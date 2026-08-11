@@ -1,0 +1,5465 @@
+{
+ "Q1": [
+  {
+   "branch": "סה\"כ רשת",
+   "net_yesterday": 556263,
+   "net_prev_week": 590510,
+   "pct_chg": -5.8
+  },
+  {
+   "branch": "אם המושבות פ\"ת",
+   "net_yesterday": 243937,
+   "net_prev_week": 259950,
+   "pct_chg": -6.2
+  },
+  {
+   "branch": "גני תקווה",
+   "net_yesterday": 225129,
+   "net_prev_week": 233683,
+   "pct_chg": -3.7
+  },
+  {
+   "branch": "רמת השרון",
+   "net_yesterday": 87197,
+   "net_prev_week": 96877,
+   "pct_chg": -10
+  }
+ ],
+ "Q4": [
+  {
+   "branch": "אם המושבות פ\"ת",
+   "tx_today": 2216,
+   "tx_prevwk": 2163,
+   "pct_chg": 2.5
+  },
+  {
+   "branch": "גני תקווה",
+   "tx_today": 2177,
+   "tx_prevwk": 2167,
+   "pct_chg": 0.5
+  },
+  {
+   "branch": "רמת השרון",
+   "tx_today": 1123,
+   "tx_prevwk": 1088,
+   "pct_chg": 3.2
+  }
+ ],
+ "Q2": [
+  {
+   "branch": "גני תקווה",
+   "net_month": 8118162
+  },
+  {
+   "branch": "אם המושבות פ\"ת",
+   "net_month": 6341527
+  },
+  {
+   "branch": "רעננה אחוזה",
+   "net_month": 2672190
+  },
+  {
+   "branch": "בר כוכבא פתח תקווה",
+   "net_month": 2494612
+  },
+  {
+   "branch": "רמת השרון",
+   "net_month": 2251698
+  },
+  {
+   "branch": "הסתדרות פ\"ת",
+   "net_month": 2045060
+  },
+  {
+   "branch": "רחובות",
+   "net_month": 1577604
+  },
+  {
+   "branch": "חובבי ציון פ\"ת",
+   "net_month": 1148783
+  },
+  {
+   "branch": "כץ פתח תקווה",
+   "net_month": 903508
+  },
+  {
+   "branch": "כפר סבא- גולני",
+   "net_month": 346214
+  },
+  {
+   "branch": "כלנית אור יהודה",
+   "net_month": 513
+  }
+ ],
+ "Q3": [
+  {
+   "branch": "גני תקווה",
+   "basket_may": 117.8,
+   "basket_apr": 114.7,
+   "pct_chg": 2.6
+  },
+  {
+   "branch": "אם המושבות פ\"ת",
+   "basket_may": 113.9,
+   "basket_apr": 113.5,
+   "pct_chg": 0.3
+  },
+  {
+   "branch": "רחובות",
+   "basket_may": 85.2,
+   "basket_apr": 87,
+   "pct_chg": -2
+  },
+  {
+   "branch": "רמת השרון",
+   "basket_may": 84.3,
+   "basket_apr": 84,
+   "pct_chg": 0.3
+  },
+  {
+   "branch": "רעננה אחוזה",
+   "basket_may": 84.1,
+   "basket_apr": 84.6,
+   "pct_chg": -0.6
+  },
+  {
+   "branch": "בר כוכבא פתח תקווה",
+   "basket_may": 74.2,
+   "basket_apr": 74,
+   "pct_chg": 0.2
+  },
+  {
+   "branch": "הסתדרות פ\"ת",
+   "basket_may": 67.9,
+   "basket_apr": 67.6,
+   "pct_chg": 0.5
+  },
+  {
+   "branch": "כץ פתח תקווה",
+   "basket_may": 66.7,
+   "basket_apr": 68.8,
+   "pct_chg": -3
+  },
+  {
+   "branch": "כפר סבא- גולני",
+   "basket_may": 63.3,
+   "basket_apr": 65.6,
+   "pct_chg": -3.4
+  },
+  {
+   "branch": "חובבי ציון פ\"ת",
+   "basket_may": 42,
+   "basket_apr": 42.4,
+   "pct_chg": -1
+  },
+  {
+   "branch": "כלנית אור יהודה",
+   "basket_may": 24.4,
+   "basket_apr": null,
+   "pct_chg": null
+  }
+ ],
+ "Q5": [
+  {
+   "branch": "אם המושבות פ\"ת",
+   "peak_hours_by_tx": "18h(5059), 19h(4936), 17h(4637)"
+  },
+  {
+   "branch": "בר כוכבא פתח תקווה",
+   "peak_hours_by_tx": "19h(3246), 18h(2949), 11h(2688)"
+  },
+  {
+   "branch": "גני תקווה",
+   "peak_hours_by_tx": "18h(6100), 19h(5839), 17h(5539)"
+  },
+  {
+   "branch": "הסתדרות פ\"ת",
+   "peak_hours_by_tx": "13h(2788), 12h(2563), 11h(2554)"
+  },
+  {
+   "branch": "חובבי ציון פ\"ת",
+   "peak_hours_by_tx": "12h(2445), 13h(2384), 11h(2203)"
+  },
+  {
+   "branch": "כלנית אור יהודה",
+   "peak_hours_by_tx": "17h(4), 14h(3), 12h(3)"
+  },
+  {
+   "branch": "כפר סבא- גולני",
+   "peak_hours_by_tx": "12h(452), 17h(447), 14h(434)"
+  },
+  {
+   "branch": "כץ פתח תקווה",
+   "peak_hours_by_tx": "13h(1038), 14h(999), 12h(995)"
+  },
+  {
+   "branch": "רחובות",
+   "peak_hours_by_tx": "18h(1497), 12h(1418), 13h(1369)"
+  },
+  {
+   "branch": "רמת השרון",
+   "peak_hours_by_tx": "18h(2396), 19h(2254), 17h(2075)"
+  },
+  {
+   "branch": "רעננה אחוזה",
+   "peak_hours_by_tx": "11h(2661), 12h(2611), 10h(2400)"
+  }
+ ],
+ "Q6": [
+  {
+   "week_start": "2026-03-30",
+   "net_ex_promo": 5518617,
+   "wow_pct": null
+  },
+  {
+   "week_start": "2026-04-06",
+   "net_ex_promo": 5633214,
+   "wow_pct": 2.1
+  },
+  {
+   "week_start": "2026-04-13",
+   "net_ex_promo": 5441755,
+   "wow_pct": -3.4
+  },
+  {
+   "week_start": "2026-04-20",
+   "net_ex_promo": 5961121,
+   "wow_pct": 9.5
+  },
+  {
+   "week_start": "2026-04-27",
+   "net_ex_promo": 5296750,
+   "wow_pct": -11.1
+  },
+  {
+   "week_start": "2026-05-04",
+   "net_ex_promo": 5149400,
+   "wow_pct": -2.8
+  },
+  {
+   "week_start": "2026-05-11",
+   "net_ex_promo": 5217949,
+   "wow_pct": 1.3
+  },
+  {
+   "week_start": "2026-05-18",
+   "net_ex_promo": 5730220,
+   "wow_pct": 9.8
+  },
+  {
+   "week_start": "2026-05-25",
+   "net_ex_promo": 5322436,
+   "wow_pct": -7.1
+  },
+  {
+   "week_start": "2026-06-01",
+   "net_ex_promo": 5357974,
+   "wow_pct": 0.7
+  },
+  {
+   "week_start": "2026-06-08",
+   "net_ex_promo": 5455286,
+   "wow_pct": 1.8
+  },
+  {
+   "week_start": "2026-06-15",
+   "net_ex_promo": 5143957,
+   "wow_pct": -5.7
+  }
+ ],
+ "Q8": [
+  {
+   "daypart": "חול (ראשון-חמישי)",
+   "net": 475093101,
+   "pct_of_total": 68.7,
+   "n_days": 649,
+   "net_per_day": 732039
+  },
+  {
+   "daypart": "סופ\"ש (שישי-שבת)",
+   "net": 216242499,
+   "pct_of_total": 31.3,
+   "n_days": 259,
+   "net_per_day": 834913
+  }
+ ],
+ "Q7": [
+  {
+   "branch": "סה\"כ חנויות זהות",
+   "h1_2025": 141337520,
+   "h1_2026": 158780958,
+   "yoy_pct": 12.3
+  },
+  {
+   "branch": "גני תקווה",
+   "h1_2025": 44165877,
+   "h1_2026": 46437395,
+   "yoy_pct": 5.1
+  },
+  {
+   "branch": "אם המושבות פ\"ת",
+   "h1_2025": 31217773,
+   "h1_2026": 35694990,
+   "yoy_pct": 14.3
+  },
+  {
+   "branch": "רעננה אחוזה",
+   "h1_2025": 15534609,
+   "h1_2026": 16232091,
+   "yoy_pct": 4.5
+  },
+  {
+   "branch": "בר כוכבא פתח תקווה",
+   "h1_2025": 11145320,
+   "h1_2026": 15095481,
+   "yoy_pct": 35.4
+  },
+  {
+   "branch": "רמת השרון",
+   "h1_2025": 9171557,
+   "h1_2026": 12489094,
+   "yoy_pct": 36.2
+  },
+  {
+   "branch": "הסתדרות פ\"ת",
+   "h1_2025": 11562951,
+   "h1_2026": 11669753,
+   "yoy_pct": 0.9
+  },
+  {
+   "branch": "רחובות",
+   "h1_2025": 8111841,
+   "h1_2026": 9191160,
+   "yoy_pct": 13.3
+  },
+  {
+   "branch": "חובבי ציון פ\"ת",
+   "h1_2025": 6119589,
+   "h1_2026": 6782910,
+   "yoy_pct": 10.8
+  },
+  {
+   "branch": "כץ פתח תקווה",
+   "h1_2025": 4308003,
+   "h1_2026": 5188083,
+   "yoy_pct": 20.4
+  }
+ ],
+ "Q11": [
+  {
+   "prt": 20278,
+   "Nm": "קפה נמס טייסטר צ'ויס נסקפה 200 גרם                                                                                                ",
+   "qty": 75808,
+   "net": 2072442,
+   "lost_margin_ils": -290493,
+   "margin_pct": -14
+  },
+  {
+   "prt": 68627,
+   "Nm": "שקית לקופה                                                                                                                        ",
+   "qty": 4229168,
+   "net": 357903,
+   "lost_margin_ils": -149598,
+   "margin_pct": -41.8
+  },
+  {
+   "prt": 1024,
+   "Nm": "קפה נמס עלית 200 גרם                                                                                                              ",
+   "qty": 27821,
+   "net": 540220,
+   "lost_margin_ils": -36231,
+   "margin_pct": -6.7
+  },
+  {
+   "prt": 65436,
+   "Nm": "אוכמניות גליל ים                                                                                                                  ",
+   "qty": 4875,
+   "net": 90754,
+   "lost_margin_ils": -31121,
+   "margin_pct": -34.3
+  },
+  {
+   "prt": 37927,
+   "Nm": "דובדבן ישראל                                                                                                                      ",
+   "qty": 12117.812999999967,
+   "net": 436802,
+   "lost_margin_ils": -26719,
+   "margin_pct": -6.1
+  },
+  {
+   "prt": 64899,
+   "Nm": "אנטריקוט ארגנטינה מוכשר מיושן מצונן פיקו                                                                                          ",
+   "qty": 5081.799399999993,
+   "net": 415717,
+   "lost_margin_ils": -19772,
+   "margin_pct": -4.8
+  },
+  {
+   "prt": 25553,
+   "Nm": "חטיפי מיקס מעורב מגדים עלית 390 גרם                                                                                               ",
+   "qty": 17594,
+   "net": 393009,
+   "lost_margin_ils": -17459,
+   "margin_pct": -4.4
+  },
+  {
+   "prt": 63185,
+   "Nm": "קיווי ארוז                                                                                                                        ",
+   "qty": 2797,
+   "net": 28243,
+   "lost_margin_ils": -12453,
+   "margin_pct": -44.1
+  },
+  {
+   "prt": 46579,
+   "Nm": "סלק בוואקום מרינה 525 גרם                                                                                                         ",
+   "qty": 13175,
+   "net": 74756,
+   "lost_margin_ils": -10881,
+   "margin_pct": -14.6
+  },
+  {
+   "prt": 8364,
+   "Nm": "מטרנה אקסטרה קר 3 חסכון 700 גרם                                                                                                   ",
+   "qty": 1513,
+   "net": 71366,
+   "lost_margin_ils": -6675,
+   "margin_pct": -9.4
+  },
+  {
+   "prt": 64450,
+   "Nm": "שמיכת פלנל גדולה 160*210                                                                                                          ",
+   "qty": 2842,
+   "net": 37354,
+   "lost_margin_ils": -6356,
+   "margin_pct": -17
+  },
+  {
+   "prt": 51160,
+   "Nm": "מטרנה אקסטרה קר שלב 2                                                                                                             ",
+   "qty": 1390,
+   "net": 65336,
+   "lost_margin_ils": -6274,
+   "margin_pct": -9.6
+  },
+  {
+   "prt": 67118,
+   "Nm": "אביזרי שיער                                                                                                                       ",
+   "qty": 3267,
+   "net": 30182,
+   "lost_margin_ils": -5429,
+   "margin_pct": -18
+  },
+  {
+   "prt": 25555,
+   "Nm": "לואקר שוקולד אגוזים 54 גרם                                                                                                        ",
+   "qty": 6284,
+   "net": 18184,
+   "lost_margin_ils": -5067,
+   "margin_pct": -27.9
+  },
+  {
+   "prt": 66829,
+   "Nm": "גלידת קרמל עם ליבה בטעם שוקולד מילקה 480 גרם                                                                                      ",
+   "qty": 3463,
+   "net": 33956,
+   "lost_margin_ils": -5051,
+   "margin_pct": -14.9
+  },
+  {
+   "prt": 8163,
+   "Nm": "מטרנה אקסטרה קר 2 חסכון 700 גרם                                                                                                   ",
+   "qty": 1553,
+   "net": 75047,
+   "lost_margin_ils": -4897,
+   "margin_pct": -6.5
+  },
+  {
+   "prt": 12276,
+   "Nm": "קפה נמס עלית מוקה 200 גרם                                                                                                         ",
+   "qty": 1879,
+   "net": 46359,
+   "lost_margin_ils": -4424,
+   "margin_pct": -9.5
+  },
+  {
+   "prt": 67993,
+   "Nm": "תות שדה                                                                                                                           ",
+   "qty": 1170,
+   "net": 19155,
+   "lost_margin_ils": -4245,
+   "margin_pct": -22.2
+  },
+  {
+   "prt": 18911,
+   "Nm": "קפה נמס עלית וניל 200 גרם                                                                                                         ",
+   "qty": 2460,
+   "net": 62183,
+   "lost_margin_ils": -4234,
+   "margin_pct": -6.8
+  },
+  {
+   "prt": 43968,
+   "Nm": "קפה נמס טייסטר צ'ויס + מילוי 250 גרם                                                                                              ",
+   "qty": 2943,
+   "net": 78600,
+   "lost_margin_ils": -4099,
+   "margin_pct": -5.2
+  }
+ ],
+ "Q9": [
+  {
+   "Nm": "בר כוכבא פתח תקווה                      ",
+   "net": 54786821,
+   "gross_profit_ils": 14741175,
+   "margin_pct": 27.1,
+   "chain_avg_pct": 31.9,
+   "drag_vs_chain_ils": -2622727
+  },
+  {
+   "Nm": "אם המושבות פ\"ת                          ",
+   "net": 155828590,
+   "gross_profit_ils": 48524028,
+   "margin_pct": 31.7,
+   "chain_avg_pct": 31.9,
+   "drag_vs_chain_ils": -301583
+  },
+  {
+   "Nm": "רחובות                                  ",
+   "net": 42749773,
+   "gross_profit_ils": 13273828,
+   "margin_pct": 31.6,
+   "chain_avg_pct": 31.9,
+   "drag_vs_chain_ils": -128626
+  },
+  {
+   "Nm": "חובבי ציון פ\"ת                          ",
+   "net": 30833375,
+   "gross_profit_ils": 9569515,
+   "margin_pct": 31.5,
+   "chain_avg_pct": 31.9,
+   "drag_vs_chain_ils": -104287
+  },
+  {
+   "Nm": "כץ פתח תקווה                            ",
+   "net": 20830719,
+   "gross_profit_ils": 6653778,
+   "margin_pct": 32.3,
+   "chain_avg_pct": 31.9,
+   "drag_vs_chain_ils": 87384
+  },
+  {
+   "Nm": "רעננה אחוזה                             ",
+   "net": 71974321,
+   "gross_profit_ils": 23052061,
+   "margin_pct": 32.4,
+   "chain_avg_pct": 31.9,
+   "drag_vs_chain_ils": 353130
+  },
+  {
+   "Nm": "הסתדרות פ\"ת                             ",
+   "net": 58312471,
+   "gross_profit_ils": 18791261,
+   "margin_pct": 32.7,
+   "chain_avg_pct": 31.9,
+   "drag_vs_chain_ils": 483479
+  },
+  {
+   "Nm": "רמת השרון                               ",
+   "net": 32019962,
+   "gross_profit_ils": 10873505,
+   "margin_pct": 33.8,
+   "chain_avg_pct": 31.9,
+   "drag_vs_chain_ils": 627538
+  },
+  {
+   "Nm": "גני תקווה                               ",
+   "net": 222758042,
+   "gross_profit_ils": 71624972,
+   "margin_pct": 32.6,
+   "chain_avg_pct": 31.9,
+   "drag_vs_chain_ils": 1635188
+  }
+ ],
+ "Q10": [
+  {
+   "dept": 11,
+   "dept_nm": "פירות וירקות ללא מע\"מ                   ",
+   "net": 142535282,
+   "margin_ils": 59402568,
+   "margin_pct": 42,
+   "share_of_total_margin": 27.3
+  },
+  {
+   "dept": 194,
+   "dept_nm": "מוצרי חלב וביצים                        ",
+   "net": 133536267,
+   "margin_ils": 34594905,
+   "margin_pct": 26.1,
+   "share_of_total_margin": 15.9
+  },
+  {
+   "dept": 195,
+   "dept_nm": "מוצרי יסוד                              ",
+   "net": 64816304,
+   "margin_ils": 19793034,
+   "margin_pct": 30.9,
+   "share_of_total_margin": 9.1
+  },
+  {
+   "dept": 202,
+   "dept_nm": "קפואים                                  ",
+   "net": 45570232,
+   "margin_ils": 15939813,
+   "margin_pct": 35.7,
+   "share_of_total_margin": 7.3
+  },
+  {
+   "dept": 214,
+   "dept_nm": "בשר ועוף טרי                            ",
+   "net": 44578490,
+   "margin_ils": 10393141,
+   "margin_pct": 24.6,
+   "share_of_total_margin": 4.8
+  },
+  {
+   "dept": 203,
+   "dept_nm": "דגני בוקר ומאפה מתוק                    ",
+   "net": 42247194,
+   "margin_ils": 10930649,
+   "margin_pct": 26.6,
+   "share_of_total_margin": 5
+  },
+  {
+   "dept": 193,
+   "dept_nm": "לחם ותחליפיו                            ",
+   "net": 31852663,
+   "margin_ils": 10659935,
+   "margin_pct": 33.7,
+   "share_of_total_margin": 4.9
+  },
+  {
+   "dept": 196,
+   "dept_nm": "מוצרי ניקיון וחד פעמי                   ",
+   "net": 29408787,
+   "margin_ils": 9448104,
+   "margin_pct": 32.7,
+   "share_of_total_margin": 4.3
+  },
+  {
+   "dept": 197,
+   "dept_nm": "מזון מקורר ארוז                         ",
+   "net": 28439872,
+   "margin_ils": 9742057,
+   "margin_pct": 34.7,
+   "share_of_total_margin": 4.5
+  },
+  {
+   "dept": 199,
+   "dept_nm": "משקאות לא אלכוהולים                     ",
+   "net": 28043733,
+   "margin_ils": 8036453,
+   "margin_pct": 28.9,
+   "share_of_total_margin": 3.7
+  },
+  {
+   "dept": 189,
+   "dept_nm": "אלכוהול                                 ",
+   "net": 18464520,
+   "margin_ils": 4894037,
+   "margin_pct": 27,
+   "share_of_total_margin": 2.3
+  },
+  {
+   "dept": 191,
+   "dept_nm": "חטיפים מלוחים ופיצוחים                  ",
+   "net": 17434779,
+   "margin_ils": 6297003,
+   "margin_pct": 36.6,
+   "share_of_total_margin": 2.9
+  },
+  {
+   "dept": 198,
+   "dept_nm": "משקאות חמים וממתיקים                    ",
+   "net": 11971891,
+   "margin_ils": 1536756,
+   "margin_pct": 13.1,
+   "share_of_total_margin": 0.7
+  },
+  {
+   "dept": 201,
+   "dept_nm": "פארם וטואלטיקה                          ",
+   "net": 8814128,
+   "margin_ils": 2823905,
+   "margin_pct": 33,
+   "share_of_total_margin": 1.3
+  },
+  {
+   "dept": 33,
+   "dept_nm": "ממתקים ופיצוחים במשקל                   ",
+   "net": 7899785,
+   "margin_ils": 1811544,
+   "margin_pct": 23,
+   "share_of_total_margin": 0.8
+  },
+  {
+   "dept": 192,
+   "dept_nm": "לא מזון וחד פעמי                        ",
+   "net": 6889091,
+   "margin_ils": 2858979,
+   "margin_pct": 43.7,
+   "share_of_total_margin": 1.3
+  },
+  {
+   "dept": 23,
+   "dept_nm": "דגים טריים                              ",
+   "net": 6552252,
+   "margin_ils": 2135797,
+   "margin_pct": 32.6,
+   "share_of_total_margin": 1
+  },
+  {
+   "dept": 24,
+   "dept_nm": "פיצוחים ופירות יבשים                    ",
+   "net": 4702691,
+   "margin_ils": 1214124,
+   "margin_pct": 26,
+   "share_of_total_margin": 0.6
+  },
+  {
+   "dept": 58,
+   "dept_nm": "מזון ואביזרי תינוקות                    ",
+   "net": 4591953,
+   "margin_ils": 791245,
+   "margin_pct": 17.4,
+   "share_of_total_margin": 0.4
+  },
+  {
+   "dept": 200,
+   "dept_nm": "סוכריות ומסטיקים                        ",
+   "net": 3699974,
+   "margin_ils": 1369741,
+   "margin_pct": 38.5,
+   "share_of_total_margin": 0.6
+  },
+  {
+   "dept": 12,
+   "dept_nm": "פירות וירקות כולל מע\"מ                  ",
+   "net": 2558085,
+   "margin_ils": 976673,
+   "margin_pct": 38.8,
+   "share_of_total_margin": 0.4
+  },
+  {
+   "dept": 213,
+   "dept_nm": "מוצרי טבק ועישון                        ",
+   "net": 2529409,
+   "margin_ils": 507177,
+   "margin_pct": 20.2,
+   "share_of_total_margin": 0.2
+  },
+  {
+   "dept": 164,
+   "dept_nm": "אגרות משטחים מיכלים                     ",
+   "net": 1611774,
+   "margin_ils": 78508,
+   "margin_pct": 6,
+   "share_of_total_margin": 0
+  },
+  {
+   "dept": 212,
+   "dept_nm": "מוצרי טבע                               ",
+   "net": 1373821,
+   "margin_ils": 480043,
+   "margin_pct": 35.3,
+   "share_of_total_margin": 0.2
+  },
+  {
+   "dept": 217,
+   "dept_nm": "בונבוניירות שוקולד וחטיפים מתוקים       ",
+   "net": 1076050,
+   "margin_ils": 382366,
+   "margin_pct": 35.6,
+   "share_of_total_margin": 0.2
+  },
+  {
+   "dept": 190,
+   "dept_nm": "חגי ישראל                               ",
+   "net": 908777,
+   "margin_ils": 174744,
+   "margin_pct": 21.2,
+   "share_of_total_margin": 0.1
+  },
+  {
+   "dept": 211,
+   "dept_nm": "בעלי חיים                               ",
+   "net": 421147,
+   "margin_ils": 198397,
+   "margin_pct": 47.6,
+   "share_of_total_margin": 0.1
+  },
+  {
+   "dept": 205,
+   "dept_nm": "פקדון ללא מעמ                           ",
+   "net": -274248,
+   "margin_ils": null,
+   "margin_pct": null,
+   "share_of_total_margin": null
+  },
+  {
+   "dept": 204,
+   "dept_nm": "לא לפידיון                              ",
+   "net": -919136,
+   "margin_ils": -2092,
+   "margin_pct": -0.4,
+   "share_of_total_margin": 0
+  }
+ ],
+ "Q15": [
+  {
+   "prt": 21794,
+   "Nm": "חזה עוף פרימיום (שקיל טרי)                                                                                                        ",
+   "net_at_risk": 539999,
+   "qty": 13619.457900000014,
+   "stores": 8
+  },
+  {
+   "prt": 21791,
+   "Nm": "שוקיים עוף פרימיום (שקיל טרי)                                                                                                     ",
+   "net_at_risk": 432065,
+   "qty": 14817.71860000004,
+   "stores": 8
+  },
+  {
+   "prt": 63167,
+   "Nm": "תות שדה 500 גרם                                                                                                                   ",
+   "net_at_risk": 414300,
+   "qty": 15068,
+   "stores": 7
+  },
+  {
+   "prt": 21798,
+   "Nm": "פרגיות עוף פרימיום (שקיל טרי)                                                                                                     ",
+   "net_at_risk": 378408,
+   "qty": 6519.924400000003,
+   "stores": 8
+  },
+  {
+   "prt": 60291,
+   "Nm": "קוד כללי                                                                                                                          ",
+   "net_at_risk": 251615,
+   "qty": 17071,
+   "stores": 8
+  },
+  {
+   "prt": 21789,
+   "Nm": "כרעיים עוף פרימיום (שקיל טרי)                                                                                                     ",
+   "net_at_risk": 241783,
+   "qty": 8375.369600000002,
+   "stores": 8
+  },
+  {
+   "prt": 21812,
+   "Nm": "בשר טחון  טרי (שקיל טרי)                                                                                                          ",
+   "net_at_risk": 172118,
+   "qty": 4278.741800000091,
+   "stores": 5
+  },
+  {
+   "prt": 4976,
+   "Nm": "חטיפי פיצה גבינה מעדנות 650 גרם                                                                                                   ",
+   "net_at_risk": 119830,
+   "qty": 5389,
+   "stores": 8
+  },
+  {
+   "prt": 92,
+   "Nm": "דמי משלוח                                                                                                                         ",
+   "net_at_risk": 101015,
+   "qty": 9421,
+   "stores": 7
+  },
+  {
+   "prt": 21792,
+   "Nm": "כנפיים עוף פרימיום (שקיל טרי)                                                                                                     ",
+   "net_at_risk": 90415,
+   "qty": 8239.186399999999,
+   "stores": 8
+  },
+  {
+   "prt": 54336,
+   "Nm": "ביצים L תנובה 12 יח'                                                                                                              ",
+   "net_at_risk": 89341,
+   "qty": 7482,
+   "stores": 4
+  },
+  {
+   "prt": 35219,
+   "Nm": "קפה נמס ג'ייקובס מונארך 190 גרם                                                                                                   ",
+   "net_at_risk": 86516,
+   "qty": 3788,
+   "stores": 8
+  },
+  {
+   "prt": 61552,
+   "Nm": "נקניקיית עוף בלחמניה                                                                                                              ",
+   "net_at_risk": 82024,
+   "qty": 5042,
+   "stores": 5
+  },
+  {
+   "prt": 55014,
+   "Nm": "ביצים L תנובה 18 יח'                                                                                                              ",
+   "net_at_risk": 77609,
+   "qty": 4334,
+   "stores": 3
+  },
+  {
+   "prt": 21787,
+   "Nm": "עוף שלם פרימיום (שקיל טרי)                                                                                                        ",
+   "net_at_risk": 77385,
+   "qty": 3834.2517000000003,
+   "stores": 7
+  },
+  {
+   "prt": 21802,
+   "Nm": "כבד עוף פרימיום (שקיל טרי)                                                                                                        ",
+   "net_at_risk": 69325,
+   "qty": 4131.430299999998,
+   "stores": 7
+  },
+  {
+   "prt": 41798,
+   "Nm": "שמן קנולה תפארת מזוכך 1 ליטר ויליפוד                                                                                              ",
+   "net_at_risk": 68705,
+   "qty": 9928,
+   "stores": 8
+  },
+  {
+   "prt": 60822,
+   "Nm": "פרחים 100601                                                                                                                      ",
+   "net_at_risk": 65636,
+   "qty": 1280,
+   "stores": 5
+  },
+  {
+   "prt": 21916,
+   "Nm": "קפה נמס טסטר צ'ויס בריסט  180 גרם                                                                                                 ",
+   "net_at_risk": 63416,
+   "qty": 2343,
+   "stores": 8
+  },
+  {
+   "prt": 61551,
+   "Nm": "נקניקיית עגל בלחמניה                                                                                                              ",
+   "net_at_risk": 61137,
+   "qty": 3607,
+   "stores": 4
+  }
+ ],
+ "Q16": [
+  {
+   "qty": -466539,
+   "item": "שקית לקופה",
+   "store": "גני תקווה",
+   "dept": "לא לפידיון",
+   "kind": "artifact"
+  },
+  {
+   "qty": -353523,
+   "item": "שקית לקופה",
+   "store": "אם המושבות פ\"ת",
+   "dept": "לא לפידיון",
+   "kind": "artifact"
+  },
+  {
+   "qty": -165072,
+   "item": "שקית לקופה",
+   "store": "בר כוכבא פתח תקווה",
+   "dept": "לא לפידיון",
+   "kind": "artifact"
+  },
+  {
+   "qty": -151375,
+   "item": "שקית לקופה",
+   "store": "רעננה אחוזה",
+   "dept": "לא לפידיון",
+   "kind": "artifact"
+  },
+  {
+   "qty": -127914,
+   "item": "שקית לקופה",
+   "store": "הסתדרות פ\"ת",
+   "dept": "לא לפידיון",
+   "kind": "artifact"
+  },
+  {
+   "qty": -101884,
+   "item": "שקית לקופה",
+   "store": "רמת השרון",
+   "dept": "לא לפידיון",
+   "kind": "artifact"
+  },
+  {
+   "qty": -75828,
+   "item": "שקית לקופה",
+   "store": "רחובות",
+   "dept": "לא לפידיון",
+   "kind": "artifact"
+  },
+  {
+   "qty": -62009,
+   "item": "שקית לקופה",
+   "store": "חובבי ציון פ\"ת",
+   "dept": "לא לפידיון",
+   "kind": "artifact"
+  },
+  {
+   "qty": -32111.23,
+   "item": "תפו\"א אדום גלי משה",
+   "store": "בר כוכבא פתח תקווה",
+   "dept": "פירות וירקות ללא מע\"מ",
+   "kind": "suspicious"
+  },
+  {
+   "qty": -24900,
+   "item": "שקית רב פעמית \"סופרטל\" : 39*39*18 ס\"מ",
+   "store": "מרלו\"ג - פתח תקווה",
+   "dept": "לא לפידיון",
+   "kind": "artifact"
+  },
+  {
+   "qty": -21665.54,
+   "item": "תפו\"א לבן גלי משה",
+   "store": "בר כוכבא פתח תקווה",
+   "dept": "פירות וירקות ללא מע\"מ",
+   "kind": "suspicious"
+  },
+  {
+   "qty": -18688,
+   "item": "מארז פיתות בית הפיתה",
+   "store": "גני תקווה",
+   "dept": "לחם ותחליפיו",
+   "kind": "artifact"
+  },
+  {
+   "qty": -15772,
+   "item": "קוקה קולה קולה זירו 1.5 ליטר",
+   "store": "גני תקווה",
+   "dept": "משקאות לא אלכוהולים",
+   "kind": "suspicious"
+  },
+  {
+   "qty": -14611.59,
+   "item": "עגבניות שרי תמר ישראל",
+   "store": "גני תקווה",
+   "dept": "פירות וירקות ללא מע\"מ",
+   "kind": "suspicious"
+  },
+  {
+   "qty": -14172,
+   "item": "כוסברה הקסם הירוק",
+   "store": "גני תקווה",
+   "dept": "פירות וירקות ללא מע\"מ",
+   "kind": "suspicious"
+  },
+  {
+   "qty": -13172,
+   "item": "פטרוזיליה הקסם הירוק",
+   "store": "גני תקווה",
+   "dept": "פירות וירקות ללא מע\"מ",
+   "kind": "suspicious"
+  },
+  {
+   "qty": -12675,
+   "item": "מארז פיתות בית הפיתה",
+   "store": "אם המושבות פ\"ת",
+   "dept": "לחם ותחליפיו",
+   "kind": "artifact"
+  },
+  {
+   "qty": -12391,
+   "item": "10 לחמניה אצבע ארוז \"אגמי\"",
+   "store": "גני תקווה",
+   "dept": "לחם ותחליפיו",
+   "kind": "suspicious"
+  },
+  {
+   "qty": -11107,
+   "item": "מובחרים מן הטבע",
+   "store": "גני תקווה",
+   "dept": "פיצוחים ופירות יבשים",
+   "kind": "suspicious"
+  },
+  {
+   "qty": -10378,
+   "item": "שקית לקופה",
+   "store": "כץ פתח תקווה",
+   "dept": "לא לפידיון",
+   "kind": "artifact"
+  }
+ ],
+ "Q17": [
+  {
+   "item": "שלשייה עגבניות מרוסקות 400 גרם MUTTI",
+   "store": "מחסן מרלוג- דנלוג",
+   "stock": 54197,
+   "tied_cash": 677463
+  },
+  {
+   "item": "ערכת אנגוס קיט לטחינה (שקיל)",
+   "store": "גני תקווה",
+   "stock": 7358.4,
+   "tied_cash": 282562
+  },
+  {
+   "item": "ערכת אנגוס קיט לטחינה (שקיל)",
+   "store": "רעננה אחוזה",
+   "stock": 3482.6,
+   "tied_cash": 139302
+  },
+  {
+   "item": "תות שדה",
+   "store": "חובבי ציון פ\"ת",
+   "stock": 4931,
+   "tied_cash": 89350
+  },
+  {
+   "item": "תות שדה",
+   "store": "הסתדרות פ\"ת",
+   "stock": 8421,
+   "tied_cash": 84210
+  },
+  {
+   "item": "עגבניות מגי ישראל",
+   "store": "גני תקווה",
+   "stock": 7008,
+   "tied_cash": 67978
+  },
+  {
+   "item": "תות שדה",
+   "store": "רמת השרון",
+   "stock": 6521,
+   "tied_cash": 65210
+  },
+  {
+   "item": "עוגיות אוראו רגיל בד\"ץ 176 גרם",
+   "store": "מחסן מרלוג- דנלוג",
+   "stock": 16656,
+   "tied_cash": 59962
+  },
+  {
+   "item": "ערכת אנגוס קיט לטחינה (שקיל)",
+   "store": "רמת השרון",
+   "stock": 1516,
+   "tied_cash": 58216
+  },
+  {
+   "item": "מגבונים לחים KIDDO בודד",
+   "store": "מחסן מרלוג- דנלוג",
+   "stock": 16848,
+   "tied_cash": 44647
+  },
+  {
+   "item": "ערכת אנגוס קיט לטחינה (שקיל)",
+   "store": "הסתדרות פ\"ת",
+   "stock": 997.1,
+   "tied_cash": 38287
+  },
+  {
+   "item": "ארגז פלסטיק",
+   "store": "גני תקווה",
+   "stock": 2397,
+   "tied_cash": 36195
+  },
+  {
+   "item": "עגבניות מגי ישראל",
+   "store": "אם המושבות פ\"ת",
+   "stock": 3638,
+   "tied_cash": 35289
+  },
+  {
+   "item": "אוכמניות",
+   "store": "אם המושבות פ\"ת",
+   "stock": 5052,
+   "tied_cash": 31878
+  },
+  {
+   "item": "כוסות שתיה חמה 8b טל סהר",
+   "store": "מחסן מרלוג- דנלוג",
+   "stock": 17760,
+   "tied_cash": 31613
+  },
+  {
+   "item": "נייר טואלט סלפאק 3 שכבות  32 גלילים",
+   "store": "מחסן מרלוג- דנלוג",
+   "stock": 1260,
+   "tied_cash": 31374
+  },
+  {
+   "item": "תות שדה",
+   "store": "אם המושבות פ\"ת",
+   "stock": 1808,
+   "tied_cash": 29380
+  },
+  {
+   "item": "עגבניות מגי ישראל",
+   "store": "רמת השרון",
+   "stock": 2481.8,
+   "tied_cash": 28888
+  },
+  {
+   "item": "תות שדה",
+   "store": "אם המושבות פ\"ת",
+   "stock": 2778,
+   "tied_cash": 27780
+  },
+  {
+   "item": "שקית רב פעמית \"סופרטל\" : 39*39*18 ס\"מ",
+   "store": "מחסן מרלוג- דנלוג",
+   "stock": 15200,
+   "tied_cash": 23712
+  }
+ ],
+ "Q12": [
+  {
+   "prt": 67056,
+   "Nm": "שניצל עוף טרי פרמיום ארוז חתם פרימיום                                                                                             ",
+   "leak_ils": 472302,
+   "leak_pct_of_list": 6.5,
+   "via_promo": 462263,
+   "via_manual": 10039
+  },
+  {
+   "prt": 11450,
+   "Nm": "משקה אנרגיה אקסל 250 מ''ל                                                                                                         ",
+   "leak_ils": 406211,
+   "leak_pct_of_list": 26.5,
+   "via_promo": 406228,
+   "via_manual": -17
+  },
+  {
+   "prt": 70664,
+   "Nm": "קריסטוליה שמן קנולה 900 מ\"ל                                                                                                       ",
+   "leak_ils": 318208,
+   "leak_pct_of_list": 37,
+   "via_promo": 317661,
+   "via_manual": 547
+  },
+  {
+   "prt": 7060,
+   "Nm": "פחית קוקה קולה זירו 330 מ''ל                                                                                                      ",
+   "leak_ils": 299925,
+   "leak_pct_of_list": 33.8,
+   "via_promo": 299669,
+   "via_manual": 257
+  },
+  {
+   "prt": 64131,
+   "Nm": "בשר טחון  טרי (שקיל טרי)                                                                                                          ",
+   "leak_ils": 295160,
+   "leak_pct_of_list": 4.9,
+   "via_promo": 293535,
+   "via_manual": 1625
+  },
+  {
+   "prt": 15624,
+   "Nm": "דאוואט אורז בסמטי 1 קילו                                                                                                          ",
+   "leak_ils": 289336,
+   "leak_pct_of_list": 21.2,
+   "via_promo": 288557,
+   "via_manual": 779
+  },
+  {
+   "prt": 14670,
+   "Nm": "שלשייה עגבניות מרוסקות 400 גרם MUTTI                                                                                              ",
+   "leak_ils": 252088,
+   "leak_pct_of_list": 17.7,
+   "via_promo": 251406,
+   "via_manual": 682
+  },
+  {
+   "prt": 1905,
+   "Nm": "שמן קנולה בריאות עץ הזית 1 ליטר                                                                                                   ",
+   "leak_ils": 240982,
+   "leak_pct_of_list": 17.4,
+   "via_promo": 239982,
+   "via_manual": 1000
+  },
+  {
+   "prt": 65324,
+   "Nm": "מגבונים לחים KIDDO בודד                                                                                                           ",
+   "leak_ils": 233910,
+   "leak_pct_of_list": 42.8,
+   "via_promo": 233668,
+   "via_manual": 242
+  },
+  {
+   "prt": 30665,
+   "Nm": "שום ארוז סין                                                                                                                      ",
+   "leak_ils": 222447,
+   "leak_pct_of_list": 21.6,
+   "via_promo": 222491,
+   "via_manual": -44
+  },
+  {
+   "prt": 48547,
+   "Nm": "טונה בהירה בשמן סטארקיסט 120גרם 4 יח'                                                                                             ",
+   "leak_ils": 218668,
+   "leak_pct_of_list": 14.1,
+   "via_promo": 218055,
+   "via_manual": 613
+  },
+  {
+   "prt": 65144,
+   "Nm": "כוסות שתיה חמה 8b טל סהר                                                                                                          ",
+   "leak_ils": 213869,
+   "leak_pct_of_list": 39.1,
+   "via_promo": 213543,
+   "via_manual": 326
+  },
+  {
+   "prt": 63840,
+   "Nm": "שניצל עוף טרי ארוז מקוצב                                                                                                          ",
+   "leak_ils": 200657,
+   "leak_pct_of_list": 9.4,
+   "via_promo": 196488,
+   "via_manual": 4169
+  },
+  {
+   "prt": 33689,
+   "Nm": "אוראו עוגיות סנדויץ 176 גרם                                                                                                       ",
+   "leak_ils": 198343,
+   "leak_pct_of_list": 30.2,
+   "via_promo": 198086,
+   "via_manual": 257
+  },
+  {
+   "prt": 20278,
+   "Nm": "קפה נמס טייסטר צ'ויס נסקפה 200 גרם                                                                                                ",
+   "leak_ils": 192125,
+   "leak_pct_of_list": 7.3,
+   "via_promo": 191451,
+   "via_manual": 674
+  },
+  {
+   "prt": 53424,
+   "Nm": "מגבות נייר ניקול 6 יח'                                                                                                            ",
+   "leak_ils": 183000,
+   "leak_pct_of_list": 15.6,
+   "via_promo": 182824,
+   "via_manual": 176
+  },
+  {
+   "prt": 12242,
+   "Nm": "שמן קנולה וילי פוד 1 ליטר                                                                                                         ",
+   "leak_ils": 175959,
+   "leak_pct_of_list": 23.1,
+   "via_promo": 175873,
+   "via_manual": 87
+  },
+  {
+   "prt": 6625,
+   "Nm": "פחית קוקה קולה 330 מ''ל                                                                                                           ",
+   "leak_ils": 172967,
+   "leak_pct_of_list": 30,
+   "via_promo": 173608,
+   "via_manual": -641
+  },
+  {
+   "prt": 1408,
+   "Nm": "שמן קנולה בריאות עץ הזית 750 מ''ל                                                                                                 ",
+   "leak_ils": 164412,
+   "leak_pct_of_list": 34.6,
+   "via_promo": 164385,
+   "via_manual": 28
+  },
+  {
+   "prt": 21797,
+   "Nm": "טחון עוף פרימיום (שקיל טרי)                                                                                                       ",
+   "leak_ils": 160751,
+   "leak_pct_of_list": 12.2,
+   "via_promo": 160118,
+   "via_manual": 633
+  }
+ ],
+ "Q19": [
+  {
+   "item": "10 לחמניה אצבע ארוז \"אגמי\"",
+   "store": "גני תקווה",
+   "dept": "לחם ותחליפיו",
+   "neg_stock": -12391,
+   "loss_proxy_ils": 118954
+  },
+  {
+   "item": "קוקה קולה קולה זירו 1.5 ליטר",
+   "store": "גני תקווה",
+   "dept": "משקאות לא אלכוהולים",
+   "neg_stock": -15772,
+   "loss_proxy_ils": 88481
+  },
+  {
+   "item": "חלה מתוקה קליינס 500 גרם",
+   "store": "גני תקווה",
+   "dept": "לחם ותחליפיו",
+   "neg_stock": -8199,
+   "loss_proxy_ils": 83384
+  },
+  {
+   "item": "10 לחמניה אצבע ארוז \"אגמי\"",
+   "store": "אם המושבות פ\"ת",
+   "dept": "לחם ותחליפיו",
+   "neg_stock": -8459,
+   "loss_proxy_ils": 81206
+  },
+  {
+   "item": "תערובת אגוזים דין שיווק 250 גרם",
+   "store": "גני תקווה",
+   "dept": "פיצוחים ופירות יבשים",
+   "neg_stock": -5229,
+   "loss_proxy_ils": 73206
+  },
+  {
+   "item": "מובחרים מן הטבע",
+   "store": "גני תקווה",
+   "dept": "פיצוחים ופירות יבשים",
+   "neg_stock": -11107,
+   "loss_proxy_ils": 68863
+  },
+  {
+   "item": "10 פיתה ביס כוסמין מלא \"אגמי\"",
+   "store": "גני תקווה",
+   "dept": "לחם ותחליפיו",
+   "neg_stock": -5568,
+   "loss_proxy_ils": 53453
+  },
+  {
+   "item": "קוקה קולה קולה זירו 1.5 ליטר",
+   "store": "אם המושבות פ\"ת",
+   "dept": "משקאות לא אלכוהולים",
+   "neg_stock": -9442,
+   "loss_proxy_ils": 52970
+  },
+  {
+   "item": "6 חליות במתיקות מעודנת \"אגמי\"",
+   "store": "גני תקווה",
+   "dept": "לחם ותחליפיו",
+   "neg_stock": -5983,
+   "loss_proxy_ils": 50616
+  },
+  {
+   "item": "פיתות כוסמין מלא מעושר בחלבון 408 גרם",
+   "store": "גני תקווה",
+   "dept": "לחם ותחליפיו",
+   "neg_stock": -3281,
+   "loss_proxy_ils": 42850
+  },
+  {
+   "item": "לחם PRO דל פחמימות \"אגמי\"",
+   "store": "גני תקווה",
+   "dept": "לחם ותחליפיו",
+   "neg_stock": -2902,
+   "loss_proxy_ils": 41034
+  },
+  {
+   "item": "תערובת אגוזים דין שיווק 250 גרם",
+   "store": "אם המושבות פ\"ת",
+   "dept": "פיצוחים ופירות יבשים",
+   "neg_stock": -2804,
+   "loss_proxy_ils": 39256
+  },
+  {
+   "item": "פיתות כוסמין מלא מעושר בחלבון 408 גרם",
+   "store": "אם המושבות פ\"ת",
+   "dept": "לחם ותחליפיו",
+   "neg_stock": -2919,
+   "loss_proxy_ils": 38122
+  },
+  {
+   "item": "מובחרים מן הטבע",
+   "store": "אם המושבות פ\"ת",
+   "dept": "פיצוחים ופירות יבשים",
+   "neg_stock": -5664,
+   "loss_proxy_ils": 35117
+  },
+  {
+   "item": "לחם אחיד פלוס כוסמין חלי ממן",
+   "store": "אם המושבות פ\"ת",
+   "dept": "לחם ותחליפיו",
+   "neg_stock": -3228,
+   "loss_proxy_ils": 34636
+  },
+  {
+   "item": "קוקה קולה 1.5 ליטר",
+   "store": "בר כוכבא פתח תקווה",
+   "dept": "משקאות לא אלכוהולים",
+   "neg_stock": -5367,
+   "loss_proxy_ils": 32041
+  },
+  {
+   "item": "6 חליות במתיקות מעודנת \"אגמי\"",
+   "store": "אם המושבות פ\"ת",
+   "dept": "לחם ותחליפיו",
+   "neg_stock": -3608,
+   "loss_proxy_ils": 30524
+  },
+  {
+   "item": "חלה מתוקה קליינס 500 גרם",
+   "store": "אם המושבות פ\"ת",
+   "dept": "לחם ותחליפיו",
+   "neg_stock": -2997,
+   "loss_proxy_ils": 30479
+  },
+  {
+   "item": "קוקה קולה 1.5 ליטר",
+   "store": "גני תקווה",
+   "dept": "משקאות לא אלכוהולים",
+   "neg_stock": -5083,
+   "loss_proxy_ils": 30346
+  },
+  {
+   "item": "10 פיתה ביס כוסמין מלא \"אגמי\"",
+   "store": "אם המושבות פ\"ת",
+   "dept": "לחם ותחליפיו",
+   "neg_stock": -2911,
+   "loss_proxy_ils": 27946
+  }
+ ],
+ "Q18": [
+  {
+   "item": "אבטיח",
+   "store": "גני תקווה",
+   "stock": 346.2,
+   "daily_rate": 435,
+   "days_cover": 0.8
+  },
+  {
+   "item": "תנובה חלב 3% ליטר ועדת מהדרין בקרטון",
+   "store": "גני תקווה",
+   "stock": 511,
+   "daily_rate": 376.6,
+   "days_cover": 1.36
+  },
+  {
+   "item": "קוטג' תנובה 5% שומן 250 גרם",
+   "store": "גני תקווה",
+   "stock": 95,
+   "daily_rate": 350.4,
+   "days_cover": 0.27
+  },
+  {
+   "item": "אבטיח",
+   "store": "אם המושבות פ\"ת",
+   "stock": 570.1,
+   "daily_rate": 342.2,
+   "days_cover": 1.67
+  },
+  {
+   "item": "בצל יבש ישראל",
+   "store": "גני תקווה",
+   "stock": 119.6,
+   "daily_rate": 161.6,
+   "days_cover": 0.74
+  },
+  {
+   "item": "תנובה חלב 3% ליטר ועדת מהדרין בקרטון",
+   "store": "רעננה אחוזה",
+   "stock": 33,
+   "daily_rate": 123.4,
+   "days_cover": 0.27
+  },
+  {
+   "item": "אבטיח",
+   "store": "רעננה אחוזה",
+   "stock": 57.2,
+   "daily_rate": 121.8,
+   "days_cover": 0.47
+  },
+  {
+   "item": "תנובה חלב 3% ליטר ועדת מהדרין בקרטון",
+   "store": "בר כוכבא פתח תקווה",
+   "stock": 173,
+   "daily_rate": 109,
+   "days_cover": 1.59
+  },
+  {
+   "item": "קוטג' תנובה 9% שומן 250 גרם",
+   "store": "גני תקווה",
+   "stock": 137,
+   "daily_rate": 90.6,
+   "days_cover": 1.51
+  },
+  {
+   "item": "יוגורט 20 גרם חלבון דנונה פרו 1.5% שומן 200 גרם",
+   "store": "גני תקווה",
+   "stock": 58,
+   "daily_rate": 86.6,
+   "days_cover": 0.67
+  },
+  {
+   "item": "תנובה חלב 3% ליטר ועדת מהדרין בקרטון",
+   "store": "רחובות",
+   "stock": 61,
+   "daily_rate": 83.7,
+   "days_cover": 0.73
+  },
+  {
+   "item": "קוטג' שטראוס 5% שומן 250 גרם",
+   "store": "גני תקווה",
+   "stock": 65.3,
+   "daily_rate": 82.4,
+   "days_cover": 0.79
+  },
+  {
+   "item": "בטטה ישראל",
+   "store": "גני תקווה",
+   "stock": 24,
+   "daily_rate": 67.1,
+   "days_cover": 0.36
+  },
+  {
+   "item": "קוטג' תנובה 9% שומן 250 גרם",
+   "store": "אם המושבות פ\"ת",
+   "stock": 103,
+   "daily_rate": 61.4,
+   "days_cover": 1.68
+  },
+  {
+   "item": "גבינה לבנה תנובה 5% ועדת מהדרין",
+   "store": "גני תקווה",
+   "stock": 42,
+   "daily_rate": 58.3,
+   "days_cover": 0.72
+  },
+  {
+   "item": "כנפיים טרי במגש עוף טוב",
+   "store": "בר כוכבא פתח תקווה",
+   "stock": 114.1,
+   "daily_rate": 57.8,
+   "days_cover": 1.97
+  },
+  {
+   "item": "דניאלה וניל 5% שומן 88 גרם",
+   "store": "גני תקווה",
+   "stock": 81,
+   "daily_rate": 52.2,
+   "days_cover": 1.55
+  },
+  {
+   "item": "לימון ישראל",
+   "store": "בר כוכבא פתח תקווה",
+   "stock": 87.1,
+   "daily_rate": 48.2,
+   "days_cover": 1.81
+  },
+  {
+   "item": "גבינה לבנה סקי 5% שומן 250 גרם",
+   "store": "גני תקווה",
+   "stock": 91,
+   "daily_rate": 48,
+   "days_cover": 1.9
+  },
+  {
+   "item": "יוגורט וניל 20 גרם חלבון דנונה פרו 0% שומן 200 גרם",
+   "store": "גני תקווה",
+   "stock": 48,
+   "daily_rate": 45.1,
+   "days_cover": 1.06
+  }
+ ],
+ "Q21": [
+  {
+   "item": "פקדון בקבוק 0.3 בודד",
+   "store": "בר כוכבא פתח תקווה",
+   "stock": 6397.8,
+   "daily_rate": 1109.3,
+   "days_cover": 5.8,
+   "suggest_order_qty": 1368
+  },
+  {
+   "item": "אבטיח",
+   "store": "גני תקווה",
+   "stock": 346.2,
+   "daily_rate": 435,
+   "days_cover": 0.8,
+   "suggest_order_qty": 2699
+  },
+  {
+   "item": "תנובה חלב 3% ליטר ועדת מהדרין בקרטון",
+   "store": "גני תקווה",
+   "stock": 511,
+   "daily_rate": 376.6,
+   "days_cover": 1.4,
+   "suggest_order_qty": 2126
+  },
+  {
+   "item": "קוטג' תנובה 5% שומן 250 גרם",
+   "store": "גני תקווה",
+   "stock": 95,
+   "daily_rate": 350.4,
+   "days_cover": 0.3,
+   "suggest_order_qty": 2358
+  },
+  {
+   "item": "אבטיח",
+   "store": "אם המושבות פ\"ת",
+   "stock": 570.1,
+   "daily_rate": 342.2,
+   "days_cover": 1.7,
+   "suggest_order_qty": 1826
+  },
+  {
+   "item": "תנובה חלב 3% ליטר ועדת מהדרין בקרטון",
+   "store": "אם המושבות פ\"ת",
+   "stock": 1404,
+   "daily_rate": 259.7,
+   "days_cover": 5.4,
+   "suggest_order_qty": 415
+  },
+  {
+   "item": "פחית קוקה קולה זירו 330 מ''ל",
+   "store": "אם המושבות פ\"ת",
+   "stock": 992,
+   "daily_rate": 176.8,
+   "days_cover": 5.6,
+   "suggest_order_qty": 246
+  },
+  {
+   "item": "בצל יבש ישראל",
+   "store": "גני תקווה",
+   "stock": 119.6,
+   "daily_rate": 161.6,
+   "days_cover": 0.7,
+   "suggest_order_qty": 1012
+  },
+  {
+   "item": "פלפל אדום ישראל",
+   "store": "גני תקווה",
+   "stock": 651.5,
+   "daily_rate": 157.5,
+   "days_cover": 4.1,
+   "suggest_order_qty": 452
+  },
+  {
+   "item": "תנובה חלב 3% ליטר ועדת מהדרין בקרטון",
+   "store": "רעננה אחוזה",
+   "stock": 33,
+   "daily_rate": 123.4,
+   "days_cover": 0.3,
+   "suggest_order_qty": 831
+  },
+  {
+   "item": "אבטיח",
+   "store": "רעננה אחוזה",
+   "stock": 57.2,
+   "daily_rate": 121.8,
+   "days_cover": 0.5,
+   "suggest_order_qty": 796
+  },
+  {
+   "item": "תנובה חלב 3% ליטר ועדת מהדרין בקרטון",
+   "store": "בר כוכבא פתח תקווה",
+   "stock": 173,
+   "daily_rate": 109,
+   "days_cover": 1.6,
+   "suggest_order_qty": 590
+  },
+  {
+   "item": "תנובה חלב 3% ליטר ועדת מהדרין בקרטון",
+   "store": "רמת השרון",
+   "stock": 495,
+   "daily_rate": 108.7,
+   "days_cover": 4.6,
+   "suggest_order_qty": 266
+  },
+  {
+   "item": "יוגורט בר פיצפוצי שוקולד דנונה 1.5% שומן 175 גרם",
+   "store": "גני תקווה",
+   "stock": 345,
+   "daily_rate": 108.3,
+   "days_cover": 3.2,
+   "suggest_order_qty": 414
+  },
+  {
+   "item": "לימון ישראל",
+   "store": "גני תקווה",
+   "stock": 260.6,
+   "daily_rate": 102.4,
+   "days_cover": 2.5,
+   "suggest_order_qty": 457
+  },
+  {
+   "item": "תנובה חלב 3% ליטר ועדת מהדרין בקרטון",
+   "store": "הסתדרות פ\"ת",
+   "stock": 648,
+   "daily_rate": 93.6,
+   "days_cover": 6.9,
+   "suggest_order_qty": 8
+  },
+  {
+   "item": "ביצים L רמות השבים 12 יח'",
+   "store": "גני תקווה",
+   "stock": 502,
+   "daily_rate": 91.8,
+   "days_cover": 5.5,
+   "suggest_order_qty": 141
+  },
+  {
+   "item": "קוטג' תנובה 5% שומן 250 גרם",
+   "store": "רמת השרון",
+   "stock": 314,
+   "daily_rate": 91.4,
+   "days_cover": 3.4,
+   "suggest_order_qty": 326
+  },
+  {
+   "item": "קוטג' תנובה 9% שומן 250 גרם",
+   "store": "גני תקווה",
+   "stock": 137,
+   "daily_rate": 90.6,
+   "days_cover": 1.5,
+   "suggest_order_qty": 498
+  },
+  {
+   "item": "אבוקדו  ישראל",
+   "store": "בר כוכבא פתח תקווה",
+   "stock": 229.5,
+   "daily_rate": 89.7,
+   "days_cover": 2.6,
+   "suggest_order_qty": 399
+  }
+ ],
+ "Q20": [
+  {
+   "item": "תאנים ישראל",
+   "arch": "2026-02-02",
+   "qty": 170.3,
+   "stock_val": 3799
+  },
+  {
+   "item": "ענבים אדומים סקרלוטה ישראל",
+   "arch": "2025-12-31",
+   "qty": 100.6,
+   "stock_val": 2732
+  },
+  {
+   "item": "אננס",
+   "arch": "2025-12-14",
+   "qty": 135,
+   "stock_val": 1048
+  },
+  {
+   "item": "ערמונים טיישן",
+   "arch": "2025-12-01",
+   "qty": 70,
+   "stock_val": 815
+  },
+  {
+   "item": "תות שדה טרי 500 גרם",
+   "arch": "2025-11-13",
+   "qty": 75,
+   "stock_val": 563
+  },
+  {
+   "item": "מסכה לשיער סטייל קרטין לאחר החלקה 500 מ\"ל",
+   "arch": "2025-05-01",
+   "qty": 26,
+   "stock_val": 447
+  },
+  {
+   "item": "מלחיה ברונזה בינונית",
+   "arch": "2025-04-30",
+   "qty": 8,
+   "stock_val": 200
+  },
+  {
+   "item": "גליל צלופן עבה במיוחד 4",
+   "arch": "2025-05-31",
+   "qty": 50,
+   "stock_val": 150
+  },
+  {
+   "item": "קופסאות אחסון סט 4 יחידות 250/500/1000/1800 מיליליטר",
+   "arch": "2025-12-16",
+   "qty": 12,
+   "stock_val": 145
+  },
+  {
+   "item": "שעון שבת",
+   "arch": "2025-05-31",
+   "qty": 11,
+   "stock_val": 141
+  },
+  {
+   "item": "סוללות דגם 2032 אנרג'ייזר 2 יח'",
+   "arch": "2025-05-31",
+   "qty": 9,
+   "stock_val": 126
+  },
+  {
+   "item": "עלי בזיליקום מיובשים מקורמיק",
+   "arch": "2025-05-31",
+   "qty": 7,
+   "stock_val": 114
+  },
+  {
+   "item": "דאודורנט ספריי קרמה נרולי 150 מ\"ל",
+   "arch": "2025-05-30",
+   "qty": 12,
+   "stock_val": 106
+  },
+  {
+   "item": "שמפו לשיער סטייל קרטין לאחר החלקה 750 מ\"ל",
+   "arch": "2025-05-01",
+   "qty": 6,
+   "stock_val": 92
+  },
+  {
+   "item": "שיפוד עם מנגנון שחרור",
+   "arch": "2025-05-31",
+   "qty": 10,
+   "stock_val": 60
+  },
+  {
+   "item": "ג'ל אלוורה אפטרסול 200 מ\"ל",
+   "arch": "2025-06-30",
+   "qty": 3,
+   "stock_val": 42
+  },
+  {
+   "item": "מגבת הפלא המתכלה",
+   "arch": "2025-05-31",
+   "qty": 5,
+   "stock_val": 40
+  },
+  {
+   "item": "ספוגית הקסם 15 ס\"מ ניקול 10 יח'",
+   "arch": "2025-05-31",
+   "qty": 3,
+   "stock_val": 21
+  },
+  {
+   "item": "ריבת פרי הדר מעורבת מכיל 50% פרי 320 גרם",
+   "arch": "2025-02-01",
+   "qty": 1,
+   "stock_val": 12
+  },
+  {
+   "item": "ריבת אננס וקיווי מכיל 38% פרי 320 גרם",
+   "arch": "2025-03-31",
+   "qty": 1,
+   "stock_val": 12
+  }
+ ],
+ "Q13": [
+  {
+   "prt": 38688,
+   "Nm": "דנוור סטייק                                                                                                                       ",
+   "cost_base": 95,
+   "cost_now": 112.32,
+   "cost_chg_pct": 18.2,
+   "price_chg_pct": 4.9,
+   "net_recent_2026h1": 432349
+  },
+  {
+   "prt": 65144,
+   "Nm": "כוסות שתיה חמה 8b טל סהר                                                                                                          ",
+   "cost_base": 1.51,
+   "cost_now": 1.78,
+   "cost_chg_pct": 17.5,
+   "price_chg_pct": -24.6,
+   "net_recent_2026h1": 76788
+  }
+ ],
+ "Q22": [
+  {
+   "branch": "אם המושבות פ\"ת",
+   "stock_value": 4008953,
+   "pos_items": 11496,
+   "cost_cov_pct": 98.7
+  },
+  {
+   "branch": "גני תקווה",
+   "stock_value": 3811161,
+   "pos_items": 10606,
+   "cost_cov_pct": 98.9
+  },
+  {
+   "branch": "בר כוכבא פתח תקווה",
+   "stock_value": 2103687,
+   "pos_items": 8751,
+   "cost_cov_pct": 98.8
+  },
+  {
+   "branch": "רעננה אחוזה",
+   "stock_value": 1863429,
+   "pos_items": 8620,
+   "cost_cov_pct": 99.2
+  },
+  {
+   "branch": "רמת השרון",
+   "stock_value": 1748908,
+   "pos_items": 9270,
+   "cost_cov_pct": 98.8
+  },
+  {
+   "branch": "הסתדרות פ\"ת",
+   "stock_value": 1418644,
+   "pos_items": 7269,
+   "cost_cov_pct": 98.7
+  },
+  {
+   "branch": "רחובות",
+   "stock_value": 1355375,
+   "pos_items": 9086,
+   "cost_cov_pct": 98.9
+  },
+  {
+   "branch": "מחסן מרלוג- דנלוג",
+   "stock_value": 975913,
+   "pos_items": 31,
+   "cost_cov_pct": 93.5
+  },
+  {
+   "branch": "חובבי ציון פ\"ת",
+   "stock_value": 933976,
+   "pos_items": 5621,
+   "cost_cov_pct": 99.1
+  },
+  {
+   "branch": "כלנית אור יהודה",
+   "stock_value": 577776,
+   "pos_items": 4244,
+   "cost_cov_pct": 98.7
+  },
+  {
+   "branch": "כץ פתח תקווה",
+   "stock_value": 504696,
+   "pos_items": 4186,
+   "cost_cov_pct": 98.5
+  },
+  {
+   "branch": "כפר סבא- גולני",
+   "stock_value": 364735,
+   "pos_items": 3449,
+   "cost_cov_pct": 99.2
+  },
+  {
+   "branch": "מרלו\"ג - פתח תקווה",
+   "stock_value": 62454,
+   "pos_items": 6,
+   "cost_cov_pct": 100
+  },
+  {
+   "branch": "מכון וייצמן",
+   "stock_value": 8254,
+   "pos_items": 82,
+   "cost_cov_pct": 79.3
+  }
+ ],
+ "Q23": [
+  {
+   "item": "שרי לובלו תמר ישראל",
+   "store": "גני תקווה",
+   "dept": "פירות וירקות ללא מע\"מ",
+   "stock": 16020.3,
+   "daily_rate": 29.99,
+   "days_cover": 534.3,
+   "tied_cash": 120152
+  },
+  {
+   "item": "תפוח אדמה אדום ארוז ישראל",
+   "store": "בר כוכבא פתח תקווה",
+   "dept": "פירות וירקות ללא מע\"מ",
+   "stock": 28723.4,
+   "daily_rate": 9.86,
+   "days_cover": 2912.9,
+   "tied_cash": 77553
+  },
+  {
+   "item": "שרי לובלו תמר ישראל",
+   "store": "אם המושבות פ\"ת",
+   "dept": "פירות וירקות ללא מע\"מ",
+   "stock": 10046.4,
+   "daily_rate": 13.68,
+   "days_cover": 734.5,
+   "tied_cash": 75348
+  },
+  {
+   "item": "תפוח אדמה לבן ארוז ישראל",
+   "store": "בר כוכבא פתח תקווה",
+   "dept": "פירות וירקות ללא מע\"מ",
+   "stock": 25303.3,
+   "daily_rate": 16.47,
+   "days_cover": 1536.3,
+   "tied_cash": 60728
+  },
+  {
+   "item": "כרובית ישראל",
+   "store": "אם המושבות פ\"ת",
+   "dept": "פירות וירקות ללא מע\"מ",
+   "stock": 7661.2,
+   "daily_rate": 24.85,
+   "days_cover": 308.3,
+   "tied_cash": 45967
+  },
+  {
+   "item": "תות שדה",
+   "store": "גני תקווה",
+   "dept": "פירות וירקות ללא מע\"מ",
+   "stock": 5311,
+   "daily_rate": 91.25,
+   "days_cover": 58.2,
+   "tied_cash": 43178
+  },
+  {
+   "item": "כרובית ישראל",
+   "store": "גני תקווה",
+   "dept": "פירות וירקות ללא מע\"מ",
+   "stock": 7014.6,
+   "daily_rate": 32.98,
+   "days_cover": 212.7,
+   "tied_cash": 42088
+  },
+  {
+   "item": "סטייק אנטריקוט זוגות מצונן (שקיל)",
+   "store": "אם המושבות פ\"ת",
+   "dept": "בשר ועוף טרי",
+   "stock": 229.5,
+   "daily_rate": 0.58,
+   "days_cover": 397.5,
+   "tied_cash": 39649
+  },
+  {
+   "item": "בננה ישראל",
+   "store": "בר כוכבא פתח תקווה",
+   "dept": "פירות וירקות ללא מע\"מ",
+   "stock": 5734.2,
+   "daily_rate": 148.91,
+   "days_cover": 38.5,
+   "tied_cash": 37272
+  },
+  {
+   "item": "שרי לובלו תמר ישראל",
+   "store": "רמת השרון",
+   "dept": "פירות וירקות ללא מע\"מ",
+   "stock": 4654.8,
+   "daily_rate": 1.17,
+   "days_cover": 3968.4,
+   "tied_cash": 36121
+  },
+  {
+   "item": "בננה ישראל",
+   "store": "גני תקווה",
+   "dept": "פירות וירקות ללא מע\"מ",
+   "stock": 5496.3,
+   "daily_rate": 280.01,
+   "days_cover": 19.6,
+   "tied_cash": 35726
+  },
+  {
+   "item": "תות שדה",
+   "store": "רחובות",
+   "dept": "פירות וירקות ללא מע\"מ",
+   "stock": 4282,
+   "daily_rate": 3.99,
+   "days_cover": 1073.5,
+   "tied_cash": 34813
+  },
+  {
+   "item": "ענב לבן",
+   "store": "גני תקווה",
+   "dept": "פירות וירקות ללא מע\"מ",
+   "stock": 1303.5,
+   "daily_rate": 58.52,
+   "days_cover": 22.3,
+   "tied_cash": 32875
+  },
+  {
+   "item": "שרי לובלו תמר ישראל",
+   "store": "רעננה אחוזה",
+   "dept": "פירות וירקות ללא מע\"מ",
+   "stock": 4127.1,
+   "daily_rate": 3.45,
+   "days_cover": 1195.2,
+   "tied_cash": 30954
+  },
+  {
+   "item": "בננה ישראל",
+   "store": "אם המושבות פ\"ת",
+   "dept": "פירות וירקות ללא מע\"מ",
+   "stock": 4727.4,
+   "daily_rate": 211.73,
+   "days_cover": 22.3,
+   "tied_cash": 30728
+  },
+  {
+   "item": "חמאה תנובה 81% שומן 200 גרם",
+   "store": "רעננה אחוזה",
+   "dept": "מוצרי חלב וביצים",
+   "stock": 3570,
+   "daily_rate": 27.6,
+   "days_cover": 129.4,
+   "tied_cash": 26311
+  },
+  {
+   "item": "שרי לובלו תמר ישראל",
+   "store": "בר כוכבא פתח תקווה",
+   "dept": "פירות וירקות ללא מע\"מ",
+   "stock": 3224.4,
+   "daily_rate": 2.88,
+   "days_cover": 1118.4,
+   "tied_cash": 25021
+  },
+  {
+   "item": "אננס קאפי פרימיום",
+   "store": "אם המושבות פ\"ת",
+   "dept": "פירות וירקות ללא מע\"מ",
+   "stock": 1154,
+   "daily_rate": 0.28,
+   "days_cover": 4108.2,
+   "tied_cash": 23726
+  },
+  {
+   "item": "אננס קאפי פרימיום",
+   "store": "גני תקווה",
+   "dept": "פירות וירקות ללא מע\"מ",
+   "stock": 1121,
+   "daily_rate": 0.3,
+   "days_cover": 3695.1,
+   "tied_cash": 23048
+  },
+  {
+   "item": "ענב שחור",
+   "store": "גני תקווה",
+   "dept": "פירות וירקות ללא מע\"מ",
+   "stock": 661.5,
+   "daily_rate": 0,
+   "days_cover": 160023.4,
+   "tied_cash": 20533
+  }
+ ],
+ "Q14": [
+  {
+   "prt": 242,
+   "Nm": "עגבניה ישראל                                                                                                                      ",
+   "net": 7310234,
+   "margin_ils": 4289954,
+   "margin_pct": 58.7
+  },
+  {
+   "prt": 886,
+   "Nm": "עגבניות שרי תמר ישראל                                                                                                             ",
+   "net": 6430546,
+   "margin_ils": 4093497,
+   "margin_pct": 63.7
+  },
+  {
+   "prt": 897,
+   "Nm": "מלפפון ישראל                                                                                                                      ",
+   "net": 7406953,
+   "margin_ils": 2433787,
+   "margin_pct": 32.9
+  },
+  {
+   "prt": 276,
+   "Nm": "בננה ישראל                                                                                                                        ",
+   "net": 7876623,
+   "margin_ils": 1644004,
+   "margin_pct": 20.9
+  },
+  {
+   "prt": 988,
+   "Nm": "תפוח אדמה אדום ארוז ישראל                                                                                                         ",
+   "net": 2196452,
+   "margin_ils": 1553865,
+   "margin_pct": 70.7
+  },
+  {
+   "prt": 26004,
+   "Nm": "אבטיח                                                                                                                             ",
+   "net": 2585899,
+   "margin_ils": 1545156,
+   "margin_pct": 59.8
+  },
+  {
+   "prt": 67056,
+   "Nm": "שניצל עוף טרי פרמיום ארוז חתם פרימיום                                                                                             ",
+   "net": 5722775,
+   "margin_ils": 1441669,
+   "margin_pct": 25.2
+  },
+  {
+   "prt": 258,
+   "Nm": "תפוח אדמה לבן ארוז ישראל                                                                                                          ",
+   "net": 1816137,
+   "margin_ils": 1303866,
+   "margin_pct": 71.8
+  },
+  {
+   "prt": 299,
+   "Nm": "בצל יבש ישראל                                                                                                                     ",
+   "net": 3009154,
+   "margin_ils": 1221493,
+   "margin_pct": 40.6
+  },
+  {
+   "prt": 64131,
+   "Nm": "בשר טחון  טרי (שקיל טרי)                                                                                                          ",
+   "net": 4870010,
+   "margin_ils": 1181577,
+   "margin_pct": 24.3
+  },
+  {
+   "prt": 41771,
+   "Nm": "תפוח אדמה גורמה דוד משה ישראל                                                                                                     ",
+   "net": 2759884,
+   "margin_ils": 1127149,
+   "margin_pct": 40.8
+  },
+  {
+   "prt": 105,
+   "Nm": "תפוח עץ פינק ליידי ארה\"ב                                                                                                          ",
+   "net": 2257354,
+   "margin_ils": 1089211,
+   "margin_pct": 48.3
+  },
+  {
+   "prt": 15,
+   "Nm": "נקטרינה ישראל                                                                                                                     ",
+   "net": 1914481,
+   "margin_ils": 1024638,
+   "margin_pct": 53.5
+  },
+  {
+   "prt": 68152,
+   "Nm": "תות שדה טרי 500 גרם                                                                                                               ",
+   "net": 1934502,
+   "margin_ils": 983112,
+   "margin_pct": 50.8
+  },
+  {
+   "prt": 147,
+   "Nm": "ענב לבן ווינטר קינג                                                                                                               ",
+   "net": 3141516,
+   "margin_ils": 983105,
+   "margin_pct": 31.3
+  },
+  {
+   "prt": 34665,
+   "Nm": "מארז פיתות בית הפיתה                                                                                                              ",
+   "net": 2356653,
+   "margin_ils": 972123,
+   "margin_pct": 41.3
+  },
+  {
+   "prt": 47974,
+   "Nm": "אבוקדו בשל                                                                                                                        ",
+   "net": 1975955,
+   "margin_ils": 937836,
+   "margin_pct": 47.5
+  },
+  {
+   "prt": 43,
+   "Nm": "בטטה ישראל                                                                                                                        ",
+   "net": 1734298,
+   "margin_ils": 926671,
+   "margin_pct": 53.4
+  },
+  {
+   "prt": 48496,
+   "Nm": "דג פילה סלמון פרוס מאסטר פוד (שקיל טרי)                                                                                           ",
+   "net": 2254103,
+   "margin_ils": 922449,
+   "margin_pct": 40.9
+  },
+  {
+   "prt": 5530,
+   "Nm": "תנובה חלב 3% ליטר ועדת מהדרין בקרטון                                                                                              ",
+   "net": 6112123,
+   "margin_ils": 877116,
+   "margin_pct": 14.4
+  }
+ ],
+ "Q26": [
+  {
+   "yr": 2024,
+   "q": 1,
+   "net_M": 49.08,
+   "disc_rev_share_pct": 25.1,
+   "formal_promo_share_pct": 16,
+   "avg_depth_pct": 14.4
+  },
+  {
+   "yr": 2024,
+   "q": 2,
+   "net_M": 61.73,
+   "disc_rev_share_pct": 24.2,
+   "formal_promo_share_pct": 14,
+   "avg_depth_pct": 12
+  },
+  {
+   "yr": 2024,
+   "q": 3,
+   "net_M": 67.45,
+   "disc_rev_share_pct": 24.5,
+   "formal_promo_share_pct": 13.5,
+   "avg_depth_pct": 11.1
+  },
+  {
+   "yr": 2024,
+   "q": 4,
+   "net_M": 67.11,
+   "disc_rev_share_pct": 23,
+   "formal_promo_share_pct": 12.8,
+   "avg_depth_pct": 10.8
+  },
+  {
+   "yr": 2025,
+   "q": 1,
+   "net_M": 67.95,
+   "disc_rev_share_pct": 21.8,
+   "formal_promo_share_pct": 12.7,
+   "avg_depth_pct": 12.4
+  },
+  {
+   "yr": 2025,
+   "q": 2,
+   "net_M": 75.11,
+   "disc_rev_share_pct": 23.9,
+   "formal_promo_share_pct": 13.6,
+   "avg_depth_pct": 13
+  },
+  {
+   "yr": 2025,
+   "q": 3,
+   "net_M": 70.06,
+   "disc_rev_share_pct": 25,
+   "formal_promo_share_pct": 14.4,
+   "avg_depth_pct": 14
+  },
+  {
+   "yr": 2025,
+   "q": 4,
+   "net_M": 72.71,
+   "disc_rev_share_pct": 24.8,
+   "formal_promo_share_pct": 16.6,
+   "avg_depth_pct": 15.4
+  },
+  {
+   "yr": 2026,
+   "q": 1,
+   "net_M": 80.52,
+   "disc_rev_share_pct": 25.4,
+   "formal_promo_share_pct": 16.5,
+   "avg_depth_pct": 17.3
+  },
+  {
+   "yr": 2026,
+   "q": 2,
+   "net_M": 79.62,
+   "disc_rev_share_pct": 25.1,
+   "formal_promo_share_pct": 14.9,
+   "avg_depth_pct": 15
+  }
+ ],
+ "Q28": [
+  {
+   "prt": 66651,
+   "Nm": "אננס יבוא                                                                                                                         ",
+   "depth_pct": 52.2,
+   "disc_net_K": 77,
+   "disc_margin_pct": -15.2,
+   "verdict": "UNJUSTIFIED(loss)"
+  },
+  {
+   "prt": 20998,
+   "Nm": "משקה אנרגיה בלו 250 מ''ל                                                                                                          ",
+   "depth_pct": 45.7,
+   "disc_net_K": 58,
+   "disc_margin_pct": 33.5,
+   "verdict": "justified(+margin)"
+  },
+  {
+   "prt": 65324,
+   "Nm": "מגבונים לחים KIDDO בודד                                                                                                           ",
+   "depth_pct": 45,
+   "disc_net_K": 226,
+   "disc_margin_pct": 27.6,
+   "verdict": "justified(+margin)"
+  },
+  {
+   "prt": 25553,
+   "Nm": "חטיפי מיקס מעורב מגדים עלית 390 גרם                                                                                               ",
+   "depth_pct": 44.6,
+   "disc_net_K": 128,
+   "disc_margin_pct": -38.3,
+   "verdict": "UNJUSTIFIED(loss)"
+  },
+  {
+   "prt": 66013,
+   "Nm": "שקית רב פעמית \"סופרטל\" : 39*39*18 ס\"מ                                                                                             ",
+   "depth_pct": 43.9,
+   "disc_net_K": 79,
+   "disc_margin_pct": 44.5,
+   "verdict": "justified(+margin)"
+  },
+  {
+   "prt": 65144,
+   "Nm": "כוסות שתיה חמה 8b טל סהר                                                                                                          ",
+   "depth_pct": 43,
+   "disc_net_K": 200,
+   "disc_margin_pct": 42.4,
+   "verdict": "justified(+margin)"
+  },
+  {
+   "prt": 5353,
+   "Nm": "שניצלונים ג'ונגל מאמא עוף 700 גרם                                                                                                 ",
+   "depth_pct": 42.4,
+   "disc_net_K": 50,
+   "disc_margin_pct": 23.6,
+   "verdict": "justified(+margin)"
+  },
+  {
+   "prt": 68460,
+   "Nm": "דגני בוקר כריות נוגט 348 גרם                                                                                                      ",
+   "depth_pct": 41.9,
+   "disc_net_K": 155,
+   "disc_margin_pct": -5.8,
+   "verdict": "UNJUSTIFIED(loss)"
+  },
+  {
+   "prt": 73030,
+   "Nm": "מנות סלמון נורווגי 400 גרם                                                                                                        ",
+   "depth_pct": 40.4,
+   "disc_net_K": 53,
+   "disc_margin_pct": 8.1,
+   "verdict": "justified(+margin)"
+  },
+  {
+   "prt": 30387,
+   "Nm": "בירה בקס 275 מ\"ל 6 יח'                                                                                                            ",
+   "depth_pct": 40.4,
+   "disc_net_K": 53,
+   "disc_margin_pct": -8.8,
+   "verdict": "UNJUSTIFIED(loss)"
+  },
+  {
+   "prt": 58352,
+   "Nm": "שמן זית מור ולבונה 750 מ''ל                                                                                                       ",
+   "depth_pct": 40.2,
+   "disc_net_K": 184,
+   "disc_margin_pct": 17.2,
+   "verdict": "justified(+margin)"
+  },
+  {
+   "prt": 62941,
+   "Nm": "ברוקולי ארוז במגשית  ביכורי שדה ישראל                                                                                             ",
+   "depth_pct": 39.9,
+   "disc_net_K": 79,
+   "disc_margin_pct": 33.7,
+   "verdict": "justified(+margin)"
+  },
+  {
+   "prt": 1010,
+   "Nm": "רסק עגבניות 22% יכין 100 גרם                                                                                                      ",
+   "depth_pct": 39,
+   "disc_net_K": 173,
+   "disc_margin_pct": 28,
+   "verdict": "justified(+margin)"
+  },
+  {
+   "prt": 5574,
+   "Nm": "שניצל אמיתי מאמא עוף 700 גרם                                                                                                      ",
+   "depth_pct": 39,
+   "disc_net_K": 73,
+   "disc_margin_pct": 18.7,
+   "verdict": "justified(+margin)"
+  },
+  {
+   "prt": 6372,
+   "Nm": "שניצלים דק פריך מאמא עוף 700 גרם                                                                                                  ",
+   "depth_pct": 38.6,
+   "disc_net_K": 95,
+   "disc_margin_pct": 12.3,
+   "verdict": "justified(+margin)"
+  },
+  {
+   "prt": 70664,
+   "Nm": "קריסטוליה שמן קנולה 900 מ\"ל                                                                                                       ",
+   "depth_pct": 38.6,
+   "disc_net_K": 398,
+   "disc_margin_pct": 13.4,
+   "verdict": "justified(+margin)"
+  },
+  {
+   "prt": 6574,
+   "Nm": "שניצלים בציפוי מעודן מאמא עוף 700 גרם                                                                                             ",
+   "depth_pct": 38.4,
+   "disc_net_K": 81,
+   "disc_margin_pct": 19.5,
+   "verdict": "justified(+margin)"
+  },
+  {
+   "prt": 44294,
+   "Nm": "טחינה 100% שומשום בארכה 450 גרם                                                                                                   ",
+   "depth_pct": 37.5,
+   "disc_net_K": 70,
+   "disc_margin_pct": 21.5,
+   "verdict": "justified(+margin)"
+  },
+  {
+   "prt": 30665,
+   "Nm": "שום ארוז סין                                                                                                                      ",
+   "depth_pct": 37.3,
+   "disc_net_K": 369,
+   "disc_margin_pct": 57.1,
+   "verdict": "justified(+margin)"
+  },
+  {
+   "prt": 33586,
+   "Nm": "ברוקולי במגשית                                                                                                                    ",
+   "depth_pct": 37.2,
+   "disc_net_K": 66,
+   "disc_margin_pct": -5.2,
+   "verdict": "UNJUSTIFIED(loss)"
+  }
+ ],
+ "Q29": [
+  {
+   "phase": "L-tray ON promo",
+   "nmonths": 11,
+   "mates_fullprice_qpd": 770.3,
+   "L_tray_qpd": 275.2,
+   "whole_group_qpd": 1050.7
+  },
+  {
+   "phase": "L-tray full price",
+   "nmonths": 6,
+   "mates_fullprice_qpd": 985,
+   "L_tray_qpd": 66.6,
+   "whole_group_qpd": 1054.4
+  }
+ ],
+ "Q30": {
+  "sets": [
+   [
+    {
+     "customer": "משרדי סופרטל",
+     "Type": 1,
+     "net_2024plus": 309972,
+     "top_dept": "משקאות לא אלכוהולים                     "
+    },
+    {
+     "customer": "יעל דברשוילי",
+     "Type": 900,
+     "net_2024plus": 138696,
+     "top_dept": "בשר ועוף טרי                            "
+    },
+    {
+     "customer": "מלי מורדוף",
+     "Type": 900,
+     "net_2024plus": 118629,
+     "top_dept": "פירות וירקות ללא מע\"מ                   "
+    },
+    {
+     "customer": "ג'רלד חן",
+     "Type": 900,
+     "net_2024plus": 109297,
+     "top_dept": "מוצרי חלב וביצים                        "
+    },
+    {
+     "customer": "יאנה טור",
+     "Type": 900,
+     "net_2024plus": 107756,
+     "top_dept": "פירות וירקות ללא מע\"מ                   "
+    },
+    {
+     "customer": "לילך צים",
+     "Type": 900,
+     "net_2024plus": 103802,
+     "top_dept": "בשר ועוף טרי                            "
+    },
+    {
+     "customer": "גולן גבאי",
+     "Type": 900,
+     "net_2024plus": 100208,
+     "top_dept": "פירות וירקות ללא מע\"מ                   "
+    },
+    {
+     "customer": "איריס  אמיתי לייש",
+     "Type": 900,
+     "net_2024plus": 98695,
+     "top_dept": "מוצרי חלב וביצים                        "
+    },
+    {
+     "customer": "מירב חומן",
+     "Type": 900,
+     "net_2024plus": 98619,
+     "top_dept": "פירות וירקות ללא מע\"מ                   "
+    },
+    {
+     "customer": "יוסי עטר",
+     "Type": 900,
+     "net_2024plus": 98377,
+     "top_dept": "פירות וירקות ללא מע\"מ                   "
+    },
+    {
+     "customer": "גיא לופו",
+     "Type": 900,
+     "net_2024plus": 97240,
+     "top_dept": "פירות וירקות ללא מע\"מ                   "
+    },
+    {
+     "customer": "איריס  יעקובובסקי",
+     "Type": 900,
+     "net_2024plus": 95843,
+     "top_dept": "מוצרי חלב וביצים                        "
+    },
+    {
+     "customer": "שי קרן",
+     "Type": 900,
+     "net_2024plus": 95225,
+     "top_dept": "מוצרי חלב וביצים                        "
+    },
+    {
+     "customer": "שירה  כהן",
+     "Type": 900,
+     "net_2024plus": 92897,
+     "top_dept": "פירות וירקות ללא מע\"מ                   "
+    },
+    {
+     "customer": "אור אסולין",
+     "Type": 900,
+     "net_2024plus": 92550,
+     "top_dept": "פירות וירקות ללא מע\"מ                   "
+    },
+    {
+     "customer": "גלית גלירו גבאי",
+     "Type": 900,
+     "net_2024plus": 90966,
+     "top_dept": "פירות וירקות ללא מע\"מ                   "
+    },
+    {
+     "customer": "Farmon Maropov",
+     "Type": 900,
+     "net_2024plus": 90463,
+     "top_dept": "פירות וירקות ללא מע\"מ                   "
+    },
+    {
+     "customer": "גל נוראני",
+     "Type": 900,
+     "net_2024plus": 89189,
+     "top_dept": "פירות וירקות ללא מע\"מ                   "
+    },
+    {
+     "customer": "סיבוס סודסקו -   רחובות",
+     "Type": 1,
+     "net_2024plus": 89144,
+     "top_dept": "מוצרי חלב וביצים                        "
+    },
+    {
+     "customer": "שרון רמר ביאל",
+     "Type": 900,
+     "net_2024plus": 88480,
+     "top_dept": "פירות וירקות ללא מע\"מ                   "
+    }
+   ],
+   [
+    {
+     "card": 999990,
+     "receipts": 71,
+     "net_june": 21158,
+     "top_dept": "בשר ועוף טרי                            "
+    },
+    {
+     "card": 301181,
+     "receipts": 71,
+     "net_june": 7673,
+     "top_dept": "מוצרי חלב וביצים                        "
+    },
+    {
+     "card": 3108,
+     "receipts": 16,
+     "net_june": 6901,
+     "top_dept": "פירות וירקות ללא מע\"מ                   "
+    },
+    {
+     "card": 806171,
+     "receipts": 17,
+     "net_june": 6511,
+     "top_dept": "פירות וירקות ללא מע\"מ                   "
+    },
+    {
+     "card": 6914,
+     "receipts": 12,
+     "net_june": 6109,
+     "top_dept": "מוצרי חלב וביצים                        "
+    },
+    {
+     "card": 17801,
+     "receipts": 14,
+     "net_june": 5613,
+     "top_dept": "פירות וירקות ללא מע\"מ                   "
+    },
+    {
+     "card": 13661,
+     "receipts": 15,
+     "net_june": 5529,
+     "top_dept": "מוצרי חלב וביצים                        "
+    },
+    {
+     "card": 11048,
+     "receipts": 12,
+     "net_june": 5462,
+     "top_dept": "פירות וירקות ללא מע\"מ                   "
+    },
+    {
+     "card": 331,
+     "receipts": 78,
+     "net_june": 5319,
+     "top_dept": "פירות וירקות ללא מע\"מ                   "
+    },
+    {
+     "card": 17819,
+     "receipts": 20,
+     "net_june": 5276,
+     "top_dept": "בשר ועוף טרי                            "
+    },
+    {
+     "card": 6228,
+     "receipts": 14,
+     "net_june": 5074,
+     "top_dept": "בשר ועוף טרי                            "
+    },
+    {
+     "card": 133,
+     "receipts": 44,
+     "net_june": 5041,
+     "top_dept": "מוצרי חלב וביצים                        "
+    },
+    {
+     "card": 24397,
+     "receipts": 12,
+     "net_june": 4980,
+     "top_dept": "מוצרי חלב וביצים                        "
+    },
+    {
+     "card": 6062,
+     "receipts": 7,
+     "net_june": 4904,
+     "top_dept": "פירות וירקות ללא מע\"מ                   "
+    },
+    {
+     "card": 8225,
+     "receipts": 17,
+     "net_june": 4891,
+     "top_dept": "מוצרי חלב וביצים                        "
+    },
+    {
+     "card": 12110,
+     "receipts": 10,
+     "net_june": 4872,
+     "top_dept": "פירות וירקות ללא מע\"מ                   "
+    },
+    {
+     "card": 2295,
+     "receipts": 18,
+     "net_june": 4867,
+     "top_dept": "פירות וירקות ללא מע\"מ                   "
+    },
+    {
+     "card": 15910,
+     "receipts": 25,
+     "net_june": 4839,
+     "top_dept": "מוצרי חלב וביצים                        "
+    },
+    {
+     "card": 803094,
+     "receipts": 6,
+     "net_june": 4672,
+     "top_dept": "פירות וירקות ללא מע\"מ                   "
+    },
+    {
+     "card": 803086,
+     "receipts": 9,
+     "net_june": 4672,
+     "top_dept": "מוצרי חלב וביצים                        "
+    }
+   ]
+  ]
+ },
+ "Q31": [
+  {
+   "store": "גני תקווה                               ",
+   "billed_cost": 1697002,
+   "units": 320097,
+   "billed_days": 543,
+   "avg_unit_cost": 5.3
+  },
+  {
+   "store": "אם המושבות פ\"ת                          ",
+   "billed_cost": 768357,
+   "units": 154626,
+   "billed_days": 543,
+   "avg_unit_cost": 4.97
+  },
+  {
+   "store": "רעננה אחוזה                             ",
+   "billed_cost": 491031,
+   "units": 92134,
+   "billed_days": 456,
+   "avg_unit_cost": 5.33
+  },
+  {
+   "store": "חובבי ציון פ\"ת                          ",
+   "billed_cost": 337953,
+   "units": 78790,
+   "billed_days": 454,
+   "avg_unit_cost": 4.29
+  },
+  {
+   "store": "רחובות                                  ",
+   "billed_cost": 276357,
+   "units": 60907,
+   "billed_days": 455,
+   "avg_unit_cost": 4.54
+  },
+  {
+   "store": "בר כוכבא פתח תקווה                      ",
+   "billed_cost": 260876,
+   "units": 52254,
+   "billed_days": 455,
+   "avg_unit_cost": 4.99
+  },
+  {
+   "store": "הסתדרות פ\"ת                             ",
+   "billed_cost": 231125,
+   "units": 34048,
+   "billed_days": 454,
+   "avg_unit_cost": 6.79
+  },
+  {
+   "store": "כץ פתח תקווה                            ",
+   "billed_cost": 199719,
+   "units": 46628,
+   "billed_days": 454,
+   "avg_unit_cost": 4.28
+  }
+ ],
+ "Q32": {
+  "sets": [
+   [
+    {
+     "seg": "anonymous_bucket",
+     "net_M": 444.2,
+     "pct": 64.2
+    },
+    {
+     "seg": "identified_named",
+     "net_M": 241.4,
+     "pct": 34.9
+    },
+    {
+     "seg": "wolt_delivery",
+     "net_M": 5.6,
+     "pct": 0.8
+    },
+    {
+     "seg": "self_consumption",
+     "net_M": 0.2,
+     "pct": 0
+    },
+    {
+     "seg": "other",
+     "net_M": 0,
+     "pct": 0
+    }
+   ],
+   [
+    {
+     "seg": "real_loyalty_card",
+     "net": 12700486,
+     "pct": 52.2
+    },
+    {
+     "seg": "default_house_card",
+     "net": 11619046,
+     "pct": 47.8
+    }
+   ]
+  ]
+ },
+ "Q33": [
+  {
+   "customer": "Asaf Givoli",
+   "rec_2025": 390,
+   "months_2025": 12,
+   "net_2025": 53823
+  },
+  {
+   "customer": "חני ישר",
+   "rec_2025": 417,
+   "months_2025": 12,
+   "net_2025": 44737
+  },
+  {
+   "customer": "משה בוקובזה",
+   "rec_2025": 175,
+   "months_2025": 12,
+   "net_2025": 25607
+  },
+  {
+   "customer": "צביקה ליבוביץ",
+   "rec_2025": 111,
+   "months_2025": 12,
+   "net_2025": 25394
+  },
+  {
+   "customer": "יוני לוי",
+   "rec_2025": 113,
+   "months_2025": 12,
+   "net_2025": 21571
+  },
+  {
+   "customer": "אלינור חן",
+   "rec_2025": 49,
+   "months_2025": 12,
+   "net_2025": 19617
+  },
+  {
+   "customer": "פנינה מזרחי",
+   "rec_2025": 46,
+   "months_2025": 12,
+   "net_2025": 18677
+  },
+  {
+   "customer": "Shirly Frizinsky",
+   "rec_2025": 43,
+   "months_2025": 12,
+   "net_2025": 18389
+  },
+  {
+   "customer": "נורית סטולר",
+   "rec_2025": 147,
+   "months_2025": 12,
+   "net_2025": 18229
+  },
+  {
+   "customer": "אייל כהן",
+   "rec_2025": 24,
+   "months_2025": 11,
+   "net_2025": 18220
+  },
+  {
+   "customer": "Zayd  Hagos",
+   "rec_2025": 83,
+   "months_2025": 12,
+   "net_2025": 17449
+  },
+  {
+   "customer": "עדי שרגל",
+   "rec_2025": 121,
+   "months_2025": 12,
+   "net_2025": 16322
+  },
+  {
+   "customer": "קרן בכור",
+   "rec_2025": 69,
+   "months_2025": 11,
+   "net_2025": 15992
+  },
+  {
+   "customer": "גל גורביץ",
+   "rec_2025": 182,
+   "months_2025": 11,
+   "net_2025": 15584
+  },
+  {
+   "customer": "שובל ששון",
+   "rec_2025": 81,
+   "months_2025": 12,
+   "net_2025": 15476
+  },
+  {
+   "customer": "דבורית אורלי",
+   "rec_2025": 162,
+   "months_2025": 12,
+   "net_2025": 14979
+  },
+  {
+   "customer": "דוד רובינוב",
+   "rec_2025": 57,
+   "months_2025": 12,
+   "net_2025": 14899
+  },
+  {
+   "customer": "אושרת במברון",
+   "rec_2025": 104,
+   "months_2025": 10,
+   "net_2025": 14701
+  },
+  {
+   "customer": "חביבה חן",
+   "rec_2025": 26,
+   "months_2025": 10,
+   "net_2025": 14476
+  },
+  {
+   "customer": "דניאל פוקס",
+   "rec_2025": 48,
+   "months_2025": 12,
+   "net_2025": 14153
+  }
+ ],
+ "Q34": [
+  {
+   "dept_a": "פירות וירקות ללא מע\"מ                   ",
+   "dept_b": "מוצרי חלב וביצים                        ",
+   "baskets_together": 16046
+  },
+  {
+   "dept_a": "מוצרי חלב וביצים                        ",
+   "dept_b": "מוצרי יסוד                              ",
+   "baskets_together": 10579
+  },
+  {
+   "dept_a": "פירות וירקות ללא מע\"מ                   ",
+   "dept_b": "מוצרי יסוד                              ",
+   "baskets_together": 10098
+  },
+  {
+   "dept_a": "לחם ותחליפיו                            ",
+   "dept_b": "מוצרי חלב וביצים                        ",
+   "baskets_together": 8947
+  },
+  {
+   "dept_a": "פירות וירקות ללא מע\"מ                   ",
+   "dept_b": "לחם ותחליפיו                            ",
+   "baskets_together": 7838
+  },
+  {
+   "dept_a": "מוצרי חלב וביצים                        ",
+   "dept_b": "דגני בוקר ומאפה מתוק                    ",
+   "baskets_together": 7027
+  },
+  {
+   "dept_a": "מוצרי חלב וביצים                        ",
+   "dept_b": "קפואים                                  ",
+   "baskets_together": 6552
+  },
+  {
+   "dept_a": "פירות וירקות ללא מע\"מ                   ",
+   "dept_b": "קפואים                                  ",
+   "baskets_together": 6125
+  },
+  {
+   "dept_a": "מוצרי חלב וביצים                        ",
+   "dept_b": "משקאות לא אלכוהולים                     ",
+   "baskets_together": 5786
+  },
+  {
+   "dept_a": "פירות וירקות ללא מע\"מ                   ",
+   "dept_b": "דגני בוקר ומאפה מתוק                    ",
+   "baskets_together": 5771
+  },
+  {
+   "dept_a": "לחם ותחליפיו                            ",
+   "dept_b": "מוצרי יסוד                              ",
+   "baskets_together": 5395
+  },
+  {
+   "dept_a": "פירות וירקות ללא מע\"מ                   ",
+   "dept_b": "משקאות לא אלכוהולים                     ",
+   "baskets_together": 5230
+  },
+  {
+   "dept_a": "מוצרי חלב וביצים                        ",
+   "dept_b": "מזון מקורר ארוז                         ",
+   "baskets_together": 4977
+  },
+  {
+   "dept_a": "מוצרי חלב וביצים                        ",
+   "dept_b": "מוצרי ניקיון וחד פעמי                   ",
+   "baskets_together": 4915
+  },
+  {
+   "dept_a": "מוצרי יסוד                              ",
+   "dept_b": "דגני בוקר ומאפה מתוק                    ",
+   "baskets_together": 4611
+  },
+  {
+   "dept_a": "פירות וירקות ללא מע\"מ                   ",
+   "dept_b": "מוצרי ניקיון וחד פעמי                   ",
+   "baskets_together": 4503
+  },
+  {
+   "dept_a": "מוצרי יסוד                              ",
+   "dept_b": "קפואים                                  ",
+   "baskets_together": 4501
+  },
+  {
+   "dept_a": "פירות וירקות ללא מע\"מ                   ",
+   "dept_b": "מזון מקורר ארוז                         ",
+   "baskets_together": 4455
+  },
+  {
+   "dept_a": "חטיפים מלוחים ופיצוחים                  ",
+   "dept_b": "מוצרי חלב וביצים                        ",
+   "baskets_together": 4394
+  },
+  {
+   "dept_a": "מוצרי יסוד                              ",
+   "dept_b": "משקאות לא אלכוהולים                     ",
+   "baskets_together": 3886
+  }
+ ],
+ "Q27": [
+  {
+   "store": 13,
+   "Nm": "כץ פתח תקווה                            ",
+   "syst_dev_pct": 1.01,
+   "pct_rev_offmedian": 16
+  },
+  {
+   "store": 26,
+   "Nm": "רעננה אחוזה                             ",
+   "syst_dev_pct": 0.4,
+   "pct_rev_offmedian": 6
+  },
+  {
+   "store": 25,
+   "Nm": "אם המושבות פ\"ת                          ",
+   "syst_dev_pct": 0.27,
+   "pct_rev_offmedian": 5
+  },
+  {
+   "store": 18,
+   "Nm": "גני תקווה                               ",
+   "syst_dev_pct": 0.26,
+   "pct_rev_offmedian": 5
+  },
+  {
+   "store": 31,
+   "Nm": "רמת השרון                               ",
+   "syst_dev_pct": 0.08,
+   "pct_rev_offmedian": 8
+  },
+  {
+   "store": 19,
+   "Nm": "הסתדרות פ\"ת                             ",
+   "syst_dev_pct": -0.21,
+   "pct_rev_offmedian": 5
+  },
+  {
+   "store": 23,
+   "Nm": "רחובות                                  ",
+   "syst_dev_pct": -0.78,
+   "pct_rev_offmedian": 12
+  },
+  {
+   "store": 24,
+   "Nm": "חובבי ציון פ\"ת                          ",
+   "syst_dev_pct": -1.92,
+   "pct_rev_offmedian": 23
+  },
+  {
+   "store": 27,
+   "Nm": "בר כוכבא פתח תקווה                      ",
+   "syst_dev_pct": -4.48,
+   "pct_rev_offmedian": 21
+  }
+ ],
+ "Q25": [
+  {
+   "mz": 21278,
+   "promo_net_K": 177,
+   "nprt": 5,
+   "depth_pct": 53.1,
+   "promo_margin_pct": -18.3,
+   "fullprice_margin_pct": 50
+  },
+  {
+   "mz": 19445,
+   "promo_net_K": 188,
+   "nprt": 22,
+   "depth_pct": 35.9,
+   "promo_margin_pct": 4,
+   "fullprice_margin_pct": 38.4
+  },
+  {
+   "mz": 19025,
+   "promo_net_K": 335,
+   "nprt": 7,
+   "depth_pct": 30.8,
+   "promo_margin_pct": 26.2,
+   "fullprice_margin_pct": 55
+  },
+  {
+   "mz": 16549,
+   "promo_net_K": 187,
+   "nprt": 2,
+   "depth_pct": 22.8,
+   "promo_margin_pct": 9.7,
+   "fullprice_margin_pct": 32.7
+  },
+  {
+   "mz": 16829,
+   "promo_net_K": 260,
+   "nprt": 1,
+   "depth_pct": 19,
+   "promo_margin_pct": -23.1,
+   "fullprice_margin_pct": -0.5
+  },
+  {
+   "mz": 15269,
+   "promo_net_K": 235,
+   "nprt": 2,
+   "depth_pct": 19,
+   "promo_margin_pct": -23.1,
+   "fullprice_margin_pct": -0.7
+  },
+  {
+   "mz": 5148,
+   "promo_net_K": 166,
+   "nprt": 5,
+   "depth_pct": 38.7,
+   "promo_margin_pct": 62.3,
+   "fullprice_margin_pct": 79.4
+  },
+  {
+   "mz": 736,
+   "promo_net_K": 425,
+   "nprt": 9,
+   "depth_pct": 21.7,
+   "promo_margin_pct": 41.7,
+   "fullprice_margin_pct": 57.7
+  },
+  {
+   "mz": 17135,
+   "promo_net_K": 220,
+   "nprt": 10,
+   "depth_pct": 26.2,
+   "promo_margin_pct": 23.5,
+   "fullprice_margin_pct": 36.7
+  },
+  {
+   "mz": 10911,
+   "promo_net_K": 359,
+   "nprt": 24,
+   "depth_pct": 14,
+   "promo_margin_pct": 27.2,
+   "fullprice_margin_pct": 38.4
+  },
+  {
+   "mz": 78,
+   "promo_net_K": 238,
+   "nprt": 25,
+   "depth_pct": 12.2,
+   "promo_margin_pct": 27.7,
+   "fullprice_margin_pct": 38.4
+  },
+  {
+   "mz": 6848,
+   "promo_net_K": 983,
+   "nprt": 5,
+   "depth_pct": 12.2,
+   "promo_margin_pct": 25.5,
+   "fullprice_margin_pct": 35.5
+  },
+  {
+   "mz": 16173,
+   "promo_net_K": 240,
+   "nprt": 9,
+   "depth_pct": 25.2,
+   "promo_margin_pct": 47.8,
+   "fullprice_margin_pct": 57.7
+  },
+  {
+   "mz": 8183,
+   "promo_net_K": 958,
+   "nprt": 7,
+   "depth_pct": 10.7,
+   "promo_margin_pct": 21,
+   "fullprice_margin_pct": 30.1
+  },
+  {
+   "mz": 20305,
+   "promo_net_K": 152,
+   "nprt": 3,
+   "depth_pct": 9.8,
+   "promo_margin_pct": 22.3,
+   "fullprice_margin_pct": 30.2
+  },
+  {
+   "mz": 15942,
+   "promo_net_K": 460,
+   "nprt": 6,
+   "depth_pct": 10.8,
+   "promo_margin_pct": 22.8,
+   "fullprice_margin_pct": 30.3
+  },
+  {
+   "mz": 8860,
+   "promo_net_K": 171,
+   "nprt": 4,
+   "depth_pct": 7.3,
+   "promo_margin_pct": 27.6,
+   "fullprice_margin_pct": 33.3
+  },
+  {
+   "mz": 16363,
+   "promo_net_K": 152,
+   "nprt": 11,
+   "depth_pct": 19.5,
+   "promo_margin_pct": 34.6,
+   "fullprice_margin_pct": 37.8
+  },
+  {
+   "mz": 14696,
+   "promo_net_K": 258,
+   "nprt": 4032,
+   "depth_pct": 0.1,
+   "promo_margin_pct": 34,
+   "fullprice_margin_pct": 34.7
+  },
+  {
+   "mz": 5272,
+   "promo_net_K": 2024,
+   "nprt": 10036,
+   "depth_pct": 0,
+   "promo_margin_pct": 36.2,
+   "fullprice_margin_pct": 35.3
+  }
+ ],
+ "Q24": [
+  {
+   "tier": "1_strong_uplift(>=2x)",
+   "items": 434,
+   "may_net_K": 3798,
+   "net_share_pct": 24,
+   "median_ratio": 2.56,
+   "incr_units_K": 232.6
+  },
+  {
+   "tier": "2_moderate(1.2-2x)",
+   "items": 1328,
+   "may_net_K": 6539,
+   "net_share_pct": 41.3,
+   "median_ratio": 1.43,
+   "incr_units_K": 188.2
+  },
+  {
+   "tier": "3_flat(0.9-1.2x)",
+   "items": 1174,
+   "may_net_K": 3863,
+   "net_share_pct": 24.4,
+   "median_ratio": 1.04,
+   "incr_units_K": 42.8
+  },
+  {
+   "tier": "4_declined(<0.9x)",
+   "items": 771,
+   "may_net_K": 1621,
+   "net_share_pct": 10.2,
+   "median_ratio": 0.77,
+   "incr_units_K": -41.5
+  }
+ ],
+ "Q41": [
+  {
+   "candidate_items": 4009,
+   "rev_at_risk_K": 493.7,
+   "pct_h1_rev": 0.308,
+   "stock_units": 316667
+  }
+ ],
+ "Q36": [
+  {
+   "supplier": "לויתן סחר ומוצרים חקלאיים בע`מ                    ",
+   "wtd_cost_infl_pct": 8.8,
+   "n_items": 42,
+   "rev_musd": 16.3
+  },
+  {
+   "supplier": "שטראוס גרופ בע\"מ-יבש                              ",
+   "wtd_cost_infl_pct": 4.1,
+   "n_items": 298,
+   "rev_musd": 16.5
+  },
+  {
+   "supplier": "טרה - החברה המרכזית                               ",
+   "wtd_cost_infl_pct": 2.7,
+   "n_items": 149,
+   "rev_musd": 14.4
+  },
+  {
+   "supplier": "ביכורי שדה דרום 2002 בע\"מ                         ",
+   "wtd_cost_infl_pct": 2.7,
+   "n_items": 184,
+   "rev_musd": 106.5
+  },
+  {
+   "supplier": "מאפיית אגמי(מכר)                                  ",
+   "wtd_cost_infl_pct": 2.5,
+   "n_items": 20,
+   "rev_musd": 6.4
+  },
+  {
+   "supplier": "מחלבות גד (שיווק - 1992) בע\"מ                     ",
+   "wtd_cost_infl_pct": 1.1,
+   "n_items": 89,
+   "rev_musd": 8.8
+  },
+  {
+   "supplier": "מן הטבע מילובר בע\"מ (בארותיים)                    ",
+   "wtd_cost_infl_pct": 0.5,
+   "n_items": 11,
+   "rev_musd": 4
+  },
+  {
+   "supplier": "ג. וילי-פוד אינטרנשיונל בע\"מ                      ",
+   "wtd_cost_infl_pct": 0.5,
+   "n_items": 250,
+   "rev_musd": 9
+  },
+  {
+   "supplier": "בוארון סלטים ביתיים בע\"מ                          ",
+   "wtd_cost_infl_pct": 0.2,
+   "n_items": 86,
+   "rev_musd": 3.5
+  },
+  {
+   "supplier": "יוניליוור ישראל שיווק בע\"מ                        ",
+   "wtd_cost_infl_pct": 0.1,
+   "n_items": 326,
+   "rev_musd": 8.7
+  },
+  {
+   "supplier": "שלמה א. אנג'ל בע\"מ                                ",
+   "wtd_cost_infl_pct": 0.1,
+   "n_items": 30,
+   "rev_musd": 5.8
+  },
+  {
+   "supplier": "מרינה פטריות הגליל בע\"מ                           ",
+   "wtd_cost_infl_pct": 0,
+   "n_items": 98,
+   "rev_musd": 13.1
+  },
+  {
+   "supplier": "אסם נסטלה ישראל בע\"מ                              ",
+   "wtd_cost_infl_pct": -0.1,
+   "n_items": 579,
+   "rev_musd": 27.3
+  },
+  {
+   "supplier": "הקסם הירוק משה עזרא בע\"מ                          ",
+   "wtd_cost_infl_pct": -0.1,
+   "n_items": 76,
+   "rev_musd": 7.8
+  },
+  {
+   "supplier": "אסול אוכל איכותי בע\"מ                             ",
+   "wtd_cost_infl_pct": -0.4,
+   "n_items": 100,
+   "rev_musd": 3
+  },
+  {
+   "supplier": "דין שיווק וקליה 2021 בע\"מ-מכר                     ",
+   "wtd_cost_infl_pct": -0.5,
+   "n_items": 103,
+   "rev_musd": 12.6
+  },
+  {
+   "supplier": "תנובה חלב                                         ",
+   "wtd_cost_infl_pct": -0.6,
+   "n_items": 331,
+   "rev_musd": 49.1
+  },
+  {
+   "supplier": "מ. לסר  בע\"מ                                      ",
+   "wtd_cost_infl_pct": -0.8,
+   "n_items": 12,
+   "rev_musd": 4
+  },
+  {
+   "supplier": "קולה - החברה המרכזית                              ",
+   "wtd_cost_infl_pct": -1.1,
+   "n_items": 191,
+   "rev_musd": 14
+  },
+  {
+   "supplier": "שטראוס מצונן                                      ",
+   "wtd_cost_infl_pct": -1.2,
+   "n_items": 289,
+   "rev_musd": 34.9
+  }
+ ],
+ "Q43": [
+  {
+   "coh": "hist_2025Q1",
+   "items_opened": 1303,
+   "items_with_sales": 1049,
+   "pct_activated": 81,
+   "median_net_13wk": 525,
+   "mean_net_13wk": 3128
+  },
+  {
+   "coh": "recent_2026Q1",
+   "items_opened": 1322,
+   "items_with_sales": 825,
+   "pct_activated": 62,
+   "median_net_13wk": 180,
+   "mean_net_13wk": 1802
+  }
+ ],
+ "Q40": [
+  {
+   "dept": "פירות וירקות ללא מע\"מ                   ",
+   "s24": 21.1,
+   "s25": 20.2,
+   "s26h1": 20.6,
+   "ppt_24to26": -0.5
+  },
+  {
+   "dept": "מוצרי חלב וביצים                        ",
+   "s24": 18.6,
+   "s25": 19.6,
+   "s26h1": 19.9,
+   "ppt_24to26": 1.27
+  },
+  {
+   "dept": "מוצרי יסוד                              ",
+   "s24": 9.6,
+   "s25": 9.2,
+   "s26h1": 9.3,
+   "ppt_24to26": -0.31
+  },
+  {
+   "dept": "קפואים                                  ",
+   "s24": 6.6,
+   "s25": 6.5,
+   "s26h1": 6.7,
+   "ppt_24to26": 0.13
+  },
+  {
+   "dept": "בשר ועוף טרי                            ",
+   "s24": 6.4,
+   "s25": 6.5,
+   "s26h1": 6.4,
+   "ppt_24to26": -0.01
+  },
+  {
+   "dept": "דגני בוקר ומאפה מתוק                    ",
+   "s24": 6.1,
+   "s25": 6.1,
+   "s26h1": 6.2,
+   "ppt_24to26": 0.12
+  },
+  {
+   "dept": "לחם ותחליפיו                            ",
+   "s24": 4.4,
+   "s25": 4.8,
+   "s26h1": 4.6,
+   "ppt_24to26": 0.2
+  },
+  {
+   "dept": "משקאות לא אלכוהולים                     ",
+   "s24": 4,
+   "s25": 4.2,
+   "s26h1": 3.9,
+   "ppt_24to26": -0.05
+  },
+  {
+   "dept": "מזון מקורר ארוז                         ",
+   "s24": 4.1,
+   "s25": 4.2,
+   "s26h1": 3.9,
+   "ppt_24to26": -0.18
+  },
+  {
+   "dept": "מוצרי ניקיון וחד פעמי                   ",
+   "s24": 4.4,
+   "s25": 4.1,
+   "s26h1": 4.3,
+   "ppt_24to26": -0.13
+  },
+  {
+   "dept": "אלכוהול                                 ",
+   "s24": 2.9,
+   "s25": 2.6,
+   "s26h1": 2.5,
+   "ppt_24to26": -0.38
+  },
+  {
+   "dept": "חטיפים מלוחים ופיצוחים                  ",
+   "s24": 2.4,
+   "s25": 2.6,
+   "s26h1": 2.6,
+   "ppt_24to26": 0.25
+  },
+  {
+   "dept": "משקאות חמים וממתיקים                    ",
+   "s24": 1.7,
+   "s25": 1.8,
+   "s26h1": 1.7,
+   "ppt_24to26": 0.04
+  },
+  {
+   "dept": "ממתקים ופיצוחים במשקל                   ",
+   "s24": 1.1,
+   "s25": 1.3,
+   "s26h1": 1,
+   "ppt_24to26": -0.02
+  },
+  {
+   "dept": "פארם וטואלטיקה                          ",
+   "s24": 1.3,
+   "s25": 1.2,
+   "s26h1": 1.2,
+   "ppt_24to26": -0.11
+  },
+  {
+   "dept": "לא מזון וחד פעמי                        ",
+   "s24": 1,
+   "s25": 1.1,
+   "s26h1": 0.8,
+   "ppt_24to26": -0.23
+  },
+  {
+   "dept": "דגים טריים                              ",
+   "s24": 1,
+   "s25": 0.9,
+   "s26h1": 0.9,
+   "ppt_24to26": -0.16
+  },
+  {
+   "dept": "מזון ואביזרי תינוקות                    ",
+   "s24": 0.8,
+   "s25": 0.6,
+   "s26h1": 0.6,
+   "ppt_24to26": -0.16
+  },
+  {
+   "dept": "פיצוחים ופירות יבשים                    ",
+   "s24": 0.9,
+   "s25": 0.6,
+   "s26h1": 0.6,
+   "ppt_24to26": -0.24
+  },
+  {
+   "dept": "סוכריות ומסטיקים                        ",
+   "s24": 0.5,
+   "s25": 0.5,
+   "s26h1": 0.6,
+   "ppt_24to26": 0.05
+  },
+  {
+   "dept": "מוצרי טבק ועישון                        ",
+   "s24": 0.2,
+   "s25": 0.5,
+   "s26h1": 0.4,
+   "ppt_24to26": 0.23
+  },
+  {
+   "dept": "פירות וירקות כולל מע\"מ                  ",
+   "s24": 0.4,
+   "s25": 0.4,
+   "s26h1": 0.4,
+   "ppt_24to26": 0.02
+  },
+  {
+   "dept": "אגרות משטחים מיכלים                     ",
+   "s24": 0.2,
+   "s25": 0.3,
+   "s26h1": 0.2,
+   "ppt_24to26": 0.04
+  },
+  {
+   "dept": "מוצרי טבע                               ",
+   "s24": 0.2,
+   "s25": 0.2,
+   "s26h1": 0.2,
+   "ppt_24to26": 0.05
+  },
+  {
+   "dept": "חגי ישראל                               ",
+   "s24": 0.1,
+   "s25": 0.1,
+   "s26h1": 0.2,
+   "ppt_24to26": 0.07
+  },
+  {
+   "dept": "בעלי חיים                               ",
+   "s24": 0,
+   "s25": 0.1,
+   "s26h1": 0.1,
+   "ppt_24to26": 0.08
+  },
+  {
+   "dept": "בונבוניירות שוקולד וחטיפים מתוקים       ",
+   "s24": 0.1,
+   "s25": 0.1,
+   "s26h1": 0.3,
+   "ppt_24to26": 0.24
+  },
+  {
+   "dept": "פקדון ללא מעמ                           ",
+   "s24": 0,
+   "s25": 0,
+   "s26h1": -0.1,
+   "ppt_24to26": -0.03
+  },
+  {
+   "dept": "לא לפידיון                              ",
+   "s24": 0,
+   "s25": -0.2,
+   "s26h1": -0.3,
+   "ppt_24to26": -0.28
+  }
+ ],
+ "Q42": [
+  {
+   "grp": "מוצרי יום הולדת                         ",
+   "margin_pct": 50.3,
+   "net_M": 0.4,
+   "rev_share_pct": 0.06
+  },
+  {
+   "grp": "נרות וגפרורים                           ",
+   "margin_pct": 48.7,
+   "net_M": 0.56,
+   "rev_share_pct": 0.08
+  },
+  {
+   "grp": "מזון לבע\"ח                              ",
+   "margin_pct": 47.9,
+   "net_M": 0.4,
+   "rev_share_pct": 0.06
+  },
+  {
+   "grp": "עזרי מזון חד פעמי                       ",
+   "margin_pct": 46.1,
+   "net_M": 0.94,
+   "rev_share_pct": 0.14
+  },
+  {
+   "grp": "אביזרים לאירוח                          ",
+   "margin_pct": 43.3,
+   "net_M": 3.61,
+   "rev_share_pct": 0.52
+  },
+  {
+   "grp": "מטהר אוויר                              ",
+   "margin_pct": 42.9,
+   "net_M": 0.31,
+   "rev_share_pct": 0.04
+  },
+  {
+   "grp": "ציוד למנגל                              ",
+   "margin_pct": 42.4,
+   "net_M": 0.7,
+   "rev_share_pct": 0.1
+  },
+  {
+   "grp": "תבלינים                                 ",
+   "margin_pct": 42.3,
+   "net_M": 2.18,
+   "rev_share_pct": 0.32
+  },
+  {
+   "grp": "מוצרים לבית                             ",
+   "margin_pct": 42,
+   "net_M": 2.24,
+   "rev_share_pct": 0.32
+  },
+  {
+   "grp": "כפפות                                   ",
+   "margin_pct": 41.2,
+   "net_M": 0.61,
+   "rev_share_pct": 0.09
+  },
+  {
+   "grp": "צמחייה                                  ",
+   "margin_pct": 39.6,
+   "net_M": 1.23,
+   "rev_share_pct": 0.18
+  },
+  {
+   "grp": "ירקות כולל מע\"מ                         ",
+   "margin_pct": 39.6,
+   "net_M": 2.27,
+   "rev_share_pct": 0.33
+  },
+  {
+   "grp": "מטליות/אביזרי קרצוף                     ",
+   "margin_pct": 39.4,
+   "net_M": 2.22,
+   "rev_share_pct": 0.32
+  },
+  {
+   "grp": "סוכריות                                 ",
+   "margin_pct": 38.1,
+   "net_M": 2.32,
+   "rev_share_pct": 0.34
+  },
+  {
+   "grp": "היגיינת הפה                             ",
+   "margin_pct": 38,
+   "net_M": 1.92,
+   "rev_share_pct": 0.28
+  },
+  {
+   "grp": "מקלחות ושרותים                          ",
+   "margin_pct": 37.7,
+   "net_M": 0.82,
+   "rev_share_pct": 0.12
+  },
+  {
+   "grp": "מסטיקים                                 ",
+   "margin_pct": 37.7,
+   "net_M": 3.12,
+   "rev_share_pct": 0.45
+  },
+  {
+   "grp": "עזרי אפייה ובישול                       ",
+   "margin_pct": 36.7,
+   "net_M": 7.13,
+   "rev_share_pct": 1.03
+  },
+  {
+   "grp": "אוכל מוכן                               ",
+   "margin_pct": 36.7,
+   "net_M": 7.51,
+   "rev_share_pct": 1.09
+  },
+  {
+   "grp": "דגים קפואים                             ",
+   "margin_pct": 36.4,
+   "net_M": 5.7,
+   "rev_share_pct": 0.82
+  },
+  {
+   "grp": "מזון תינוקות/ילדים                      ",
+   "margin_pct": 36.1,
+   "net_M": 0.52,
+   "rev_share_pct": 0.07
+  },
+  {
+   "grp": "עזרי מזון חד פעמיים                     ",
+   "margin_pct": 36,
+   "net_M": 3.78,
+   "rev_share_pct": 0.55
+  },
+  {
+   "grp": "היגיינה וטיפוח הגוף                     ",
+   "margin_pct": 35.8,
+   "net_M": 2.89,
+   "rev_share_pct": 0.42
+  },
+  {
+   "grp": "משקאות פונקציונלים/קפה                  ",
+   "margin_pct": 35.5,
+   "net_M": 2.13,
+   "rev_share_pct": 0.31
+  },
+  {
+   "grp": "מוצרים ללא גלוטן                        ",
+   "margin_pct": 35.3,
+   "net_M": 1.32,
+   "rev_share_pct": 0.19
+  },
+  {
+   "grp": "תחליפי חלב וטופו                        ",
+   "margin_pct": 35.1,
+   "net_M": 1.42,
+   "rev_share_pct": 0.2
+  },
+  {
+   "grp": "ניקיון הבית                             ",
+   "margin_pct": 34.9,
+   "net_M": 1.48,
+   "rev_share_pct": 0.21
+  },
+  {
+   "grp": "תחליפי לחם                              ",
+   "margin_pct": 34.9,
+   "net_M": 6.17,
+   "rev_share_pct": 0.89
+  },
+  {
+   "grp": "פיצוחים ופירות יבשים                    ",
+   "margin_pct": 34.7,
+   "net_M": 0.89,
+   "rev_share_pct": 0.13
+  },
+  {
+   "grp": "טיפוח הפנים                             ",
+   "margin_pct": 34.4,
+   "net_M": 0.39,
+   "rev_share_pct": 0.06
+  },
+  {
+   "grp": "פסטה/ פתיתים/ קוסקוס/פרורי לחם          ",
+   "margin_pct": 34,
+   "net_M": 5.83,
+   "rev_share_pct": 0.84
+  },
+  {
+   "grp": "משקאות קלים                             ",
+   "margin_pct": 34,
+   "net_M": 6.71,
+   "rev_share_pct": 0.97
+  },
+  {
+   "grp": "תכשירי טיפוח וניקוי תינוקות             ",
+   "margin_pct": 33.9,
+   "net_M": 0.31,
+   "rev_share_pct": 0.05
+  },
+  {
+   "grp": "פירות וירקות קפואים                     ",
+   "margin_pct": 33.6,
+   "net_M": 8.45,
+   "rev_share_pct": 1.22
+  },
+  {
+   "grp": "אוכל מוכן למכירה                        ",
+   "margin_pct": 33.5,
+   "net_M": 0.88,
+   "rev_share_pct": 0.13
+  },
+  {
+   "grp": "מוצרי בשר על האש                        ",
+   "margin_pct": 33.2,
+   "net_M": 3.51,
+   "rev_share_pct": 0.51
+  },
+  {
+   "grp": "קוטל חרקים ומעופפים                     ",
+   "margin_pct": 32.9,
+   "net_M": 0.4,
+   "rev_share_pct": 0.06
+  },
+  {
+   "grp": "דגים טריים                              ",
+   "margin_pct": 32.6,
+   "net_M": 6.55,
+   "rev_share_pct": 0.95
+  },
+  {
+   "grp": "אקונומיקה ורצפות                        ",
+   "margin_pct": 32.3,
+   "net_M": 1.46,
+   "rev_share_pct": 0.21
+  },
+  {
+   "grp": "עוגות וקינוחים קפואים                   ",
+   "margin_pct": 32.1,
+   "net_M": 0.47,
+   "rev_share_pct": 0.07
+  }
+ ],
+ "Q46": [
+  {
+   "ym": 202401,
+   "net_M": 14.55,
+   "vat_collected_M": 1.96,
+   "vat_pct_on_taxable": 17.08,
+   "exempt_share_pct": 21
+  },
+  {
+   "ym": 202402,
+   "net_M": 15.6,
+   "vat_collected_M": 2.11,
+   "vat_pct_on_taxable": 17.06,
+   "exempt_share_pct": 20.6
+  },
+  {
+   "ym": 202403,
+   "net_M": 18.93,
+   "vat_collected_M": 2.6,
+   "vat_pct_on_taxable": 17.04,
+   "exempt_share_pct": 19.5
+  },
+  {
+   "ym": 202404,
+   "net_M": 19.38,
+   "vat_collected_M": 2.63,
+   "vat_pct_on_taxable": 17.03,
+   "exempt_share_pct": 20.4
+  },
+  {
+   "ym": 202405,
+   "net_M": 21.64,
+   "vat_collected_M": 2.91,
+   "vat_pct_on_taxable": 17.08,
+   "exempt_share_pct": 21.2
+  },
+  {
+   "ym": 202406,
+   "net_M": 20.71,
+   "vat_collected_M": 2.77,
+   "vat_pct_on_taxable": 17.09,
+   "exempt_share_pct": 21.7
+  },
+  {
+   "ym": 202407,
+   "net_M": 21.85,
+   "vat_collected_M": 2.9,
+   "vat_pct_on_taxable": 17.08,
+   "exempt_share_pct": 22.3
+  },
+  {
+   "ym": 202408,
+   "net_M": 23.13,
+   "vat_collected_M": 3.06,
+   "vat_pct_on_taxable": 17.08,
+   "exempt_share_pct": 22.6
+  },
+  {
+   "ym": 202409,
+   "net_M": 22.46,
+   "vat_collected_M": 2.96,
+   "vat_pct_on_taxable": 17.09,
+   "exempt_share_pct": 22.9
+  },
+  {
+   "ym": 202410,
+   "net_M": 23.45,
+   "vat_collected_M": 3.14,
+   "vat_pct_on_taxable": 17.1,
+   "exempt_share_pct": 21.7
+  },
+  {
+   "ym": 202411,
+   "net_M": 21.87,
+   "vat_collected_M": 2.99,
+   "vat_pct_on_taxable": 17.07,
+   "exempt_share_pct": 19.9
+  },
+  {
+   "ym": 202412,
+   "net_M": 21.79,
+   "vat_collected_M": 3.01,
+   "vat_pct_on_taxable": 17.06,
+   "exempt_share_pct": 19
+  },
+  {
+   "ym": 202501,
+   "net_M": 23.61,
+   "vat_collected_M": 3.41,
+   "vat_pct_on_taxable": 18.06,
+   "exempt_share_pct": 20
+  },
+  {
+   "ym": 202502,
+   "net_M": 21.34,
+   "vat_collected_M": 3.11,
+   "vat_pct_on_taxable": 18.05,
+   "exempt_share_pct": 19.2
+  },
+  {
+   "ym": 202503,
+   "net_M": 22.99,
+   "vat_collected_M": 3.38,
+   "vat_pct_on_taxable": 18.06,
+   "exempt_share_pct": 18.5
+  },
+  {
+   "ym": 202504,
+   "net_M": 24.06,
+   "vat_collected_M": 3.54,
+   "vat_pct_on_taxable": 18.06,
+   "exempt_share_pct": 18.6
+  },
+  {
+   "ym": 202505,
+   "net_M": 25.05,
+   "vat_collected_M": 3.61,
+   "vat_pct_on_taxable": 18.06,
+   "exempt_share_pct": 20.1
+  },
+  {
+   "ym": 202506,
+   "net_M": 26,
+   "vat_collected_M": 3.74,
+   "vat_pct_on_taxable": 18.06,
+   "exempt_share_pct": 20.4
+  },
+  {
+   "ym": 202507,
+   "net_M": 23.33,
+   "vat_collected_M": 3.3,
+   "vat_pct_on_taxable": 18.04,
+   "exempt_share_pct": 21.7
+  },
+  {
+   "ym": 202508,
+   "net_M": 22.74,
+   "vat_collected_M": 3.26,
+   "vat_pct_on_taxable": 18.02,
+   "exempt_share_pct": 20.3
+  },
+  {
+   "ym": 202509,
+   "net_M": 23.99,
+   "vat_collected_M": 3.41,
+   "vat_pct_on_taxable": 18.01,
+   "exempt_share_pct": 21
+  },
+  {
+   "ym": 202510,
+   "net_M": 25.4,
+   "vat_collected_M": 3.6,
+   "vat_pct_on_taxable": 18.01,
+   "exempt_share_pct": 21.3
+  },
+  {
+   "ym": 202511,
+   "net_M": 23.15,
+   "vat_collected_M": 3.31,
+   "vat_pct_on_taxable": 18.01,
+   "exempt_share_pct": 20.5
+  },
+  {
+   "ym": 202512,
+   "net_M": 24.17,
+   "vat_collected_M": 3.46,
+   "vat_pct_on_taxable": 18.01,
+   "exempt_share_pct": 20.6
+  },
+  {
+   "ym": 202601,
+   "net_M": 26.13,
+   "vat_collected_M": 3.74,
+   "vat_pct_on_taxable": 18.01,
+   "exempt_share_pct": 20.6
+  },
+  {
+   "ym": 202602,
+   "net_M": 24.07,
+   "vat_collected_M": 3.48,
+   "vat_pct_on_taxable": 18.01,
+   "exempt_share_pct": 19.8
+  },
+  {
+   "ym": 202603,
+   "net_M": 30.33,
+   "vat_collected_M": 4.37,
+   "vat_pct_on_taxable": 18.01,
+   "exempt_share_pct": 20
+  },
+  {
+   "ym": 202604,
+   "net_M": 27.45,
+   "vat_collected_M": 3.88,
+   "vat_pct_on_taxable": 18.01,
+   "exempt_share_pct": 21.4
+  },
+  {
+   "ym": 202605,
+   "net_M": 27.9,
+   "vat_collected_M": 3.96,
+   "vat_pct_on_taxable": 18.01,
+   "exempt_share_pct": 21.2
+  },
+  {
+   "ym": 202606,
+   "net_M": 24.27,
+   "vat_collected_M": 3.47,
+   "vat_pct_on_taxable": 18.02,
+   "exempt_share_pct": 20.7
+  }
+ ],
+ "Q45": [
+  {
+   "branch": "גני תקווה                               ",
+   "net25_M": 87.8,
+   "avg_basket_ILS": 117.8,
+   "yoy_pct": -0.7
+  },
+  {
+   "branch": "אם המושבות פ\"ת                          ",
+   "net25_M": 64.2,
+   "avg_basket_ILS": 109.7,
+   "yoy_pct": 15
+  },
+  {
+   "branch": "רעננה אחוזה                             ",
+   "net25_M": 31.2,
+   "avg_basket_ILS": 82.5,
+   "yoy_pct": 27.2
+  },
+  {
+   "branch": "הסתדרות פ\"ת                             ",
+   "net25_M": 23.4,
+   "avg_basket_ILS": 61.4,
+   "yoy_pct": 0.9
+  },
+  {
+   "branch": "בר כוכבא פתח תקווה                      ",
+   "net25_M": 22,
+   "avg_basket_ILS": 77,
+   "yoy_pct": 23.9
+  },
+  {
+   "branch": "רחובות                                  ",
+   "net25_M": 16.1,
+   "avg_basket_ILS": 78.4,
+   "yoy_pct": -7.8
+  },
+  {
+   "branch": "חובבי ציון פ\"ת                          ",
+   "net25_M": 12.7,
+   "avg_basket_ILS": 41.3,
+   "yoy_pct": 12.5
+  },
+  {
+   "branch": "כץ פתח תקווה                            ",
+   "net25_M": 8.8,
+   "avg_basket_ILS": 61.1,
+   "yoy_pct": 29.9
+  }
+ ],
+ "Q48": [
+  {
+   "ym": "2026-02",
+   "lk_gross": 378206,
+   "main670_gross": 394247,
+   "lk_vs_670_pct": 95.9
+  },
+  {
+   "ym": "2026-03",
+   "lk_gross": 1259985,
+   "main670_gross": 1286269,
+   "lk_vs_670_pct": 98
+  },
+  {
+   "ym": "2026-04",
+   "lk_gross": 771515,
+   "main670_gross": 799150,
+   "lk_vs_670_pct": 96.5
+  },
+  {
+   "ym": "2026-05",
+   "lk_gross": 1144402,
+   "main670_gross": 1115553,
+   "lk_vs_670_pct": 102.6
+  },
+  {
+   "ym": "2026-06",
+   "lk_gross": 1204356,
+   "main670_gross": 1017157,
+   "lk_vs_670_pct": 118.4
+  }
+ ],
+ "Q49": [
+  {
+   "store": 18,
+   "oved": 3,
+   "n_receipts": 650013,
+   "net_M": 70.2,
+   "rev_per_receipt": 108
+  },
+  {
+   "store": 25,
+   "oved": 2,
+   "n_receipts": 678589,
+   "net_M": 63,
+   "rev_per_receipt": 92.9
+  },
+  {
+   "store": 18,
+   "oved": 2,
+   "n_receipts": 532068,
+   "net_M": 59.3,
+   "rev_per_receipt": 111.5
+  },
+  {
+   "store": 26,
+   "oved": 1887,
+   "n_receipts": 318133,
+   "net_M": 25.7,
+   "rev_per_receipt": 80.7
+  },
+  {
+   "store": 18,
+   "oved": 2317,
+   "n_receipts": 136678,
+   "net_M": 16.7,
+   "rev_per_receipt": 122.1
+  },
+  {
+   "store": 26,
+   "oved": 1215,
+   "n_receipts": 208100,
+   "net_M": 16,
+   "rev_per_receipt": 76.7
+  },
+  {
+   "store": 13,
+   "oved": 951,
+   "n_receipts": 243576,
+   "net_M": 15,
+   "rev_per_receipt": 61.8
+  },
+  {
+   "store": 26,
+   "oved": 1581,
+   "n_receipts": 122264,
+   "net_M": 10.6,
+   "rev_per_receipt": 87.1
+  },
+  {
+   "store": 24,
+   "oved": 1510,
+   "n_receipts": 217249,
+   "net_M": 8.9,
+   "rev_per_receipt": 41
+  },
+  {
+   "store": 25,
+   "oved": 2176,
+   "n_receipts": 54969,
+   "net_M": 7.2,
+   "rev_per_receipt": 130.6
+  },
+  {
+   "store": 23,
+   "oved": 593,
+   "n_receipts": 88577,
+   "net_M": 7.2,
+   "rev_per_receipt": 81.7
+  },
+  {
+   "store": 18,
+   "oved": 1929,
+   "n_receipts": 49660,
+   "net_M": 7.1,
+   "rev_per_receipt": 143.9
+  },
+  {
+   "store": 19,
+   "oved": 423,
+   "n_receipts": 112973,
+   "net_M": 6.9,
+   "rev_per_receipt": 61.4
+  },
+  {
+   "store": 25,
+   "oved": 1595,
+   "n_receipts": 50272,
+   "net_M": 6.6,
+   "rev_per_receipt": 131.6
+  },
+  {
+   "store": 23,
+   "oved": 2468,
+   "n_receipts": 76123,
+   "net_M": 6.4,
+   "rev_per_receipt": 84.2
+  },
+  {
+   "store": 25,
+   "oved": 2070,
+   "n_receipts": 49541,
+   "net_M": 6.2,
+   "rev_per_receipt": 124.4
+  },
+  {
+   "store": 18,
+   "oved": 1236,
+   "n_receipts": 43368,
+   "net_M": 6.1,
+   "rev_per_receipt": 139.6
+  },
+  {
+   "store": 25,
+   "oved": 1325,
+   "n_receipts": 43031,
+   "net_M": 5.8,
+   "rev_per_receipt": 135.5
+  },
+  {
+   "store": 27,
+   "oved": 1383,
+   "n_receipts": 77733,
+   "net_M": 5.8,
+   "rev_per_receipt": 74.9
+  },
+  {
+   "store": 24,
+   "oved": 1190,
+   "n_receipts": 121076,
+   "net_M": 5.6,
+   "rev_per_receipt": 46.2
+  }
+ ],
+ "Q44": [
+  {
+   "grp": "ירקות ללא מע\"מ                          ",
+   "net_M": 77.7,
+   "gp_K": 37807,
+   "sku": 381,
+   "gp_per_sku": 99230
+  },
+  {
+   "grp": "פירות ללא מע\"מ                          ",
+   "net_M": 64.8,
+   "gp_K": 21596,
+   "sku": 231,
+   "gp_per_sku": 93489
+  },
+  {
+   "grp": "דגים טריים                              ",
+   "net_M": 6.6,
+   "gp_K": 2136,
+   "sku": 29,
+   "gp_per_sku": 73648
+  },
+  {
+   "grp": "עוף והודו טרי                           ",
+   "net_M": 26.1,
+   "gp_K": 6472,
+   "sku": 105,
+   "gp_per_sku": 61642
+  },
+  {
+   "grp": "בשר טרי                                 ",
+   "net_M": 18.5,
+   "gp_K": 3921,
+   "sku": 104,
+   "gp_per_sku": 37699
+  },
+  {
+   "grp": "לחמים                                   ",
+   "net_M": 25.6,
+   "gp_K": 8495,
+   "sku": 293,
+   "gp_per_sku": 28992
+  },
+  {
+   "grp": "ביצים מיוחדות                           ",
+   "net_M": 2,
+   "gp_K": 593,
+   "sku": 22,
+   "gp_per_sku": 26943
+  },
+  {
+   "grp": "חלב ומשקאות חלב                         ",
+   "net_M": 25.2,
+   "gp_K": 6212,
+   "sku": 250,
+   "gp_per_sku": 24847
+  },
+  {
+   "grp": "מוצרי נייר                              ",
+   "net_M": 6.2,
+   "gp_K": 1671,
+   "sku": 79,
+   "gp_per_sku": 21156
+  },
+  {
+   "grp": "דגים קפואים                             ",
+   "net_M": 5.7,
+   "gp_K": 2068,
+   "sku": 114,
+   "gp_per_sku": 18138
+  },
+  {
+   "grp": "יוגורט ומשקאות יוגורט                   ",
+   "net_M": 20.9,
+   "gp_K": 5633,
+   "sku": 321,
+   "gp_per_sku": 17548
+  },
+  {
+   "grp": "ירקות כולל מע\"מ                         ",
+   "net_M": 2.3,
+   "gp_K": 889,
+   "sku": 52,
+   "gp_per_sku": 17096
+  },
+  {
+   "grp": "פיצוחים ופירות יבשים במשקל              ",
+   "net_M": 5.6,
+   "gp_K": 1348,
+   "sku": 79,
+   "gp_per_sku": 17059
+  },
+  {
+   "grp": "מדף גבינות ותחליפיו                     ",
+   "net_M": 50.4,
+   "gp_K": 13312,
+   "sku": 792,
+   "gp_per_sku": 16808
+  },
+  {
+   "grp": "אורז ופסטה                              ",
+   "net_M": 3,
+   "gp_K": 778,
+   "sku": 50,
+   "gp_per_sku": 15567
+  },
+  {
+   "grp": "מוצרי אפייה ובישול                      ",
+   "net_M": 11.6,
+   "gp_K": 2734,
+   "sku": 183,
+   "gp_per_sku": 14939
+  },
+  {
+   "grp": "מזון מקורר ארוז                         ",
+   "net_M": 15.2,
+   "gp_K": 5332,
+   "sku": 368,
+   "gp_per_sku": 14488
+  },
+  {
+   "grp": "שמן חומץ ומיץ לימון                     ",
+   "net_M": 8.6,
+   "gp_K": 2413,
+   "sku": 175,
+   "gp_per_sku": 13790
+  },
+  {
+   "grp": "מים                                     ",
+   "net_M": 3.8,
+   "gp_K": 1139,
+   "sku": 95,
+   "gp_per_sku": 11993
+  },
+  {
+   "grp": "מעדנים וקינוחים                         ",
+   "net_M": 9.9,
+   "gp_K": 2838,
+   "sku": 245,
+   "gp_per_sku": 11584
+  },
+  {
+   "grp": "אוכל מוכן                               ",
+   "net_M": 7.5,
+   "gp_K": 2714,
+   "sku": 237,
+   "gp_per_sku": 11451
+  },
+  {
+   "grp": "פיצוחים ופירות יבשים                    ",
+   "net_M": 4.7,
+   "gp_K": 1214,
+   "sku": 107,
+   "gp_per_sku": 11347
+  },
+  {
+   "grp": "תחליפי חלב וטופו                        ",
+   "net_M": 1.4,
+   "gp_K": 489,
+   "sku": 46,
+   "gp_per_sku": 10628
+  },
+  {
+   "grp": "פירות וירקות קפואים                     ",
+   "net_M": 8.4,
+   "gp_K": 2803,
+   "sku": 281,
+   "gp_per_sku": 9976
+  },
+  {
+   "grp": "מוצרי בשר על האש                        ",
+   "net_M": 3.5,
+   "gp_K": 1134,
+   "sku": 119,
+   "gp_per_sku": 9530
+  },
+  {
+   "grp": "מוצרי בצק קפוא                          ",
+   "net_M": 6.6,
+   "gp_K": 2003,
+   "sku": 223,
+   "gp_per_sku": 8984
+  },
+  {
+   "grp": "גלידות ושלגונים                         ",
+   "net_M": 12.4,
+   "gp_K": 4793,
+   "sku": 535,
+   "gp_per_sku": 8958
+  },
+  {
+   "grp": "משקאות פונקציונלים/קפה                  ",
+   "net_M": 2.1,
+   "gp_K": 749,
+   "sku": 84,
+   "gp_per_sku": 8918
+  },
+  {
+   "grp": "מגבונים לחים                            ",
+   "net_M": 1.4,
+   "gp_K": 392,
+   "sku": 44,
+   "gp_per_sku": 8916
+  },
+  {
+   "grp": "עזרי מזון חד פעמיים                     ",
+   "net_M": 3.8,
+   "gp_K": 1351,
+   "sku": 152,
+   "gp_per_sku": 8889
+  },
+  {
+   "grp": "ציוד למנגל                              ",
+   "net_M": 0.7,
+   "gp_K": 297,
+   "sku": 35,
+   "gp_per_sku": 8498
+  },
+  {
+   "grp": "חטיפים מלוחים                           ",
+   "net_M": 16.5,
+   "gp_K": 5998,
+   "sku": 710,
+   "gp_per_sku": 8447
+  },
+  {
+   "grp": "משקאות מוגזים                           ",
+   "net_M": 12.7,
+   "gp_K": 3201,
+   "sku": 385,
+   "gp_per_sku": 8314
+  },
+  {
+   "grp": "סלטים ארוזים                            ",
+   "net_M": 12.3,
+   "gp_K": 4169,
+   "sku": 519,
+   "gp_per_sku": 8032
+  },
+  {
+   "grp": "בירה לבנה                               ",
+   "net_M": 5.5,
+   "gp_K": 1479,
+   "sku": 197,
+   "gp_per_sku": 7508
+  },
+  {
+   "grp": "תחליפי לחם                              ",
+   "net_M": 6.2,
+   "gp_K": 2132,
+   "sku": 287,
+   "gp_per_sku": 7428
+  },
+  {
+   "grp": "צמחייה                                  ",
+   "net_M": 1.2,
+   "gp_K": 448,
+   "sku": 64,
+   "gp_per_sku": 7004
+  },
+  {
+   "grp": "דגני בוקר                               ",
+   "net_M": 8.8,
+   "gp_K": 2326,
+   "sku": 345,
+   "gp_per_sku": 6741
+  },
+  {
+   "grp": "אביזרי עישון וטבק                       ",
+   "net_M": 2.5,
+   "gp_K": 507,
+   "sku": 78,
+   "gp_per_sku": 6502
+  },
+  {
+   "grp": "שימורים                                 ",
+   "net_M": 19.1,
+   "gp_K": 5781,
+   "sku": 919,
+   "gp_per_sku": 6290
+  },
+  {
+   "grp": "ניקוי כלים                              ",
+   "net_M": 2.4,
+   "gp_K": 699,
+   "sku": 115,
+   "gp_per_sku": 6081
+  },
+  {
+   "grp": "עזרי אפייה ובישול                       ",
+   "net_M": 7.1,
+   "gp_K": 2591,
+   "sku": 438,
+   "gp_per_sku": 5917
+  },
+  {
+   "grp": "עזרי מזון חד פעמי                       ",
+   "net_M": 0.9,
+   "gp_K": 413,
+   "sku": 71,
+   "gp_per_sku": 5822
+  },
+  {
+   "grp": "כפפות                                   ",
+   "net_M": 0.6,
+   "gp_K": 247,
+   "sku": 43,
+   "gp_per_sku": 5748
+  },
+  {
+   "grp": "משקאות אלכוהולים אחרים                  ",
+   "net_M": 0.7,
+   "gp_K": 231,
+   "sku": 41,
+   "gp_per_sku": 5638
+  },
+  {
+   "grp": "משקאות קלים                             ",
+   "net_M": 6.7,
+   "gp_K": 2236,
+   "sku": 398,
+   "gp_per_sku": 5617
+  },
+  {
+   "grp": "קטניות ותבשלים                          ",
+   "net_M": 5.1,
+   "gp_K": 1604,
+   "sku": 320,
+   "gp_per_sku": 5012
+  },
+  {
+   "grp": "מסטיקים                                 ",
+   "net_M": 3.1,
+   "gp_K": 1156,
+   "sku": 236,
+   "gp_per_sku": 4896
+  },
+  {
+   "grp": "רטבים וממרחים                           ",
+   "net_M": 13.7,
+   "gp_K": 3717,
+   "sku": 762,
+   "gp_per_sku": 4878
+  },
+  {
+   "grp": "מוצרי כביסה                             ",
+   "net_M": 6.5,
+   "gp_K": 1721,
+   "sku": 355,
+   "gp_per_sku": 4847
+  },
+  {
+   "grp": "פסטה/ פתיתים/ קוסקוס/פרורי לחם          ",
+   "net_M": 5.8,
+   "gp_K": 1947,
+   "sku": 402,
+   "gp_per_sku": 4844
+  },
+  {
+   "grp": "מטליות/אביזרי קרצוף                     ",
+   "net_M": 2.2,
+   "gp_K": 875,
+   "sku": 181,
+   "gp_per_sku": 4836
+  },
+  {
+   "grp": "תרכיזי משקה סירופ                       ",
+   "net_M": 1.2,
+   "gp_K": 305,
+   "sku": 65,
+   "gp_per_sku": 4685
+  },
+  {
+   "grp": "נרות וגפרורים                           ",
+   "net_M": 0.6,
+   "gp_K": 254,
+   "sku": 55,
+   "gp_per_sku": 4622
+  },
+  {
+   "grp": "חטיפים מתוקים                           ",
+   "net_M": 19.1,
+   "gp_K": 4549,
+   "sku": 1040,
+   "gp_per_sku": 4374
+  },
+  {
+   "grp": "פיצוחים ופירות יבשים                    ",
+   "net_M": 0.9,
+   "gp_K": 299,
+   "sku": 70,
+   "gp_per_sku": 4275
+  },
+  {
+   "grp": "מאפה מתוק                               ",
+   "net_M": 13.6,
+   "gp_K": 3800,
+   "sku": 901,
+   "gp_per_sku": 4218
+  },
+  {
+   "grp": "סודה                                    ",
+   "net_M": 0.9,
+   "gp_K": 272,
+   "sku": 66,
+   "gp_per_sku": 4125
+  },
+  {
+   "grp": "אביזרים לאירוח                          ",
+   "net_M": 3.6,
+   "gp_K": 1527,
+   "sku": 376,
+   "gp_per_sku": 4062
+  },
+  {
+   "grp": "שוקו וקקאו                              ",
+   "net_M": 0.7,
+   "gp_K": 80,
+   "sku": 20,
+   "gp_per_sku": 4010
+  },
+  {
+   "grp": "אקונומיקה ורצפות                        ",
+   "net_M": 1.5,
+   "gp_K": 468,
+   "sku": 121,
+   "gp_per_sku": 3864
+  },
+  {
+   "grp": "משקאות חריפים                           ",
+   "net_M": 4.2,
+   "gp_K": 699,
+   "sku": 181,
+   "gp_per_sku": 3860
+  },
+  {
+   "grp": "תבלינים                                 ",
+   "net_M": 2.2,
+   "gp_K": 908,
+   "sku": 275,
+   "gp_per_sku": 3301
+  },
+  {
+   "grp": "תה וקפה                                 ",
+   "net_M": 10.9,
+   "gp_K": 1351,
+   "sku": 423,
+   "gp_per_sku": 3195
+  },
+  {
+   "grp": "בשר ועוף קפוא                           ",
+   "net_M": 0.5,
+   "gp_K": 151,
+   "sku": 50,
+   "gp_per_sku": 3018
+  },
+  {
+   "grp": "מוצרים ללא גלוטן                        ",
+   "net_M": 1.3,
+   "gp_K": 461,
+   "sku": 158,
+   "gp_per_sku": 2918
+  },
+  {
+   "grp": "ניקיון הבית                             ",
+   "net_M": 1.5,
+   "gp_K": 477,
+   "sku": 180,
+   "gp_per_sku": 2650
+  },
+  {
+   "grp": "יינות                                   ",
+   "net_M": 8,
+   "gp_K": 2498,
+   "sku": 961,
+   "gp_per_sku": 2599
+  },
+  {
+   "grp": "מקלחות ושרותים                          ",
+   "net_M": 0.8,
+   "gp_K": 304,
+   "sku": 118,
+   "gp_per_sku": 2577
+  },
+  {
+   "grp": "היגיינת הפה                             ",
+   "net_M": 1.9,
+   "gp_K": 700,
+   "sku": 282,
+   "gp_per_sku": 2482
+  },
+  {
+   "grp": "מזון תינוקות/ילדים                      ",
+   "net_M": 0.5,
+   "gp_K": 185,
+   "sku": 75,
+   "gp_per_sku": 2462
+  },
+  {
+   "grp": "פסח                                     ",
+   "net_M": 0.9,
+   "gp_K": 169,
+   "sku": 75,
+   "gp_per_sku": 2254
+  },
+  {
+   "grp": "חיתולים                                 ",
+   "net_M": 1.4,
+   "gp_K": 120,
+   "sku": 56,
+   "gp_per_sku": 2135
+  },
+  {
+   "grp": "סוכריות                                 ",
+   "net_M": 2.3,
+   "gp_K": 827,
+   "sku": 498,
+   "gp_per_sku": 1660
+  },
+  {
+   "grp": "סבון רחצה                               ",
+   "net_M": 2,
+   "gp_K": 578,
+   "sku": 364,
+   "gp_per_sku": 1589
+  },
+  {
+   "grp": "מוצרים לבית                             ",
+   "net_M": 2.2,
+   "gp_K": 891,
+   "sku": 617,
+   "gp_per_sku": 1443
+  },
+  {
+   "grp": "היגיינה וטיפוח הגוף                     ",
+   "net_M": 2.9,
+   "gp_K": 996,
+   "sku": 773,
+   "gp_per_sku": 1288
+  },
+  {
+   "grp": "טיפוח השיער                             ",
+   "net_M": 1.5,
+   "gp_K": 393,
+   "sku": 357,
+   "gp_per_sku": 1102
+  },
+  {
+   "grp": "תחליפי חלב אם                           ",
+   "net_M": 1.1,
+   "gp_K": -9,
+   "sku": 39,
+   "gp_per_sku": -219
+  }
+ ],
+ "Q47": [
+  {
+   "store": 27,
+   "oved": 1435,
+   "n_docs": 16808,
+   "refund_pct": 3.64,
+   "store_med_refund": 0.58,
+   "disc_pct": 20.2,
+   "store_med_disc": 23.4
+  },
+  {
+   "store": 25,
+   "oved": 1058,
+   "n_docs": 1334,
+   "refund_pct": 3.37,
+   "store_med_refund": 0.9,
+   "disc_pct": 22.7,
+   "store_med_disc": 19.7
+  },
+  {
+   "store": 31,
+   "oved": 1561,
+   "n_docs": 1451,
+   "refund_pct": 4.48,
+   "store_med_refund": 2.06,
+   "disc_pct": 18.9,
+   "store_med_disc": 21.2
+  },
+  {
+   "store": 31,
+   "oved": 2651,
+   "n_docs": 2877,
+   "refund_pct": 4.14,
+   "store_med_refund": 2.06,
+   "disc_pct": 19.5,
+   "store_med_disc": 21.2
+  },
+  {
+   "store": 25,
+   "oved": 2094,
+   "n_docs": 1049,
+   "refund_pct": 2.48,
+   "store_med_refund": 0.9,
+   "disc_pct": 21.1,
+   "store_med_disc": 19.7
+  },
+  {
+   "store": 27,
+   "oved": 1099,
+   "n_docs": 6812,
+   "refund_pct": 2.04,
+   "store_med_refund": 0.58,
+   "disc_pct": 23.4,
+   "store_med_disc": 23.4
+  },
+  {
+   "store": 27,
+   "oved": 2347,
+   "n_docs": 3799,
+   "refund_pct": 2,
+   "store_med_refund": 0.58,
+   "disc_pct": 25.4,
+   "store_med_disc": 23.4
+  },
+  {
+   "store": 27,
+   "oved": 2173,
+   "n_docs": 4351,
+   "refund_pct": 2,
+   "store_med_refund": 0.58,
+   "disc_pct": 27.1,
+   "store_med_disc": 23.4
+  },
+  {
+   "store": 27,
+   "oved": 1383,
+   "n_docs": 79313,
+   "refund_pct": 1.96,
+   "store_med_refund": 0.58,
+   "disc_pct": 21.5,
+   "store_med_disc": 23.4
+  },
+  {
+   "store": 27,
+   "oved": 2481,
+   "n_docs": 1689,
+   "refund_pct": 1.84,
+   "store_med_refund": 0.58,
+   "disc_pct": 28.2,
+   "store_med_disc": 23.4
+  },
+  {
+   "store": 25,
+   "oved": 1369,
+   "n_docs": 565,
+   "refund_pct": 2.12,
+   "store_med_refund": 0.9,
+   "disc_pct": 17.9,
+   "store_med_disc": 19.7
+  },
+  {
+   "store": 26,
+   "oved": 1231,
+   "n_docs": 2044,
+   "refund_pct": 1.61,
+   "store_med_refund": 0.56,
+   "disc_pct": 26.5,
+   "store_med_disc": 17.5
+  },
+  {
+   "store": 25,
+   "oved": 2093,
+   "n_docs": 619,
+   "refund_pct": 1.94,
+   "store_med_refund": 0.9,
+   "disc_pct": 19.7,
+   "store_med_disc": 19.7
+  },
+  {
+   "store": 26,
+   "oved": 1726,
+   "n_docs": 585,
+   "refund_pct": 1.54,
+   "store_med_refund": 0.56,
+   "disc_pct": 12.2,
+   "store_med_disc": 17.5
+  },
+  {
+   "store": 25,
+   "oved": 1535,
+   "n_docs": 2079,
+   "refund_pct": 1.88,
+   "store_med_refund": 0.9,
+   "disc_pct": 17.2,
+   "store_med_disc": 19.7
+  },
+  {
+   "store": 24,
+   "oved": 2503,
+   "n_docs": 1722,
+   "refund_pct": 1.22,
+   "store_med_refund": 0.42,
+   "disc_pct": 25.8,
+   "store_med_disc": 18.6
+  },
+  {
+   "store": 27,
+   "oved": 1,
+   "n_docs": 1362,
+   "refund_pct": 1.32,
+   "store_med_refund": 0.58,
+   "disc_pct": 25.5,
+   "store_med_disc": 23.4
+  },
+  {
+   "store": 24,
+   "oved": 1649,
+   "n_docs": 1326,
+   "refund_pct": 1.13,
+   "store_med_refund": 0.42,
+   "disc_pct": 15.7,
+   "store_med_disc": 18.6
+  },
+  {
+   "store": 27,
+   "oved": 1722,
+   "n_docs": 1020,
+   "refund_pct": 1.27,
+   "store_med_refund": 0.58,
+   "disc_pct": 16.5,
+   "store_med_disc": 23.4
+  },
+  {
+   "store": 27,
+   "oved": 3,
+   "n_docs": 13641,
+   "refund_pct": 1.24,
+   "store_med_refund": 0.58,
+   "disc_pct": 24.3,
+   "store_med_disc": 23.4
+  }
+ ],
+ "Q50": [
+  {
+   "branch": "גני תקווה                               ",
+   "net25_M": 87.8,
+   "yoy_pct": -0.7,
+   "margin_pct": 33.2,
+   "basket25": 117.8,
+   "txn_yoy_pct": -3.8
+  },
+  {
+   "branch": "אם המושבות פ\"ת                          ",
+   "net25_M": 64.2,
+   "yoy_pct": 15,
+   "margin_pct": 32.3,
+   "basket25": 109.7,
+   "txn_yoy_pct": 8.3
+  },
+  {
+   "branch": "רעננה אחוזה                             ",
+   "net25_M": 31.2,
+   "yoy_pct": 27.2,
+   "margin_pct": 32.4,
+   "basket25": 82.5,
+   "txn_yoy_pct": 18
+  },
+  {
+   "branch": "הסתדרות פ\"ת                             ",
+   "net25_M": 23.4,
+   "yoy_pct": 0.9,
+   "margin_pct": 33.3,
+   "basket25": 61.4,
+   "txn_yoy_pct": -8.3
+  },
+  {
+   "branch": "בר כוכבא פתח תקווה                      ",
+   "net25_M": 22,
+   "yoy_pct": 23.9,
+   "margin_pct": 28,
+   "basket25": 77,
+   "txn_yoy_pct": 28.3
+  },
+  {
+   "branch": "רחובות                                  ",
+   "net25_M": 16.1,
+   "yoy_pct": -7.8,
+   "margin_pct": 32.3,
+   "basket25": 78.4,
+   "txn_yoy_pct": -8.4
+  },
+  {
+   "branch": "חובבי ציון פ\"ת                          ",
+   "net25_M": 12.7,
+   "yoy_pct": 12.5,
+   "margin_pct": 32.2,
+   "basket25": 41.3,
+   "txn_yoy_pct": 23.9
+  },
+  {
+   "branch": "כץ פתח תקווה                            ",
+   "net25_M": 8.8,
+   "yoy_pct": 29.9,
+   "margin_pct": 32.6,
+   "basket25": 61.1,
+   "txn_yoy_pct": 13.8
+  }
+ ],
+ "Q35": [
+  {
+   "supplier": "ביכורי שדה דרום 2002 בע\"מ                         ",
+   "net_rev": 114058776,
+   "pct_of_total_net": 16.5,
+   "margin_pct": 41.6,
+   "items": 359,
+   "depts": 6
+  },
+  {
+   "supplier": "תנובה חלב                                         ",
+   "net_rev": 49999266,
+   "pct_of_total_net": 7.23,
+   "margin_pct": 23.7,
+   "items": 484,
+   "depts": 4
+  },
+  {
+   "supplier": "שטראוס מצונן                                      ",
+   "net_rev": 36861075,
+   "pct_of_total_net": 5.33,
+   "margin_pct": 26.7,
+   "items": 457,
+   "depts": 5
+  },
+  {
+   "supplier": "אסם נסטלה ישראל בע\"מ                              ",
+   "net_rev": 28851517,
+   "pct_of_total_net": 4.17,
+   "margin_pct": 26.3,
+   "items": 957,
+   "depts": 14
+  },
+  {
+   "supplier": "עוף ירושלים שיווק בע\"מ                            ",
+   "net_rev": 24442662,
+   "pct_of_total_net": 3.54,
+   "margin_pct": 26.6,
+   "items": 120,
+   "depts": 3
+  },
+  {
+   "supplier": "שטראוס גרופ בע\"מ-יבש                              ",
+   "net_rev": 17451781,
+   "pct_of_total_net": 2.52,
+   "margin_pct": 19.2,
+   "items": 523,
+   "depts": 11
+  },
+  {
+   "supplier": "לויתן סחר ומוצרים חקלאיים בע`מ                    ",
+   "net_rev": 16504293,
+   "pct_of_total_net": 2.39,
+   "margin_pct": 22,
+   "items": 66,
+   "depts": 2
+  },
+  {
+   "supplier": "טרה - החברה המרכזית                               ",
+   "net_rev": 15153066,
+   "pct_of_total_net": 2.19,
+   "margin_pct": 26.1,
+   "items": 254,
+   "depts": 7
+  },
+  {
+   "supplier": "תנובה מותגים                                      ",
+   "net_rev": 14301917,
+   "pct_of_total_net": 2.07,
+   "margin_pct": 36.4,
+   "items": 235,
+   "depts": 4
+  },
+  {
+   "supplier": "קולה - החברה המרכזית                              ",
+   "net_rev": 14163411,
+   "pct_of_total_net": 2.05,
+   "margin_pct": 20.1,
+   "items": 268,
+   "depts": 3
+  },
+  {
+   "supplier": "מרינה פטריות הגליל בע\"מ                           ",
+   "net_rev": 13742619,
+   "pct_of_total_net": 1.99,
+   "margin_pct": 44.3,
+   "items": 216,
+   "depts": 5
+  },
+  {
+   "supplier": "דיפלומט מפיצים (1968) בע\"מ                        ",
+   "net_rev": 13257783,
+   "pct_of_total_net": 1.92,
+   "margin_pct": 22.9,
+   "items": 614,
+   "depts": 15
+  },
+  {
+   "supplier": "דין שיווק וקליה 2021 בע\"מ-מכר                     ",
+   "net_rev": 12697167,
+   "pct_of_total_net": 1.84,
+   "margin_pct": 23.5,
+   "items": 117,
+   "depts": 6
+  },
+  {
+   "supplier": "החברה הדרומית לשיווק בע\"מ                         ",
+   "net_rev": 12135996,
+   "pct_of_total_net": 1.76,
+   "margin_pct": 32.4,
+   "items": 931,
+   "depts": 3
+  },
+  {
+   "supplier": "נטו מלינדה סחר בע\"מ                               ",
+   "net_rev": 11388649,
+   "pct_of_total_net": 1.65,
+   "margin_pct": 33.6,
+   "items": 410,
+   "depts": 9
+  },
+  {
+   "supplier": "ג. וילי-פוד אינטרנשיונל בע\"מ                      ",
+   "net_rev": 9884626,
+   "pct_of_total_net": 1.43,
+   "margin_pct": 30.1,
+   "items": 474,
+   "depts": 9
+  },
+  {
+   "supplier": "יוניליוור ישראל שיווק בע\"מ                        ",
+   "net_rev": 9832402,
+   "pct_of_total_net": 1.42,
+   "margin_pct": 23.3,
+   "items": 520,
+   "depts": 10
+  },
+  {
+   "supplier": "מחלבות גד (שיווק - 1992) בע\"מ                     ",
+   "net_rev": 8974349,
+   "pct_of_total_net": 1.3,
+   "margin_pct": 31.4,
+   "items": 126,
+   "depts": 2
+  },
+  {
+   "supplier": "סוגת תעשיות בע\"מ                                  ",
+   "net_rev": 8790670,
+   "pct_of_total_net": 1.27,
+   "margin_pct": 32.2,
+   "items": 260,
+   "depts": 7
+  },
+  {
+   "supplier": "טמפו שווק (1981) בע\"מ                             ",
+   "net_rev": 8520265,
+   "pct_of_total_net": 1.23,
+   "margin_pct": 32.2,
+   "items": 339,
+   "depts": 3
+  }
+ ]
+}

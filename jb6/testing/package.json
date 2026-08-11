@@ -1,0 +1,31 @@
+{
+  "name": "@jb6/testing",
+  "version": "1.260606.0",
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./express-testing-utils.js": "./express-testing-utils.js",
+    "./*": "./*"
+  },
+  "scripts": {},
+  "dependencies": {
+    "@jb6/core": "1.260606.0",
+    "@jb6/common": "1.260606.0",
+    "@jb6/server-utils": "1.260606.0",
+    "@jb6/llm-guide": "1.260606.0"
+  },
+  "devDependencies": {
+    "@jb6/react": "1.260606.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Artwaresoft/jb6.git",
+    "directory": "packages/testing"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "jb-tests": "./run-tests-cli.js"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "name": "wonder",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "local": "node --import ./nodejs-importmap.js cloud-services/express-server/local-server.js",
+    "deploy-jb6-react-lib": "bash cloud-services/deploy-jb6-react-lib-to-cdn.sh"
+  },
+  "dependencies": {
+    "@google-cloud/storage": "^7.15.2",
+    "@modelcontextprotocol/sdk": "^1.13.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "esbuild": "^0.25.0",
+    "express": "^4.21.2",
+    "google-auth-library": "^10.2.0",
+    "node-pty": "^1.1.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "stream-json": "^1.9.1",
+    "tar": "^7.5.1",
+    "undici": "^8.3.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "^6.0.1",
+    "jsdom": "^26.1.0"
+  },
+  "importMap": {
+    "@wonder/": "/wonder/",
+    "@solution/": "/solution/",
+    "@indiviai/": "/indiviai/"
+  },
+  "staticMappings": {
+    "/wonder": "./wonder",
+    "/solution": "./solutions",
+    "/indiviai": "./indiviai",
+    "/jb6-local-settings": "./.jb6"
+  },
+  "importMapsInCli": "./nodejs-importmap.js",
+  "jb6Root": "./jb6"
+}

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="./jbart-tests.png" type="image/png">
+  <style>
+    .test-button { opacity: 0 }
+    .test-button:hover { opacity: 1 }
+  </style>
+  <script type="importmap">JB_IMPORT_MAP</script>
+
+  <script type="module">
+    const urlQuery = prop => new URLSearchParams(location.search).get(prop)
+    const { coreUtils } = await import('@jb6/core')
+    const { runTests } = await import('@jb6/testing')
+    const { browserSpy } = await import('@jb6/core/utils/browser-spy.js')
+
+    const modulePath = urlQuery('modulePath') || '@jb6/testing/all-jb6-tests.js'
+    console.log('modulePath', modulePath)
+    // show/showOnly/action render the real component visibly -> load real modules, not stubs
+    if (['show','showOnly','action'].some(p => urlQuery(p) != null)) window.noStubs = true
+    await import(modulePath)
+
+    const params = {
+      specificTest: urlQuery('test'),
+      notPattern:    urlQuery('not'),
+      ...Object.fromEntries(['pattern','take','includeHeavy','showOnly','action'].map(x => [x, urlQuery(x) || urlQuery(x) != null]))
+    }
+
+    browserSpy.initSpyByUrl()
+    runTests(params)
+  </script>
+</head>
+
+<body>
+  <div id="remoteTests"></div>
+  <div id="mem"></div>
+  <div id="testElem"></div>
+  <div id="show"></div>
+</body>
+</html>

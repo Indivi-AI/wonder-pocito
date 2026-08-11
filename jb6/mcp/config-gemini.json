@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "jb_mcp": {
+      "command": "/usr/bin/node",
+      "args": [ "packages/mcp/index.js", "--start" ],
+      "cwd": "%$REPO_ROOT%"
+    }
+  },
+  "selectedAuthType": "gemini-api-key",
+  "theme": "Default"
+}

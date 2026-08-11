@@ -1,0 +1,43 @@
+<!-- Static HTML template for MCP UI iframe. Uses JB_IMPORT_MAP (replaced by server).
+     Cannot use srcdoc/dynamic HTML because ES module imports require same-origin base URL. -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script type="importmap">JB_IMPORT_MAP</script>
+<style> html, body { height: 100%; margin: 0; padding: 0; } </style>
+</head>
+<body>
+  <div id="show" style="height: 100vh;"></div>
+  <script type="module">
+    import { App } from '@jb6/mcp/mcp-iframe-app.js'
+    import { dsls, coreUtils } from '@jb6/core'
+    import '@jb6/react/lib/tailwindcss-3.4.17.js'
+    import { reactUtils } from '@jb6/react'
+
+    const urlParams = new URLSearchParams(window.location.search)
+    const { importMapsInCli } = JB_IMPORT_MAP
+    jb.coreRegistry.importMapsInCli = importMapsInCli
+
+    for (const file of (urlParams.get('urlsToLoad') || '').split(',').filter(Boolean))
+      await import(file)
+
+    const cmpId = urlParams.get('compId') || 'showMe'
+    const root = reactUtils.createRoot(document.getElementById('show'))
+    const app = globalThis.mcpApp = new App({ name: cmpId, version: '1.0.0' })
+
+    const render = async (compArgs) => {
+      const { reactCmp, props, ctx } = await reactUtils.runOnHost(cmpId, reactUtils.extendCtxWithUrl(), compArgs)
+      root.render(reactUtils.hh(ctx, reactCmp, props))
+    }
+
+    app.ontoolinput = (params) => render(params.arguments || null)
+    app.ontoolresult = (result) => {
+      const text = result.content?.find(c => c.type === 'text')?.text
+      render(text ? (() => { try { return JSON.parse(text) } catch { return { data: text } } })() : null)
+    }
+
+    app.connect()
+  </script>
+</body>
+</html>

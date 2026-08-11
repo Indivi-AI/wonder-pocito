@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script type="importmap">JB_IMPORT_MAP</script>
+</head>
+
+<body class="h-screen m-0 p-0 font-sans">
+  <div class="flex flex-col h-screen">
+    <div class="p-2 bg-gray-100 border-b border-gray-300 flex gap-4 items-center">
+      <label class="flex items-center gap-2">
+        Component ID:
+        <input type="text" id="cmpId" value="showMe" class="px-2 py-1 border border-gray-300 rounded" />
+      </label>
+      <button id="loadBtn" class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer">Load</button>
+      <span id="status" class="text-sm text-gray-600"></span>
+    </div>
+    <div class="flex-1 relative">
+      <iframe id="appFrame" class="w-full h-full border-none"></iframe>
+      <div class="absolute top-2 right-2 bg-white border border-gray-300 rounded p-2 text-xs max-w-xs shadow-md">
+        <h4 class="m-0 mb-2 font-semibold">Mock Host - Send Tool Result</h4>
+        <textarea id="toolResult" class="w-full h-20 font-mono text-xs p-1 border border-gray-300 rounded">{"data": {"text": "hello from tool"}, "vars": {"v1": "toolVar"}}</textarea>
+        <button id="sendResult" class="mt-2 px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 cursor-pointer text-xs">Send Tool Result</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { dsls, coreUtils } from '@jb6/core'
+    import '@jb6/core/misc/import-map-services.js'
+    import '@jb6/react/lib/tailwindcss-3.4.17.js'
+    import { reactUtils } from '@jb6/react'
+
+    const urlParams = new URLSearchParams(window.location.search)
+    const { importMapsInCli } = JB_IMPORT_MAP
+    jb.coreRegistry.importMapsInCli = importMapsInCli
+
+    // Load any additional URLs
+    const urlsToLoad = urlParams.get('urlsToLoad') || ''
+    for (const file of urlsToLoad.split(',').filter(Boolean))
+      await import(file)
+
+    const cmpIdInput = document.getElementById('cmpId')
+    const loadBtn = document.getElementById('loadBtn')
+    const appFrame = document.getElementById('appFrame')
+    const toolResultTextarea = document.getElementById('toolResult')
+    const sendResultBtn = document.getElementById('sendResult')
+    const statusEl = document.getElementById('status')
+
+    // Set initial cmpId from URL
+    cmpIdInput.value = urlParams.get('cmpId') || 'showMe'
+
+    // Mock host - handle messages from iframe
+    window.addEventListener('message', (event) => {
+      const data = event.data
+      if (!data || typeof data !== 'object') return
+
+      console.log('Host received:', data)
+
+      // Handle ui/initialize request
+      if (data.method === 'ui/initialize') {
+        const response = {
+          jsonrpc: '2.0',
+          id: data.id,
+          result: {
+            protocolVersion: '2026-01-26',
+            capabilities: { serverTools: true },
+            hostInfo: { name: 'JB6 Preview Host', version: '1.0.0' },
+            hostContext: { theme: 'light' }
+          }
+        }
+        appFrame.contentWindow.postMessage(response, '*')
+        statusEl.textContent = 'App initialized'
+        return
+      }
+
+      // Handle ui/notifications/initialized
+      if (data.method === 'ui/notifications/initialized') {
+        statusEl.textContent = 'App ready'
+        return
+      }
+
+      // Handle tools/call requests
+      if (data.method === 'tools/call') {
+        console.log('Tool call:', data.params)
+        const response = {
+          jsonrpc: '2.0',
+          id: data.id,
+          result: {
+            content: [{ type: 'text', text: JSON.stringify(data.params) }]
+          }
+        }
+        appFrame.contentWindow.postMessage(response, '*')
+        return
+      }
+    })
+
+    // Generate iframe HTML from the renderReactCompToHtml logic
+    function generateIframeHtml(compId) {
+      const importMapJson = JSON.stringify(JB_IMPORT_MAP, null, 2)
+      return `<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script type="importmap">${importMapJson}</script>
+</head>
+<body class="h-screen m-0 p-0">
+  <div id="show" class="h-screen"></div>
+  <script type="module">
+    import { App } from '@jb6/mcp/mcp-iframe-app.js'
+    import { dsls, coreUtils } from '@jb6/core'
+    import '@jb6/react/lib/tailwindcss-3.4.17.js'
+    import { reactUtils } from '@jb6/react'
+
+    const cmpId = '${compId}'
+    const root = reactUtils.createRoot(document.getElementById('show'))
+
+    const app = new App({ name: cmpId, version: '1.0.0' })
+    app.connect()
+
+    async function render(toolResultData) {
+      const { reactCmp, props, ctx } = await reactUtils.runOnHost(cmpId, reactUtils.extendCtxWithUrl())
+      const finalCtx = toolResultData ? ctx.setData(toolResultData.data).setVars(toolResultData.vars) : ctx
+      const finalProps = toolResultData?.props ? { ...props, ...toolResultData.props } : props
+      root.render(reactUtils.hh(finalCtx, reactCmp, finalProps))
+    }
+
+    app.ontoolresult = (result) => {
+      const textContent = result.content?.find(c => c.type === 'text')?.text
+      let toolResultData = null
+      if (textContent) {
+        try {
+          toolResultData = JSON.parse(textContent)
+        } catch (e) {
+          toolResultData = { data: textContent }
+        }
+      }
+      render(toolResultData)
+    }
+
+    render(null)
+  </script>
+</body>
+</html>`
+    }
+
+    function loadComponent() {
+      const compId = cmpIdInput.value
+      const html = generateIframeHtml(compId)
+      appFrame.srcdoc = html
+      statusEl.textContent = 'Loading...'
+    }
+
+    loadBtn.addEventListener('click', loadComponent)
+
+    sendResultBtn.addEventListener('click', () => {
+      try {
+        const toolData = JSON.parse(toolResultTextarea.value)
+        const notification = {
+          jsonrpc: '2.0',
+          method: 'ui/notifications/tool-result',
+          params: {
+            content: [{ type: 'text', text: JSON.stringify(toolData) }]
+          }
+        }
+        appFrame.contentWindow.postMessage(notification, '*')
+        statusEl.textContent = 'Tool result sent'
+      } catch (e) {
+        statusEl.textContent = 'Error: ' + e.message
+      }
+    })
+
+    loadComponent()
+  </script>
+</body>
+</html>

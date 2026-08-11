@@ -1,0 +1,29 @@
+{
+  "name": "@jb6/react",
+  "version": "1.260606.0",
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./*.js": "./*.js",
+    "./lib/*.js": "./lib/*.js",
+    "./lib/*.mjs": "./lib/*.mjs",
+    "./tests/*.js": "./tests/*.js",
+    "./tests/*.mjs": "./tests/*.mjs"
+  },
+  "scripts": {},
+  "dependencies": {
+    "@jb6/core": "1.260606.0"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0",
+    "mutationobserver-shim": "^0.3.7",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "scheduler": "^0.27.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Artwaresoft/jb6.git",
+    "directory": "packages/react"
+  }
+}
