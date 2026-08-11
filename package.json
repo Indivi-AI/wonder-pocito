@@ -5,9 +5,19 @@
   "type": "module",
   "scripts": {
     "local": "node --import ./nodejs-importmap.js cloud-services/express-server/local-server.js",
-    "deploy-jb6-react-lib": "bash cloud-services/deploy-jb6-react-lib-to-cdn.sh"
+    "build-wonder-base": "bash cloud-services/build-wonder-base.sh",
+    "build-wonder": "bash cloud-services/build-wonder-image.sh",
+    "deploy-wonder": "bash cloud-services/deploy-cloud-run-staging-ggl.sh",
+    "deploy-wonder-all": "bash cloud-services/deploy-cloud-run-staging-ggl.sh --all",
+    "deploy-wonder-amz": "bash cloud-services/deploy-wonder-amz.sh",
+    "deploy-react-lib-and-images-to-cdn": "bash cloud-services/deploy-react-lib-and-images-to-cdn.sh",
+    "server-secrets:pull:dev": "node scripts/secrets.js pull dev",
+    "server-secrets:pull:prod": "node scripts/secrets.js pull prod",
+    "server-secrets:push:dev": "node scripts/secrets.js push dev",
+    "server-secrets:push:prod": "node scripts/secrets.js push prod"
   },
   "dependencies": {
+    "@google-cloud/secret-manager": "^5.6.0",
     "@google-cloud/storage": "^7.15.2",
     "@modelcontextprotocol/sdk": "^1.13.2",
     "cookie-parser": "^1.4.7",

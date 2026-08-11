@@ -3,10 +3,6 @@ import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { coreUtils } from '@jb6/core'
 import '@jb6/core/misc/import-map-services.js'
-import '@jb6/mcp'
-import '../../.jb6/mcp.js'
-import '@jb6/server-utils/serve-mcp.js'
-import { serverUtils } from '@jb6/server-utils'
 import { setupAuthRoutes } from './lib/auth-routes.js'
 import { setupGCSProxyRoute } from './lib/gcs-proxy.js'
 import { setupProtectedRoutes } from './lib/protected-routes.js'
@@ -46,6 +42,10 @@ export async function createApp(mode = process.env.WONDER_SERVICE || 'public') {
     setupAuthRoutes(app)
     setupProtectedRoutes(app)
     if (mode === 'local') {
+      await import('@jb6/mcp')
+      await import('../../.jb6/mcp.js')
+      await import('@jb6/server-utils/serve-mcp.js')
+      const { serverUtils } = await import('@jb6/server-utils')
       await setupLiveRepo(app)
       await serverUtils.serveMcpViaCli(app, { express })
     }

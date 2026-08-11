@@ -78,7 +78,7 @@ Test('roomLambdaTest.deployOnTheCloud', {
 Test('roomLambdaTest.ensureExtracted.concurrent', {
   impl: dataTest({
     calculate: async () => {
-      const serverModule = '../../cloud-services/express-server/lib/room-lambda-and-applet.js'
+      const serverModule = '../../../cloud-services/express-server/lib/room-lambda-and-applet.js'
       const { ensureExtracted } = await import(serverModule)
       const { promises: fsp } = await import('fs')
       const root = `/tmp/ensure-extracted-${Date.now()}`, src = `${root}/src`, code = `${root}/code`

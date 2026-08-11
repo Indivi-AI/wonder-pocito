@@ -15,8 +15,8 @@ import { readJson } from './signed-url.js'
 import { promises as fsp, existsSync } from 'fs'
 import { spawn } from 'child_process'
 
-const BUCKET = 'wonder-frontend-me-west1'
-const PUBLIC_BUCKET_URL = `https://storage.googleapis.com/${BUCKET}`
+const FRONTEND_URL = 'https://jb6-cdn.pages.dev'
+const CODE_PACKAGES_URL = 'https://storage.googleapis.com/wonder-code-packages'
 const PUBLIC_ROOM_BUCKET = 'https://storage.googleapis.com/indiviai-wonder'
 const jb6Pkgs = ['core','common','react','rx','jq','llm-api','llm-guide','mcp','testing','repo','lang-service','probe-studio']
 const json = express.json({ limit: '1mb' })
@@ -28,7 +28,7 @@ const SHELL_HTML = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wonder Workspace</title>
 <link rel="icon" type="image/svg+xml" href="_FAVICON_">
-<link rel="apple-touch-icon" href="${PUBLIC_BUCKET_URL}/images/icon/icon-180x180.png">
+<link rel="apple-touch-icon" href="${FRONTEND_URL}/images/icon/icon-180x180.png">
 _OG_TAGS_
 <style>
 html,body{height:100%;margin:0;padding:0}
@@ -75,8 +75,8 @@ await harvestReady(cmpCtx)
 // link-preview branding: crawlers run no JS, so the shared applet card is chosen server-side. Resolved per-field, first-defined-wins:
 // applet.og (applets/<name>.json) → room admin/branding.json → wonder.html defaults (wonder.svg favicon, "Wonder" title/og:image).
 const OG_DEFAULTS = {
-  favicon: `${PUBLIC_BUCKET_URL}/images/wonder.svg`,
-  ogImage: `${PUBLIC_BUCKET_URL}/images/wonder.svg`,
+  favicon: `${FRONTEND_URL}/images/wonder.svg`,
+  ogImage: `${FRONTEND_URL}/images/wonder.svg`,
   ogTitle: 'Wonder Workspace',
   ogDescription: 'A Wonder workspace applet',
   ogType: 'website'
@@ -96,11 +96,11 @@ export async function serveAppletShell(spec, res, localImports) {
     'Cross-Origin-Embedder-Policy': 'credentialless'
   })
   const shareId = spec.appletV
-  const shareBase = `${PUBLIC_BUCKET_URL}/shared/${shareId}`
+  const shareBase = `${CODE_PACKAGES_URL}/shared/${shareId}`
   const imports = localImports ? localImports : shareId ? {
     ...Object.fromEntries(jb6Pkgs.flatMap(p => [
       [`@jb6/${p}`, `${shareBase}/jb6/${p}/index.js`], [`@jb6/${p}/`, `${shareBase}/jb6/${p}/`]])),
-    '@jb6/react/lib/': `${PUBLIC_BUCKET_URL}/jb6_packages/react/lib/`,
+    '@jb6/react/lib/': 'https://jb6-cdn.pages.dev/',
     '@wonder/': `${shareBase}/wonder/`, '@solution/': `${shareBase}/solution/`, '@indiviai/': `${shareBase}/indiviai/`
   } : {}
   const { og = [], ...clientSpec } = spec   // og = raw branding sources (room, applet), server-only — not shipped to the client
@@ -261,7 +261,7 @@ export async function ensureExtracted(lambdaV, { root = '/tmp/code', fetchTar = 
 }
 
 async function fetchLambdaTar(lambdaV) {
-  const r = await fetch(`${PUBLIC_BUCKET_URL}/lambdas/${lambdaV}.tar.gz`)
+  const r = await fetch(`${CODE_PACKAGES_URL}/lambdas/${lambdaV}.tar.gz`)
   if (!r.ok) throw new Error(`tar fetch ${r.status}`)
   return Buffer.from(await r.arrayBuffer())
 }

@@ -1,0 +1,9 @@
+.git
+.jb6
+node_modules
+solutions
+tests
+**/*-tests.js
+**/tests
+**/static-wasm
+*.log
