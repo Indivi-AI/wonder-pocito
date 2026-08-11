@@ -1,5 +1,5 @@
 import { coreUtils, dsls, ns, jb } from '@jb6/core'
-import { logger, storagePrefix, serversByUrl } from './base-utils.js'
+import { logger, storagePrefix } from './base-utils.js'
 import './db-drivers.js'
 const { successResult, errorResultByException } = jb.wonderUtils
 
@@ -139,7 +139,7 @@ DbDriver('GCS.browser.liveRepo', {
     get: wget.viaGcsHttpApi(),
     put: wput.viaGcsHttpApi(),
     list: wlist.viaGcsHttpApi(),
-    append: wappend.viaWonderService(),
+    append: wappend.getAndPutNoCheck({ get: wget.viaGcsHttpApi(), put: wput.viaGcsHttpApi() }),
     filePathUrl: (ctx,{path, bucketName}) => `${storagePrefix}/${bucketName}/${path}`
   })
 })

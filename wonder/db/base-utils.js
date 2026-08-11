@@ -15,35 +15,8 @@ import { coreUtils, dsls } from '@jb6/core'
 export const storagePrefix =  'https://storage.googleapis.com'
 export const wonderBucketName = 'indiviai-wonder'
 
-export function serversByUrl(ctx) {
-  const window = globalThis.window || { location: {hostname: '', pathname: '', search: '', hash: ''}, innerWidth: 0, navigator: { userAgent: ''} } || null
-  const isLocalHost = ctx?.vars.isLocalHost !== undefined ? ctx.vars.isLocalHost
-    : globalThis.builtIn?.localhost || window?.location.hostname === 'localhost' || window?.location.hostname?.startsWith('192.168')
-  const _pathSeg = window?.location.pathname?.split('/')[1]   // a versioned app path uses it; a w*.html entry or the /room/:roomId/applet shell must NOT — it's not a version
-  const version = globalThis.builtIn?.wonderVersion?.versionId || ctx?.vars.wonderVersion
-    || (_pathSeg && !_pathSeg.endsWith('.html') && _pathSeg !== 'room' ? _pathSeg : 'latestVersion')
-  const db = ctx?.vars.db || Object.fromEntries([...new URLSearchParams(window?.location.search), ...new URLSearchParams(window?.location.hash.replace(/^#/, '?'))]).db
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(window?.navigator.userAgent) || window?.innerWidth < 768
-  const localhostServer = globalThis.builtIn?.window?.url || 'http://localhost:3000'
-  return {
-    isLocalHost, version, isMobile, db, localhostServer,
-    lambdaServerBase: isLocalHost ? `${localhostServer}` : window?.location?.hostname === 'staging.indivi.ai' ? window.location.origin : 'https://wonder-lambda-me-west1.indivi.ai',
-    llmProxyUrl: ctx?.vars.llmProxyUrl
-      || (ctx?.vars.runningAsAutomation ? `http://localhost:${globalThis.process?.env?.PORT || 8080}/llmProxy`
-          : (ctx?.vars.localProxy || isLocalHost) ? `${localhostServer}/llmProxy`
-          : 'https://node25-automations-server-365199207445.me-west1.run.app/llmProxy'),
-    searchServer: isLocalHost ? `${localhostServer}/a/similaritySearch`
-      : `https://node25-automations-server${ctx?.vars.isStaging ? '-staging' : ''}-365199207445.me-west1.run.app/a/${version}/similaritySearch`,
-    filterServer: (ctx?.vars.localProxy || isLocalHost) ? `${localhostServer}/process-file`
-      : 'https://node25-automations-server-365199207445.me-west1.run.app/process-file',
-    wonderServer: isLocalHost ? `${localhostServer}/a` : window?.location?.hostname === 'staging.indivi.ai' ? `${window.location.origin}/a/${version}`
-      : `https://node25-automations-server${ctx?.vars.isStaging ? '-staging' : ''}-365199207445.me-west1.run.app/a/${version}`,
-    // signed-url is served ONLY by staging (no prod signed-url route) — so it's unconditional, never gated on isStaging.
-    signedUrlServer: `https://node25-automations-server-staging-365199207445.me-west1.run.app/signed-url`,
-    gcsProxyBase: isLocalHost ? localhostServer : window?.location?.hostname === 'staging.indivi.ai' ? window.location.origin
-      : 'https://node25-automations-server-365199207445.me-west1.run.app'
-  }
-}
+const isLocalRuntime = ctx => ctx?.vars.isLocalHost !== undefined ? ctx.vars.isLocalHost
+  : !!(globalThis.location?.hostname === 'localhost' || globalThis.location?.hostname?.startsWith('192.168'))
 
 const extractError = obj => Object.fromEntries(
   Object.entries(obj).flatMap(([k,v]) => 
@@ -95,8 +68,7 @@ function logEvent(severity, logRecord = {}, heavyOrSensitiveRecord = {}, debugge
   const allArgs = {...logRecord, ...heavyOrSensitiveRecord, ...debuggerRecord}
   if (severity === 'error' && !coreUtils.isNode)
     console.error(allArgs)
-  const {isLocalHost} = serversByUrl(ctx)
-  if (isLocalHost && !globalThis.vmId && !ctx?.vars.sessionId) return
+  if (isLocalRuntime(ctx) && !globalThis.vmId && !ctx?.vars.sessionId) return
   if (ctx?.vars.doNotWriteLogs) return
 
   const logEntry = { severity, sessionId, userName, timestamp: Date.now(), ...logRecord }
@@ -135,10 +107,8 @@ function maybeFlush (force = false, ctx) {
 }
 
 const flushOnExit = () => {
-  const { isLocalHost, logServer } = serversByUrl() // to fix
-  if (isLocalHost || !logBuffer.length) return
+  if (isLocalRuntime() || !logBuffer.length) return
   try { globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify(logBuffer)) } catch {}
-  navigator.sendBeacon(logServer, JSON.stringify(logBuffer))
 }
 
 if (!coreUtils.isNode) {
@@ -159,9 +129,7 @@ if (!coreUtils.isNode) {
 
 export const createShortUrl = async (longUrl, alias, ctx) => {
   const baseUrl = location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://share.indivi.ai'
-  const { isLocalHost } = serversByUrl(ctx)
-  
-  if (isLocalHost) {
+  if (isLocalRuntime(ctx)) {
     const url = new URL(longUrl)
     const hashParams = new URLSearchParams(url.hash.slice(1))
     hashParams.delete('noAuth')
@@ -195,6 +163,5 @@ export const shareHandler = async (shareData) => {
 export function encode(text) {
   if (typeof Buffer !== 'undefined') return Buffer.from(text, 'utf-8')
   if (globalThis.TextEncoder) return new TextEncoder().encode(text)
-  if (globalThis.builtIn?.util) return new globalThis.builtIn.util.TextEncoder().encode(text)
   throw new Error('No text encoder available')
 }

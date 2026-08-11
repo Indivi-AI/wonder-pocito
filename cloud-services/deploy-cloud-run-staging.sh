@@ -4,7 +4,7 @@ export PROJECT_ID="indiviai"
 export REGION="me-west1"
 export REPOSITORY="cloud-run-source-deploy"
 export IMAGE_NAME="wonder"
-PUBLIC_SERVICE="wonder-staging"
+PUBLIC_SERVICE="node25-automations-server-staging"
 PUBLIC_SA="wonder-public-sa@${PROJECT_ID}.iam.gserviceaccount.com"
 PROTECTED_SA="wonder-protected-rooms-sa@${PROJECT_ID}.iam.gserviceaccount.com"
 
@@ -17,7 +17,7 @@ echo "--- Authenticating Docker with GCP ---"
 gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
 
 echo "--- Building Production Docker Image for linux/amd64 ---"
-docker build --platform linux/amd64 --build-arg BUILD_TARGET=prod -t ${IMAGE_NAME} -f ./cloud-services/Dockerfile .
+docker build --platform linux/amd64 --build-arg BUILD_TARGET=prod -t ${IMAGE_NAME} -f ./cloud-services/wonder.docker .
 
 export IMAGE_TAG="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:latest"
 echo "--- Tagging image as: ${IMAGE_TAG} ---"

@@ -6,17 +6,17 @@ const authStore = () => globalThis.localStorage
 export const readAuth = () => { try { return JSON.parse(authStore()?.getItem('auth2') || '{}') } catch { return {} } }
 export const writeAuth = auth => authStore()?.setItem('auth2', JSON.stringify(auth))
 export const currentPrincipal = () => readAuth().sub || readAuth().email || 'anon'
-const servers = async ctx => (await import('./base-utils.js')).serversByUrl(ctx)
+const localhostServer = ctx => ctx?.vars?.localhostServer || globalThis.process?.env?.WONDER_LOCAL_SERVER || 'http://localhost:3000'
+const isLocalHost = ctx => ctx?.vars?.isLocalHost ?? !!(globalThis.location?.hostname === 'localhost' || globalThis.location?.hostname?.startsWith('192.168'))
 
 const devEmail = async ctx => {
   if (!coreUtils.isNode) {
     const email = readAuth().email
     if (email) return email
     await import('@jb6/core/misc/jb-cli.js')
-    const { localhostServer } = await servers(ctx)
     return (await coreUtils.runCliInContext(`import { coreUtils } from '@jb6/core'
 import { auth } from '@wonder/db/auth.js'
-await coreUtils.writeServiceResult(await auth.devEmail(new coreUtils.Ctx()))`, { ctx, expressUrl: localhostServer })).result || ''
+await coreUtils.writeServiceResult(await auth.devEmail(new coreUtils.Ctx()))`, { ctx, expressUrl: localhostServer(ctx) })).result || ''
   }
   const { readFile } = await import('fs/promises')
   const config = await readFile(`${process.env.HOME}/.config/gcloud/configurations/config_default`, 'utf8').catch(() => '')
@@ -37,10 +37,9 @@ const wonderIdToken = async ctx => {
     if (stored.id_token && (!stored.expiresAt || stored.expiresAt > Date.now())) return stored.id_token
     if (stored.id_token) await (await import('./oauth2.js')).handleAuth()
     if (readAuth().id_token) return readAuth().id_token
-    const { isLocalHost, localhostServer } = await servers(ctx)
-    if (!isLocalHost) return dbLogger?.error?.({ t: 'wonderIdToken: login required' }, {}, { ctx }) || null
+    if (!isLocalHost(ctx)) return dbLogger?.error?.({ t: 'wonderIdToken: login required' }, {}, { ctx }) || null
     const email = await devEmail(ctx)
-    const id_token = await fetch(`${localhostServer}/mint-wonder-token?email=${encodeURIComponent(email)}`).then(r => r.text())
+    const id_token = await fetch(`${localhostServer(ctx)}/mint-wonder-token?email=${encodeURIComponent(email)}`).then(r => r.text())
     writeAuth({ ...stored, id_token, email, expiresAt: Date.now() + 86400e3 })
     return id_token
   }
@@ -49,8 +48,7 @@ const wonderIdToken = async ctx => {
     const { GoogleAuth } = await import('google-auth-library')
     return registry.idToken = (await (await new GoogleAuth().getIdTokenClient('unused')).getRequestHeaders()).Authorization.split(' ')[1]
   }
-  const { localhostServer } = await servers(ctx)
-  return registry.idToken = fetch(`${localhostServer}/mint-wonder-token?email=${encodeURIComponent(await devEmail(ctx))}`).then(r => r.text())
+  return registry.idToken = fetch(`${localhostServer(ctx)}/mint-wonder-token?email=${encodeURIComponent(await devEmail(ctx))}`).then(r => r.text())
 }
 
 const gcpAccessToken = async (ctx, { method = 'GET' } = {}) => {
@@ -70,7 +68,7 @@ const gcpAccessToken = async (ctx, { method = 'GET' } = {}) => {
 
 let storage, nativeStorage
 const gcpStorage = async (ctx, { native = false } = {}) => {
-  const { Storage } = globalThis.builtIn?.gcsStorage || await import('@google-cloud/storage')
+  const { Storage } = await import('@google-cloud/storage')
   if (native) return nativeStorage ||= new Storage()
   if (storage) return storage
   const token = await auth.gcpAccessToken(ctx, { method: 'POST' })

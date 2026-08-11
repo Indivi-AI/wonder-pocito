@@ -101,7 +101,7 @@ export async function serveAppletShell(spec, res, localImports) {
     ...Object.fromEntries(jb6Pkgs.flatMap(p => [
       [`@jb6/${p}`, `${shareBase}/jb6/${p}/index.js`], [`@jb6/${p}/`, `${shareBase}/jb6/${p}/`]])),
     '@jb6/react/lib/': 'https://jb6-cdn.pages.dev/',
-    '@wonder/': `${shareBase}/wonder/`, '@solution/': `${shareBase}/solution/`, '@indiviai/': `${shareBase}/indiviai/`
+    '@wonder/': `${shareBase}/wonder/`, '@solution/': `${shareBase}/solutions/`, '@indiviai/': `${shareBase}/indiviai/`
   } : {}
   const { og = [], ...clientSpec } = spec   // og = raw branding sources (room, applet), server-only — not shipped to the client
   const branding = mergeBranding(...og)
@@ -203,7 +203,7 @@ export function setupRoomLambdaAndApplet(app) {
     const effRole = anon ? 'authenticated' : role, email = who?.email || 'anonymous'
     const denied = lambda.dir && !canAccess(policy, lambda.dir, 'r', effRole)
     if (denied) { res.status(403).json({ error: `forbidden: ${lambda.dir} for role ${effRole} for user ${email}` }); return null }
-    // isLocalHost/isStaging route the signed-url service for signedRoom:// reads (serversByUrl). roomUrl = the caller's room.
+    // roomUrl tells signedRoom:// reads which protected room policy applies.
     const isLocalHost = req.hostname === 'localhost'
     return { lambdaV: lambda.lambdaV, source: {                                         // 3. run AS THE USER (or anon SA)
       // profile = the call; packedCtx = the caller's ctx slice (stripCtx, logger-free).
@@ -261,7 +261,7 @@ export async function ensureExtracted(lambdaV, { root = '/tmp/code', fetchTar = 
 }
 
 async function fetchLambdaTar(lambdaV) {
-  const r = await fetch(`${CODE_PACKAGES_URL}/lambdas/${lambdaV}.tar.gz`)
+  const r = await fetch(`${CODE_PACKAGES_URL}/lambdas/${lambdaV}.tar.gz?v=${Date.now()}`)
   if (!r.ok) throw new Error(`tar fetch ${r.status}`)
   return Buffer.from(await r.arrayBuffer())
 }

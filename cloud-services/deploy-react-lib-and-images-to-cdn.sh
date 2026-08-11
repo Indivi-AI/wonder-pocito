@@ -9,5 +9,5 @@ echo "Deploying wonder/images/* to https://jb6-cdn.pages.dev/images/*"
 cp -r "$ROOT/jb6/react/lib/." "$DEPLOY_DIR/"
 mkdir -p "$DEPLOY_DIR/images"
 cp -r "$ROOT/wonder/images/." "$DEPLOY_DIR/images/"
-npx wrangler pages deploy "$DEPLOY_DIR" --project-name jb6-cdn
+npx wrangler@4.120.1 pages deploy "$DEPLOY_DIR" --project-name jb6-cdn --branch main
 echo "Deployed React libraries and Wonder images to https://jb6-cdn.pages.dev"

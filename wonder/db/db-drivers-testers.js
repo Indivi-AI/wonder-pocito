@@ -2,7 +2,6 @@ import { dsls, coreUtils, jb } from '@jb6/core'
 import '@jb6/testing'
 import '@jb6/common'
 import './db-drivers.js'
-import { serversByUrl } from './base-utils.js'
 import './db-drivers-live-repo.js'
 
 const { wfetch2, getIdToken } = jb.wonderUtils
@@ -17,6 +16,7 @@ const {
 } = dsls
 
 const mintTestToken = phone => fetch(`http://localhost:3000/mint-wonder-token?phone=${encodeURIComponent(phone)}`).then(r => r.text())
+const signedUrlServerForTests = env => env === 'staging' ? 'https://staging.indivi.ai/signed-url' : 'http://localhost:3000/signed-url'
 
 Test('dbDriverPutGetTest', {
   circuit: 'dbDriverTests.fsMem.browser.putGet',
@@ -56,7 +56,7 @@ Test('dbDriverAppendTest', {
       const onLiveRepo = mode.includes('localhost')
       const forceGCS = mode.includes('prod')
       const useNode = mode.includes('node')
-      const dbCtx = ctx.setVars({forceGCS, onLiveRepo, wonderVersion: 'latestVersion', hasGcpIdentity: useNode})
+      const dbCtx = ctx.setVars({forceGCS, onLiveRepo, hasGcpIdentity: useNode})
       const result = await putChangeGet({url: urlF(ctx), initialArray, appendItems, forceGCS, onLiveRepo, testSessionId, changeNewFile}, useNode, dbCtx)
       return result
     },
@@ -66,7 +66,7 @@ Test('dbDriverAppendTest', {
 })
 
 function signedRoomCtx(ctx, env) {
-  return ctx.setVars({ forceGCS: false, isStaging: env === 'staging', wonderVersion: 'latestVersion' })
+  return ctx.setVars({ forceGCS: false, isStaging: env === 'staging' })
 }
 
 Test('signedRoomPutGetTest', {
@@ -116,10 +116,10 @@ Test('signedRoomPermissionsTest', {
     logger: 'dbLogger',
     calculate: async (ctx, {}, {env}) => {
       const dbCtx = signedRoomCtx(ctx, env)
-      const { signedUrlServer } = serversByUrl(ctx.setVars({ isStaging: env === 'staging' }))
+      const signingUrl = signedUrlServerForTests(env)
       const [adminToken, user1Token, user2Token, strangerToken] = await Promise.all(
         ['+1000ADMIN', '+1000USER1', '+1000USER2', '+1000STRANGER'].map(mintTestToken))
-      const req = (token, path, method) => fetch(`${signedUrlServer}/${path}?method=${method}`, { headers: { Authorization: `Bearer ${token}` } })
+      const req = (token, path, method) => fetch(`${signingUrl}/${path}?method=${method}`, { headers: { Authorization: `Bearer ${token}` } })
       const labels = ['admin-read-admin','admin-write-admin','user-read-admin','admin-read-usersRO','admin-write-usersRO',
         'user-read-usersRO','user-write-usersRO','admin-read-userProtected','user-read-own','user-write-own','user-read-others','stranger-read','no-token']
       const results = await Promise.all([
@@ -135,7 +135,7 @@ Test('signedRoomPermissionsTest', {
         req(user1Token, 'testSignedRoom/userProtected/+1000USER1/cart.json', 'PUT'), // 10. user write own → 200
         req(user2Token, 'testSignedRoom/userProtected/+1000USER1/cart.json', 'GET'), // 11. user read other's → 403
         req(strangerToken, 'testSignedRoomSpecific/usersRO/test.json', 'GET'),     // 12. stranger (not member) → 403
-        fetch(`${signedUrlServer}/testSignedRoom/admin/test.json?method=GET`), // 13. no token → 401
+        fetch(`${signingUrl}/testSignedRoom/admin/test.json?method=GET`), // 13. no token → 401
       ])
       const details = await Promise.all(results.map(async (r, i) => {
         const body = r.status !== 200 ? await r.text().catch(() => '') : ''
@@ -156,13 +156,13 @@ Test('signedRoomGooglePermissionsTest', {
     calculate: async (ctx, {}, {env}) => {
       const dbCtx = signedRoomCtx(ctx, env)
       const idToken = await getIdToken(dbCtx)
-      const { signedUrlServer } = serversByUrl(ctx.setVars({ isStaging: env === 'staging' }))
+      const signingUrl = signedUrlServerForTests(env)
       const headers = { Authorization: `Bearer ${idToken}` }
-      const req = (path, method) => fetch(`${signedUrlServer}/${path}?method=${method}`, { headers })
+      const req = (path, method) => fetch(`${signingUrl}/${path}?method=${method}`, { headers })
       const results = await Promise.all([
         req('testSignedRoom/admin/test.json', 'GET'),
         req('testSignedRoom/usersRO/test.json', 'GET'),
-        fetch(`${signedUrlServer}/testSignedRoom/admin/test.json?method=GET`),
+        fetch(`${signingUrl}/testSignedRoom/admin/test.json?method=GET`),
       ])
       const details = await Promise.all(results.map(async (r, i) => {
         const body = r.status !== 200 ? await r.text().catch(() => '') : ''
@@ -305,7 +305,7 @@ Test('dbDriverPatchTest', {
       const onLiveRepo = mode.includes('localhost')
       const forceGCS = mode.includes('prod')
       const useNode = mode.includes('node')
-      const dbCtx = ctx.setVars({forceGCS, onLiveRepo, wonderVersion : 'latestVersion', hasGcpIdentity: useNode})
+      const dbCtx = ctx.setVars({forceGCS, onLiveRepo, hasGcpIdentity: useNode})
       const result = await putChangeGet({url, initialObj, patchData, forceGCS, onLiveRepo, testSessionId}, useNode, dbCtx)
       return result
     },
@@ -351,7 +351,7 @@ export async function putGet(args, useNode, ctx) {
 
 export async function putChangeGet(args, useNode, ctx) {
   const { url, initialArray, appendItems, initialObj, patchData, changeNewFile } = args
-  const { wonderVersion, dbLogger } = ctx.vars
+  const { dbLogger } = ctx.vars
   try {
     if (!coreUtils.isNode && useNode) {
       const script = `
@@ -359,7 +359,7 @@ export async function putChangeGet(args, useNode, ctx) {
         import {putChangeGet} from '@wonder/db/db-drivers-testers.js'
         try {
           const args = ${JSON.stringify(args)}
-          const ctx = new coreUtils.Ctx().setVars({...args,wonderVersion : '${wonderVersion}'})
+          const ctx = new coreUtils.Ctx().setVars(args)
           const result = await putChangeGet(args,true,ctx)
           await coreUtils.writeServiceResult(result)
         } catch (error) {

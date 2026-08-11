@@ -308,8 +308,7 @@ Data('runFastReport', {
   permissionByPath: 'usersRW',
   params: [{ id: 'userMessage', as: 'string', mandatory: true }, { id: 'chatHistory', as: 'array' }, { id: 'model', as: 'string' }],
   impl: async (ctx, {}, { userMessage, chatHistory, model }) => {
-    const wonderVersion = await fetch('https://storage.googleapis.com/wonder-frontend-me-west1/versions.json').then(r => r.json()).then(j => j.latestVersion).catch(() => null)
-    const vars = {db: 'local', roomId: ctx.vars.roomId || 'comaxDemo', userMessage, wonderVersion,
+    const vars = {db: 'local', roomId: ctx.vars.roomId || 'comaxDemo', userMessage,
       llmProxyUrl: LLM_PROXY, summaryModel: SUMMARY_MODEL, accumulatedContext: {chatHistory},
       categories: {reportsAnalytics: true, reports: true, local: true}}
     const wfCtx = await jb.workflowUtils.extendWithWorkflowVars(ctx.setVars(vars))

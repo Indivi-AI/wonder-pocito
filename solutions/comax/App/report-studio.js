@@ -2,7 +2,7 @@ import { dsls, jb } from '@jb6/core'
 import '@jb6/common'
 import '@jb6/react'
 import '@wonder/applets/applet.js'
-import '@wonder/llm-flow/report-step.js'
+import '@wonder/ai/report-step.js'
 import '@wonder/verified-queries/verified-queries-dsl.js'
 import '@wonder/core/db-drivers.js'
 const { wfetch2 } = jb.wonderUtils

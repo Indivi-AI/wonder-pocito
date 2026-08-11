@@ -2,18 +2,18 @@ import { dsls, coreUtils } from '@jb6/core'
 import '@jb6/testing'
 import '@jb6/llm-guide'
 import './room-lambda-client.js'         // permissionByPath comp-field + roomLambda interceptor + lambdaLogger/roomLogger
+import './ping-lambda.js'
+import './room-bi-lambdas.js'
 import '@wonder/db/etl/file-query.js'  // fileQuery, cachedWonderUrl, duckdb
-import '@wonder/bi/bi-common.js'     // cube/cubeQuery/parquetSource — the signed-room parquet cubeQuery lambda
 
 const {
   tgp: { Component, 'ctx-enricher': { setVars, Var, enrichCtx } },
   common: { Data, Lambda,
     boolean: { equals, notEmpty, contains, and },
-    data: { asIs, count, join, pipe, fileQuery, wFetch, invokeSnippetInContext, cubeQuery }
+    data: { asIs, count, join, pipe, fileQuery, wFetch, invokeSnippetInContext, ping, storeCount, storeCountPublic }
   },
   lambda: { 'lambda-packaging': { roomLambda } },
   etl: { 'cli-extract': { cachedWonderUrl }, 'cli-transform': { duckdb } },
-  bi: { cube: { cube }, 'silver-builder': { parquetSource }, metric: { metric } },
   test: { Test, test: { dataTest } },
   'llm-guide': { Doclet }
 } = dsls
@@ -38,7 +38,6 @@ const accountSummary = Lambda('accountSummary', {
   impl: pipe('%$accountDetails()%', count())
 })
 
-const ping = Lambda('ping', { permissionByPath: 'usersRO', impl: asIs({ pong: true }) })
 // permission probes: same trivial body, different declared dir → drive the gate's accessLevels[dir][role] decision per room.
 const pingRW = Lambda('pingRW', { permissionByPath: 'usersRW', impl: asIs({ pong: true }) })
 const pingAdmin = Lambda('pingAdmin', { permissionByPath: 'admin', impl: asIs({ pong: true }) })
@@ -207,9 +206,11 @@ Test('roomLambdaTest.perm.signed', {
   HeavyTest: true,
   impl: dataTest({
     calculate: invokeSnippetInContext(salesByCategory('sports')),
-    expectedResult: contains('X-Goog-Signature=', {
-      allText: join(',', { items: '%$dbLogger.dbLog.filePathUrl%' })
-    }),
+    expectedResult: and(
+      equals('sports', '%0/category%'),
+      contains('signedRoom', { allText: join(',', { items: '%$dbLogger.dbLog.driverId%' }) }),
+      contains('signedUrl ready', { allText: join(',', { items: '%$dbLogger.dbLog.t%' }) })
+    ),
     setup: setVars(asIs({lambdaHost: 'https://staging.indivi.ai', roomUrl: 'signedRoom://testSignedRoom'})),
     timeout: 12000,
     logger: 'dbLogger,roomLogger,etlLogger'
@@ -268,13 +269,6 @@ Test('roomLambdaTest.probe.duckdbPerf', {
 
 // §8 — CUBE QUERY OVER PARQUET, on the signed room. A cubeQuery lambda: the cube compiles `storeCount` → count_star()
 // over stores.parquet, run AS THE USER, reading the protected parquet via signed-url byte-ranges (db:'gcs' server-side).
-const storeCount = Lambda('storeCount', {
-  permissionByPath: 'usersRO',
-  impl: cubeQuery({ sql: 'select storeCount', cube: cube({
-    source: parquetSource('signedRoom://testSignedRoom/usersRO/stores.parquet', { name: 'stores' }),
-    metrics: [metric('storeCount', 'count(*)')]
-  }) })
-})
 Test('roomLambdaTest.cubeQuery.signedParquet', {
   impl: dataTest({
     setup: setVars(asIs({ lambdaHost: 'http://localhost:3000', roomUrl: 'signedRoom://testSignedRoom', onLiveRepo: true })),
@@ -286,13 +280,6 @@ Test('roomLambdaTest.cubeQuery.signedParquet', {
 })
 
 // wasm twin: same cube over the PUBLIC-room parquet (plain gcs url, no signing) — the browser has no auth token.
-const storeCountPublic = Lambda('storeCountPublic', {
-  permissionByPath: 'usersRO',
-  impl: cubeQuery({ sql: 'select storeCount', cube: cube({
-    source: parquetSource('room://testPublicRoom/usersRO/stores.parquet', { name: 'stores' }),
-    metrics: [metric('storeCount', 'count(*)')]
-  }) })
-})
 Test('roomLambdaTest.cubeQuery.wasm', {
   impl: dataTest({
     setup: setVars(asIs({ roomUrl: 'room://testPublicRoom', onLiveRepo: true })),

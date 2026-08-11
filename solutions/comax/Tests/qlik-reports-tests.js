@@ -1,7 +1,7 @@
 import { dsls, jb } from '@jb6/core'
 import '@jb6/common'
 import '@jb6/testing'
-import '@wonder/llm-flow/report-step.js'
+import '@wonder/ai/report-step.js'
 import '../Reports/index.js'
 import '../Agents/reports-template-agent.js'
 

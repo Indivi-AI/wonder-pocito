@@ -1,5 +1,5 @@
 import { dsls, jb } from '@jb6/core'
-import '@wonder/llm-flow/llm-flow-main-workflow.js'
+import '@wonder/ai/llm-flow-main-workflow.js'
 import '@wonder/core/db-drivers-live-repo.js'
 import '@wonder-admin/room/room-lambda-client.js'
 import '@wonder-admin/bi/bi-repair-doclets.js'
@@ -71,9 +71,7 @@ Data('runAnalytics', {
     { id: 'chatHistory', as: 'array' }
   ],
   impl: async (ctx, {}, { userMessage, chatHistory }) => {
-    const wonderVersion = await fetch('https://storage.googleapis.com/wonder-frontend-me-west1/versions.json')
-      .then(r => r.json()).then(j => j.latestVersion).catch(() => null)
-    const vars = {db: 'local', userMessage, wonderVersion, llmProxyUrl: LLM_PROXY,
+    const vars = {db: 'local', userMessage, llmProxyUrl: LLM_PROXY,
       summaryModel: SUMMARY_MODEL, accumulatedContext: {chatHistory},
       categories: {analytics: true, local: true, duckdb: true, comax: true}}
     const wfCtx = await jb.workflowUtils.extendWithWorkflowVars(ctx.setVars(vars))

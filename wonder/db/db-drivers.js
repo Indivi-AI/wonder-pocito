@@ -1,5 +1,5 @@
 import { jb, coreUtils, dsls, ns } from '@jb6/core'
-import { logger, storagePrefix, wonderBucketName, serversByUrl } from '@wonder/db/base-utils.js'
+import { logger, storagePrefix, wonderBucketName } from '@wonder/db/base-utils.js'
 import { auth } from '@wonder/db/auth.js'
 import '@wonder/db/db-drivers-utils.js'
 import '@jb6/llm-guide'
@@ -9,6 +9,10 @@ const {
   common: { Data },
 } = dsls
 const { wonderUtils } = jb
+const localhostServer = ctx => ctx.vars.localhostServer || globalThis.process?.env?.WONDER_LOCAL_SERVER || 'http://localhost:3000'
+const runtimeDb = ctx => ctx.vars.db || (!coreUtils.isNode && new URLSearchParams(globalThis.location?.search || '').get('db'))
+const gcsProxyBase = ctx => ctx.vars.wonderServiceBase || globalThis.location?.origin
+  || globalThis.process?.env?.WONDER_SERVICE_URL || 'https://wonder-lambda-me-west1.indivi.ai'
 const { wresolve, successResult, errorResultByException, notFoundResult, bustCdnCache, gcsStorage, paginateGcsList, calcPath,
   extractFromUrl, wonderRepoRoot, getCachedSignedUrl, isLocalFile, rawFileUtils, wcachePath } = wonderUtils
 
@@ -24,12 +28,11 @@ Data('wFetch', {
     { id: 'headers', as: 'object', defaultValue: {},
       description: 'extra headers. x-wonder-body=localFile makes body a server-side path to stream' },
     { id: 'stream', as: 'boolean', description: 'false (default) returns parsed json; true returns the raw Response (for binaries / large media)' },
-    { id: 'isStaging', as: 'boolean', description: 'route signed-url and wonder-service to staging from MCP/dev' },
-    { id: 'wonderVersion', as: 'string' },
+    { id: 'isStaging', as: 'boolean', description: 'route signed-url to staging from MCP/dev' },
     { id: 'logger', as: 'string', description: 'comma-separated loggers to harvest. returns {result, ...harvestedLogs}; implies no stream' }
   ],
-  impl: async (ctx, {}, { url, method, body, headers, stream, isStaging, wonderVersion, logger }) => {
-    const fetchCtx = coreUtils.ensureLoggers(logger, { ctx: ctx.setVars({ ...(isStaging && { isStaging }), ...(wonderVersion && { wonderVersion }) }) })
+  impl: async (ctx, {}, { url, method, body, headers, stream, isStaging, logger }) => {
+    const fetchCtx = coreUtils.ensureLoggers(logger, { ctx: ctx.setVars({ ...(isStaging && { isStaging }) }) })
     const res = await wfetch2(url(ctx), { method, headers, ...(body.profile ? { body: await body(ctx) } : {}) }, fetchCtx)
     const readBody = () => (method || 'GET').toUpperCase() === 'HEAD'
       ? { ok: res.ok, status: res.status, lastModified: res.headers?.get?.('last-modified'),
@@ -100,8 +103,8 @@ Scope('roomLogs', {
   impl: scope('logs-bucket-me-west1', { path: ['roomId', 'fileName'] })
 })
 
-Scope('wonderFrontend', {
-  impl: scope('wonder-frontend-me-west1', { path: ['fileName'] })
+Scope('codePackages', {
+  impl: scope('wonder-code-packages', { path: ['fileName'] })
 })
 
 Scope('analytics', {
@@ -165,9 +168,9 @@ const notifyInternalActivity = (url, opts, ctx) => { if (ctx.vars.doNotUpdateRoo
 async function getDBDriver(url, ctx) {
   const { dbLogger, forceGCS, dbCategories } = ctx.vars
   const host = ctx.vars.dbHost || (coreUtils.isNode ? 'node' : 'browser')
-  const { db: dbFromCtx } = serversByUrl(ctx)
+  const dbFromCtx = runtimeDb(ctx)
   const onLiveRepo = ctx.vars.onLiveRepo
-  const hasGcp = ctx.vars.hasGcpIdentity ?? globalThis.builtIn?.hasGcpIdentity ?? await auth.hasGcpIdentity(ctx)
+  const hasGcp = ctx.vars.hasGcpIdentity ?? await auth.hasGcpIdentity(ctx)
   const extracted = url ? extractFromUrl(url, ctx) : {}
   const isPublicBucket = extracted?.scope?.bucket === wonderBucketName
   // public-bucket READS go anonymous-HTTPS (GCS.node.publicGCS) — no token mint, no SDK ctor → 0 init (key on cloud).
@@ -222,10 +225,10 @@ async function getDBDriver(url, ctx) {
 }
 
 async function wfetch2(_url, opts, _ctx) {
-  const { localhostServer } = serversByUrl(_ctx)
+  const localServer = localhostServer(_ctx)
   const dbLogger = _ctx.vars.dbLogger || logger
   const etlStatus = t => _ctx.vars.etlLogger?.status?.(t)
-  const ctx = _ctx.setVars({ url: _url, opts, dbLogger, localhostServer })
+  const ctx = _ctx.setVars({ url: _url, opts, dbLogger, localhostServer: localServer })
   try {
 
   const interceptors = coreUtils.globalsOfType(dsls.wonder['db-driver-interceptor'])
@@ -417,7 +420,7 @@ GetMethod('wget.viaGcsHttpApi', {
 
 GetMethod('wget.viaGcsProxy', {
   impl: async (ctx, { dbLogger, bucketName, path }) => {
-    const url = `${serversByUrl(ctx).gcsProxyBase}/gcs-proxy/${bucketName}/${path}?t=${Date.now()}`
+    const url = `${gcsProxyBase(ctx)}/gcs-proxy/${bucketName}/${path}?t=${Date.now()}`
     const response = await fetch(url, { headers: { 'Content-Type': 'application/json' } })
     if (!response.ok) {
       if (response.status == 404) dbLogger?.info?.({ t: 'viaGcsProxy GET 404' }, { url }, { ctx })
@@ -432,7 +435,7 @@ GetMethod('wget.viaGcsProxy', {
 
 PutMethod('wput.viaGcsProxy', {
   impl: async (ctx, { dbLogger, bucketName, path, opts }) => {
-    const url = `${serversByUrl(ctx).gcsProxyBase}/gcs-proxy/${bucketName}/${path}`
+    const url = `${gcsProxyBase(ctx)}/gcs-proxy/${bucketName}/${path}`
     const jsonStr = JSON.stringify({ content: opts.body })
     const response = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: jsonStr })
     if (!response.ok) { dbLogger?.error?.({ t: 'viaGcsProxy PUT failure' }, { url }, { ctx, response }); return response }
@@ -543,46 +546,6 @@ AppendMethod('wappend.GcsJSApiWithGenerationCheck', {
   }
 })
 
-AppendMethod('wappend.viaWonderService', {
-  impl: async (ctx, { dbLogger, url, opts }) => {
-    const { wonderServer } = serversByUrl(ctx)
-    const lambdaUrl = `${wonderServer}/wfetch`
-    const bodyStr = JSON.stringify({ 'serviceType': 'data-service', params: { url, opts } })
-    dbLogger?.info?.({ t: `wappend.viaWonderService sending to server` }, {}, { ctx })
-    const response = await fetch(lambdaUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: bodyStr
-    })
-    const curl = `curl -X POST -H "Content-Type: application/json" -d '${bodyStr}' "${lambdaUrl}"`
-    if (!response.ok) {
-      dbLogger?.error?.({ t: 'GCSBrowser server failure' }, { curl }, { ctx, response })
-      return response
-    }
-    const resultFromServer = await response.json()
-    if (resultFromServer.error) {
-      dbLogger?.error?.({ t: 'GCSBrowser server failure' }, { resultFromServer }, { ctx })
-      return errorResultByException(resultFromServer.error)
-    }
-    dbLogger?.info?.({ t: `wappend.viaWonderService success` }, { resultFromServer }, { ctx })
-    return successResult
-  }
-})
-
-PutMethod('wput.viaWonderService', {
-  impl: async (ctx, { dbLogger, url, opts }) => {
-    const { wonderServer } = serversByUrl(ctx)
-    const response = await fetch(`${wonderServer}/wfetch`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ serviceType: 'data-service', params: { url, opts } })
-    })
-    if (!response.ok) { dbLogger?.error?.({ t: 'wput.viaWonderService failure' }, {}, { ctx, response }); return response }
-    const res = await response.json()
-    if (res.error) return errorResultByException(res.error)
-    return successResult
-  }
-})
-
 AppendMethod('wappend.viaSignedUrl', {
   impl: async (ctx, { dbLogger, url, opts, path }) => {
     const method = (opts.method || 'POST').toUpperCase()
@@ -643,7 +606,7 @@ ListMethod('wlist.viaGcsHttpApi', {
 ListMethod('wlist.viaGcsProxy', {
   impl: async (ctx, { dbLogger, bucketName, path }) => {
     const t0 = Date.now()
-    const base = serversByUrl(ctx).gcsProxyBase || ''
+    const base = gcsProxyBase(ctx)
     const { items, dirs, pages, status, result } = await paginateGcsList(async pageToken => {
       const pageQuery = pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ''
       const url = `${base}/gcs-proxy-api/storage/v1/b/${bucketName}/o?delimiter=%2F&prefix=${encodeURIComponent(path)}&maxResults=5000${pageQuery}`
@@ -674,10 +637,9 @@ DbDriver('GCS.node.gcpIdentity', {
 
 DbDriver('GCS.node.publicGCS', {
   impl: dbDriver({
-    whenAndWhyToUse: 'Node without GCP identity targeting a public-read bucket. Anonymous HTTP for reads; writes delegated to wonder service (lambda has SA identity).',
+    whenAndWhyToUse: 'Node without GCP identity targeting a public bucket. Uses anonymous HTTP operations allowed by the bucket policy.',
     get: wget.viaGcsHttpApi(),
-    put: wput.viaWonderService(),
-    append: wappend.viaWonderService(),
+    put: wput.viaGcsHttpApi(),
     head: whead.viaGcsHttpApi(),
     list: wlist.viaGcsHttpApi(),
     filePathUrl: (ctx, { path, bucketName }) => `${storagePrefix}/${bucketName}/${path}`
@@ -687,10 +649,9 @@ DbDriver('GCS.node.publicGCS', {
 DbDriver('GCS.browser', {
   impl: dbDriver({
     whenAndWhyToUse: 'We prefer our users to interact directly with gcs and not via our lambdas mostly for scalability reasons. hence they need to use http api',
-    designConcerns: 'generation check is not supported via the https api, so the append is done via lambda',
+    designConcerns: 'generation checks are unavailable, so this driver deliberately does not support append/patch.',
     get: wget.viaGcsHttpApi(),
     put: wput.viaGcsHttpApi(),
-    append: wappend.viaWonderService(),
     head: whead.viaGcsHttpApi(),
     list: wlist.viaGcsHttpApi(),
     filePathUrl: (ctx, { path, bucketName }) => `${storagePrefix}/${bucketName}/${path}`
@@ -702,9 +663,8 @@ DbDriver('GCS.browser.gcsHTTPBlockedByCORS', {
     whenAndWhyToUse: 'Browser fetch to storage.googleapis.com fails because the GCS bucket CORS config',
     get: wget.viaGcsProxy(),
     put: wput.viaGcsProxy(),
-    append: wappend.viaWonderService(),
     list: wlist.viaGcsProxy(),
-    filePathUrl: (ctx, { path, bucketName }) => `${serversByUrl(ctx).gcsProxyBase}/gcs-proxy/${bucketName}/${path}`
+    filePathUrl: (ctx, { path, bucketName }) => `${gcsProxyBase(ctx)}/gcs-proxy/${bucketName}/${path}`
   })
 })
 
@@ -821,7 +781,7 @@ DbDriverInterceptor('rawFile', {
       if (driverMethod === 'put') {
         const contentType = mimeTypes[path.match(rawFileExts)[1].toLowerCase()] || 'application/octet-stream'
         const body = opts.body, isFile = isLocalFile(body, opts)
-        const fs = isFile ? (globalThis.builtIn?.fs || await import('fs')) : null
+        const fs = isFile ? await import('fs') : null
         const sendBody = isFile ? fs.createReadStream(body) : await rawFileBody(body, contentType, opts)
         const bytes = isFile ? fs.statSync(body).size : sendBody.length
         // encoding of a STRING body: text mimes (rawText) → utf8; binary mimes (rawBinary) → the string is base64 → decoded.
@@ -836,7 +796,7 @@ DbDriverInterceptor('rawFile', {
           const res = await fetch(filePathUrl, { method: 'PUT', headers: { 'content-type': contentType }, body: sendBody })
           if (!res.ok) throw new Error(`rawFile PUT failed: ${res.status} ${await res.text()}`)
         } else {
-          const { request } = globalThis.builtIn?.undici || await import('undici')
+          const { request } = await import('undici')
           await request(filePathUrl, { method: 'PUT', headers: { 'content-type': contentType }, body: sendBody })
         }
         return successResult

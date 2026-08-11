@@ -1,22 +1,19 @@
 import { jb, coreUtils, dsls } from '@jb6/core'
 import '@jb6/llm-guide'
 import '@wonder/db/db-drivers.js'
+import './room-lambda-dsl.js'
 const { getIdToken, wfetch2 } = jb.wonderUtils
-import '@jb6/lang-service/src/tgp-snippet.js'      // calcImportsForProfile — discover the live entry path
 import '@jb6/core/misc/jb-remote-via-cli.js'        // runStrippedCli — run over the LIVE repo (no upload)
 import '@jb6/core/misc/jb-remote.js'                // stripCtx — roomLambda ships the call + ctx slice
 
 const {
-  tgp: { TgpType, TgpTypeModifier, CompField },
+  tgp: { TgpType },
   common: { Data },
   wonder: { DbDriverInterceptor, 'db-driver-interceptor': { dbDriverInterceptor } },
   test: { Logger, logger: { domainLogger } },
   'llm-guide': { Doclet }
 } = dsls
 const { isNode, activeLoggers } = coreUtils
-
-CompField('permissionByPath', { impl: { $: 'comp-field<tgp>compField', type: 'string' } })
-const Lambda = TgpTypeModifier('Lambda', { lambda: true, dsl: 'common', type: 'data' })
 
 Doclet('lambda-packaging-concept', {
   impl: `
@@ -81,6 +78,7 @@ const unPackagedInLiveRepo = LambdaPackaging('unPackagedInLiveRepo', {
       const repoRoot = await coreUtils.calcRepoRoot()
       await coreUtils.calcJb6RepoRootAndImportMapsInCli()   // populates jb.coreRegistry.importMapsInCli → buildNodeCliCmd passes --import to the child
       const fast = importsFromLoadedLocations(compToRun.profile, repoRoot)   // null ⇒ some comp not loaded here
+      if (!fast) await import('@jb6/lang-service/src/tgp-snippet.js')
       const imp = fast || await coreUtils.calcImportsForProfile(profile, { entryPointPaths: [`${repoRoot}/tests/all-tests.js`], ctx })
       log?.info?.({ event: fast ? 'entry paths from loaded $location (fast, no parse)' : 'loaded $location incomplete → parsed discover (slow)',
         strategy: 'unPackagedInLiveRepo', files: imp?.topLevelImports?.length, compsWalked: fast?.compsWalked }, { imp }, { ctx })

@@ -1,0 +1,31 @@
+FROM me-west1-docker.pkg.dev/indiviai/cloud-run-source-deploy/node24-wonder-base:latest
+ARG BUILD_TARGET=prod
+
+# ---- Runtime utilities for lambdas/ETL (duckdb, jq, ...). Cached layer; add more tools here. ----
+# httpfs + cache_httpfs baked in at build so cold containers never download them at query time (duckdb autoloads the pinned-version extensions).
+# cache_httpfs caches fetched remote byte-ranges on local disk so repeat queries in a warm container skip the network.
+RUN curl -fsSL https://github.com/duckdb/duckdb/releases/download/v1.5.4/duckdb_cli-linux-amd64.zip -o /tmp/d.zip \
+ && unzip -d /usr/local/bin /tmp/d.zip && rm /tmp/d.zip \
+ && duckdb -c "INSTALL httpfs; INSTALL cache_httpfs FROM community;"
+
+# ---- cols_cache: our prebuilt unsigned duckdb extension + its node colsCacheService. ----
+COPY wonder/bi/cols-cache/cols_cache.duckdb_extension \
+     wonder/bi/cols-cache/colsCacheService.js \
+     wonder/bi/cols-cache/nodejs-importmap.js \
+     ./wonder/bi/cols-cache/
+ENV COLS_CACHE_EXT=/usr/src/app/wonder/bi/cols-cache/cols_cache.duckdb_extension \
+    COLS_CACHE_LOADER=/usr/src/app/nodejs-importmap-loader.js
+
+# ---- App layer (changes often) ----
+COPY nodejs-importmap.js nodejs-importmap-loader.js ./
+COPY jb6 ./jb6
+COPY wonder ./wonder
+COPY indiviai ./indiviai
+COPY cloud-services ./cloud-services
+COPY cloud-services/express-server/.env.${BUILD_TARGET} .env
+
+RUN test -f .env || (echo "ERROR: .env file not found for BUILD_TARGET=${BUILD_TARGET}" && exit 1)
+RUN grep -q "WHAPI_TOKEN_WONDER_DEMO" .env || (echo "ERROR: WHAPI_TOKEN_WONDER_DEMO not found in .env" && exit 1)
+
+EXPOSE 8080
+CMD [ "node", "--experimental-vm-modules", "--expose-gc", "--import", "./nodejs-importmap.js", "cloud-services/express-server/server.js" ]

@@ -10,7 +10,7 @@ import '../Agents/agents-repo.js'   // Data('comaxAnalyticsAgents') — the sele
 import '../../../viz/viz-index.js'   // VizWidget + all inline chart widgets the assistant can emit
 import './dashboards.js'
 import { comaxDrillQuestion, comaxFixDrillSql } from '../Comps/drill-helpers.js'
-import { runViaRoomLambda } from '@wonder/llm-flow/duckdb-sql-step.js'
+import { runViaRoomLambda } from '@wonder/ai/duckdb-sql-step.js'
 import { comaxLogo, comaxFontCss } from '../Comps/comax-brand.js'
 
 const {

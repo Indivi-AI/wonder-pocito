@@ -7,8 +7,8 @@
     "local": "node --import ./nodejs-importmap.js cloud-services/express-server/local-server.js",
     "build-wonder-base": "bash cloud-services/build-wonder-base.sh",
     "build-wonder": "bash cloud-services/build-wonder-image.sh",
-    "deploy-wonder": "bash cloud-services/deploy-cloud-run-staging-ggl.sh",
-    "deploy-wonder-all": "bash cloud-services/deploy-cloud-run-staging-ggl.sh --all",
+    "deploy-wonder": "bash cloud-services/deploy-cloud-run-staging.sh",
+    "deploy-wonder-all": "bash cloud-services/deploy-cloud-run-staging.sh --all",
     "deploy-wonder-amz": "bash cloud-services/deploy-wonder-amz.sh",
     "deploy-react-lib-and-images-to-cdn": "bash cloud-services/deploy-react-lib-and-images-to-cdn.sh",
     "server-secrets:pull:dev": "node scripts/secrets.js pull dev",
@@ -36,16 +36,17 @@
   },
   "devDependencies": {
     "fake-indexeddb": "^6.0.1",
-    "jsdom": "^26.1.0"
+    "jsdom": "^26.1.0",
+    "playwright": "^1.59.1"
   },
   "importMap": {
     "@wonder/": "/wonder/",
-    "@solution/": "/solution/",
+    "@solution/": "/solutions/",
     "@indiviai/": "/indiviai/"
   },
   "staticMappings": {
     "/wonder": "./wonder",
-    "/solution": "./solutions",
+    "/solutions": "./solutions",
     "/indiviai": "./indiviai",
     "/jb6-local-settings": "./.jb6"
   },

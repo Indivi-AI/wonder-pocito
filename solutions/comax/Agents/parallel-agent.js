@@ -1,5 +1,5 @@
 import { dsls } from '@jb6/core'
-import '@wonder/llm-flow/parallel-step.js'
+import '@wonder/ai/parallel-step.js'
 import '../nostalgy/reports-based-agent.js'   // registers the reportsAnalytics workflow
 import './analytics-agent.js'       // registers the basicAnalytics workflow
 

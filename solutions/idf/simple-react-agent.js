@@ -1,6 +1,6 @@
 import { dsls } from '@jb6/core'
-import '@wonder/llm-flow/agent-steps.js'
-import '@wonder/llm-flow/parallel-step.js'
+import '@wonder/ai/agent-steps.js'
+import '@wonder/ai/parallel-step.js'
 import './retrieval-analytics-agent.js'   // registers retrievalAnalytics + exports retrieveDoclets
 import { retrieveDoclets, RETRIEVAL_MODEL } from './retrieval-analytics-agent.js'
 

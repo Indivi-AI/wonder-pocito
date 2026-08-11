@@ -1,6 +1,6 @@
 import { dsls, jb, coreUtils } from '@jb6/core'
 import '@jb6/common'
-import '@wonder/llm-flow/llm-flow-main-workflow.js'
+import '@wonder/ai/llm-flow-main-workflow.js'
 import { fetchItemsFromLLMReactiveP } from '@wonder/core/reactive-llm.js'
 import '@wonder/core/db-drivers.js'
 const { wfetch2 } = jb.wonderUtils

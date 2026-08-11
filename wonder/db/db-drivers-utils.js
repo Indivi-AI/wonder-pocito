@@ -1,5 +1,5 @@
 import { jb, coreUtils, dsls } from '@jb6/core'
-import { logger, wonderBucketName, serversByUrl } from '@wonder/db/base-utils.js'
+import { logger, wonderBucketName } from '@wonder/db/base-utils.js'
 import { auth } from '@wonder/db/auth.js'
 
 const { test: { Logger, logger: { domainLogger } } } = dsls
@@ -7,11 +7,14 @@ jb.wonderUtils ||= {}
 jb.dbDriversRegistry ||= { signedUrlCache: new Map() }
 
 let rawFileExts
+const localhostServer = ctx => ctx.vars.localhostServer || globalThis.process?.env?.WONDER_LOCAL_SERVER || 'http://localhost:3000'
+const wonderServiceBase = ctx => ctx.vars.lambdaHost || ctx.vars.wonderServiceBase
+  || globalThis.location?.origin || globalThis.process?.env?.WONDER_SERVICE_URL || 'https://wonder-lambda-me-west1.indivi.ai'
 
 
 async function wresolve(url, _ctx, method = 'GET') {
   const dbLogger = _ctx.vars.dbLogger || logger
-  const ctx = _ctx.setVars({ url, method, dbLogger, localhostServer: serversByUrl(_ctx).localhostServer })
+  const ctx = _ctx.setVars({ url, method, dbLogger, localhostServer: localhostServer(_ctx) })
   const extracted = extractFromUrl(url, ctx)
   const { fileName } = extracted
   const ext = (url.endsWith('/') || fileName?.includes('.')) ? '' : '.json'
@@ -66,7 +69,7 @@ const { wcachePopulate } = jb.wonderUtils
 }
 
 async function calcPath(ctx, { scope, roomId, userId, fileName, db }) {
-  const dbToUse = db || serversByUrl(ctx).db
+  const dbToUse = db || ctx.vars.db
   const isLocal = dbToUse === 'fs' || dbToUse === 'local' // old - now we use wCache!!
   const myRooms = (userId && !isLocal && dsls.common.data.getMyRooms) ? await dsls.common.data.getMyRooms.$runWithCtx(ctx) : {}
   const userPrivatePath = isLocal ? userId : (myRooms?.private || userId)
@@ -194,7 +197,7 @@ async function getCachedSignedUrl(ctx, path, method) {
   const t0 = Date.now()
   dbLogger?.info?.({ t: 'signedUrl fetch', path, method }, {}, { ctx })
   const idToken = await auth.wonderIdToken(ctx)
-  const { signedUrlServer } = serversByUrl(ctx)
+  const signedUrlServer = `${wonderServiceBase(ctx)}/signed-url`
   let res
   for (let attempt = 0; ; attempt++) {   // burst signing of many NEW files hits the signatures-file mutation rate limit (GCS 429 → 500) - back off and retry
     res = await fetch(`${signedUrlServer}/${path}?method=${method}`, { headers: { Authorization: `Bearer ${idToken}` } })
@@ -218,7 +221,7 @@ async function prefetchSignedUrls(ctx) {
   const { roomId } = ctx.vars
   const t0 = Date.now()   // log to delete
   const idToken = await auth.wonderIdToken(ctx)
-  const { signedUrlServer } = serversByUrl(ctx)
+  const signedUrlServer = `${wonderServiceBase(ctx)}/signed-url`
   const res = await fetch(`${signedUrlServer.replace('/signed-url', '')}/signed-urls/${roomId}`, { headers: { Authorization: `Bearer ${idToken}` } })
   if (!res.ok) return
   const { signatures, cached, timing } = await res.json()

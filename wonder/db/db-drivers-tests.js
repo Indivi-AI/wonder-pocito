@@ -132,7 +132,6 @@ Test('dbDriverTests.jqPath', {
   })
 })
 
-// Path 1: Node liveRepo (probe/CLI) — wfetch2 directly, getIdToken via gcloud CLI, signedUrlServer = staging cloud
 Test('dbDriverTests.signedRoom.liveRepo.mediaPutGet', { nodeOnly: true, impl: signedRoomMediaPutGetTest('staging') })
 Test('dbDriverTests.signedRoom.liveRepo.permissions', { nodeOnly: true, impl: signedRoomPermissionsTest('staging') })
 Test('dbDriverTests.signedRoom.liveRepo.googlePermissions', { nodeOnly: true, impl: signedRoomGooglePermissionsTest('staging') })
@@ -142,7 +141,6 @@ Test('dbDriverTests.signedRoom.liveRepo.usersRW', { nodeOnly: true, impl: signed
 Test('dbDriverTests.signedRoom.liveRepo.list', { nodeOnly: true, impl: signedRoomListTest('staging') })
 Test('dbDriverTests.signedRoom.liveRepo.trailingSlashGet', { nodeOnly: true, impl: signedRoomTrailingSlashGetTest('staging') })
 
-// Path 2: Cloud Run (wfetch DataService) — HTTP POST to staging, getIdToken via GoogleAuth (SA), signedUrlServer = same process
 Test('dbDriverTests.signedRoom.cloudRun.putGet', { nodeOnly: true, impl: signedRoomCloudRunPutGetTest('staging') })
 
 Test('dbDriverTests.gcs.node.noIdentity.publicRead', {
@@ -166,7 +164,7 @@ Test('dbDriverTests.wcachePath', {
   impl: dataTest({
     logger: 'dbLogger',
     calculate: async ctx => {
-      const dbCtx = ctx.setVars({ forceGCS: false, onLiveRepo: true, hasGcpIdentity: true, wonderVersion: 'latestVersion' })
+      const dbCtx = ctx.setVars({ forceGCS: false, onLiveRepo: true, hasGcpIdentity: true })
       const at = u => wresolve(u, dbCtx.setVars({ db: 'wcache' }))
       return { result: [await at('signedRoom://testSignedRoom/usersRO/sales-large.json'),
         await at('room://testPublicRoom/usersRO/sales-large.json')], ...coreUtils.harvestLogs(dbCtx) }

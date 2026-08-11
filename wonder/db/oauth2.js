@@ -1,4 +1,4 @@
-import { serversByUrl, logger } from './base-utils.js'
+import { logger } from './base-utils.js'
 import { reactUtils } from '@jb6/react'
 import { readAuth, writeAuth } from './auth.js'
 
@@ -7,12 +7,12 @@ const { h, useState } = reactUtils
 const encode = (text) => {
     if (typeof Buffer !== 'undefined') return Buffer.from(text, 'utf-8')
     if (globalThis.TextEncoder) return new TextEncoder().encode(text)
-    if (globalThis.builtIn?.util) return new globalThis.builtIn.util.TextEncoder().encode(text)
     throw new Error('No text encoder available')
 }
 
 const isIOSWebView = navigator.userAgent === "wonder-ios"
-const { lambdaServerBase, isLocalHost } = serversByUrl()
+const isLocalHost = location.hostname === 'localhost' || location.hostname.startsWith('192.168')
+const lambdaServerBase = location.origin
 
 const authConfig = 
   isIOSWebView ? {

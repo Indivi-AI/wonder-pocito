@@ -2,7 +2,7 @@
 // Like finance-analytics.js: the LLM writes ONE data<common>cubeQuery `select … from base` — never a parquet path.
 // The cube owns the data (dims/metrics/limits, rendered here by cubeVocab); this file owns only tone + the query-surface prompt.
 import { dsls, jb } from '@jb6/core'
-import '@wonder/llm-flow/llm-flow-main-workflow.js'
+import '@wonder/ai/llm-flow-main-workflow.js'
 import '@jb6/llm-guide'
 import '@wonder-admin/comax2/comax-cube.js'   // comaxSalesCube semantic layer + setupComax binding
 import '../Doclets/viz-doclets.js'            // the vizWidgets booklet — reused as-is

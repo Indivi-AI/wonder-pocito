@@ -1,5 +1,5 @@
 import { coreUtils } from '@jb6/core'
-import { logger as baseUtilsLogger, serversByUrl } from '@wonder/db/base-utils.js'
+import { logger as baseUtilsLogger } from '@wonder/db/base-utils.js'
 import { auth } from '@wonder/db/auth.js'
 
 function decode(value) {
@@ -438,7 +438,9 @@ export const trimContext = (roomData, settings = null) => {
 
 export async function fetchLLMProxy(targetUrl, options = {}, ctx) {
   const { body, headers = {}, ...restOptions } = options
-  const url = serversByUrl(ctx).llmProxyUrl
+  const proxyBase = ctx?.vars?.wonderServiceBase || globalThis.location?.origin
+    || globalThis.process?.env?.WONDER_SERVICE_URL || 'https://wonder-lambda-me-west1.indivi.ai'
+  const url = ctx?.vars?.llmProxyUrl || `${proxyBase}/llmProxy`
   const roomId = ctx?.vars.roomId || ctx?.vars.roomUrl?.split('://')[1]?.split('/')[0]
   const bodyForProxy = JSON.stringify({ targetUrl, headers, originalBody: body || null, roomId })
   const curlCmd = ['curl', '-X', 'POST', ...Object.entries(headers || {}).flatMap(([k, v]) => ['-H', `'${k}: ${v}'`]),
@@ -460,7 +462,7 @@ export async function fetchLLMProxy(targetUrl, options = {}, ctx) {
 }
 
 export async function fetchProxyWithCache(url,options, _ctx) {
-  if (false && _ctx?.vars.useProxyCache && serversByUrl(_ctx).isLocalHost) {
+  if (false && _ctx?.vars.useProxyCache && globalThis.location?.hostname === 'localhost') {
     let res
     const ctx = _ctx.setVars({db:'local'}) // proxy only on local db
     const hash = options.body && calcHash(typeof options.body == 'string' ? options.body : JSON.stringify(options.body))

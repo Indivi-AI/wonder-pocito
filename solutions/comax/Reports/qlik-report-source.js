@@ -1,6 +1,6 @@
 import { dsls } from '@jb6/core'
 import '@jb6/common'
-import '@wonder/llm-flow/duckdb-sql-step.js'
+import '@wonder/ai/duckdb-sql-step.js'
 
 const { common: { Data, data:{duckDbSql} } } = dsls
 const files={salesLines:'KupaDoc_Lines',salesHeaders:'KupaDoc_Header',stores:'Store',products:'Prt',departments:'Departments',departmentTops:'DepartmentsTop',productGroups:'PrtGroups',productSubgroups:'PrtGroupTt',suppliers:'Suppliers',entities:'Idx',entityGroups:'Idx_Grp',promotions:'Mivza',promotionClasses:'Mivza_Svg',models:'PrtDegem',salesCosts:'DailyPriceCost',franchiseCosts:'DailyPriceCost_Zakyan',inventory:'Prt_ItrotStore_Yomi'}

@@ -1,7 +1,6 @@
 import { dsls, jb } from '@jb6/core'
 import '@jb6/react'
-import '@wonder/core/db-drivers.js'
-import { serversByUrl } from '@wonder/core/base-utils.js'
+import '@wonder/db/db-drivers.js'
 import '../../../viz/viz-index.js'
 import { comaxLogo, comaxFontCss } from './comax-brand.js'
 
@@ -18,7 +17,8 @@ const reportBaseUrl = roomUrl => {
   return u.startsWith('signedRoom://') && u.split('/').length == 3 ? `${u}/usersRW` : u
 }
 const mcpPost = async (method, params, ctx) => {
-  const res = await fetch(`${serversByUrl(ctx).lambdaServerBase}/mcp`, {
+  const serviceBase = ctx?.vars?.wonderServiceBase || globalThis.location?.origin || 'http://localhost:3000'
+  const res = await fetch(`${serviceBase}/mcp`, {
     method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params })
   })

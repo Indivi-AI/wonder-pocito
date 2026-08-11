@@ -1,6 +1,6 @@
 import { dsls } from '@jb6/core'
-import '@wonder/llm-flow/report-step.js'
-import '@wonder-admin/room/room-lambda-client.js'
+import '@wonder/ai/report-step.js'
+import '@wonder/db/room/room-lambda-client.js'
 // the report DEFINITIONS only - Reports/index.js also pulls the UI comps (@jb6/react), which a node lambda closure can't load
 import '../Reports/comax-reports.js'
 import '../Reports/inventory-analysis.js'
