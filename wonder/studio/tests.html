@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="https://jb6-cdn.pages.dev/images/wonder-tests.svg">
+  <style>
+    .test-button { opacity: 0 }
+    .test-button:hover { opacity: 1 }
+  </style>
+  <script type="importmap">JB_IMPORT_MAP</script>
+  <script type="module">
+    const query = name => new URLSearchParams(location.search).get(name)
+    const { runTests } = await import('@jb6/testing')
+    const { browserSpy } = await import('@jb6/core/utils/browser-spy.js')
+
+    await import(query('modulePath') || '/tests/all-tests.js')
+    browserSpy.initSpyByUrl()
+    runTests({
+      specificTest: query('test'),
+      notPattern: query('not'),
+      ...Object.fromEntries(['pattern', 'take', 'includeHeavy', 'showOnly', 'action'].map(name => [name, query(name) || query(name) != null]))
+    })
+  </script>
+</head>
+<body>
+  <div id="remoteTests"></div>
+  <div id="mem"></div>
+  <div id="testElem"></div>
+  <div id="show"></div>
+</body>
+</html>

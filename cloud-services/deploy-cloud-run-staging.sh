@@ -4,7 +4,7 @@ export PROJECT_ID="indiviai"
 export REGION="me-west1"
 export REPOSITORY="cloud-run-source-deploy"
 export IMAGE_NAME="wonder"
-PUBLIC_SERVICE="node25-automations-server-staging"
+PUBLIC_SERVICE="wonder-server-staging"
 PUBLIC_SA="wonder-public-sa@${PROJECT_ID}.iam.gserviceaccount.com"
 PROTECTED_SA="wonder-protected-rooms-sa@${PROJECT_ID}.iam.gserviceaccount.com"
 

@@ -148,21 +148,21 @@ const toJstype = (val,type) => RT_types[type](val)
 function log(logNames, logObj) {}
 
 function logError(err,logObj) {
-  const { ctx, url, line, col } = logObj || {}
+  const { ctx, url, line, col, ...details } = logObj || {}
   const { jbCtx: { dynamicStack, lexicalStack }} = ctx || { jbCtx: {} }
   const srcLink = url && globalThis.window ? `${window.location.origin}${url}:${line+1}:${col} ` : ''
   globalThis.window && globalThis.console.error(srcLink+'%c Error: ','color: red', err, logObj, dynamicStack, lexicalStack)
-  const errObj = { err , ...logObj, dynamicStack, lexicalStack}
+  const errObj = { err, url, line, col, ...details, dynamicStack, lexicalStack}
   logVsCode('error', stripData(errObj))
-  log('error', {...errObj, ctx})   // -> errorLogger.error, the always-on auto-fail gate
+  const errorLogger = ctx?.vars?.errorLogger
+  errorLogger ? errorLogger.error({t: 'error', ...errObj}, {}, {ctx}) : jb.coreUtils.log('error', errObj)
 }
 
 function logException(e,err,logObj) {
   globalThis.window && globalThis.console.log('%c Exception: ','color: red', err, e, logObj)
-  const errObj = { message: e.message, err, stack: e.stack||'', ...logObj }
-  globalThis.process?.stderr?.write(`${err}\n${e}`)
-  logVsCode('exception', stripData(errObj))
-  log('exception error', {...errObj, error: e})   // error: e -> enrichParams extracts e.stack; routed to errorLogger.error
+  const stack = e.stack || String(e)
+  globalThis.process?.stderr?.write(`${err}\n${stack}`)
+  logError(err, {...logObj, stack})
 }
 
 function Const(id, val) {

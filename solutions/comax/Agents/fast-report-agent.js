@@ -1,6 +1,5 @@
 import { dsls, jb, coreUtils } from '@jb6/core'
 import '@jb6/common'
-import { writeBigLog } from '@wonder/core/base-utils.js'
 import { activeCompany } from '../Doclets/comax-analytics-doclets.js'
 import { CAVEAT_POLICY, antiRepeatFailure, awaitEntityVars, cleanAnswer, executeMultiReportPlan,
   executeReportPlan, filterUiRowsByEntities, markUnverifiedAnswer, reportEntityFlow,
@@ -293,13 +292,8 @@ Workflow('fast-report', {
         res = { runRes: { error: error.stack || String(error) } }
       }
       const result = { ...res, workflowInput: ctx.vars.workflowInput, ...workflowLogger.logsAndErrors() }
-      const { userId, roomId, userMessage, replay } = ctx.vars
-      const bigLogRes = ctx.vars.doNotWriteLogs ? null : await writeBigLog({roomId,
-        fileName: `wf-fast-report-${Date.now()}`, payload: result,
-        metadata: {userMessage, workflowName: ctx.vars.workflowInput?.agentId || 'fast-report', userId,
-          duration: Date.now() - startTime, roomId, ...(replay && {modified: true, replayOf: replay.sourceRunId})}, ctx})
-      return {...result, bigLogRes, ...(bigLogRes?.adminUrl
-        ? {adminUrl: bigLogRes.adminUrl} : {bigLogError: bigLogRes?.error})}
+      const bigLogWUrl = ctx.vars.doNotWriteLogs ? null : await jb.wonderUtils.saveRoomBigLog2(ctx, `wf-fast-report-${Date.now()}`)
+      return { ...result, ...(bigLogWUrl && { bigLogWUrl }) }
     }
   })
 })

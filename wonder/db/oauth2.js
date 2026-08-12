@@ -1,9 +1,7 @@
-import { logger } from './base-utils.js'
 import { reactUtils } from '@jb6/react'
 import { readAuth, writeAuth } from './auth.js'
 
 const { h, useState } = reactUtils
-
 const encode = (text) => {
     if (typeof Buffer !== 'undefined') return Buffer.from(text, 'utf-8')
     if (globalThis.TextEncoder) return new TextEncoder().encode(text)
@@ -38,21 +36,20 @@ function getAuthState({loginButtonRequest} = {}) {
     : !has_access_token ? 'UNAUTHENTICATED'
     :  !access_token_not_expired ? 'ACCESS_TOKEN_EXPIRED'
     : 'AUTHENTICATED'
-  logger.info({immediate: true, loginState, userId: auth?.sub, name: auth?.name, email: auth?.email, hd: auth?.hd})
   return loginState
 }
 
 export function getAuthorizationHeaders(ctx) {
   const access_token = globalThis.localStorage && JSON.parse(localStorage.getItem('auth2') || '{}')?.access_token
   if (!access_token) 
-    logger.error({ t: "access token missing"} ,{},{ctx})
+    ctx.vars.errorLogger.error({ t: 'access token missing' }, {}, {ctx})
   return { 'Authorization': `Bearer ${access_token}` }
 }
 
 export async function ensureLogin(ctx, el = globalThis.document?.getElementById('root') || globalThis.document?.body) {
   const { createRoot, h } = ctx.vars.react
-  if (await handleAuth()) return true
-  logger.info({t:'startingAuth'}, {}, {ctx})
+  if (await handleAuth({ctx})) return true
+  ctx.vars.uiLogger?.info?.({t:'startingAuth'}, {}, {ctx})
   createRoot(el).render(h(LoginScreen))
   return false
 }

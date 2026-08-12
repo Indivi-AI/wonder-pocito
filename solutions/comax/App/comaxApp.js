@@ -1,6 +1,7 @@
 import { dsls, coreUtils, jb } from '@jb6/core'
-import { createShortUrl, formatTimeWithRandom, shareHandler } from '@wonder/core/base-utils.js'
-import { wAppend, wGet, wPut } from '@wonder/core/content-types.js'
+import '@wonder/db/db-drivers-utils.js'
+import '@wonder/ui/ui-utils.js'
+const { createShortUrl, formatTimeWithRandom, shareHandler, wAppend, wGet, wPut } = jb.wonderUtils
 import '@wonder/applets/applet.js'
 import '@wonder-admin/room/room-lambda-client.js'   // roomLambda db-driver-interceptor - routes the <roomUrl>/lambda/<name> POSTs of the remote duckDbSql hook
 import '../Agents/analytics-agent.js'   // registers the basicAnalytics workflow (run in-browser; its duckDbSql offloads duckdb to /run-bash)
@@ -807,7 +808,7 @@ ReactComp('basicAnalyticsApplet', {
       const shareShortUrl = location.hostname == 'localhost' ? await createShortUrl(fullUrl) : fullUrl
       // block startup on login (staging/prod); localhost keeps the auto-minted dev admin token. oauth2 is browser-only - dynamic import keeps node tests loading.
       // on false ensureLogin rendered the LoginScreen - halt enrichCtx forever so the applet never mounts over it (sign-in navigates away)
-      if (location.hostname != 'localhost' && !await (await import('@wonder/core/oauth2.js')).ensureLogin(ctx)) return new Promise(() => {})
+      if (location.hostname != 'localhost' && !await (await import('@wonder/db/oauth2.js')).ensureLogin(ctx)) return new Promise(() => {})
       const roomCtx = ctx.setVars({ roomId, instanceId, userId: ctx.vars.userId || chatUser() })   // applets lack mobile-web-app's auth2.sub seeding
       const appCtx = roomCtx.setVars({ initChatElements: existingInstanceId && chatUser() ? await wGet(cts.privateChat, roomCtx) : [], shareShortUrl,
         analyticsWorkflow: p.get('workflow') || DEFAULT_WORKFLOW, comaxDataset: 'big', analyticsModel: p.get('model'),

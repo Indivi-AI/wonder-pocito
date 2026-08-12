@@ -63,7 +63,8 @@ const importsFromLoadedLocations = (profile, repoRoot) => {
   walkNode(profile)
   if (missing) return null   // a comp the profile touches isn't loaded here → caller falls back to parsed discover
   const topLevelImports = coreUtils.unique(paths)
-  return { topLevelImports, importsStr: topLevelImports.map(f => `await import('${f}')`).join('\n'), projectDir: repoRoot, importMapsInCli: jb.coreRegistry.importMapsInCli, compsWalked: seen.size }
+  return { topLevelImports, importsStr: topLevelImports.map(f => `await import('${f}')`).join('\n'), projectDir: repoRoot,
+    importMapsInCli: jb.coreRegistry.importMapsInCli, compsWalked: seen.size }
 }
 
 const unPackagedInLiveRepo = LambdaPackaging('unPackagedInLiveRepo', {
@@ -73,7 +74,11 @@ const unPackagedInLiveRepo = LambdaPackaging('unPackagedInLiveRepo', {
       // the live repo IS this process — run in-process, no wire. node always qualifies; the browser qualifies too unless the
       // comp is nodeOnly (touches fs/spawn/gcs; e.g. fileQuery). a cubeQuery lambda is NOT nodeOnly → runs on wasm duckdb in-page.
       const nodeOnly = asJbComp(compToRun.profile.$)?.nodeOnly
-      if ((isNode || !nodeOnly) && !ctx.vars.forceDiscover) { log?.info?.({ event: 'in-process (live repo, no wire)', strategy: 'unPackagedInLiveRepo', host: isNode ? 'node' : 'browser' }, {}, { ctx }); return compToRun(ctx) }
+      if ((isNode || !nodeOnly) && !ctx.vars.forceDiscover) {
+        log?.info?.({ event: 'in-process (live repo, no wire)', strategy: 'unPackagedInLiveRepo',
+          host: isNode ? 'node' : 'browser' }, {}, { ctx })
+        return compToRun(ctx)
+      }
       const profile = coreUtils.tgpProfileToJson(compToRun.profile)   // resolves compToRun.profile in place → its $ nodes are now jbComp objects
       const repoRoot = await coreUtils.calcRepoRoot()
       await coreUtils.calcJb6RepoRootAndImportMapsInCli()   // populates jb.coreRegistry.importMapsInCli → buildNodeCliCmd passes --import to the child
@@ -87,7 +92,8 @@ const unPackagedInLiveRepo = LambdaPackaging('unPackagedInLiveRepo', {
       const packedCtx = coreUtils.stripCtx({ profileJson: profile, ctx: compToRun.lexicalCtx })
       packedCtx.vars.db = 'gcs'
       const loggers = activeLoggers(ctx)
-      log?.info?.({ event: 'spawning child CLI to run packed profile', strategy: 'unPackagedInLiveRepo', loggers, ctxVars: Object.keys(packedCtx.vars || {}) }, {}, { ctx })
+      log?.info?.({ event: 'spawning child CLI to run packed profile', strategy: 'unPackagedInLiveRepo', loggers,
+        ctxVars: Object.keys(packedCtx.vars || {}) }, {}, { ctx })
       const res = await coreUtils.runStrippedCli({ profileJson: profile, packedCtx, imports: imp, testLoggers: loggers, progressLoggers: loggers, ctx })
       if (res?.error) { log?.error?.({ event: 'run failed → skip', strategy: 'unPackagedInLiveRepo', error: res.error }, { childLogs: res.logs }, { ctx }); return null }
       log?.info?.({ event: 'child CLI returned ok', strategy: 'unPackagedInLiveRepo', resultRows: Array.isArray(res.result) ? res.result.length : typeof res.result }, {}, { ctx })
@@ -101,7 +107,8 @@ const roomLambda = LambdaPackaging('roomLambda', {
     { id: 'streamProgress', as: 'boolean' },
     { id: 'timeout', as: 'number', defaultValue: '%$testTimeout%' },
     { id: 'timeoutRatio', as: 'number', defaultValue: 0.8 },
-    { id: 'maxPackedBytes', as: 'number', defaultValue: 65536, description: 'advisory wire-size budget (~one 64K transport chunk); a bigger input belongs in a room file, not packedCtx' }
+    { id: 'maxPackedBytes', as: 'number', defaultValue: 65536,
+      description: 'advisory wire-size budget (~one 64K transport chunk); a bigger input belongs in a room file, not packedCtx' }
   ],
   impl: (_, {}, { streamProgress, timeout, timeoutRatio, maxPackedBytes }) => ({
     run: async (ctx, compToRun) => {
@@ -112,23 +119,30 @@ const roomLambda = LambdaPackaging('roomLambda', {
       // send only a reference — a CONSTANT belongs in a param defaultValue (resolves on the server, never crosses), a RUNTIME
       // input in a room FILE (cachedWonderUrl/wfetch2 inside the lambda); a packedCtx var is for small tokens only. tooLarge =
       // a warning a future LLM reads in the log, then {error} (no fetch) - NOT a raw stack. CAP (256K, jb-remote.js) is the hard ceiling.
-      const tooLarge = (bytes, detail) => (log?.warning?.({ event: 'do not pass large objects over the wire', strategy: 'roomLambda', version: name },
-        { bytes, maxPackedBytes, hint: 'keep the bytes server-side, send only a reference. CONSTANT input → a param defaultValue (omit the arg, it resolves on the server, never crosses; e.g. salesByCategory: defaultValue:"electronics"). RUNTIME/caller-specific input → a room FILE the lambda reads (cachedWonderUrl/wfetch2 inside the impl). a packedCtx var is for SMALL tokens only (id/date/category)', ...detail }, { ctx }), { error: `packedCtx exceeds budget: ${detail.cap || `${bytes} > ${maxPackedBytes}`}` })
+      const tooLarge = (bytes, detail) => (log?.warning?.({ event: 'do not pass large objects over the wire',
+        strategy: 'roomLambda', version: name }, { bytes, maxPackedBytes,
+          hint: 'keep bytes server-side; send a reference. CONSTANT → param defaultValue. RUNTIME input → room FILE. packedCtx → small tokens only',
+          ...detail }, { ctx }), { error: `packedCtx exceeds budget: ${detail.cap || `${bytes} > ${maxPackedBytes}`}` })
       let packedCtx
       try { packedCtx = coreUtils.stripCtx({ profileJson: profile, ctx: compToRun.lexicalCtx }) }
-      catch (err) { return tooLarge(undefined, { cap: err.message }) }
+      catch (err) { coreUtils.logException(err, 'room lambda pack context failed', { ctx }); return tooLarge(undefined, {}) }
       const packedBytes = JSON.stringify(packedCtx).length
       log?.info?.({ event: 'packed', strategy: 'roomLambda', version: name, packedBytes }, { packedVars: Object.keys(packedCtx.vars || {}) }, { ctx })
       if (maxPackedBytes && packedBytes > maxPackedBytes) return tooLarge(packedBytes, {})
       const serverTimeout = timeout && timeout * timeoutRatio
       const t0 = Date.now()
       const TIMED_OUT = Symbol('timedOut')
-      const fetching = wfetch2(`${ctx.vars.roomUrl}/lambda/${name}`, { method: 'post', body: { profile, packedCtx, stream: !!streamProgress, serverTimeout } }, ctx)
+      const fetching = wfetch2(`${ctx.vars.roomUrl}/lambda/${name}`,
+        { method: 'post', body: { profile, packedCtx, stream: !!streamProgress, serverTimeout } }, ctx)
       const deadline = serverTimeout && new Promise(ok => setTimeout(() => ok(TIMED_OUT), serverTimeout))
       const res = await Promise.race([fetching, deadline].filter(Boolean))
       const uptimeMs = ctx.vars.roomLogger?.roomLog?.find(e => e.t === 'run version')?.uptimeMs
       const lambdaMs = Date.now() - t0
-      if (res === TIMED_OUT) { log?.info?.({ event: uptimeMs ? `timeout - uptime ${uptimeMs}` : 'timeout - probably warmup', strategy: 'roomLambda', version: name }, { lambdaMs }, { ctx }); return { error: 'timeout' } }
+      if (res === TIMED_OUT) {
+        log?.info?.({ event: uptimeMs ? `timeout - uptime ${uptimeMs}` : 'timeout - probably warmup',
+          strategy: 'roomLambda', version: name }, { lambdaMs }, { ctx })
+        return { error: 'timeout' }
+      }
       log?.info?.({ event: 'roomLambda done', strategy: 'roomLambda', version: name }, { roomUrl: ctx.vars.roomUrl, lambdaMs, uptimeMs, ok: res.ok }, { ctx })
       const body = await res.json()
       return res.ok ? body : { error: body.error || res.status }
@@ -151,7 +165,7 @@ DbDriverInterceptor('roomLambda', {
       if (driverMethod !== 'append' || !fileName?.startsWith('lambda/')) return null
       const name = fileName.slice('lambda/'.length)
       try {
-      // lambdaHost: explicit override (e.g. http://localhost:3000 or https://staging.indivi.ai). else browser: page origin; node: staging (lambdas/applets NEVER target wonder.indivi.ai).
+      // lambdaHost: explicit override; else browser uses page origin and node uses staging.
       const base = ctx.vars.lambdaHost || globalThis.window?.location?.origin || 'https://staging.indivi.ai'
       const authAt = performance.now()
       const idToken = ctx.vars.noAuth ? null : await getIdToken(ctx)
@@ -180,12 +194,14 @@ DbDriverInterceptor('roomLambda', {
       if (!opts.body?.stream) {
         const url = `${base}/run-room-lambda/${roomId}/${name}`
         const res = await fetch(url, { method: 'POST', headers: authHeaders, body })
-        const raw = await res.text()   // read once as text: a bare-text 503 'Service Unavailable' (Cloud Run OOM) is NOT json — parse it blind and you'd lose the real status behind an opaque SyntaxError
+        const raw = await res.text()
         let json; try { json = JSON.parse(raw) } catch {}
-        if (json === undefined) {   // non-json body ⇒ the infra failed before the lambda: surface status + body + a future-LLM hint (503 'Service Unavailable' = the lambda container was OOM-killed; the heavy cube crossed the 2Gi Cloud Run cap → check `gcloud logging read` for 'Memory limit ... exceeded')
+        if (json === undefined) {
           roomLogger?.error?.({ t: 'roomLambda non-json response', roomId, name, status: res.status, body: raw.slice(0, 500),
-            hint: `the room-lambda infra returned a non-json body (status ${res.status}). a bare-text 503 'Service Unavailable' means the lambda container was OOM-killed — the query exceeded the 2Gi Cloud Run cap (duckdb sizes memory_limit off the HOST ram, not the cgroup). run a lighter query or cap duckMemLimit; check \`gcloud logging read\` on node25-automations-server-staging for 'Memory limit ... exceeded'` }, {}, { ctx })
-          return { ok: false, status: res.status, json: async () => ({ error: `room-lambda ${res.status}: ${raw.slice(0, 200)}` }), text: async () => raw }
+            hint: `non-json ${res.status}; a bare-text 503 usually means the 2Gi container was OOM-killed. `
+              + `Run a lighter query or check wonder-server-staging logs for 'Memory limit ... exceeded'` }, {}, { ctx })
+          return { ok: false, status: res.status,
+            json: async () => ({ error: `room-lambda ${res.status}: ${raw.slice(0, 200)}` }), text: async () => raw }
         }
         if (!res.ok) {   // 401/403/... carry {error} and no result - surface it; asResponse would mask it as an ok-null (the "failed: 200" trap)
           if (globalThis.window && (json?.error === 'authorization token expired' || json?.error?.endsWith('role null for user devMachine')))

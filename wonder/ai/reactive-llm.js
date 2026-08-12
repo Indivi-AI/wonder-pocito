@@ -1,6 +1,7 @@
 import { coreUtils } from '@jb6/core'
-import { logger as baseUtilsLogger } from '@wonder/db/base-utils.js'
 import { auth } from '@wonder/db/auth.js'
+
+const loggerOf = ctx => ctx.vars.workflowLogger || ctx.vars.aiLogger
 
 function decode(value) {
     if (!value) return ''
@@ -121,10 +122,10 @@ export async function fetchItemsFromLLMReactive({messages, goal, prompt, instruc
   onChunk, model: modelString = DEFAULT_MODEL, maxTokens = 10000, temperature = 0.0, thinkingBudget, responseSchema,
   userId, roomId, passedContext = {}, contentType, inputOrigins, ctx}) {
     const {provider, model, url} = getProviderConfig(modelString)
-    const logger = ctx?.vars.workflowLogger || baseUtilsLogger
+    const logger = loggerOf(ctx)
     const {categories, userRequestId} = ctx.vars
     if (ctx.vars.llmAbortFlag?.aborted) {   // run aborted by the user - skip the remaining llm calls so the flow completes fast and the bigLog is still written
-      logger.info({t: `${goal}: skipped - llm run aborted`, model}, {}, {ctx})
+      logger?.info?.({t: `${goal}: skipped - llm run aborted`, model}, {}, {ctx})
       return '{}'
     }
     logger.step?.('llm', `Using LLM (${modelString}): ${goal}...`)
@@ -135,7 +136,7 @@ export async function fetchItemsFromLLMReactive({messages, goal, prompt, instruc
     const llmStart = Date.now()
     if (provider === 'chrome') {   // Chrome built-in Gemini Nano (Prompt API, chrome 138+ desktop) - runs on-device in the browser, no fetch
       const LM = globalThis.LanguageModel
-      const fail = reason => { logger.error({t: `${goal}: chrome built-in llm failed`, reason, model}, {}, {ctx})
+      const fail = reason => { ctx.vars.errorLogger.error({t: `${goal}: chrome built-in llm failed`, reason, model}, {}, {ctx})
         logger.status?.(`gemini nano: ${reason}`); logger.stepDone?.('llm'); onDone && onDone('{}'); return '{}' }
       if (!LM) return fail('the LanguageModel API is missing - needs Chrome 138+ on desktop')
       if (await LM.availability?.() == 'unavailable') return fail('gemini nano is unavailable on this device')
@@ -152,7 +153,7 @@ export async function fetchItemsFromLLMReactive({messages, goal, prompt, instruc
         if (/not available in Chromium/.test(fullContent)) return fail('this Chromium ships an echo stub, not gemini nano - use real Chrome 138+ desktop')
         const llmStats = { goal, model, duration: Date.now() - llmStart,
           inputTokens: await countTokens({messages, instructions, context}), outputTokens: Math.ceil(fullContent.length / 4) }
-        logger.info({t: `${goal}: llm call finished`, ...llmStats, onDevice: true}, {llmInput, fullContent}, {ctx})
+        logger?.info?.({t: `${goal}: llm call finished`, ...llmStats, onDevice: true}, {llmInput, fullContent}, {ctx})
         logger.stepDone?.('llm')
         onDone && onDone(fullContent, llmStats)
         return { llmStats, outputTokens: llmStats.outputTokens, destroy() { controller.abort() } }
@@ -170,7 +171,7 @@ export async function fetchItemsFromLLMReactive({messages, goal, prompt, instruc
     ctx.vars.llmCallLogger?.info?.({t: 'llm request', goal, model, userRequestId, workflowStack: ctx.vars.workflowStack},
       {messages: logMessages, sourceRefs: coreUtils.sourceRefs?.ids?.(logMessages) || []}, {ctx})
     if (tokenCount !== null)
-      logger.info({t:`${goal}: countInputTokens`, tokenCount, instructionsLength: instructions?.length || 0, contextLength: context?.length || 0}, logBody, {ctx})
+      logger?.info?.({t:`${goal}: countInputTokens`, tokenCount, instructionsLength: instructions?.length || 0, contextLength: context?.length || 0}, logBody, {ctx})
 
     const options = {
       method: "POST",
@@ -183,13 +184,13 @@ export async function fetchItemsFromLLMReactive({messages, goal, prompt, instruc
 
     if (!response) {   // fetch aborted mid-connect or proxy failed
       controller.offAbortLLM?.()
-      logger.error({t: `${goal}: llm fetch failed or aborted`, model, aborted: !!ctx.vars.llmAbortFlag?.aborted}, logBody, {ctx})
+      ctx.vars.errorLogger.error({t: `${goal}: llm fetch failed or aborted`, model, aborted: !!ctx.vars.llmAbortFlag?.aborted}, logBody, {ctx})
       return '{}'
     }
     if (response.status == 429) {
       debugger
       controller.offAbortLLM?.()
-      logger.error({t:`${goal}: tooManyRequestsToLLM`, responseStatus: response.status, model}, logBody, {response, ctx})
+      ctx.vars.errorLogger.error({t:`${goal}: tooManyRequestsToLLM`, responseStatus: response.status, model}, logBody, {response, ctx})
       return '{}'
     }
     if (response.status == 400) {
@@ -200,7 +201,7 @@ export async function fetchItemsFromLLMReactive({messages, goal, prompt, instruc
       const reader = response.body.getReader()
       const { done, value } = await reader.read()
       const reply = '' + decode(value||'')
-      logger.error({t:`${goal}: BadRequest`, curlCmd, reply, responseStatus: response.status, model}, logBody, {response, ctx})
+      ctx.vars.errorLogger.error({t:`${goal}: BadRequest`, curlCmd, reply, responseStatus: response.status, model}, logBody, {response, ctx})
       return '{}'
     }
 
@@ -210,11 +211,11 @@ export async function fetchItemsFromLLMReactive({messages, goal, prompt, instruc
       response.statusText && logger.status?.(response.statusText)
       const {curlCmd} = response
       console.log('apiRequestFailedToLLM Raw', curlCmd, logBody)
-      logger.error({t:`${goal} apiRequestFailedToLLM`, statusText: response.statusText, responseStatus: response.status, model}
+      ctx.vars.errorLogger.error({t:`${goal} apiRequestFailedToLLM`, statusText: response.statusText, responseStatus: response.status, model}
         , {curlCmd, ...logBody}, { response, ctx})
       return '{}'
     }
-    logger.info({t:`${goal}: llmStreamingStarted` }, logBody , {ctx})
+    logger?.info?.({t:`${goal}: llmStreamingStarted` }, logBody , {ctx})
   
     // Process the stream
     const reader = response.body.getReader()
@@ -258,7 +259,7 @@ export async function fetchItemsFromLLMReactive({messages, goal, prompt, instruc
                 onChunk && onChunk(content)
               }
             } catch (error) {
-              logger.error({t:`${goal}: llm can not parse line`, error: error.stack }, {line, fullContent} , {ctx, error})
+              ctx.vars.errorLogger.error({t:`${goal}: llm can not parse line`, error: error.stack }, {line, fullContent} , {ctx, error})
             }
         })
         if ((fullContent || fullThinking) && Date.now() - lastPctAt > 200) {   // throttled live token stream → moving bar, so a slow LLM call reads as alive not hung
@@ -276,7 +277,7 @@ export async function fetchItemsFromLLMReactive({messages, goal, prompt, instruc
             try {
               detector.handler(result.text, {fullContent, addDynamicSegments, userId, roomId, passedContext, contentType})
             } catch (error) {
-              wfLogger.error({t: `${goal}: segment handler error`, segmentIndex}, {text: result.text, error: error.stack}, {ctx, error})
+              ctx.vars.errorLogger.error({t: `${goal}: segment handler error`, segmentIndex}, {text: result.text, error: error.stack}, {ctx, error})
             }
             segmentIndex++
           }
@@ -294,7 +295,7 @@ export async function fetchItemsFromLLMReactive({messages, goal, prompt, instruc
           break
       }
     } catch(error) {
-      logger.error({t:`${goal}: llm error`, error: error.stack }, { fullContent} , {ctx, error})
+      ctx.vars.errorLogger.error({t:`${goal}: llm error`, error: error.stack }, { fullContent} , {ctx, error})
       return { error: error.stack}
     }
     finally {
@@ -302,9 +303,9 @@ export async function fetchItemsFromLLMReactive({messages, goal, prompt, instruc
       const cacheTokens = cacheTokenFields({cache_creation_input_tokens: cacheCreationInputTokens, cache_read_input_tokens: cacheReadInputTokens})
       llmStats = {goal, model, duration: Date.now() - llmStart, inputTokens: providerInputTokens ?? tokenCount,
         outputTokens: outputTokens ?? null, ...cacheTokens}
-      logger.info({t:`${goal}: llm cache usage`, ...cacheLogFields({provider, model, goal,
+      logger?.info?.({t:`${goal}: llm cache usage`, ...cacheLogFields({provider, model, goal,
         inputTokens: providerInputTokens, outputTokens, cacheCreationInputTokens, cacheReadInputTokens, tokenCount})}, {}, {ctx})
-      logger.info({t:`${goal}: llm call finished`, ...llmStats},
+      logger?.info?.({t:`${goal}: llm call finished`, ...llmStats},
         {...logBody, llmInput, categories, fullContent, ...(fullThinking && {thinkingContent: fullThinking})}, {ctx})
       ctx.vars.llmCallLogger?.info?.({t: 'llm response', ...llmStats, userRequestId, workflowStack: ctx.vars.workflowStack},
         {fullContent, ...(fullThinking && {thinkingContent: fullThinking})}, {ctx})
@@ -339,7 +340,7 @@ export async function fetchItemsFromLLMReactiveP(args) {
 
 export async function warmLLMCache({messages, prompt = 'warmup', goal = 'warm llm cache', instructions, context,
   model: modelString = DEFAULT_MODEL, maxTokens = 10000, temperature = 0, thinkingBudget, responseSchema, ctx}) {
-  const {provider, model, url} = getProviderConfig(modelString), logger = ctx?.vars.workflowLogger || baseUtilsLogger
+  const {provider, model, url} = getProviderConfig(modelString), logger = loggerOf(ctx)
   if (provider != 'anthropic' || !instructions)
     return {skipped: true, reason: provider != 'anthropic' ? 'only anthropic prompt cache is supported' : 'missing instructions'}
   const start = Date.now(), reqMessages = messages || [{role: 'user', content: prompt}]
@@ -351,7 +352,7 @@ export async function warmLLMCache({messages, prompt = 'warmup', goal = 'warm ll
   const json = await response?.json?.().catch(() => null), usage = usageOf(json)
   const res = {ok: !!response?.ok, status: response?.status, stopReason: json?.stop_reason,
     contentLength: json?.content?.length ?? 0, duration: Date.now() - start, ...cacheTokenFields(usage)}
-  logger.info({t: `${goal}: llm cache warm finished`, model, ...res}, {messages: logMessages, max_tokens: 0, temperature}, {ctx})
+  logger?.info?.({t: `${goal}: llm cache warm finished`, model, ...res}, {messages: logMessages, max_tokens: 0, temperature}, {ctx})
   return res
 }
 
@@ -438,10 +439,10 @@ export const trimContext = (roomData, settings = null) => {
 
 export async function fetchLLMProxy(targetUrl, options = {}, ctx) {
   const { body, headers = {}, ...restOptions } = options
-  const proxyBase = ctx?.vars?.wonderServiceBase || globalThis.location?.origin
+  const proxyBase = ctx.vars.wonderServiceBase || globalThis.location?.origin
     || globalThis.process?.env?.WONDER_SERVICE_URL || 'https://wonder-lambda-me-west1.indivi.ai'
-  const url = ctx?.vars?.llmProxyUrl || `${proxyBase}/llmProxy`
-  const roomId = ctx?.vars.roomId || ctx?.vars.roomUrl?.split('://')[1]?.split('/')[0]
+  const url = ctx.vars.llmProxyUrl || `${proxyBase}/llmProxy`
+  const roomId = ctx.vars.roomId || ctx.vars.roomUrl?.split('://')[1]?.split('/')[0]
   const bodyForProxy = JSON.stringify({ targetUrl, headers, originalBody: body || null, roomId })
   const curlCmd = ['curl', '-X', 'POST', ...Object.entries(headers || {}).flatMap(([k, v]) => ['-H', `'${k}: ${v}'`]),
   '-d', `'${bodyForProxy.replace(/'/g, "'\\''")}'`, `'${url}'` ].join(' ') // for debug
@@ -457,7 +458,7 @@ export async function fetchLLMProxy(targetUrl, options = {}, ctx) {
     return response
   } catch (error) {
     debugger
-    baseUtilsLogger.error({ t: 'fetch proxy', url, bodyForProxy, curlCmd }, {}, { ctx })
+    coreUtils.logException(error, 'fetch proxy failed', { ctx, url, bodyForProxy, curlCmd })
   }
 }
 
@@ -495,9 +496,9 @@ export async function fetchProxyWithCache(url,options, _ctx) {
           debugger
           return { value }
         }
-        baseUtilsLogger.error({t: 'fetch proxy - response not ok', status: response.status, url, options }, {}, {response, ctx})
+        coreUtils.logError('fetch proxy response not ok', { ctx, status: response.status, url, options })
       } catch (error) {
-          baseUtilsLogger.error({t: 'fetch proxy error', message: error.stack, url, options }, {}, {error, ctx})
+          coreUtils.logException(error, 'fetch proxy failed', { ctx, url, options })
       }
     }
   

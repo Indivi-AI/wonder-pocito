@@ -7,7 +7,7 @@ import '../Reports/comax-reports.js'
 import '../Reports/index.js'
 import '../../../viz/viz-index.js'
 import '../Agents/dashboards-edit-agent.js'
-import '@wonder/core/db-drivers.js'
+import '@wonder/db/db-drivers.js'
 const { wfetch2, wresolve } = jb.wonderUtils
 import { comaxDrillQuestion } from '../Comps/drill-helpers.js'
 import { comaxLogo, comaxFontCss } from '../Comps/comax-brand.js'

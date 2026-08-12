@@ -6,7 +6,7 @@ import '../../Agents/analytics-agent.js'
 import '../../nostalgy/retrieval-analytics-agent.js'
 import '../../Agents/agentic-agents.js'
 import { retrieveDoclets } from '../../nostalgy/retrieval-analytics-agent.js'
-import { fetchItemsFromLLMReactiveP } from '@wonder/core/reactive-llm.js'
+import { fetchItemsFromLLMReactiveP } from '@wonder/ai/reactive-llm.js'
 import { loadVerifiedQuestions, pMap } from './eval-utils.js'
 
 const {

@@ -1,7 +1,7 @@
 import { coreUtils, dsls, ns, jb } from '@jb6/core'
-import { logger, storagePrefix } from './base-utils.js'
 import './db-drivers.js'
 const { successResult, errorResultByException } = jb.wonderUtils
+const { storagePrefix } = jb.wonderUtils
 
 const {
   wonder: { GetMethod, PutMethod, AppendMethod, ListMethod, DbDriver,
@@ -194,7 +194,7 @@ GetMethod('wget.viaGsUtil', {
       return { ok: true, status: 200, text: async () => res, json: async () => res }
     } catch (error) {
       const gsutilCmd = `gsutil cat gs://${bucketName}/${path}`
-      dbLogger?.error?.({ t: 'viaGsUtil GET failed' }, { gsutilCmd, error: error.message }, { ctx, error })
+      coreUtils.logException(error, 'viaGsUtil GET failed', { ctx, gsutilCmd })
       return errorResultByException(error)
     }
   }
@@ -226,7 +226,7 @@ GetMethod('wget.viaGsUtilStreaming', {
       return { ok: true, status: 200, text: async () => JSON.stringify(content), json: async () => content }
     } catch (error) {
       await unlink(tmpFile).catch(() => {})
-      dbLogger?.error?.({ t: 'viaGsUtilStreaming GET failed' }, { gsutilCmd, error: error.message }, { ctx, error })
+      coreUtils.logException(error, 'viaGsUtilStreaming GET failed', { ctx, gsutilCmd })
       return errorResultByException(error)
     }
   }

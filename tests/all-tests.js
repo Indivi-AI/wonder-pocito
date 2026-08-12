@@ -1,5 +1,6 @@
 import '@jb6/testing/all-jb6-tests.js'
 import '@solution/comax/comax-v2-tests.js'
+import '@wonder/db/db-drivers-tests.js'
 import '@wonder/db/room/room-tests.js'
 import '@wonder/db/room/room-applet-tests.js'
 import '@wonder/db/room/signed-room-applet-tests.js'

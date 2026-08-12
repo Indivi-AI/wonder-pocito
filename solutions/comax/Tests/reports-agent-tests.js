@@ -1,5 +1,5 @@
 import { dsls, jb } from '@jb6/core'
-import '@wonder/core/db-drivers.js'
+import '@wonder/db/db-drivers.js'
 
 const { wfetch2 } = jb.wonderUtils
 import '@jb6/common'
@@ -15,7 +15,7 @@ import '@wonder/verified-queries/verified-queries-assets.js'
 import '@jb6/react/tests/react-testers.js'
 import '../App/reports-workspace.js'
 import '../App/report-studio.js'
-import { buildRequestBody, fetchItemsFromLLMReactiveP } from '@wonder/core/reactive-llm.js'
+import { buildRequestBody, fetchItemsFromLLMReactiveP } from '@wonder/ai/reactive-llm.js'
 
 const {
   tgp: { 'ctx-enricher': { setVars } },

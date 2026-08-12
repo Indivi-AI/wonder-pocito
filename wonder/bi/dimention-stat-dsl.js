@@ -145,7 +145,7 @@ Component('dimensionStatsMacroFile', {
       return { to, stats: comps.length }
     } catch (error) {
       coreUtils.logException(error, 'dimension stats macro file', { from, to, ctx })
-      return { error: error.message, from, to }
+      return { error: 'dimension stats macro file failed', from, to }
     }
   }
 })

@@ -193,7 +193,8 @@ async function checkTimePredicate(predicate, ctx) {
     const { error, stderr } = await runDuckdbSqlByHost(`select (${predicate}) from (select DATE '2000-01-01' date)`, ctx, { as: 'raw' })
     return error ? { error: `Invalid timePredicate: ${String(stderr || error).replace(/\n__JB_DUCK_CPU__.*/s, '').trim()}` } : { predicate }
   } catch (error) {
-    return { error: `Invalid timePredicate: ${error.message}` }
+    coreUtils.logException(error, 'Invalid timePredicate', { ctx, predicate })
+    return { error: 'Invalid timePredicate' }
   }
 }
 

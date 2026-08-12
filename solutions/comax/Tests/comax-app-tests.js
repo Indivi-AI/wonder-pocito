@@ -13,7 +13,7 @@ import './reports-agent-tests.js'
 import './eval/reports-eval.js'
 import './eval/execution-accuracy.js'
 import { comaxReportFromAnswer } from '../Comps/report-button.js'
-import '@wonder/core/db-drivers.js'
+import '@wonder/db/db-drivers.js'
 const { wfetch2, wresolve } = jb.wonderUtils
 
 const {

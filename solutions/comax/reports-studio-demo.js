@@ -5,7 +5,7 @@ import '@wonder/ai/report-step.js'
 import '../../viz/viz-index.js'
 import './Reports/index.js'
 import './Agents/report-edit-agent.js'
-import '@wonder/core/db-drivers.js'
+import '@wonder/db/db-drivers.js'
 
 const { wfetch2 } = jb.wonderUtils
 import { applyReportPatch } from './Agents/report-edit-agent.js'

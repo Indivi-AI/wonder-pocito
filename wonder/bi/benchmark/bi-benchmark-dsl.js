@@ -3,7 +3,9 @@ import '../duckdb-utils.js'
 import '../bi-dsl.js'
 import '../bi-manifest.js'
 import '@wonder/db/room/room-lambda-client.js'
-import { formatTimeWithRandom } from '@wonder/db/base-utils.js'
+import '@wonder/db/db-drivers-utils.js'
+
+const { formatTimeWithRandom } = jb.wonderUtils
 
 const {
   tgp: { TgpType },

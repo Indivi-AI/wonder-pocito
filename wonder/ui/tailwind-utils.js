@@ -65,7 +65,8 @@ async function compileTailwindCSS(args) {
         const result = await jb.tailwindUtils.compileTailwindCSS(${JSON.stringify(args)})
         await coreUtils.writeServiceResult(result)
       } catch (e) {
-        await coreUtils.writeServiceResult(e.message || e)
+        coreUtils.logException(e, 'tailwind compile failed')
+        await coreUtils.writeServiceResult(null)
       }`
     const res = await coreUtils.runNodeCliViaJbWebServer(script,{importMapsInCli: './public/core/nodejs-importmap.js'})
     return res.result
@@ -231,4 +232,3 @@ async function tailwindHtmlToPng(args) {
     return { error: `tailwindHtmlToPng: ${e.stack || e}` }
   }
 }
-

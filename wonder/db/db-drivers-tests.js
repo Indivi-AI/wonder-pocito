@@ -14,7 +14,7 @@ const {
   test: { Test,
     test: { dataTest, dbDriverAppendTest, dbDriverPatchTest, dbDriverPutGetTest, publicRoomCountTest,
       signedRoomPutGetTest, signedRoomAppendTest, signedRoomPermissionsTest, signedRoomGooglePermissionsTest,
-      signedRoomCloudRunPutGetTest, signedRoomUsersRWTest, signedRoomMediaPutGetTest, signedRoomListTest, signedRoomTrailingSlashGetTest }
+      signedRoomCloudRunPutGetTest, signedRoomUsersRWTest, signedRoomMediaPutGetTest, signedRoomSigningTest, signedRoomListTest, signedRoomTrailingSlashGetTest }
   }
 } = dsls
 
@@ -133,6 +133,7 @@ Test('dbDriverTests.jqPath', {
 })
 
 Test('dbDriverTests.signedRoom.liveRepo.mediaPutGet', { nodeOnly: true, impl: signedRoomMediaPutGetTest('staging') })
+Test('dbDriverTests.signedRoom.liveRepo.signing', { nodeOnly: true, impl: signedRoomSigningTest() })
 Test('dbDriverTests.signedRoom.liveRepo.permissions', { nodeOnly: true, impl: signedRoomPermissionsTest('staging') })
 Test('dbDriverTests.signedRoom.liveRepo.googlePermissions', { nodeOnly: true, impl: signedRoomGooglePermissionsTest('staging') })
 Test('dbDriverTests.signedRoom.liveRepo.putGet', { nodeOnly: true, impl: signedRoomPutGetTest('staging') })

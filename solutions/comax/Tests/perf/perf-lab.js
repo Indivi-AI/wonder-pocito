@@ -1,9 +1,8 @@
 import { dsls, jb } from '@jb6/core'
-import { fetchItemsFromLLMReactiveP, warmLLMCache } from '@wonder/core/reactive-llm.js'
-import { writeBigLog } from '@wonder/core/base-utils.js'
+import { fetchItemsFromLLMReactiveP, warmLLMCache } from '@wonder/ai/reactive-llm.js'
 import '@wonder/ai/llm-flow-main-workflow.js'
 import '@wonder/ai/report-step.js'
-import '@wonder/core/db-drivers-live-repo.js'
+import '@wonder/db/db-drivers-live-repo.js'
 import '@wonder-admin/room/room-lambda-client.js'
 import '../../nostalgy/reports-based-agent.js'
 import '../../Reports/comax-reports.js'
@@ -99,7 +98,8 @@ Data('measureReportsAnalyticsPerfCache', {
     const prewarm = await warmLLMCache({ ctx: promptCtx, model, goal: `warm reportsAnalyticsPerf ${variant}`, prompt, instructions: saltedInstructions(`${key}-warm`), thinkingBudget: 0 })
     const warm = await run(`cached reportsAnalyticsPerf ${variant}`, `${key}-warm`)
     const result = { model, variant, cold, prewarm, warm, improvementPct: cold.duration && warm.duration ? Math.round((1 - warm.duration / cold.duration) * 100) : null }
-    return writeLog ? { ...result, bigLog: await writeBigLog({ roomId: promptCtx.vars.roomId, fileName: `perf-cache-${Date.now()}`, payload: result, metadata: { test: 'perfLab.cacheTiming.live', model, variant }, ctx: promptCtx }) } : result
+    const bigLogWUrl = writeLog && await jb.wonderUtils.saveRoomBigLog2(promptCtx, `perf-cache-${Date.now()}`)
+    return { ...result, ...(bigLogWUrl && { bigLogWUrl }) }
   }
 })
 

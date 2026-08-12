@@ -1,19 +1,21 @@
 import { jb, coreUtils, dsls } from '@jb6/core'
-import { logger, wonderBucketName } from '@wonder/db/base-utils.js'
 import { auth } from '@wonder/db/auth.js'
 
 const { test: { Logger, logger: { domainLogger } } } = dsls
 jb.wonderUtils ||= {}
 jb.dbDriversRegistry ||= { signedUrlCache: new Map() }
 
-let rawFileExts
-const localhostServer = ctx => ctx.vars.localhostServer || globalThis.process?.env?.WONDER_LOCAL_SERVER || 'http://localhost:3000'
-const wonderServiceBase = ctx => ctx.vars.lambdaHost || ctx.vars.wonderServiceBase
-  || globalThis.location?.origin || globalThis.process?.env?.WONDER_SERVICE_URL || 'https://wonder-lambda-me-west1.indivi.ai'
+// public
+const formatDay = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+const formatTimeWithRandom = () => {
+  const d = new Date()
+  return `${[d.getFullYear(), d.getMonth()+1, d.getDate(), d.getHours(), d.getMinutes()]
+    .map((x,i) => i ? String(x).padStart(2,'0') : x).concat(d.getMilliseconds()).join('-')}-${Math.random().toString(36).slice(2, 11)}`
+}
 
 
 async function wresolve(url, _ctx, method = 'GET') {
-  const dbLogger = _ctx.vars.dbLogger || logger
+  const dbLogger = _ctx.vars.dbLogger
   const ctx = _ctx.setVars({ url, method, dbLogger, localhostServer: localhostServer(_ctx) })
   const extracted = extractFromUrl(url, ctx)
   const { fileName } = extracted
@@ -34,7 +36,7 @@ async function wresolveInfo(url, _ctx, method = 'GET') {
 }
 
 async function wcachePopulate(wUrl, _ctx, { validate = false } = {}) {
-  const dbLogger = _ctx.vars.dbLogger || logger
+  const dbLogger = _ctx.vars.dbLogger
   if (!coreUtils.isNode) {
     const script = `import { coreUtils, jb } from '@jb6/core'
 import '@wonder/db/db-drivers.js'
@@ -65,8 +67,36 @@ const { wcachePopulate } = jb.wonderUtils
     await fs.writeFile(cachePath, content)
     dbLogger?.info?.({ t: 'wcache populated', cachePath, bytes: content.length, downloadMs: Date.now() - t0 }, {}, { ctx })
     return cachePath
-  } catch (e) { dbLogger?.error?.({ t: 'wcache error', wUrl, err: e.message || String(e) }, {}, { ctx }); return false }
+  } catch (e) { coreUtils.logException(e, 'wcache failed', { ctx, wUrl }); return false }
 }
+
+async function saveRoomBigLog2(ctx, id = formatTimeWithRandom()) {
+  if (!ctx.vars.roomBigLogLogger2 || !ctx.vars.roomUrl) return
+  const wUrl = `${ctx.vars.roomUrl}/admin/bigLogs/${id}.json`
+  const res = await jb.wonderUtils.wfetch2(wUrl, { method: 'PUT', body: coreUtils.harvestBigLog(ctx) }, ctx)
+  return res.ok && wUrl
+}
+
+async function prefetchSignedUrls(ctx) {
+  if (ctx.vars.db && ctx.vars.db !== 'gcs') return
+  const { roomId } = ctx.vars
+  const t0 = Date.now()
+  const idToken = await auth.wonderIdToken(ctx)
+  const signedUrlServer = signedUrlServerOf(ctx)
+  const res = await fetch(`${signedUrlServer.replace('/signed-url', '')}/signed-urls/${roomId}`, { headers: { Authorization: `Bearer ${idToken}` } })
+  if (!res.ok) return
+  const { signatures, cached, timing } = await res.json()
+  if (signatures) cacheSignatures(roomId, signatures)
+  ctx?.vars?.dbLogger?.info?.({ t: 'prefetchSignedUrls timing', roomId, ms: Date.now() - t0, cached, timing,
+    signatures: signatures && Object.keys(signatures).length }, {}, { ctx })
+}
+
+const getIdToken = auth.wonderIdToken
+const getAccessToken = auth.gcpAccessToken
+
+// protected - db-drivers.js
+const storagePrefix = 'https://storage.googleapis.com'
+const wonderBucketName = 'indiviai-wonder'
 
 async function calcPath(ctx, { scope, roomId, userId, fileName, db }) {
   const dbToUse = db || ctx.vars.db
@@ -79,13 +109,6 @@ async function calcPath(ctx, { scope, roomId, userId, fileName, db }) {
   const fetchPath = scope.fetchPath.length > 0 ? scope.fetchPath : scope.path
   const path = [roomsPrefix, scope.folderInBucket, ...fetchPath.map(v => ctxForPath.vars[v])].filter(x => x).join('/')
   return path
-}
-
-function calcUrl(ctx, { scope, roomId, userId, fileName }) {
-  const ctxForPath = ctx.setVars({ userPrivatePath: '', userId: '', roomId, fileName })
-  const urlPath = scope.path.map(v => ctxForPath.vars[v]).filter(x => x).join('/')
-
-  return `${scope.id}://${urlPath}?user=${userId}`
 }
 
 function extractFromUrl(url, ctx) {
@@ -116,8 +139,6 @@ function extractFromUrl(url, ctx) {
   return res
 }
 
-function notifyInternalActivity(url, opts, ctx) { if (ctx.vars.doNotUpdateRoomActivity) return }
-
 async function paginateGcsList(fetchPage) {
   const items = [], dirs = []
   let pageToken, pages = 0, status = 200
@@ -146,38 +167,12 @@ async function wonderRepoRoot() {
 const bustCdnCache = url => url.includes('X-Goog-Signature') ? url : `${url}${url.includes('?') ? '&' : '?'}cacheKiller=${Date.now()}`
 
 const gcsStorage = ctx => auth.gcpStorage(ctx)
-const nativeGcsStorage = ctx => auth.gcpStorage(ctx, { native: true })
 
 Logger('dbLogger', {
   impl: domainLogger('db', 'driverId,db,method,fileName,status,statusText', {
     addToR2: 'url,filePathUrl,filePath,opts,curl'
   })
 })
-
-const methodToAction = method => method === 'GET' || method === 'HEAD' ? 'read' : 'write'
-const sigsStorageKey = roomId => `sigs_${roomId}_${auth.currentPrincipal()}`
-
-function loadSignaturesFromStorage(roomId) {
-  if (coreUtils.isNode) return
-  try {
-    const stored = JSON.parse(localStorage.getItem(sigsStorageKey(roomId)) || '{}')
-    const { signedUrlCache } = jb.dbDriversRegistry
-    const now = Date.now()
-    for (const [key, entry] of Object.entries(stored))
-      if (entry.url && entry.exp > now) signedUrlCache.set(key, entry)
-  } catch {}
-}
-
-function cacheSignatures(roomId, signatures) {
-  const { signedUrlCache } = jb.dbDriversRegistry
-  const now = Date.now()
-  for (const [key, entry] of Object.entries(signatures))
-    if (entry.url && entry.exp > now) signedUrlCache.set(key, entry)
-  if (!coreUtils.isNode)
-    localStorage.setItem(sigsStorageKey(roomId), JSON.stringify(signatures))
-}
-
-const loadedRooms = new Set()
 
 async function getCachedSignedUrl(ctx, path, method) {
   // works with cloud-services/express-server/lib/signed-url.js
@@ -195,39 +190,33 @@ async function getCachedSignedUrl(ctx, path, method) {
   dbLogger?.info?.({ t: 'signedUrl cacheLookup', cacheKey, hit: !!(cached && cached.exp > Date.now()), cacheSize: signedUrlCache.size }, {}, { ctx }) // log to delete
   if (cached && cached.exp > Date.now()) return cached.url
   const t0 = Date.now()
-  dbLogger?.info?.({ t: 'signedUrl fetch', path, method }, {}, { ctx })
+  const signedUrlServer = signedUrlServerOf(ctx)
+  dbLogger?.info?.({ t: 'signedUrl fetch', path, method, signedUrlServer }, {}, { ctx })
   const idToken = await auth.wonderIdToken(ctx)
-  const signedUrlServer = `${wonderServiceBase(ctx)}/signed-url`
   let res
   for (let attempt = 0; ; attempt++) {   // burst signing of many NEW files hits the signatures-file mutation rate limit (GCS 429 → 500) - back off and retry
-    res = await fetch(`${signedUrlServer}/${path}?method=${method}`, { headers: { Authorization: `Bearer ${idToken}` } })
-    if (res.ok || attempt >= 2) break
+    res = await fetch(`${signedUrlServer}/${path}?method=${method}`, { headers: { Authorization: `Bearer ${idToken}`,
+      ...(ctx.vars.signedRoomLogger && { 'x-wonder-debug-logs': '1' }) } })
+    if (res.ok || (res.status < 500 && res.status !== 429) || attempt >= 2) break
     dbLogger?.info?.({ t: 'signedUrl retry', path, status: res.status, attempt }, {}, { ctx })
     await new Promise(ok => setTimeout(ok, 1500 * (attempt + 1)))
   }
   if (!res.ok) {
-    const error = `signed-url failed: ${res.status} ${await res.text()}`
-    dbLogger?.error?.({ t: error, path, method }, {}, { ctx })
-    throw new Error(error)
+    const body = await res.text()
+    try {
+      const remote = JSON.parse(body).logs?.signedRoomLogger
+      Object.entries(remote || {}).forEach(([channel, entries]) => ctx.vars.signedRoomLogger?.[channel]?.push(...entries))
+    } catch {}
+    const message = `signed-url failed: ${res.status} ${method} ${path} via ${signedUrlServer}`
+    const stack = new Error(message).stack
+    ctx.vars.errorLogger.error({ t: 'signed-url failed', stack, status: res.status, path, method, signedUrlServer }, { body }, { ctx })
+    return { ok: false, status: 500, statusText: stack, text: async () => body, json: async () => ({ error: stack }) }
   }
-  const { signedUrl, signatures, timing } = await res.json()
+  const { signedUrl, signatures, timing, logs } = await res.json()
+  Object.entries(logs?.signedRoomLogger || {}).forEach(([channel, entries]) => ctx.vars.signedRoomLogger?.[channel]?.push(...entries))
   if (signatures) cacheSignatures(roomId, signatures)
   dbLogger?.info?.({ t: 'signedUrl ready', path, method, duration: Date.now() - t0, serverTiming: timing }, {}, { ctx })
   return signedUrl
-}
-
-async function prefetchSignedUrls(ctx) {
-  if (ctx.vars.db && ctx.vars.db !== 'gcs') return
-  const { roomId } = ctx.vars
-  const t0 = Date.now()   // log to delete
-  const idToken = await auth.wonderIdToken(ctx)
-  const signedUrlServer = `${wonderServiceBase(ctx)}/signed-url`
-  const res = await fetch(`${signedUrlServer.replace('/signed-url', '')}/signed-urls/${roomId}`, { headers: { Authorization: `Bearer ${idToken}` } })
-  if (!res.ok) return
-  const { signatures, cached, timing } = await res.json()
-  if (signatures) cacheSignatures(roomId, signatures)
-  ctx?.vars?.dbLogger?.info?.({ t: 'prefetchSignedUrls timing', roomId, ms: Date.now() - t0, cached, timing,
-    signatures: signatures && Object.keys(signatures).length }, {}, { ctx })   // log to delete
 }
 
 const isLocalFile = (body, opts) => typeof body === 'string' && opts?.headers?.['x-wonder-body'] === 'localFile'
@@ -245,11 +234,39 @@ const rawFileUtils = (text, binary) => {
   }}
 }
 
-const wcacheRoot = () => process.env?.WCACHE_DIR || '/tmp/wcache'
 const wcachePath = (bucketName, path) => `${wcacheRoot()}/${bucketName}/${path}`
 
-Object.assign(jb.wonderUtils, { successResult, errorResultByException, notFoundResult, wresolve, wresolveInfo, wcachePopulate,
-  calcPath, calcUrl, extractFromUrl, wonderRepoRoot, bustCdnCache, paginateGcsList, gcsStorage,
-  getCachedSignedUrl, prefetchSignedUrls, isLocalFile, rawFileUtils, wcachePath,
-  getIdToken: auth.wonderIdToken, getAccessToken: auth.gcpAccessToken
-})
+Object.assign(jb.wonderUtils, { formatDay, formatTimeWithRandom, wresolve, wresolveInfo, wcachePopulate,
+  saveRoomBigLog2, prefetchSignedUrls, getIdToken, getAccessToken,
+  storagePrefix, wonderBucketName, successResult, errorResultByException, notFoundResult,
+  calcPath, extractFromUrl, wonderRepoRoot, bustCdnCache, paginateGcsList, gcsStorage,
+  getCachedSignedUrl, isLocalFile, rawFileUtils, wcachePath })
+
+// private
+let rawFileExts
+const localhostServer = ctx => ctx.vars.localhostServer || globalThis.process?.env?.WONDER_LOCAL_SERVER || 'http://localhost:3000'
+const signedUrlServerOf = ctx => ctx.vars.signedUrlServer
+  || 'https://staging.indivi.ai/signed-url'
+const methodToAction = method => method === 'GET' || method === 'HEAD' ? 'read' : 'write'
+const sigsStorageKey = roomId => `sigs_${roomId}_${auth.currentPrincipal()}`
+const loadedRooms = new Set()
+const wcacheRoot = () => process.env?.WCACHE_DIR || '/tmp/wcache'
+
+function loadSignaturesFromStorage(roomId) {
+  if (coreUtils.isNode) return
+  try {
+    const stored = JSON.parse(localStorage.getItem(sigsStorageKey(roomId)) || '{}')
+    const { signedUrlCache } = jb.dbDriversRegistry
+    const now = Date.now()
+    for (const [key, entry] of Object.entries(stored))
+      if (entry.url && entry.exp > now) signedUrlCache.set(key, entry)
+  } catch {}
+}
+
+function cacheSignatures(roomId, signatures) {
+  const { signedUrlCache } = jb.dbDriversRegistry
+  const now = Date.now()
+  for (const [key, entry] of Object.entries(signatures))
+    if (entry.url && entry.exp > now) signedUrlCache.set(key, entry)
+  if (!coreUtils.isNode) localStorage.setItem(sigsStorageKey(roomId), JSON.stringify(signatures))
+}

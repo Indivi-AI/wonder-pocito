@@ -5,7 +5,9 @@ import '@jb6/lang-service/src/tgp-snippet.js'
 import '@jb6/core/misc/jb-remote-via-cli.js'
 import './bi-benchmarks.js'
 import '@solution/comax2/comax-benchmark.js'
-import { formatTimeWithRandom } from '@wonder/db/base-utils.js'
+import '@wonder/db/db-drivers-utils.js'
+
+const { formatTimeWithRandom } = jb.wonderUtils
 
 const {
   common: { data: { compareBenchmarks } },

@@ -114,8 +114,7 @@ Tool('listBiglogs', {
   ],
   impl: mcpTool(async (ctx, {}, {date, roomId}) => {
     try {
-      const { formatDay } = await import('@wonder/db/base-utils.js')
-      const day = date || formatDay(new Date())
+      const day = date || jb.wonderUtils.formatDay(new Date())
       const pairs = await Promise.all([`room:gcs//${roomId}/logs/${day}`, `logs:gcs//${day}`].flatMap(root => [wfetch2(`${root}/daily-logs`, {}, ctx), wfetch2(`${root}/`, {}, ctx)]))
       const ids = [...new Set((await Promise.all(pairs.map((r, i) => r?.ok ? r.json().then(x => i % 2 ? namesFromMetadata(x) : x) : []))).flat())]
       return JSON.stringify(ids, null, 2)
@@ -255,8 +254,6 @@ export async function uploadLambdaCompDependencies(entryPath) {
 
   const baseDir = await coreUtils.calcRepoRoot()
   const dbCtx = new coreUtils.Ctx().setVars({ db: 'gcs' })
-  if (lambdaTestEntry.test(`/${entryPath}`)) throw new Error(`blocked lambda entry: ${entryPath}`)
-
   // Version identity = the git sha. Clean tree → deterministic `<gitSha>` (same sha ⇒ same tar ⇒ reuse).
   // Dirty tree → `MMDD-HHMM-<gitSha>-<rand>` so every uncommitted change rebuilds. Computed first to allow early reuse.
   const gitSha = execSync('git rev-parse --short HEAD', { encoding: 'utf8', cwd: baseDir }).trim()
@@ -277,6 +274,7 @@ export async function uploadLambdaCompDependencies(entryPath) {
     ...nodeBuiltins, ...nodeBuiltins.map(n => 'node:' + n)]
 
   const absEntry = toAbsolute(entryPath, baseDir, path)
+  const testEntry = lambdaTestEntry.test(`/${entryPath}`)
   const importGraph = new Map()
   const graphId = file => path.basename(file || '<entry>').replace(/\.(m?js)$/, '')
   // imports-only plugin: bypasses parser errors in some jb6 source files; we only need the graph.
@@ -291,9 +289,11 @@ export async function uploadLambdaCompDependencies(entryPath) {
       name: 'imports-only',
       setup(b) {
         b.onResolve({ filter: /.*/ }, args => {
-          const resolved = args.path.startsWith('.') ? path.resolve(args.resolveDir, args.path) : toAbsolute(args.path, baseDir, path)
+          const resolved = path.isAbsolute(args.path) ? args.path
+            : args.path.startsWith('.') ? path.resolve(args.resolveDir, args.path) : toAbsolute(args.path, baseDir, path)
           const source = `/${args.path}\n/${resolved}`
-          const action = lambdaTraversalBlockers.test(source) ? 'blocked' : 'traverse'
+          const blocked = lambdaTraversalBlockers.test(source) || !testEntry && lambdaTestEntry.test(source)
+          const action = blocked ? 'blocked' : 'traverse'
           const from = graphId(args.importer), to = `${graphId(resolved)}${action === 'blocked' ? ':blocked' : ''}`
           if (from !== to) importGraph.set(from, new Set([...(importGraph.get(from) || []), to]))
           if (action === 'blocked') return { path: args.path, external: true }
@@ -316,6 +316,7 @@ export async function uploadLambdaCompDependencies(entryPath) {
   const inputs = Object.keys(result.metafile.inputs)
     .filter(f => !f.includes('node_modules'))
     .filter(f => !lambdaTraversalBlockers.test(`/${f}`))
+    .filter(f => testEntry || !lambdaTestEntry.test(`/${f}`))
     .filter(f => f !== '<stdin>')
 
   // Source paths already match the per-version layout.
@@ -336,8 +337,10 @@ export async function uploadLambdaCompDependencies(entryPath) {
   const loaderJs = `import { existsSync, statSync } from 'fs'
 import { extname } from 'path'
 import { pathToFileURL, fileURLToPath } from 'url'
+import { builtinModules, createRequire } from 'module'
 
 const BASE = '${runtimeBase}'
+const hostRequire = createRequire('/usr/src/app/package.json')
 const MAP = {
   '@wonder':       BASE + '/wonder',
   '@jb6':          BASE + '/jb6',
@@ -353,6 +356,8 @@ export async function resolve(specifier, context, nextResolve) {
       return { url: pathToFileURL(cand).href, shortCircuit: true }
     }
   }
+  if (!builtinModules.includes(specifier) && !specifier.startsWith('.') && !specifier.startsWith('/') && !specifier.startsWith('file:'))
+    try { return { url: pathToFileURL(hostRequire.resolve(specifier)).href, shortCircuit: true } } catch {}
   const resolved = await nextResolve(specifier, context)
   if (resolved.url.startsWith('file:') && !fileURLToPath(resolved.url).startsWith(BASE + '/'))
     throw new Error('lambda import outside package: ' + specifier)

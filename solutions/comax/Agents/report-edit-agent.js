@@ -1,10 +1,9 @@
 import { dsls, jb, coreUtils } from '@jb6/core'
 import '@jb6/common'
 import '@wonder/ai/llm-flow-main-workflow.js'
-import { fetchItemsFromLLMReactiveP } from '@wonder/core/reactive-llm.js'
-import '@wonder/core/db-drivers.js'
+import { fetchItemsFromLLMReactiveP } from '@wonder/ai/reactive-llm.js'
+import '@wonder/db/db-drivers.js'
 const { wfetch2 } = jb.wonderUtils
-import { writeBigLog } from '@wonder/core/base-utils.js'
 import '../Reports/index.js'
 
 const {
@@ -154,15 +153,13 @@ Booklet('reportStudioEditing', { impl: booklet('reportStudioEditing,editReportSt
 Workflow('reports-studio-edit', {
   params: [{ id: 'model', as: 'string', defaultValue: MODEL }],
   impl: ({}, {}, { model }) => ({ async calcWorkflow(ctx0) {
-    const start = Date.now()
     let ctx = await jb.workflowUtils.extendWithWorkflowVars(ctx0.setVars({ flowModel: model, categories: { reportsStudio: true, local: true } }))
     const logger = ctx.vars.workflowLogger
     let runRes
     try { runRes = await editDraft(ctx, { ...ctx.vars, model, currentReport: baseReport(ctx) }) }
     catch (error) { logger.error({ t: 'reports-studio-edit failed' }, {}, { ctx, error }); runRes = { error: error.stack || String(error) } }
     const result = { runRes, workflowTrace: logger.workflowTrace, ...logger.logsAndErrors() }
-    const bigLogRes = await writeBigLog({ roomId: ctx.vars.roomId || 'comaxDemo', fileName: `wf-report-studio-${Date.now()}`, payload: result, metadata: { userMessage: ctx.vars.userMessage, workflowName: 'reports-studio-edit', duration: Date.now() - start }, ctx })
-    logger.info({ t: 'reports studio edit completed', adminUrl: bigLogRes?.adminUrl }, {}, { ctx })
-    return { ...result, adminUrl: bigLogRes?.adminUrl }
+    const bigLogWUrl = await jb.wonderUtils.saveRoomBigLog2(ctx, `wf-report-studio-${Date.now()}`)
+    return { ...result, ...(bigLogWUrl && { bigLogWUrl }) }
   } })
 })

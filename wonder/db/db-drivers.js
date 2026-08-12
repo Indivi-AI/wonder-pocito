@@ -1,5 +1,4 @@
 import { jb, coreUtils, dsls, ns } from '@jb6/core'
-import { logger, storagePrefix, wonderBucketName } from '@wonder/db/base-utils.js'
 import { auth } from '@wonder/db/auth.js'
 import '@wonder/db/db-drivers-utils.js'
 import '@jb6/llm-guide'
@@ -9,6 +8,7 @@ const {
   common: { Data },
 } = dsls
 const { wonderUtils } = jb
+const { storagePrefix, wonderBucketName } = wonderUtils
 const localhostServer = ctx => ctx.vars.localhostServer || globalThis.process?.env?.WONDER_LOCAL_SERVER || 'http://localhost:3000'
 const runtimeDb = ctx => ctx.vars.db || (!coreUtils.isNode && new URLSearchParams(globalThis.location?.search || '').get('db'))
 const gcsProxyBase = ctx => ctx.vars.wonderServiceBase || globalThis.location?.origin
@@ -226,7 +226,7 @@ async function getDBDriver(url, ctx) {
 
 async function wfetch2(_url, opts, _ctx) {
   const localServer = localhostServer(_ctx)
-  const dbLogger = _ctx.vars.dbLogger || logger
+  const dbLogger = _ctx.vars.dbLogger
   const etlStatus = t => _ctx.vars.etlLogger?.status?.(t)
   const ctx = _ctx.setVars({ url: _url, opts, dbLogger, localhostServer: localServer })
   try {
@@ -271,6 +271,7 @@ async function wfetch2(_url, opts, _ctx) {
   let curl = `curl "https://storage.googleapis.com/${bucketName}/${path}"`
   let gcsFile = null, filePath = null
   const filePathUrl = isList ? null : await driver.filePathUrl(ctx.setVars({ path, bucketName, method: opts.method }))
+  if (filePathUrl?.ok === false) return filePathUrl
   const filePathUrlMs = _gms()
 
   const postCtx = preCtx.setVars({ filePathUrl })
@@ -323,8 +324,8 @@ async function wfetch2(_url, opts, _ctx) {
   }
   return res
   } catch (e) {
-    dbLogger?.error?.({ t: 'wfetch2 error', url: _url, method: opts?.method, stack: e.stack || String(e) }, {}, { ctx })
-    return { ok: false, status: 500, statusText: e.message, text: async () => e.stack, json: async () => ({ error: e.message, stack: e.stack }) }
+    coreUtils.logException(e, 'wfetch2 failed', { ctx, url: _url, method: opts?.method })
+    return { ok: false, status: 500, text: async () => null, json: async () => null }
   }
 }
 
@@ -345,6 +346,7 @@ HeadMethod('whead.GcsJSApi', {
     } catch (error) {
       if (error.code === 404)
         return notFoundResult
+      coreUtils.logException(error, 'GCS HEAD failed', { ctx })
       return errorResultByException(error)
     }
   }
@@ -374,7 +376,7 @@ GetMethod('wget.GcsJSApi', {
           try {
             return JSON.parse(txt).content
           } catch (error) {
-            dbLogger?.error?.({ t: 'GCS GET json parse error' }, { txt }, { ctx, error })
+            coreUtils.logException(error, 'GCS GET json parse failed', { ctx, txt })
             return errorResultByException(error)
           }
         }
@@ -384,7 +386,7 @@ GetMethod('wget.GcsJSApi', {
         dbLogger?.info?.({ t: 'GCS GET 404' }, {}, { ctx })
         return notFoundResult
       }
-      dbLogger?.error?.({ t: 'GCS GET failed' }, {}, { ctx, error })
+      coreUtils.logException(error, 'GCS GET failed', { ctx })
       return errorResultByException(error)
     }
   }
@@ -409,7 +411,7 @@ GetMethod('wget.viaGcsHttpApi', {
 
     let data
     try { data = await response.json() } catch(e) {
-      dbLogger?.error?.({ t: 'viaGcsHttpApi GET json parse error', status: response.status }, { url, error: e.message }, { ctx })
+      coreUtils.logException(e, 'viaGcsHttpApi GET json parse failed', { ctx, status: response.status, url })
       return { ok: false, status: 500, text: async () => null, json: async () => null }
     }
 
@@ -468,7 +470,7 @@ PutMethod('wput.GcsJSApi', {
       dbLogger?.info?.({ t: 'wput.GcsJSApi', status: 200, bytes: totalBytes }, {}, { ctx })
       return successResult
     } catch (error) {
-      dbLogger?.error?.({ t: 'wput.GcsJSApi failed', bucketName, path, error: error.stack }, {}, { ctx, error })
+      coreUtils.logException(error, 'wput.GcsJSApi failed', { ctx, bucketName, path })
       return errorResultByException(error)
     }
   }
@@ -483,7 +485,7 @@ PutMethod('wput.viaGcsHttpApi', {
       response = await fetch(filePathUrl, { headers: { 'Content-Type': 'application/json' }, method: 'PUT', body: jsonStr })
       await response.text()
     } catch (error) {
-      dbLogger?.error?.({ t: 'wput.viaGcsHttpApi error' }, { filePathUrl, curl }, { ctx, error, response })
+      coreUtils.logException(error, 'wput.viaGcsHttpApi failed', { ctx, filePathUrl, curl, response })
       return errorResultByException(error)
     }
     if (!response.ok) {
@@ -518,8 +520,7 @@ AppendMethod('wappend.GcsJSApiWithGenerationCheck', {
         existing = txt ? JSON.parse(txt).content : existing
         dbLogger?.info?.({ t: `wappend.GcsJSApiWithGenerationCheck GET`, itemsCount: Object.keys(existing).length, attempt }, { curl }, { ctx })
       } catch (error) {
-        if (error.code !== 404)
-          dbLogger?.info?.({ t: `wappend.GcsJSApiWithGenerationCheck read failed - using empty object`, attempt, generation }, { curl }, { ctx, error })
+        if (error.code !== 404) coreUtils.logException(error, 'wappend.GcsJSApiWithGenerationCheck read failed', { ctx, attempt, generation, curl })
         generation = 0
       }
       const merged = method == 'PATCH' ? { ...existing, ...newItems } : [...existing, ...newItems]
@@ -533,7 +534,7 @@ AppendMethod('wappend.GcsJSApiWithGenerationCheck', {
         if ((error.code == 409 || error.code == 412) && attempt < maxRetries - 1) {
           dbLogger?.warning?.({ t: `wappend.GcsJSApiWithGenerationCheck generation mismatch - retrying`, attempt, generation }, {}, { ctx })
         } else {
-          dbLogger?.error?.({ t: `wappend.GcsJSApiWithGenerationCheck failed permanently`, attempt }, {}, { ctx, error })
+          coreUtils.logException(error, 'wappend.GcsJSApiWithGenerationCheck failed permanently', { ctx, attempt })
           return errorResultByException(error)
         }
       }
@@ -564,7 +565,7 @@ AppendMethod('wappend.viaSignedUrl', {
       dbLogger?.info?.({ t: 'wappend.viaSignedUrl success', items: Array.isArray(merged) ? merged.length : Object.keys(merged).length }, {}, { ctx })
       return successResult
     } catch (error) {
-      dbLogger?.error?.({ t: 'wappend.viaSignedUrl failed', error: error.message }, {}, { ctx, error })
+      coreUtils.logException(error, 'wappend.viaSignedUrl failed', { ctx })
       return errorResultByException(error)
     }
   }
@@ -674,7 +675,7 @@ ListMethod('wlist.wcache', {
     const dir = wcachePath(bucketName, path).replace(/\/$/, '')
     let entries = []
     try { entries = await fs.readdir(dir, { withFileTypes: true }) } catch (e) {
-      if (e.code !== 'ENOENT') throw e
+      if (e.code !== 'ENOENT') coreUtils.logException(e, 'wlist.wcache failed', { ctx, dir })
     }
     const items = entries.filter(e => e.isFile()).map(e => ({ name: `${path}${e.name}` }))
     const dirs = entries.filter(e => e.isDirectory()).map(e => ({ name: `${path}${e.name}/`, isDir: true }))

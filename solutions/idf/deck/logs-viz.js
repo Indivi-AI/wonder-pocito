@@ -1,7 +1,6 @@
 import { dsls, coreUtils } from '@jb6/core'
 import '@jb6/react'
 import '@wonder/ai/llm-flow-core.js'
-import '@wonder/core/content-types.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 const LOG_WURL = 'room://idf/logExample.json'

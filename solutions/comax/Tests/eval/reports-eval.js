@@ -3,7 +3,7 @@ import { dsls, jb } from '@jb6/core'
 import '@jb6/common'
 import '@jb6/testing'
 import '../../nostalgy/reports-based-agent.js'
-import { fetchItemsFromLLMReactiveP } from '@wonder/core/reactive-llm.js'
+import { fetchItemsFromLLMReactiveP } from '@wonder/ai/reactive-llm.js'
 import { loadVerifiedQuestions, pMap } from './eval-utils.js'
 
 const {

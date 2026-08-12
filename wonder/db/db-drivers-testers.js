@@ -16,7 +16,9 @@ const {
 } = dsls
 
 const mintTestToken = phone => fetch(`http://localhost:3000/mint-wonder-token?phone=${encodeURIComponent(phone)}`).then(r => r.text())
-const signedUrlServerForTests = env => env === 'staging' ? 'https://staging.indivi.ai/signed-url' : 'http://localhost:3000/signed-url'
+const signedUrlServerForTests = env => env === 'staging'
+  ? 'https://staging.indivi.ai/signed-url'
+  : 'http://localhost:3000/signed-url'
 
 Test('dbDriverPutGetTest', {
   circuit: 'dbDriverTests.fsMem.browser.putGet',
@@ -66,7 +68,8 @@ Test('dbDriverAppendTest', {
 })
 
 function signedRoomCtx(ctx, env) {
-  return ctx.setVars({ forceGCS: false, isStaging: env === 'staging' })
+  return ctx.setVars({ forceGCS: false, isStaging: env === 'staging',
+    ...(env === 'staging' && { signedUrlServer: 'https://wonder-server-staging-365199207445.me-west1.run.app/signed-url' }) })
 }
 
 Test('signedRoomPutGetTest', {
@@ -81,7 +84,8 @@ Test('signedRoomPutGetTest', {
         const res = await wfetch2(url, { method: 'GET' }, dbCtx)
         return { result: await res.json(), ...coreUtils.harvestLogs(dbCtx) }
       } catch(e) {
-        return { error: e.message, ...coreUtils.harvestLogs(dbCtx) }
+        coreUtils.logException(e, 'signedRoomPutGetTest failed', { ctx: dbCtx })
+        return null
       }
     },
     expectedResult: equals('%result.a%', 5),
@@ -102,7 +106,8 @@ Test('signedRoomAppendTest', {
         const res = await wfetch2(url, { method: 'GET' }, dbCtx)
         return { result: await res.json(), ...coreUtils.harvestLogs(dbCtx) }
       } catch(e) {
-        return { error: e.message, ...coreUtils.harvestLogs(dbCtx) }
+        coreUtils.logException(e, 'signedRoomAppendTest failed', { ctx: dbCtx })
+        return null
       }
     },
     expectedResult: equals('%result%', [{id: 0}, {id: 1}]),
@@ -188,7 +193,8 @@ Test('signedRoomUsersRWTest', {
         const res = await wfetch2(url, { method: 'GET' }, dbCtx)
         return { result: await res.json(), ...coreUtils.harvestLogs(dbCtx) }
       } catch(e) {
-        return { error: e.message, ...coreUtils.harvestLogs(dbCtx) }
+        coreUtils.logException(e, 'signedRoomUsersRWTest failed', { ctx: dbCtx })
+        return null
       }
     },
     expectedResult: equals('%result.a%', 42),
@@ -210,7 +216,8 @@ Test('signedRoomListTest', {
         const names = (Array.isArray(list) ? list : []).map(e => e.name).filter(n => /\/(a|b)\.json$/.test(n))
         return { result: names.length, ...coreUtils.harvestLogs(dbCtx) }
       } catch(e) {
-        return { error: e.message, ...coreUtils.harvestLogs(dbCtx) }
+        coreUtils.logException(e, 'signedRoomListTest failed', { ctx: dbCtx })
+        return null
       }
     },
     expectedResult: equals('%result%', 2),
@@ -237,23 +244,40 @@ Test('signedRoomTrailingSlashGetTest', {
 Test('signedRoomMediaPutGetTest', {
   params: [{id: 'env', options: 'staging'}],
   impl: dataTest({
-    logger: 'dbLogger',
+    logger: 'dbLogger,signedRoomLogger',
     calculate: async (ctx, {}, {env}) => {
       const dbCtx = signedRoomCtx(ctx, env)
       const url = 'signedRoom://testSignedRoom/usersRW/assets/test-media.png'
       try {
         const testB64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
         const body = coreUtils.isNode ? Buffer.from(testB64, 'base64').toString('base64') : testB64
-        await wfetch2(url, { body, method: 'PUT' }, dbCtx)
+        const putRes = await wfetch2(url, { body, method: 'PUT' }, dbCtx)
+        if (!putRes.ok) return { result: `put:${putRes.status}`, ...coreUtils.harvestLogs(dbCtx) }
         const res = await wfetch2(url, { method: 'HEAD' }, dbCtx)
+        if (!res.ok) return { result: `head:${res.status}`, ...coreUtils.harvestLogs(dbCtx) }
         const resolved = res.headers.get('Content-Location')
-        return { result: `ok:${res.ok}:signed:${resolved?.includes('X-Goog-Signature')}:protected:${resolved?.includes('indiviai-wonder-protected')}`, ...coreUtils.harvestLogs(dbCtx) }
+        return { result: `ok:${res.ok}:signed:${resolved?.includes('X-Goog-Signature')}`
+          + `:protected:${resolved?.includes('indiviai-wonder-protected')}`, ...coreUtils.harvestLogs(dbCtx) }
       } catch(e) {
-        return { error: e.message, ...coreUtils.harvestLogs(dbCtx) }
+        coreUtils.logException(e, 'signedRoomMediaPutGetTest failed', { ctx: dbCtx })
+        return null
       }
     },
     expectedResult: equals('%result%', 'ok:true:signed:true:protected:true'),
     timeout: 20000
+  })
+})
+
+Test('signedRoomSigningTest', {
+  impl: dataTest({
+    logger: 'dbLogger',
+    calculate: async ctx => {
+      const dbCtx = signedRoomCtx(ctx, 'staging')
+      const res = await wfetch2('signedRoom://testSignedRoom/usersRO/test.json', { method: 'HEAD' }, dbCtx)
+      return { result: res.status, statusText: res.statusText, body: !res.ok && await res.text(), ...coreUtils.harvestLogs(dbCtx) }
+    },
+    expectedResult: equals('%result%', 200),
+    timeout: 12000
   })
 })
 
@@ -331,7 +355,7 @@ export async function putGet(args, useNode, ctx) {
         } catch (error) {
           await coreUtils.writeServiceResult(error.stack || error)
         }`
-        const res = await coreUtils.runNodeCliViaJbWebServer(script,{importMapsInCli: './public/core/nodejs-importmap.js'})
+        const res = await coreUtils.runNodeCliViaJbWebServer(script,{importMapsInCli: './nodejs-importmap.js'})
         return res.result
       }
 
@@ -344,7 +368,7 @@ export async function putGet(args, useNode, ctx) {
       dbLogger?.info?.({t:'final Get result'},{result},{ctx})
       return {result, putRes, ...coreUtils.harvestLogs(ctx)}
   } catch (error) {
-    dbLogger?.error?.({t: 'putGet failed', url, error: error.stack}, {args}, {ctx, error})
+    coreUtils.logException(error, 'putGet failed', { ctx, url, args })
     return {content: null, error: error.stack}
   }
 }
@@ -365,7 +389,7 @@ export async function putChangeGet(args, useNode, ctx) {
         } catch (error) {
           await coreUtils.writeServiceResult(error.stack || error)
         }`
-      return (await coreUtils.runNodeCliViaJbWebServer(script,{importMapsInCli: './public/core/nodejs-importmap.js'})).result
+      return (await coreUtils.runNodeCliViaJbWebServer(script,{importMapsInCli: './nodejs-importmap.js'})).result
     }
 
     if (initialArray) {
@@ -381,7 +405,7 @@ export async function putChangeGet(args, useNode, ctx) {
     dbLogger?.info?.({t:'final Get result'},{result},{ctx})
     return {result, ...coreUtils.harvestLogs(ctx)}
   } catch (error) {
-    dbLogger?.error?.({t: 'putAppendGet failed', url, error: error.stack}, {args}, {ctx, error})
+    coreUtils.logException(error, 'putAppendGet failed', { ctx, url, args })
     return {content: null, error: error.stack}
   }
 }

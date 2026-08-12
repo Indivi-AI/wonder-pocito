@@ -11,10 +11,9 @@ import '@wonder/ai/llm-flow-doclets.js'
 import '@wonder/verified-queries/verified-queries-dsl.js'
 import '../Reports/comax-reports.js'
 import '../Reports/index.js'
-import '@wonder/core/db-drivers.js'
+import '@wonder/db/db-drivers.js'
 const { wfetch2, wresolve } = jb.wonderUtils
-import { writeBigLog } from '@wonder/core/base-utils.js'
-import { fetchItemsFromLLMReactiveP } from '@wonder/core/reactive-llm.js'
+import { fetchItemsFromLLMReactiveP } from '@wonder/ai/reactive-llm.js'
 import { PERF_VIEW } from '../Reports/promo-shared.js'
 
 const { tgp: { TgpType }, common: { Data, data }, workflow: { Workflow, workflow: { flowWorkflow }, 'flow-elem': { flow, setCtxVar, until, replan } }, 'llm-guide': { Doclet } } = dsls
@@ -148,10 +147,10 @@ const dashboardsEditFlow = flowWorkflow({
 Workflow('dashboards-edit', {
   params: [{ id: 'model', as: 'string', defaultValue: MODEL }],
   impl: ({}, {}, { model }) => ({ async calcWorkflow(ctx0) {
-    const start = Date.now(), ctx = ctx0.setVars({ model, flowModel: model, categories: { ...(ctx0.vars.categories || {}), dashboards: true, local: true } })
-    const result = await ctx.run(dashboardsEditFlow).calcWorkflow(ctx), { userMessage, userId, roomId = 'comaxDemo' } = ctx.vars
-    const bigLogRes = await writeBigLog({ roomId, fileName: `wf-dashboards-edit-${Date.now()}`, payload: result, metadata: { userMessage, workflowName: 'dashboards-edit', userId, duration: Date.now() - start, roomId }, ctx })
-    return { ...result, bigLogRes, ...(bigLogRes?.adminUrl ? { adminUrl: bigLogRes.adminUrl } : { bigLogError: bigLogRes?.error }) }
+    const ctx = ctx0.setVars({ model, flowModel: model, categories: { ...(ctx0.vars.categories || {}), dashboards: true, local: true } })
+    const result = await ctx.run(dashboardsEditFlow).calcWorkflow(ctx)
+    const bigLogWUrl = await jb.wonderUtils.saveRoomBigLog2(ctx, `wf-dashboards-edit-${Date.now()}`)
+    return { ...result, ...(bigLogWUrl && { bigLogWUrl }) }
   } })
 })
 

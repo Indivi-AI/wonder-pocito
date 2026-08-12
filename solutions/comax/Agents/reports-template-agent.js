@@ -4,7 +4,7 @@ import './analytics-agent.js'
 import '@wonder/ai/report-step.js'
 import '@wonder/ai/final-answer-from-report-step.js'
 import '../Reports/index.js'
-import { fetchItemsFromLLMReactiveP } from '@wonder/core/reactive-llm.js'
+import { fetchItemsFromLLMReactiveP } from '@wonder/ai/reactive-llm.js'
 import '../Doclets/comax-analytics-doclets.js'
 
 const {
