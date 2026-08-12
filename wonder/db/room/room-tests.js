@@ -1,6 +1,6 @@
 import { dsls, coreUtils } from '@jb6/core'
 import '@jb6/testing'
-import '@jb6/llm-guide'
+import '@jb6/llm-guide/essentials.js'
 import './room-lambda-client.js'         // permissionByPath comp-field + roomLambda interceptor + lambdaLogger/roomLogger
 import './ping-lambda.js'
 import './room-bi-lambdas.js'

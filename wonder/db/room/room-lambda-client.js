@@ -1,9 +1,8 @@
 import { jb, coreUtils, dsls } from '@jb6/core'
-import '@jb6/llm-guide'
+import '@jb6/llm-guide/essentials.js'
 import '@wonder/db/db-drivers.js'
 import './room-lambda-dsl.js'
 const { getIdToken, wfetch2 } = jb.wonderUtils
-import '@jb6/core/misc/jb-remote-via-cli.js'        // runStrippedCli — run over the LIVE repo (no upload)
 import '@jb6/core/misc/jb-remote.js'                // stripCtx — roomLambda ships the call + ctx slice
 
 const {
@@ -13,7 +12,7 @@ const {
   test: { Logger, logger: { domainLogger } },
   'llm-guide': { Doclet }
 } = dsls
-const { isNode, activeLoggers } = coreUtils
+const { activeLoggers } = coreUtils
 
 Doclet('lambda-packaging-concept', {
   impl: `
@@ -35,71 +34,19 @@ at call time, never a param. Both packagings PACK the call the same way (stripCt
 })
 
 const LambdaPackaging = TgpType('lambda-packaging', 'lambda')
-
 const asJbComp = c => typeof c == 'string' ? coreUtils.compByFullId(c) : c?.[Symbol.for('asJbComp')] || (c?.$location ? c : null)
 
-const importsFromLoadedLocations = (profile, repoRoot) => {
-  const seen = new Set(), paths = []
-  let missing = false
-  const urlToRepoDir = { '/jb6_packages': 'jb6', '/wonder': 'wonder', '/solution': 'solutions', '/indiviai': 'indiviai' }
-  const abs = p => {
-    const dir = Object.keys(urlToRepoDir).find(pre => p.startsWith(pre + '/'))
-    return dir ? `${repoRoot}/${urlToRepoDir[dir]}${p.slice(dir.length)}` : p.startsWith('/') ? p : `${repoRoot}/${p}`
-  }
-  const walkComp = c => {
-    if (!c || seen.has(c)) return
-    seen.add(c)
-    if (!c.$location?.path) { missing = true; return }
-    paths.push(abs(c.$location.path))
-    walkNode(c.impl)
-  }
-  // one traversal for both the profile arg tree AND comp impls: descend every value, and at each `$` resolve→walk its comp.
-  const walkNode = node => {
-    if (!node || typeof node != 'object' || seen.has(node)) return
-    seen.add(node)
-    if (node.$) walkComp(asJbComp(node.$))
-    Object.values(node).forEach(v => Array.isArray(v) ? v.forEach(walkNode) : walkNode(v))
-  }
-  walkNode(profile)
-  if (missing) return null   // a comp the profile touches isn't loaded here → caller falls back to parsed discover
-  const topLevelImports = coreUtils.unique(paths)
-  return { topLevelImports, importsStr: topLevelImports.map(f => `await import('${f}')`).join('\n'), projectDir: repoRoot,
-    importMapsInCli: jb.coreRegistry.importMapsInCli, compsWalked: seen.size }
-}
-
 const unPackagedInLiveRepo = LambdaPackaging('unPackagedInLiveRepo', {
-  impl: () => ({
-    run: async (ctx, compToRun) => {
-      const log = ctx.vars.lambdaLogger
-      // the live repo IS this process — run in-process, no wire. node always qualifies; the browser qualifies too unless the
-      // comp is nodeOnly (touches fs/spawn/gcs; e.g. fileQuery). a cubeQuery lambda is NOT nodeOnly → runs on wasm duckdb in-page.
-      const nodeOnly = asJbComp(compToRun.profile.$)?.nodeOnly
-      if ((isNode || !nodeOnly) && !ctx.vars.forceDiscover) {
-        log?.info?.({ event: 'in-process (live repo, no wire)', strategy: 'unPackagedInLiveRepo',
-          host: isNode ? 'node' : 'browser' }, {}, { ctx })
-        return compToRun(ctx)
-      }
-      const profile = coreUtils.tgpProfileToJson(compToRun.profile)   // resolves compToRun.profile in place → its $ nodes are now jbComp objects
-      const repoRoot = await coreUtils.calcRepoRoot()
-      await coreUtils.calcJb6RepoRootAndImportMapsInCli()   // populates jb.coreRegistry.importMapsInCli → buildNodeCliCmd passes --import to the child
-      const fast = importsFromLoadedLocations(compToRun.profile, repoRoot)   // null ⇒ some comp not loaded here
-      if (!fast) await import('@jb6/lang-service/src/tgp-snippet.js')
-      const imp = fast || await coreUtils.calcImportsForProfile(profile, { entryPointPaths: [`${repoRoot}/tests/all-tests.js`], ctx })
-      log?.info?.({ event: fast ? 'entry paths from loaded $location (fast, no parse)' : 'loaded $location incomplete → parsed discover (slow)',
-        strategy: 'unPackagedInLiveRepo', files: imp?.topLevelImports?.length, compsWalked: fast?.compsWalked }, { imp }, { ctx })
-      if (!imp || imp.error) { log?.error?.({ event: 'discover failed → skip', strategy: 'unPackagedInLiveRepo', error: imp?.error }, { imp }, { ctx }); return null }
-      // pack = ship the call (profile + only the %$tokens% slice of ctx it needs, via stripCtx) to a fresh node CLI that shares this repo
-      const packedCtx = coreUtils.stripCtx({ profileJson: profile, ctx: compToRun.lexicalCtx })
-      packedCtx.vars.db = 'gcs'
-      const loggers = activeLoggers(ctx)
-      log?.info?.({ event: 'spawning child CLI to run packed profile', strategy: 'unPackagedInLiveRepo', loggers,
-        ctxVars: Object.keys(packedCtx.vars || {}) }, {}, { ctx })
-      const res = await coreUtils.runStrippedCli({ profileJson: profile, packedCtx, imports: imp, testLoggers: loggers, progressLoggers: loggers, ctx })
-      if (res?.error) { log?.error?.({ event: 'run failed → skip', strategy: 'unPackagedInLiveRepo', error: res.error }, { childLogs: res.logs }, { ctx }); return null }
-      log?.info?.({ event: 'child CLI returned ok', strategy: 'unPackagedInLiveRepo', resultRows: Array.isArray(res.result) ? res.result.length : typeof res.result }, {}, { ctx })
-      return res.result
+  impl: () => ({ run: async (ctx, compToRun) => {
+    const nodeOnly = asJbComp(compToRun.profile.$)?.nodeOnly
+    if ((coreUtils.isNode || !nodeOnly) && !ctx.vars.forceDiscover) {
+      ctx.vars.lambdaLogger?.info?.({ event: 'in-process (live repo, no wire)', strategy: 'unPackagedInLiveRepo',
+        host: coreUtils.isNode ? 'node' : 'browser' }, {}, { ctx })
+      return compToRun(ctx)
     }
-  })
+    if (!coreUtils.runUnPackagedInLiveRepo) await import('./room-lambda-' + 'live-repo.js')
+    return coreUtils.runUnPackagedInLiveRepo(ctx, compToRun)
+  } })
 })
 
 const roomLambda = LambdaPackaging('roomLambda', {

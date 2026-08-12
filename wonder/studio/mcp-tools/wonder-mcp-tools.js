@@ -212,7 +212,7 @@ export async function uploadCompDependencies(urlsToLoad, onVersion) {
   timer.phase('esbuildGraph')
 
   const inputs = [...new Set([...Object.keys(result.metafile.inputs), ...assets])]
-    .filter(f => !f.includes('node_modules') && f !== '<stdin>')   // stage lib/ too: source files relative-import them (e.g. lang-service-parsing-utils → ../lib/acorn.mjs), and relative imports can't be importmap-redirected to the CDN
+    .filter(f => !f.includes('node_modules') && f !== '<stdin>' && !/(^|\/)jb6\/react\/lib\//.test(f))   // React lib is already mapped to jb6-cdn; other relative-imported lib files must travel
   // Repository paths already match the browser snapshot layout.
   const relForUpload = f => f
 

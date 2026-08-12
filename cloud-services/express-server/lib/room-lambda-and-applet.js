@@ -53,6 +53,7 @@ const cmpId = new URLSearchParams(location.search).get('cmpId') || appletSpec.cm
 // ?noAuth on a PUBLIC room (room://) skips the login gate — data is public, so run anonymously (server SA) with no OAuth spin. Signed rooms ignore it.
 const noAuth = new URLSearchParams(location.search).has('noAuth') && roomUrl?.startsWith('room://')
 const root = document.getElementById('root')
+if (appletSpec.liveRepo) await import('@wonder/db/room/room-lambda-live-repo.js')
 // harvest harness wiring, run on BOTH branches: __jbOnMounted (injected externally by playwrightHarvest) installs jbRunAndHarvest; jbMounted unblocks its wait.
 const harvestReady = async mCtx => { window.jbLoggers = mCtx.vars; await window.__jbOnMounted?.(mCtx, reactUtils); window.jbMounted = true }
 // extendCtxWithUrl seeds ctx-* query params (e.g. ?ctx-reportUrl=…) + loggers from the URL; then add react + the applet's roomUrl.

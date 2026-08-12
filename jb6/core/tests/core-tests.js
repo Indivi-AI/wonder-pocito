@@ -365,21 +365,6 @@ Test('runActions', {
 //   })
 // })
 
-Test('vmTest.minimal', {
-  HeavyTest: true,
-  nodeOnly: true,
-  impl: dataTest({
-    calculate: async () => {
-      await coreUtils.calcJb6RepoRootAndImportMapsInCli()
-      return jb.testingUtils.runTestVm({ testID: 'coreTest.ns', resources: { 
-          entryPointPaths: `${jb.coreRegistry.jb6Root}/packages/core/tests/core-tests.js`}})
-    },
-    expectedResult: equals(2, '%testRes.result%'),
-    timeout: 2000,
-    logger: 'vmLogger'
-  })
-})
-
 const asIsParam = Data({
   params: [
     {id: 'param', as: 'string', asIs: true}

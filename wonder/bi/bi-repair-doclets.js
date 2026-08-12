@@ -1,5 +1,5 @@
 import { dsls } from '@jb6/core'
-import '@jb6/llm-guide'
+import '@jb6/llm-guide/essentials.js'
 
 const { 'llm-guide': { Doclet } } = dsls
 

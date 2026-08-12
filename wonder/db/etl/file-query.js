@@ -1,4 +1,5 @@
 import { dsls, coreUtils, jb } from '@jb6/core'
+import '@jb6/llm-guide/essentials.js'
 import '@wonder/db/db-drivers.js'
 import './etl-dsl.js'
 

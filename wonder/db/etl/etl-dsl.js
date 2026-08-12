@@ -1,4 +1,5 @@
 import {dsls, coreUtils, jb} from '@jb6/core'
+import '@jb6/llm-guide/essentials.js'
 import '@jb6/core/misc/jb-cli.js'   // assigns runBashScript onto coreUtils (node CLI helpers)
 import '@wonder/db/db-drivers.js'
 

@@ -220,7 +220,7 @@ if (!globalThis.window) {
     const win = globalThis.window = dom.window
     const isLocalHost = win.location.hostname === 'localhost'
 
-    await import('./lib/mutationobserver.min.js')
+    await import('@jb6/react/lib/mutationobserver.min.js')
 
     win.matchMedia = () => ({})
     win.scrollTo     = () => {}

@@ -1,4 +1,5 @@
 import '@jb6/testing/all-jb6-tests.js'
+import '@wonder/db/room/room-lambda-live-repo.js'
 import '@solution/comax/comax-v2-tests.js'
 import '@wonder/db/db-drivers-tests.js'
 import '@wonder/db/room/room-tests.js'

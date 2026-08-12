@@ -3,14 +3,10 @@
 // Module.{tailSize,haveRange,faultRange,readRange}; those + self.__ccUrls (wUrl→signed https) are planted
 // at Module creation, so there is no postMessage race. Sync XHR + range fetch are legal on this worker.
 // CppLog lines (engine stdout/stderr) stream up as {kind:'log'}; the query rows come back as {kind:'result'}.
-import createModule from './duckdb-dist/st/duckdb-eh.js'
 import { tableFromIPC } from './duckdb-dist/arrow.bundle.mjs'
-const dist = new URL('./duckdb-dist/st/', import.meta.url).href
-const runtimeUrls = {
-  'duckdb_wasm.wasm': new URL('./duckdb-dist/st/duckdb-eh.wasm', import.meta.url).href
-}
-// MT: const rangeWorkerUrl = new URL('./range-worker.js', import.meta.url)
-// MT: const rangeWorkers = Array.from({ length: 6 }, () => new Worker(rangeWorkerUrl))
+import { colsCacheRuntime } from '../cols-cache-version.js'
+const { default: createModule } = await import(colsCacheRuntime.js)
+const runtimeUrls = { 'duckdb_wasm.wasm': colsCacheRuntime.wasm }
 let requestId
 const post = (kind, d) => postMessage({ kind, requestId, ...d })
 const started = performance.now()
@@ -297,7 +293,7 @@ const loadWasm = async () => {
 let ready
 const initialize = async () => {
   globalThis.DUCKDB_RUNTIME = noRuntime
-  const locateFile = file => runtimeUrls[file] || dist + file
+  const locateFile = file => runtimeUrls[file] || file
   const print = line => post('log', { line }) // MT: scan.rangePlan also started shared range-worker prefetch.
   const wasm = await loadWasm()
   if (wasm.error) return wasm

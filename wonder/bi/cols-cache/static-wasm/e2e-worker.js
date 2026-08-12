@@ -10,11 +10,9 @@
 // through that handle fully synchronously inside the hooks. A page→packed-slot map records cached pages and
 // survives worker restart, so a fresh worker (fresh DuckDB)
 // HITS every col-chunk a prior worker cached: browser-db separated from the ephemeral DuckDB lifecycle.
-import createModule from './duckdb-dist/st/duckdb-eh.js'
-const dist = new URL('./duckdb-dist/st/', import.meta.url).href
-const runtimeUrls = {
-  'duckdb_wasm.wasm': new URL('./duckdb-dist/st/duckdb-eh.wasm', import.meta.url).href
-}
+import { colsCacheRuntime } from '../cols-cache-version.js'
+const { default: createModule } = await import(colsCacheRuntime.js)
+const runtimeUrls = { 'duckdb_wasm.wasm': colsCacheRuntime.wasm }
 const post = (kind, d) => postMessage({ kind, ...d })
 const timing = { started: 0, phases: {} }
 const phase = (step, status) => {
@@ -104,7 +102,7 @@ const noRuntime = new Proxy({ getDefaultDataProtocol: () => 2, testPlatformFeatu
 let M, conn, boot
 const ready = () => boot ||= (async () => {
   globalThis.DUCKDB_RUNTIME = noRuntime
-  const locateFile = f => runtimeUrls[f] || dist + f
+  const locateFile = f => runtimeUrls[f] || f
   /* MT: pthread builds require a classic glue blob and duckdb_wasm.worker.js. */
   phase('glue', 'running')
   phase('glue', 'done'); phase('wasm', 'running')

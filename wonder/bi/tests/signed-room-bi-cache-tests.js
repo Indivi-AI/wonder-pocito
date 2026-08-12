@@ -1,6 +1,7 @@
 import { dsls } from '@jb6/core'
 import '@jb6/testing'
 import '../bi-common.js'
+import '@wonder/db/room/room-lambda-client.js'
 
 const {
   tgp: { Component, 'ctx-enricher': { setVars } },

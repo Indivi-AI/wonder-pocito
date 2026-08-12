@@ -1,6 +1,7 @@
 import { dsls, coreUtils, jb } from '@jb6/core'
 import '@jb6/core/misc/jb-cli.js'
 import '@jb6/core/misc/import-map-services.js'
+import { colsCacheRuntime } from './cols-cache/cols-cache-version.js'
 
 const biUtils = jb.biUtils ||= {}
 const { ensureLoggers } = coreUtils
@@ -151,12 +152,12 @@ async function runDuckdbSqlByHost(sql, ctx, { as = 'rows', parseOnly = false, du
 
 // wasm transport: worker query → -json rows in {stdout}; hands each cpp CppLog line to onLine (same router as cli's stderr).
 async function runDuckdbWithWasm(sql, ctx, onLine) {
-  ctx?.vars?.colsCacheLogger?.info?.({ t: 'wasm.path', path: '@wonder/bi/cols-cache/static-wasm/duckdb-wasm.js' }, {}, { ctx })
-  return { stdout: await (await import('@wonder/bi/cols-cache/static-wasm/duckdb-wasm.js')).runSql(sql, ctx, onLine) }
+  ctx?.vars?.colsCacheLogger?.info?.({ t: 'wasm.path', path: colsCacheRuntime.client }, {}, { ctx })
+  return { stdout: await (await import(colsCacheRuntime.client)).runSql(sql, ctx, onLine) }
 }
 
 async function clearDuckdbCache() {
-  if (!coreUtils.isNode) return (await import('@wonder/bi/cols-cache/static-wasm/duckdb-wasm.js')).clearCache()
+  if (!coreUtils.isNode) return (await import(colsCacheRuntime.client)).clearCache()
   return (await import('fs/promises')).rm('/tmp/cols_cache', { recursive: true, force: true })
 }
 

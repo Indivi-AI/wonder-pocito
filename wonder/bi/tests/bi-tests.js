@@ -1,6 +1,9 @@
 import { dsls } from '@jb6/core'
 import '@jb6/testing'
-import '../bi-common.js'   // bi-dsl + event-sources + room deps (invokeSnippetInContext + managed ctx)
+import '../bi-common.js'
+import '../materialization.js'
+import '../event-sources.js'
+import '@wonder/db/room/managed-ctx.js'
 
 const {
   tgp: { Const, 'ctx-enricher': { setupCube, setVar, setVars, tempView, materializedView } },

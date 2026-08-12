@@ -1,8 +1,5 @@
 import { dsls, coreUtils, jb } from '@jb6/core'
-import '@jb6/llm-guide'
 import '@jb6/common'
-import '@wonder/db/etl/etl-cron.js'
-import './connector/connectors.js'
 import '@wonder/db/db-drivers.js'
 const { getAccessToken, wresolve, wresolveInfo, wcachePopulate, wfetch2 } = jb.wonderUtils
 import './duckdb-utils.js'
@@ -10,8 +7,7 @@ import './duckdb-utils.js'
 const {
   tgp: { TgpType, TgpTypeModifier, Component },
   common: { Data },
-  test: { Logger, logger: { domainLogger } },
-  'llm-guide': { Doclet }
+  test: { Logger, logger: { domainLogger } }
 } = dsls
 const { enrichCtxWithDataContext, omitEmptyProps } = coreUtils
 const biUtils = jb.biUtils ||= {}
@@ -423,7 +419,7 @@ QueryLookup('lookupByWUrl', {
     async resolveForQuery(ctx, periods) {
       const log = ctx?.vars?.biLogger
       const fullWUrl = joinBase(wUrl, ctx.vars.cubeWUrlBase)
-      const m = await biUtils.bindManifestSource(fullWUrl, ctx)
+      const m = await biUtils.bindManifestSource?.(fullWUrl, ctx)
       if (m) {   // manifest lookup: bind the read_parquet placeholder (expandManifest swaps it) + register its files for pruneManifest
         log?.info?.({ t: 'queryLookup manifest', bindAs, manifestUrl: m.manifestUrl }, {}, { ctx })
         return { vars: { [bindAs]: m.from }, manifest: { [m.manifestUrl]: m.entry } }
@@ -772,7 +768,7 @@ async function resolveSilvers(cube, periods, ctx) {
   for (const p of cube.parquetFiles || []) {
     const wUrlPattern = joinBase(p.wUrlPattern, cubeWUrlBase)
     const wUrls = perPeriodWUrls(wUrlPattern, periods)
-    const manifestSource = await biUtils.bindManifestSource(wUrls[0], ctx)   // manifest defers its real reader to expandManifest, which reads through the declared strategy
+    const manifestSource = await biUtils.bindManifestSource?.(wUrls[0], ctx)   // manifest defers its real reader to expandManifest, which reads through the declared strategy
     const readableByDeclared = manifestSource || !strategiesByName[declaredStrategy].effectiveStrategyFor   // manifest defers to the declared strategy; a strategy with no delegation always reads its own silvers
     const effectiveStrategy = readableByDeclared ? declaredStrategy : strategiesByName[declaredStrategy].effectiveStrategyFor(wUrls)   // per-silver: both halves (reader + modifiers) come from this ONE strategy
     const strategy = strategiesByName[effectiveStrategy] ||= CacheStrategy[effectiveStrategy].$run()

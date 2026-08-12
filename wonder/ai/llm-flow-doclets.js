@@ -1,6 +1,6 @@
 import { dsls } from '@jb6/core'
 import '@jb6/common'
-import '@jb6/llm-guide'
+import '@jb6/llm-guide/essentials.js'
 import './llm-flow-core.js'
 import './duckdb-sql-step.js'
 

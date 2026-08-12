@@ -1,7 +1,6 @@
 import { jb, coreUtils, dsls, ns } from '@jb6/core'
 import { auth } from '@wonder/db/auth.js'
 import '@wonder/db/db-drivers-utils.js'
-import '@jb6/llm-guide'
 
 const {
   tgp: { TgpType, Component },

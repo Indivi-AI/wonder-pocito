@@ -1,8 +1,10 @@
 import { dsls, coreUtils } from '@jb6/core'
 import '@jb6/core/misc/pretty-print.js'
+import './essentials.js'
 
 const { 
   tgp: { TgpType, Component },
+  'llm-guide': { Doclet, Booklet }
 } = dsls
 
 Object.assign(coreUtils, {bookletContent, docletContent})
@@ -21,14 +23,12 @@ coreUtils.evaluateDoclet = (text, vars) => String(text).replace(/<BOOKLET-EVALUA
 // =============================================================================
 
 // Define the DSL types
-const Doclet = TgpType('doclet', 'llm-guide')           // Main documentation container
 const Guidance = TgpType('guidance', 'llm-guide')       // Solution/anti-pattern components
 const Evidence = TgpType('evidence', 'llm-guide') 
 const ExplanationPoint = TgpType('explanationPoint', 'llm-guide') // Individual explanation components
 const ProblemStatement = TgpType('problemStatement', 'llm-guide') // New: Problem statement container
 const Validation = TgpType('validation', 'llm-guide')
 const Concept = TgpType('concept', 'llm-guide')
-const Booklet = TgpType('booklet', 'llm-guide') // documentation package for llm prompt
 
 // =============================================================================
 // TYPE: doclet - Main documentation container
@@ -369,13 +369,6 @@ Validation('buildQuiz', {
     {id: 'context', as: 'text', description: 'Data structure, setup code, or environment context'},
     {id: 'scrambledSolution', as: 'string', mandatory: true, description: 'Complete working solution (scrambled)'},
     {id: 'scrambledHint', as: 'string', description: 'Optional hint about approach or key concepts (scrambled)'}
-  ]
-})
-
-Booklet('booklet', {
-  params: [
-    {id: 'doclets', as: 'string', description: 'comma delimited names of doclets', mandatory: true},
-    {id: 'whenToUse', as: 'text'}
   ]
 })
 

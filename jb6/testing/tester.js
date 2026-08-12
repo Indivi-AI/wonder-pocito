@@ -2,7 +2,7 @@ import { coreUtils, dsls } from '@jb6/core'
 import '@jb6/common'
 
 const { Ctx, jb, logException, asJbComp, delay, waitForInnerElements, globalsOfTypeIds, unique, isNode } = coreUtils
-jb.testingUtils = {runTest, runTests, runTestVm, runTestInVm}
+jb.testingUtils = {runTest, runTests}
 jb.testingRepository = {}
 
 const {
@@ -85,59 +85,6 @@ Component('dataTest', {
 // run tests
 
 globalThis.jb = jb
-
-async function runTestVm(args, ctx) {
-    const {testID, params, resources, builtIn, vmId, importMap, staticMappings} = args
-    const vmLogger = ctx?.vars?.vmLogger
-    vmLogger?.info?.({t: 'runTestVm start', testID, vmId, isNode, hasCtx: !!ctx, hasResources: !!resources, builtIn: builtIn ? Object.keys(builtIn) : null}, {}, {ctx})
-    if (!isNode) {
-        const script = `import { jb, coreUtils } from '@jb6/core'
-    import '@jb6/testing/tester.js'
-    ;(async()=>{
-    try {
-      console.error('[trace cli-script] before runTestVm ${testID}')
-      const result = await jb.testingUtils.runTestVm(${JSON.stringify(args)})
-      console.error('[trace cli-script] after runTestVm', JSON.stringify(result).slice(0,200))
-      await coreUtils.writeServiceResult(result || '')
-    } catch (e) { console.error('[trace cli-script] EXCEPTION', e.stack || e) }
-    })()`
-          vmLogger?.info?.({t: 'calling runNodeCliViaJbWebServer', testID}, {}, {ctx})
-          const res = await coreUtils.runNodeCliViaJbWebServer(script, {}, ctx)
-          vmLogger?.info?.({t: 'runNodeCliViaJbWebServer returned', testID, hasResult: !!res?.result, error: res?.error, keys: Object.keys(res||{}), stderr: String(res?.stderr || '').slice(0,500), textToParse: String(res?.textToParse || '').slice(0,500)}, {}, {ctx})
-          return res.result
-      }
-      await import ('@jb6/core/misc/jb-vm.js')
-      const testVm = await coreUtils.getOrCreateVm({vmId, resources, builtIn, importMap, staticMappings, vmLogger, ctx})
-      vmLogger?.info?.({t: 'vm ready', testID, hasVm: !!testVm}, {}, {ctx})
-      if (!testVm) {
-        ctx?.vars?.errorLogger.error({t: 'no vm', testID, resources}, {}, {ctx})
-        return { error: 'getOrCreateVm returned null', testID, resources }
-      }
-      try {
-        const result = await testVm.evalScript(`jb.testingUtils.runTestInVm('${testID}', ${JSON.stringify(params || {})})`)
-        vmLogger?.info?.({t: 'runTestVm done', testID, hasResult: !!result, success: result?.success}, {}, {ctx})
-        return result
-      } catch (e) {
-        vmLogger?.error?.({t: 'runTestVm error', testID, error: e.stack || e.message || String(e)}, {}, {ctx})
-        return { error: e.stack || e.message || String(e) }
-      }
-}
-
-async function runTestInVm(testID, params, httpReqId) {
-    const jbComp = Test[testID][asJbComp]
-    let res = {}
-    const start = Date.now()
-    try {
-        const ctx = new Ctx().setVars({ testID, singleTest: true, httpReqId })
-        debugger
-        res = await jbComp.runProfile(params, ctx)
-        console.log('test res', res)
-    } catch (e) {
-        res = { success: false, reason: e}
-    }
-    res.duration = Date.now() - start
-    return res
-}
 
 export async function runTest(testID, {fullTestId, singleTest, action, httpReqId, params} = {}) {
     !singleTest && await cleanBeforeRun()

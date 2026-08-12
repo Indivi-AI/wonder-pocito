@@ -1,5 +1,5 @@
 import {jb, dsls, coreUtils} from '@jb6/core'
-import '@jb6/llm-guide'
+import '@jb6/llm-guide/essentials.js'
 
 const {tgp: {TgpType, Component, CtxEnricher}, common: {Data}} = dsls
 const CategoryType = TgpType('category-type', 'tgp',
