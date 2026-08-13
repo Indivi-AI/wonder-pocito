@@ -3,12 +3,12 @@ import '@wonder/db/db-drivers-utils.js'
 import '@wonder/ui/ui-utils.js'
 const { createShortUrl, formatTimeWithRandom, shareHandler, wAppend, wGet, wPut } = jb.wonderUtils
 import '@wonder/applets/applet.js'
-import '@wonder-admin/room/room-lambda-client.js'   // roomLambda db-driver-interceptor - routes the <roomUrl>/lambda/<name> POSTs of the remote duckDbSql hook
+import '@wonder/db/room/room-lambda-client.js'   // roomLambda db-driver-interceptor - routes the <roomUrl>/lambda/<name> POSTs of the remote duckDbSql hook
 import '../Agents/analytics-agent.js'   // registers the basicAnalytics workflow (run in-browser; its duckDbSql offloads duckdb to /run-bash)
 import { PROMOTION_ACTION_QUESTION } from '../Agents/reports-template-agent.js'
 import '../Agents/fast-report-agent.js'   // registers fast-report (quick report widgets + delayed LLM summary)
 import '../Agents/agents-repo.js'   // Data('comaxAnalyticsAgents') — the selectable-agents repo
-import '../../../viz/viz-index.js'   // VizWidget + all inline chart widgets the assistant can emit
+import '@wonder/bi/viz-index.js'   // VizWidget + all inline chart widgets the assistant can emit
 import './dashboards.js'
 import { comaxDrillQuestion, comaxFixDrillSql } from '../Comps/drill-helpers.js'
 import { runViaRoomLambda } from '@wonder/ai/duckdb-sql-step.js'
@@ -888,7 +888,9 @@ async function sendMessage({ txt, agents: agentIds, model, chatElements, setChat
     if (results.length === 1 && failedResult(results[0])) {
       const denied = /forbidden|login required/i.test(JSON.stringify(results[0] || ''))
       assistantMsg = { ...base, durMs: results[0].durMs, type: 'text',
-        content: denied ? 'לחשבון המחובר אין הרשאה לנתוני חדר הדמו. יש להתחבר עם חשבון מורשה ולנסות שוב.' : FAILURE_TEXT,
+        content: denied
+          ? 'לחשבון המחובר אין הרשאה לנתוני חדר הדמו. יש להתחבר עם חשבון מורשה ולנסות שוב.'
+          : FAILURE_TEXT,
         followUps: [{ label: 'הרץ שוב', question: txt }],
         ...(results[0].payload?.adminUrl && { adminUrl: results[0].payload.adminUrl }) }
     }

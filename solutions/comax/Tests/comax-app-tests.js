@@ -2,7 +2,7 @@ import { dsls, jb, coreUtils } from '@jb6/core'
 import '@jb6/common'
 import '@jb6/testing'
 import '@jb6/react/tests/react-testers.js'
-import '../../../viz/viz-index.js'
+import '@wonder/bi/viz-index.js'
 import { salesHomeData } from '../App/comaxApp.js'
 import '../App/dashboards.js'
 import '../Comps/human-feedback-preview.js'
@@ -105,7 +105,9 @@ Test('reactTest.comax.sliceOverridesVerifiedBadge', {
 
 Test('reactTest.comax.narrativeNeverRendered', {
   impl: reactTest({
-    testedComp: answerWith({ ...answer, content: '**סיכום עיקרי**', narrative: 'נרטיב דטרמיניסטי נסתר', longText: '', sql: '', rows: [], widgets: [], followUps: [] }),
+    testedComp: answerWith({
+      ...answer, content: '**סיכום עיקרי**', narrative: 'נרטיב דטרמיניסטי נסתר', longText: '', sql: '', rows: [], widgets: [], followUps: [],
+    }),
     expectedResult: ctx => !String(ctx.data).includes('נרטיב דטרמיניסטי נסתר') || { testFailure: String(ctx.data) },
     userActions: [delay(80)]
   })

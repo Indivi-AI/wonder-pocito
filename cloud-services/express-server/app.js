@@ -83,10 +83,16 @@ async function setupLiveRepo(app) {
 }
 
 export async function createApp(mode = process.env.WONDER_SERVICE || 'public') {
+  if (mode === 'local') process.env.WONDER_TOKEN ||= crypto.randomBytes(32).toString('hex')
   const app = express().set('trust proxy', 1)
-  useCors(app)
+  useCors(app, mode === 'local')
   app.use(express.json({ limit: mode === 'local' ? '50mb' : '10mb' }))
   if (mode === 'local') app.use(express.raw({ type: req => !/^application\/json/i.test(req.headers['content-type'] || ''), limit: '50mb' }))
+  mode === 'local' && app.get('/oauth2redirect', (_, res) => res.type('html').send(`<script>
+const url = new URL(localStorage.getItem('post_auth_redirect_url') || '/', location.origin)
+for (const [key, value] of new URLSearchParams(location.search)) url.searchParams.set(key, value)
+location.replace(url)
+</script>`))
   if (mode === 'protected') setupSignedUrlForwarder(app)
   else {
     setupAuthRoutes(app)

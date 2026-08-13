@@ -1,5 +1,6 @@
 import { jb, coreUtils, dsls } from '@jb6/core'
 import { auth } from '@wonder/db/auth.js'
+import { storage } from '@wonder/db/storage.js'
 
 const { test: { Logger, logger: { domainLogger } } } = dsls
 jb.wonderUtils ||= {}
@@ -95,7 +96,8 @@ const getIdToken = auth.wonderIdToken
 const getAccessToken = auth.gcpAccessToken
 
 // protected - db-drivers.js
-const storagePrefix = 'https://storage.googleapis.com'
+const storagePrefix = globalThis.WONDER_STORAGE_URL || globalThis.process?.env?.MINIO_PUBLIC_ENDPOINT
+  || 'https://storage.googleapis.com'
 const wonderBucketName = 'indiviai-wonder'
 
 async function calcPath(ctx, { scope, roomId, userId, fileName, db }) {
@@ -164,8 +166,7 @@ async function wonderRepoRoot() {
   return resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 }
 
-const bustCdnCache = url => url.includes('X-Goog-Signature') ? url : `${url}${url.includes('?') ? '&' : '?'}cacheKiller=${Date.now()}`
-
+const bustCdnCache = url => /X-(Goog|Amz)-Signature/i.test(url) ? url : `${url}${url.includes('?') ? '&' : '?'}cacheKiller=${Date.now()}`
 const gcsStorage = ctx => auth.gcpStorage(ctx)
 
 Logger('dbLogger', {
@@ -242,14 +243,15 @@ const wcachePath = (bucketName, path) => `${wcacheRoot()}/${bucketName}/${path}`
 Object.assign(jb.wonderUtils, { formatDay, formatTimeWithRandom, wresolve, wresolveInfo, wcachePopulate,
   saveRoomBigLog2, prefetchSignedUrls, getIdToken, getAccessToken,
   storagePrefix, wonderBucketName, successResult, errorResultByException, notFoundResult,
-  calcPath, extractFromUrl, wonderRepoRoot, bustCdnCache, paginateGcsList, gcsStorage,
+  calcPath, extractFromUrl, wonderRepoRoot, bustCdnCache, paginateGcsList, gcsStorage, storage,
   getCachedSignedUrl, isLocalFile, rawFileUtils, wcachePath })
 
 // private
 let rawFileExts
 const localhostServer = ctx => ctx.vars.localhostServer || globalThis.process?.env?.WONDER_LOCAL_SERVER || 'http://localhost:3000'
-const signedUrlServerOf = ctx => ctx.vars.signedUrlServer
-  || 'https://wonder-server-staging-365199207445.me-west1.run.app/signed-url'
+const signedUrlServerOf = ctx => ctx.vars.signedUrlServer || (!coreUtils.isNode
+  && (['localhost', '127.0.0.1', '::1'].includes(location.hostname) || location.hostname.startsWith('192.168'))
+  ? `${location.origin}/signed-url` : 'https://wonder-server-staging-365199207445.me-west1.run.app/signed-url')
 const methodToAction = method => method === 'GET' || method === 'HEAD' ? 'read' : 'write'
 const sigsStorageKey = roomId => `sigs_${roomId}_${auth.currentPrincipal()}`
 const loadedRooms = new Set()

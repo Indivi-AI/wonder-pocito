@@ -1,8 +1,8 @@
 import { dsls } from '@jb6/core'
 import '@jb6/react'
 import '@wonder/applets/applet.js'
-import '../../../viz/viz-index.js'
-import '@wonder-admin/room/room-lambda-client.js'
+import '@wonder/bi/viz-index.js'
+import '@wonder/db/room/room-lambda-client.js'
 import './reports-workspace-lambda.js'
 
 const {
@@ -177,7 +177,8 @@ ReactComp('reportsWorkspace', {
                 h('div:font-medium truncate', {}, assetId),
                 h(`div:text-xs ${active ? 'text-slate-300' : 'text-slate-400'}`, {}, `${latest.sectionCount ?? '?'} sections · ${vs.length} version${vs.length > 1 ? 's' : ''}`)),
               active && vs.length > 1 && h('div:flex flex-wrap gap-1 px-3 py-1', {}, [...vs].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).map(v =>
-                h(`button:px-2 py-0.5 rounded-full text-[11px] border ${v.variantId == sel ? 'border-slate-800 bg-slate-800 text-white' : 'border-slate-200 text-slate-500 hover:border-slate-400'}`, {
+                h(`button:px-2 py-0.5 rounded-full text-[11px] border ${v.variantId == sel
+                  ? 'border-slate-800 bg-slate-800 text-white' : 'border-slate-200 text-slate-500 hover:border-slate-400'}`, {
                   key: v.variantId, onClick: () => open(v.variantId) }, v.variantId.split('.').slice(1).join('.')))))
           })))
 

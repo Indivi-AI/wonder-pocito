@@ -1,10 +1,10 @@
 import http from 'node:http'
 import https from 'node:https'
 import { createHash } from 'node:crypto'
-import { Storage } from '@google-cloud/storage'
+import { storage } from '@wonder/db/storage.js'
 import { proxyRoomCaller } from './auth-utils.js'
 
-const quotaBucket = new Storage().bucket('indiviai-wonder-protected')
+const quotaBucket = (await storage(null, { native: true })).bucket('indiviai-wonder-protected')
 const dailyLimit = Number(process.env.LLM_DAILY_CALLS_PER_IP || 100)
 
 const providers = {
@@ -26,7 +26,7 @@ async function consumeDailyQuota(ip) {
     if (count >= dailyLimit) return { allowed: false, ...quota }
     try {
       if (metadata) await file.setMetadata({ metadata: { count: String(count + 1) } }, {
-        preconditionOpts: { ifGenerationMatch: Number(metadata.generation) }
+        preconditionOpts: { ifGenerationMatch: metadata.generation }
       })
       else await file.save('', { metadata: { metadata: { count: '1' } }, preconditionOpts: { ifGenerationMatch: 0 } })
       return { allowed: true, ...quota, usedCalls: count + 1, remainingCalls: Math.max(0, dailyLimit - count - 1),

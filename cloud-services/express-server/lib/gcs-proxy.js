@@ -2,8 +2,9 @@ import { Readable } from 'node:stream'
 import { once } from 'node:events'
 import { fetch, Pool } from 'undici'
 
-const gcsPool = new Pool('https://storage.googleapis.com', {
-    connections: 20, allowH2: true, maxConcurrentStreams: 80, connect: { preferH2: true }
+const storageOrigin = (process.env.MINIO_ENDPOINT || 'https://storage.googleapis.com').replace(/\/$/, '')
+const gcsPool = new Pool(storageOrigin, {
+    connections: 20, allowH2: storageOrigin.startsWith('https:'), maxConcurrentStreams: 80, connect: { preferH2: true }
 })
 
 async function* packetize(body, size) {
@@ -58,7 +59,7 @@ export function setupGCSProxyRoute(app) {
 
     app.get('/gcs-proxy/*', async (req, res) => {
         try {
-            const gcsUrl = `https://storage.googleapis.com/${req.params[0]}?${new URLSearchParams(req.query)}`
+            const gcsUrl = `${storageOrigin}/${req.params[0]}?${new URLSearchParams(req.query)}`
             const response = await fetch(gcsUrl, { dispatcher: gcsPool, headers: req.headers.range ? { Range: req.headers.range } : {} })
             if (!response.ok && response.status !== 206) return res.status(response.status).end()
             for (const h of ['content-type', 'content-range', 'accept-ranges', 'content-length'])

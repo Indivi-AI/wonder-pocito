@@ -227,7 +227,9 @@ MUST be JSON escaped as a string, NOT an object. e.g. "{\\"$\\":\\"ui-action<tes
     await coreUtils.ensureImportMapsInCli() // needed for external repos with import maps
     if (seedLocalStorage) {
       await import('@jb6/lang-service')
-      const { result, error } = await coreUtils.runSnippetCli({ profileText: `{$: 'data<common>${seedLocalStorage}'}` })
+      const { result, error } = await coreUtils.runSnippetCli({ profileText: `{$: 'data<common>${seedLocalStorage}'}`,
+        ctxEnricher: {$: 'ctx-enricher<tgp>setVars', obj: {$: 'data<common>asIs',
+          val: {localhostServer: new URL(url).origin, seedNonce: Date.now()}}} })
       if (error) return JSON.stringify({ error: `seedLocalStorage '${seedLocalStorage}' failed: ${error}` }, null, 2)
       seed = result
     }

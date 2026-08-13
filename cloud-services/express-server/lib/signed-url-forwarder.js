@@ -7,7 +7,7 @@ import { GoogleAuth } from 'google-auth-library'
 import { coreUtils } from '@jb6/core'
 import { setupSignedUrlRoute } from './signed-url.js'
 
-const auth = new GoogleAuth()
+const auth = new GoogleAuth({ clientOptions: { transporterOptions: { fetchImplementation: globalThis.fetch } } })
 const clientByAudience = {}
 const idTokenClient = audience => clientByAudience[audience] ||= auth.getIdTokenClient(audience)
 
@@ -27,8 +27,8 @@ export function setupSignedUrlForwarder(app) {
         try {
             log?.info?.({ t: 'public signer entered', method: req.method, path: req.path, target,
                 incomingUserAuth: !!req.headers.authorization }, {}, { ctx })
-            const client = await idTokenClient(target)
-            const authHeaders = await client.getRequestHeaders()
+            const client = process.env.PROTECTED_LAMBDA_AUTH === 'none' ? null : await idTokenClient(target)
+            const authHeaders = client ? await client.getRequestHeaders() : {}
             const googleHeaders = authHeaders?.entries ? Object.fromEntries(authHeaders.entries()) : { ...authHeaders }
             const googleAuthorization = googleHeaders.authorization || googleHeaders.Authorization
             log?.info?.({ t: 'Google ID token headers ready', headersType: authHeaders?.constructor?.name,

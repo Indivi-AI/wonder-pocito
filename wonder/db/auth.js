@@ -6,7 +6,8 @@ const authStore = () => globalThis.localStorage
 export const readAuth = () => { try { return JSON.parse(authStore()?.getItem('auth2') || '{}') } catch { return {} } }
 export const writeAuth = auth => authStore()?.setItem('auth2', JSON.stringify(auth))
 export const currentPrincipal = () => readAuth().sub || readAuth().email || 'anon'
-const localhostServer = ctx => ctx?.vars?.localhostServer || globalThis.process?.env?.WONDER_LOCAL_SERVER || 'http://localhost:3000'
+const localhostServer = ctx => ctx?.vars?.localhostServer || globalThis.process?.env?.WONDER_LOCAL_SERVER
+  || (!coreUtils.isNode && globalThis.location?.origin) || 'http://localhost:3000'
 const isLocalHost = ctx => ctx?.vars?.isLocalHost ?? !!(globalThis.location?.hostname === 'localhost' || globalThis.location?.hostname?.startsWith('192.168'))
 
 const devEmail = async ctx => {
@@ -25,6 +26,7 @@ await coreUtils.writeServiceResult(await auth.devEmail(new coreUtils.Ctx()))`, {
 
 const hasGcpIdentity = async () => {
   if (!coreUtils.isNode) return false
+  if (process.env.STORAGE_PROVIDER === 'minio') return true
   if (process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.K_SERVICE) return true
   const { access } = await import('fs/promises')
   return access(`${process.env.HOME}/.config/gcloud/application_default_credentials.json`).then(() => true, () => false)

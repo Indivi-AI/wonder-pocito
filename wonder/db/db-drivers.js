@@ -12,7 +12,7 @@ const localhostServer = ctx => ctx.vars.localhostServer || globalThis.process?.e
 const runtimeDb = ctx => ctx.vars.db || (!coreUtils.isNode && new URLSearchParams(globalThis.location?.search || '').get('db'))
 const gcsProxyBase = ctx => ctx.vars.wonderServiceBase || globalThis.location?.origin
   || globalThis.process?.env?.WONDER_SERVICE_URL || 'https://wonder-lambda-me-west1.indivi.ai'
-const { wresolve, successResult, errorResultByException, notFoundResult, bustCdnCache, gcsStorage, paginateGcsList, calcPath,
+const { wresolve, successResult, errorResultByException, notFoundResult, bustCdnCache, gcsStorage, storage, paginateGcsList, calcPath,
   extractFromUrl, wonderRepoRoot, getCachedSignedUrl, isLocalFile, rawFileUtils, wcachePath } = wonderUtils
 
 Data('wFetch', {
@@ -289,7 +289,8 @@ async function wfetch2(_url, opts, _ctx) {
   const driverParts = driver.id.split('.')
 
   if (driver.storageApi)
-    gcsFile = (await (ctx.vars.nativeGcsAuth ? auth.gcpStorage(ctx, { native: true }) : gcsStorage(ctx))).bucket(bucketName).file(path)
+    gcsFile = (await (globalThis.process?.env?.STORAGE_PROVIDER === 'minio' ? storage(ctx)
+      : ctx.vars.nativeGcsAuth ? auth.gcpStorage(ctx, { native: true }) : gcsStorage(ctx))).bucket(bucketName).file(path)
   if (driverParts.includes('FS') && driverParts.includes('node')) {
     const { resolve } = await import('path')
     filePath = resolve(await wonderRepoRoot(), `files/${path}`)
@@ -573,7 +574,7 @@ AppendMethod('wappend.viaSignedUrl', {
 ListMethod('wlist.GcsJSApi', {
   impl: async (ctx, { dbLogger, bucketName, path }) => {
     const t0 = Date.now()
-    const bucket = (await gcsStorage(ctx)).bucket(bucketName)
+    const bucket = (await (globalThis.process?.env?.STORAGE_PROVIDER === 'minio' ? storage(ctx) : gcsStorage(ctx))).bucket(bucketName)
     const { items, dirs, pages, result } = await paginateGcsList(async pageToken => {
       const [files, nextQuery, apiResp] = await bucket.getFiles({ prefix: path, delimiter: '/', autoPaginate: false, maxResults: 5000, pageToken })
       return {
@@ -789,7 +790,12 @@ DbDriverInterceptor('rawFile', {
         dbLogger?.info?.({ t: 'rawFile PUT', contentType, bytes, streamed: isFile, encoding: isFile ? 'stream' : isTextMime(contentType) ? 'utf8' : 'base64' }, {}, { ctx })
         const uploadStarted = Date.now()
         let status = 200
-        if (!coreUtils.isNode) {
+        if (coreUtils.isNode && globalThis.process?.env?.STORAGE_PROVIDER === 'minio') {
+          const gcsFile = (await storage(ctx)).bucket(bucketName).file(path)
+          if (isFile) await new Promise((res, rej) => sendBody.pipe(gcsFile.createWriteStream({ contentType, resumable: bytes > 5e6 }))
+            .on('finish', res).on('error', rej))
+          else await gcsFile.save(sendBody, { contentType })
+        } else if (!coreUtils.isNode) {
           const res = await fetch(filePathUrl, { method: 'PUT', headers: { 'content-type': contentType }, body: sendBody })
           status = res.status
           if (!res.ok) throw new Error(`rawFile PUT failed: ${res.status} ${await res.text()}`)

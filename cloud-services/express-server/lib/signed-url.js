@@ -1,9 +1,8 @@
-import { Storage } from '@google-cloud/storage'
+import { storage } from '@wonder/db/storage.js'
 import { signWonderToken, verifyToken } from './auth-utils.js'
 export { signWonderToken }
 
-const storage = new Storage()
-const bucket = storage.bucket('indiviai-wonder-protected')
+const bucket = (await storage(null, { native: true })).bucket('indiviai-wonder-protected')
 const SIGN_EXPIRY = 24 * 60 * 60 * 1000
 const REFRESH_THRESHOLD = 60 * 60 * 1000
 const MAX_ENTRIES = 1000
@@ -44,6 +43,7 @@ const signaturesPath = (roomId, role, pathUserId) => pathUserId
   : `${roomId}/admin/signatures-${role}.json`
 const sigKey = (fileName, action) => `${fileName}:${action}`
 const signIndividually = path => path.split('/').includes('logs')
+const tokenOf = req => (req.headers['x-user-authorization'] || req.headers.authorization)?.replace('Bearer ', '')
 
 function makeTiming() {
   const startTime = Date.now(), timing = [{label: 'start', at: 0}]
@@ -85,7 +85,7 @@ export function setupSignedUrlRoute(app) {
   app.get('/signed-url/*', async (req, res) => {
     const { timing, tick } = makeTiming()
     try {
-      const token = req.headers['x-user-authorization']?.replace('Bearer ', '')
+      const token = tokenOf(req)
       if (!token) return res.status(401).json({ error: 'missing token' })
       tick('verifyToken')
       const { email } = await verifyToken(token)
@@ -132,7 +132,7 @@ export function setupSignedUrlRoute(app) {
   app.get('/signed-urls/:roomId', async (req, res) => {
     const { timing, tick } = makeTiming()
     try {
-      const token = req.headers['x-user-authorization']?.replace('Bearer ', '')
+      const token = tokenOf(req)
       if (!token) return res.status(401).json({ error: 'missing token' })
       tick('verifyToken')
       const { email } = await verifyToken(token)

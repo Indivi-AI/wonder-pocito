@@ -3,7 +3,7 @@ import '@jb6/common'
 import '@jb6/react'
 import '@wonder/ui/applets/applet.js'
 import '@wonder/ai/duckdb-sql-step.js'
-import '@wonder/ui/viz/viz-index.js'
+import '@wonder/bi/viz-index.js'
 import './finance-analytics.js' // registers the financeAnalytics workflow (Ask AI) + the runFinanceAnalytics/runFinanceReport* lambdas
 import '@wonder/db/room/room-lambda-client.js' // invokeSnippetInContext + roomLambda interceptor (?engine=lambda fallback)
 import '@wonder/db/db-drivers-utils.js'

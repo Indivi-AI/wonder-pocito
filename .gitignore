@@ -1,3 +1,4 @@
 cloud-services/express-server/.env.dev
 cloud-services/express-server/.env.prod
 node_modules/**
+cloud-services/.local/

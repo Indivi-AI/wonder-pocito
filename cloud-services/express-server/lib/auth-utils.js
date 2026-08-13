@@ -4,7 +4,7 @@ import { getRole, readJson } from './signed-url.js'
 
 export const WONDER_ADMINS = ['shaiby@artwaresoft.com', 'yiftach@indivi.ai', 'roee@indivi.ai']
 
-const oauthClient = new OAuth2Client()
+const oauthClient = new OAuth2Client({ transporterOptions: { fetchImplementation: globalThis.fetch } })
 const clientIds = [
   '365199207445-q87kjft2o40ird0hv5r0r9vs8l7bvund.apps.googleusercontent.com',
   '365199207445-f9hqa8n0u6s7dpssq86n4ncqm3ef676v.apps.googleusercontent.com'

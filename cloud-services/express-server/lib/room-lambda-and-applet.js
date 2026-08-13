@@ -12,18 +12,19 @@ import '@jb6/core/misc/jb-remote-via-cli.js'   // runStrippedCli (stripCtx-aware
 import { caller, roomPolicy, roleOf, canAccess } from './auth-utils.js'
 import { developerEntryPoint } from '@indiviai/mcp/developer-entry-point.js'
 import { readJson } from './signed-url.js'
+import { storage } from '@wonder/db/storage.js'
 import { promises as fsp, existsSync } from 'fs'
 import { spawn } from 'child_process'
 
 const FRONTEND_URL = 'https://jb6-cdn.pages.dev'
-const CODE_PACKAGES_URL = 'https://storage.googleapis.com/wonder-code-packages'
-const PUBLIC_ROOM_BUCKET = 'https://storage.googleapis.com/indiviai-wonder'
+const STORAGE_URL = process.env.MINIO_PUBLIC_ENDPOINT || 'https://storage.googleapis.com'
+const CODE_PACKAGES_URL = `${STORAGE_URL}/wonder-code-packages`
 const jb6Pkgs = ['core','common','react','rx','jq','llm-guide','mcp','testing','repo','lang-service','probe-studio']
 const json = express.json({ limit: '1mb' })
 const respond = (res, r) => res.status(r.error ? 500 : 200).json(r.error ? r : { result: r })
 const extractionPromises = new Map()
 
-// ─── the inline applet render shell ────────────────────────────────────────────────────────────────
+// the inline applet render shell
 const SHELL_HTML = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wonder Workspace</title>
@@ -39,6 +40,7 @@ z-index:9999;font-family:system-ui;color:#666;font-size:14px}
 </style>
 </head><body>
 <div id="loading">Loading...</div>
+<script>globalThis.WONDER_STORAGE_URL = ${JSON.stringify(STORAGE_URL)}</script>
 <script type="importmap">_IMPORT_MAP_</script>
 <div id="root" style="height:100vh"></div>
 <script type="module">
@@ -114,13 +116,13 @@ export async function serveAppletShell(spec, res, localImports) {
   res.set('Content-Type', 'text/html').send(html)
 }
 
-// ─── running code closures (lambda / admin snippet) ────────────────────────────────────────────────
+// running code closures (lambda / admin snippet)
 // def (lambdas/applets/<name>.json) lives in the PUBLIC room bucket for public rooms; fall back to the protected
 // bucket for signed rooms. Public rooms thus need nothing in the protected bucket — fully public end to end.
 export async function readDef(roomId, path) {
-  // cache-bust: GCS edge-caches the def; without ?v the closure pointer (lambdaV) goes stale after a re-publish.
-  const r = await fetch(`${PUBLIC_ROOM_BUCKET}/${roomId}/${path}?v=${Date.now()}`).catch(() => null)
-  if (r?.ok) { const d = await r.json().catch(() => null); return d?.content ?? d }   // room files are stored as { content }
+  const bucket = (await storage(null, { native: true })).bucket('indiviai-wonder')
+  const d = await bucket.file(`${roomId}/${path}`).download().then(([x]) => JSON.parse(x), () => null)
+  if (d) return d.content ?? d
   return readJson(`${roomId}/${path}`)   // protected fallback
 }
 
@@ -262,9 +264,8 @@ export async function ensureExtracted(lambdaV, { root = '/tmp/code', fetchTar = 
 }
 
 async function fetchLambdaTar(lambdaV) {
-  const r = await fetch(`${CODE_PACKAGES_URL}/lambdas/${lambdaV}.tar.gz?v=${Date.now()}`)
-  if (!r.ok) throw new Error(`tar fetch ${r.status}`)
-  return Buffer.from(await r.arrayBuffer())
+  return (await (await storage(null, { native: true })).bucket('wonder-code-packages')
+    .file(`lambdas/${lambdaV}.tar.gz`).download())[0]
 }
 
 async function extractLambda(lambdaV, dir, root, fetchTar) {

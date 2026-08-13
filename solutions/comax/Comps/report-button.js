@@ -1,7 +1,7 @@
 import { dsls, jb } from '@jb6/core'
 import '@jb6/react'
 import '@wonder/db/db-drivers.js'
-import '../../../viz/viz-index.js'
+import '@wonder/bi/viz-index.js'
 import { comaxLogo, comaxFontCss } from './comax-brand.js'
 
 const { wfetch2 } = jb.wonderUtils
@@ -35,10 +35,12 @@ const colsOf = rows => rows[0] ? Object.keys(rows[0]).map(key => ({ key, label: 
 const val = v => v == null ? '' : typeof v == 'number' ? v.toLocaleString('en-US', { maximumFractionDigits: 2 }) : String(v)
 
 export const comaxReportFromAnswer = (answer, { rowLimit = 200 } = {}) => {
-  const a = answerObj(answer), rows = Array.isArray(a.rows) ? a.rows : [], text = a.text || a.content || ''
+  const a = answerObj(answer), rows = Array.isArray(a.rows) ? a.rows : []
+  const text = a.text || a.content || ''
   const title = firstLine(a.title, a.question, String(text).match(/^#\s*(.+)$/m)?.[1], a.narrative, text) || 'דוח אנליטיקה'
   return clone({ id: id(), title, takeaway: firstLine(a.takeaway, a.narrative, text, title), text, narrative: a.narrative || '',
-    parts: Array.isArray(a.parts) ? a.parts : [], partsLayout: a.partsLayout, widgets: Array.isArray(a.widgets) ? a.widgets : [], reactComps: Array.isArray(a.reactComps) ? a.reactComps : [],
+    parts: Array.isArray(a.parts) ? a.parts : [], partsLayout: a.partsLayout, widgets: Array.isArray(a.widgets) ? a.widgets : [],
+    reactComps: Array.isArray(a.reactComps) ? a.reactComps : [],
     rows: rows.slice(0, rowLimit), rowCount: rows.length, rowLimit, sql: a.sql || '',
     followUps: Array.isArray(a.followUps) ? a.followUps : [], createdAt: new Date().toISOString() })
 }
@@ -56,10 +58,12 @@ export async function createComaxAnalyticsReport(ctx, answer, { roomUrl = ctx.va
   const put = await wfetch2(reportUrl, { method: 'PUT', body: report }, ctx)
   if (!put?.ok) throw new Error(`report payload upload failed: ${put?.status || ''} ${put?.statusText || ''}`.trim())
   const uploaded = await callToolJson(ctx, 'uploadRoomApplet', {
-    roomId: roomIdOf(roomUrl), entryPath: '@wonder-admin/comax/demo/Comps/report-index.js', entryCompFullId: 'react-comp<react>comaxAnalyticsReport'
+    roomId: roomIdOf(roomUrl), entryPath: '@solution/comax/Comps/report-index.js', entryCompFullId: 'react-comp<react>comaxAnalyticsReport'
   })
   if (uploaded.error) throw new Error(uploaded.error.stack || uploaded.error)
-  const base = preferLocal ? uploaded.entryUrl.replace(/^https:\/\/staging\.indivi\.ai/, 'http://localhost:3000') : uploaded.entryUrl
+  const base = preferLocal
+    ? uploaded.entryUrl.replace(/^https:\/\/staging\.indivi\.ai/, globalThis.location?.origin || 'http://localhost:3000')
+    : uploaded.entryUrl
   const url = withParams(base, { 'ctx-reportUrl': reportUrl })
   return { ...uploaded, report, reportUrl, url, assistantMessage: comaxReportAssistantMessage({ url, report }) }
 }
@@ -67,7 +71,9 @@ export async function createComaxAnalyticsReport(ctx, answer, { roomUrl = ctx.va
 ReactComp('comaxAnalyticsReport', {
   impl: comp({
     hFunc: (ctx, { report = {}, reportError, react: { h, hh } }) => () => {
-      const rows = Array.isArray(report.rows) ? report.rows : [], widgets = Array.isArray(report.widgets) ? report.widgets : [], reactComps = Array.isArray(report.reactComps) ? report.reactComps : [], parts = Array.isArray(report.parts) ? report.parts : [], cols = colsOf(rows)
+      const rows = Array.isArray(report.rows) ? report.rows : [], widgets = Array.isArray(report.widgets) ? report.widgets : []
+      const reactComps = Array.isArray(report.reactComps) ? report.reactComps : [], parts = Array.isArray(report.parts) ? report.parts : []
+      const cols = colsOf(rows)
       const VizWidget = dsls.react['react-comp'].VizWidget
       const renderReactComp = (spec, i) => {
         const Cmp = spec?.cmpId && dsls.react['react-comp'][spec.cmpId]
@@ -111,7 +117,9 @@ ReactComp('comaxAnalyticsReport', {
       return wfetch2(url, { method: 'GET' }, ctx).then(async res =>
         ctx.setVars(res?.ok ? { report: await res.json() } : { reportError: `failed to load ${url}: ${res?.status}` }))
     },
-    sampleCtxData: () => ({ vars: { report: { title: 'דוח לדוגמה', takeaway: 'תקציר לדוגמה', rows: [{ metric: 'שורות תשובה', value: 1 }], createdAt: new Date().toISOString() } } })
+    sampleCtxData: () => ({ vars: { report: {
+      title: 'דוח לדוגמה', takeaway: 'תקציר לדוגמה', rows: [{ metric: 'שורות תשובה', value: 1 }], createdAt: new Date().toISOString()
+    } } })
   })
 })
 

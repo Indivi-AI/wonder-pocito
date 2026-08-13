@@ -1,6 +1,6 @@
 import { dsls } from '@jb6/core'
 import '@jb6/react'
-import '../../../viz/viz-index.js'
+import '@wonder/bi/viz-index.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 const arr = v => Array.isArray(v) ? v : v == null ? [] : [v]
