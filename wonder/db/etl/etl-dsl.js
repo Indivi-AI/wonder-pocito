@@ -318,8 +318,8 @@ Component('cliEtl', {
 
             etlLogger.status('running transform...')
             const cmd = await transform.cmd(ctx, ctx.vars)
-            // run the cli timed; `/usr/bin/time -v` (when present) reports peak RSS — its summary goes to stderr, parsed out below.
-            const timed = String((await coreUtils.runBashScript('command -v /usr/bin/time')).stdout ?? '').trim() ? `/usr/bin/time -v ${cmd}` : cmd
+            // GNU time reports peak RSS to stderr; macOS time exists but does not support -v.
+            const timed = (await coreUtils.runBashScript('/usr/bin/time -v true')).error ? cmd : `/usr/bin/time -v ${cmd}`
             const cmdStart = Date.now()
             const res = await coreUtils.runBashScript(timed)
             const stderr = res.error ? String(res.stderr ?? '').replace(/^\t[A-Z][^\n]*$/gm, '').trim() : ''

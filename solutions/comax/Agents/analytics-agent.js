@@ -1,9 +1,9 @@
 import { dsls, jb } from '@jb6/core'
 import '@wonder/ai/llm-flow-main-workflow.js'
 import '@wonder/db/db-drivers-live-repo.js'
-import '@wonder-admin/room/room-lambda-client.js'
-import '@wonder-admin/bi/bi-repair-doclets.js'
-import '@wonder-admin/comax/comax-repair-doclets.js'
+import '@wonder/db/room/room-lambda-client.js'
+import '@wonder/bi/bi-repair-doclets.js'
+import '../Doclets/comax-repair-doclets.js'
 import '../Doclets/comax-analytics-doclets.js'
 import '../Doclets/viz-doclets.js'
 

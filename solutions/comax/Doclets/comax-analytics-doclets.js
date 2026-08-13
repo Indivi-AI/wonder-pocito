@@ -1,7 +1,7 @@
 import { dsls } from '@jb6/core'
 import '@jb6/llm-guide'
 import '@wonder/ai/duckdb-sql-step.js'
-import { comaxSchema } from '../../../../files/rooms/comaxDemo/usersRO/schema/comax_semantic_schema.js'
+import { comaxSchema } from '../../../files/rooms/comaxDemo/usersRO/schema/comax_semantic_schema.js'
 
 const {
   common: { Data, data: { duckDbSql } },

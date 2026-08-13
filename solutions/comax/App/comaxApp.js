@@ -2,7 +2,7 @@ import { dsls, coreUtils, jb } from '@jb6/core'
 import '@wonder/db/db-drivers-utils.js'
 import '@wonder/ui/ui-utils.js'
 const { createShortUrl, formatTimeWithRandom, shareHandler, wAppend, wGet, wPut } = jb.wonderUtils
-import '@wonder/applets/applet.js'
+import '@wonder/ui/applet.js'
 import '@wonder/db/room/room-lambda-client.js'   // roomLambda db-driver-interceptor - routes the <roomUrl>/lambda/<name> POSTs of the remote duckDbSql hook
 import '../Agents/analytics-agent.js'   // registers the basicAnalytics workflow (run in-browser; its duckDbSql offloads duckdb to /run-bash)
 import { PROMOTION_ACTION_QUESTION } from '../Agents/reports-template-agent.js'

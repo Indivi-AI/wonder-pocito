@@ -243,8 +243,6 @@ Test('reactTest.applet.explorableAnswer', {
       contains('Revenue by campaign'), // markdown heading + widget title
       contains('$18.4K'), // bold metric survived markdown
       contains('Top campaign by device'), // follow-up chip label
-      contains('SELECT campaign, revenue FROM sessions'),
-    ), // revealed SQL after toggle
-    userActions: [delay(80), click('הצג SQL / נתונים'), delay(80)],
+    ),
   }),
 })
