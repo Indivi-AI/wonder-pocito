@@ -5,7 +5,7 @@ import '@wonder/ui/applet.js'
 import '@wonder/ai/report-step.js'
 import '../Reports/comax-reports.js'
 import '../Reports/index.js'
-import '@wonder/bi/viz-index.js'
+import '@wonder/bi/viz/viz-index.js'
 import '../Agents/dashboards-edit-agent.js'
 import '@wonder/db/db-drivers.js'
 const { wfetch2, wresolve } = jb.wonderUtils

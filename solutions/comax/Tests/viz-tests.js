@@ -3,7 +3,7 @@ import '@jb6/common'
 import '@jb6/testing'
 import '@jb6/react/tests/react-testers.js'
 import '@wonder/ai/llm-flow-main-workflow.js'
-import '@wonder/bi/viz-index.js' // registers VizWidget + every widget + its reactTests
+import '@wonder/bi/viz/viz-index.js' // registers VizWidget + every widget + its reactTests
 import '../Agents/analytics-agent.js' // registers the basicAnalytics workflow + viz doclets
 import '../App/comaxApp.js' // registers AnalyticsAssistantResponse (the chat answer renderer)
 
