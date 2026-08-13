@@ -22,14 +22,14 @@ jb.langServiceTestRegistry = {
 
 await coreUtils.calcJb6RepoRootAndImportMapsInCli()
 
-async function filePathForLangServiceTest(filePath) {
-  const repoRoot = await coreUtils.calcRepoRoot()
+async function filePathForLangServiceTest(filePath, ctx) {
+  const repoRoot = await coreUtils.calcRepoRoot({ctx})
   const filePathToUse = filePath || 'hosts/test-project/a-tests.js'
   return `${repoRoot}/${filePathToUse}`
 }
 
 async function calcCompTextAndCursorsForTest({ctx,compText,filePath: relativeFilePath}) {
-  const filePath = await filePathForLangServiceTest(relativeFilePath)
+  const filePath = await filePathForLangServiceTest(relativeFilePath, ctx)
   const testId = ctx.vars.testID
   const fullText = compText.match(/^[a-z]+Test\(/) ? `Test('x', {\n  impl: ${compText}\n})` 
     : compText.match(/^ALL:/) ? compText.slice(4)

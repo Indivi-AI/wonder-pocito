@@ -164,7 +164,7 @@ Component('param', {
     {id: 'secondParamAsArray', as: 'boolean'},
     {id: 'newLinesInCode', as: 'boolean'},
     {id: 'importance', as: 'text'},
-    {id: 'guidance' },
+    {id: 'guidance', as: 'text'},
   ]
 })
 

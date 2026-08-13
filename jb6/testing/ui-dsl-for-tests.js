@@ -1,6 +1,6 @@
 import { dsls } from '@jb6/core'
 import '@jb6/testing'
-import '@jb6/common'
+import '@jb6/common/essentials.js'
 
 const { 
   tgp: { TgpType, Component},

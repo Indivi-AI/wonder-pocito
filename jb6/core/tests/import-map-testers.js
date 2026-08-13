@@ -20,8 +20,8 @@ const Jb6 = Repo('Jb6', {
   impl: ({}, {}) => calcRepoRoot()
 })
 
-const Genie = Repo('Genie', {
-  impl: ({}, {}) => '/home/shaiby/projects/Genie'
+const Wonder = Repo('Wonder', {
+  impl: ({}, {}) => '/home/shaiby/projects/wonder'
 })
 
 Test('staticServeConfigTest', {

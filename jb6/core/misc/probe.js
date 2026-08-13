@@ -22,6 +22,7 @@ async function runProbeCli(probePath, resources = {}, {onStatus = null, claudeDi
     const { extraCode, circuitCmpId, repoRoot, fetchByEnvHttpServer, entryPointPaths, resolution = 'default' } = resources
     const loggerNames = (resources.logger || '').split(',').map(s => s.trim()).filter(Boolean)
     const ctx = coreUtils.ensureLoggers(['probeLogger', 'cliLogger', ...loggerNames], {ctx: resources.ctx})
+    const loggersNeededForUiProgress = ctx.vars.loggersNeededForUiProgress || ''
     ctx.vars.cliLogger?.progress?.({step: 'resolveImports', status: 'running'})
 
     const circuitInLoadedFiles = entryPointPaths && !circuitCmpId && (() => {
@@ -55,10 +56,13 @@ async function runProbeCli(probePath, resources = {}, {onStatus = null, claudeDi
       import '@jb6/core/misc/probe.js'
       const probePath = '${probePath}'
       const loggerNames = ${JSON.stringify(loggerNames)}
+      const loggersNeededForUiProgress = ${JSON.stringify(loggersNeededForUiProgress)}
       try {
         ${extraCode || ''}
-        // probeLogger + cliLogger are wrapped-to-stderr so live visit progress and the staticImportsLoaded timing (emitted by jb-logging) stream back even without ?logger=
-        const _ctx = coreUtils.ensureLoggers(['probeLogger', 'cliLogger', ...loggerNames], {wrapToStderr: true})
+        const liveLoggerNames = loggersNeededForUiProgress.split(',').map(x => x.trim()).filter(Boolean)
+        const _ctx = coreUtils.ensureLoggers(['probeLogger', 'cliLogger', ...loggerNames, ...liveLoggerNames], {
+          ctx: new coreUtils.Ctx({vars: {loggersNeededForUiProgress}})
+        })
         _ctx.vars.cliLogger.progress({step: 'spawn', status: 'done'})   // child's FIRST emit → spawn already happened (~10ms), so it's reported done
         _ctx.vars.cliLogger.progress({step: 'imports', status: 'running'})   // child-side stepper step: loading probed comp + test imports (streams to studio via stderr)
         const _tImports = Date.now()
@@ -74,7 +78,7 @@ async function runProbeCli(probePath, resources = {}, {onStatus = null, claudeDi
       }
     `
     const { result: rawResult, error, cmd } = await coreUtils.runCliInContext(script,
-      {projectDir, importMapsInCli, ctx, bindLoggers: ['probeLogger', 'cliLogger', ...loggerNames].join(','), stream: 'both'}, onStatus)
+      {projectDir, importMapsInCli, ctx}, onStatus)
     const result = coreUtils.resolveRefs(rawResult)   // child JSON-serializes with stripData ref-dedup ([jbReference:...]); rebuild the graph so out isn't a dangling ref
     const probeLog = ctx ? coreUtils.harvestLogs(ctx, loggerNames) : {}
     if (resolution == 'all')

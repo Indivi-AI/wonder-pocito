@@ -93,7 +93,10 @@ const runOverCli = Data('runOverCli', {
     const localProgress = []
     const onProgress = ev => localProgress.push(ev)
     coreUtils.eventEmitter.on('progress', onProgress)
-    const { result, logs } = await runStrippedCli({ profileJson, packedCtx, imports: { importsStr: "await import('@jb6/core/tests/cli-tests.js')" }, testLoggers: loggers, progressLoggers: loggers })
+    const { result, logs } = await runStrippedCli({
+      profileJson, packedCtx, imports: { importsStr: "await import('@jb6/core/tests/cli-tests.js')" },
+      testLoggers: loggers, progressLoggers: loggers, ctx: ctx.setVars({isProgressConsumer: true})
+    })
     coreUtils.eventEmitter.off('progress', onProgress)
     return { result, logs, localProgress }
   }

@@ -64,17 +64,16 @@ Tool('formatAndValidateTgpComp', {
   params: [
     {id: 'fullCompId', as: 'string', asIs: true, mandatory: true,
       description: `full component ID, e.g. test<test>coreTest.HelloWorld`},
-    {id: 'compHeader', options: 'tgpTypeName,component', defaultValue: 'tgpTypeName'},
     {id: 'logger', as: 'string', asIs: true, description: `comma-separated loggers, e.g. langServiceLogger`},
   ],
-  impl: mcpTool(async (ctx, {}, {fullCompId, compHeader, logger}) => {
+  impl: mcpTool(async (ctx, {}, {fullCompId, logger}) => {
     const loggerNames = (logger || '').split(',').map(x=>x.trim()).filter(Boolean)
     const logCtx = coreUtils.ensureLoggers(loggerNames, {ctx})
     const done = result => JSON.stringify({...result, ...coreUtils.harvestLogs(logCtx, loggerNames)}, null, 2)
     try {
       await import('@jb6/lang-service')
       const repoRoot = await coreUtils.calcRepoRoot()
-      const tgpModel = await coreUtils.calcTgpModelData({forRepo: repoRoot, ctx: logCtx})
+      const tgpModel = await coreUtils.calcTgpModelData({forRepo: repoRoot}, logCtx)
       const comp = coreUtils.compByFullId(fullCompId, tgpModel)
       if (!comp?.$location) throw new Error(`fullCompId '${fullCompId}' not found`)
       const {readFile, writeFile} = await import('fs/promises')
@@ -84,9 +83,9 @@ Tool('formatAndValidateTgpComp', {
       const path = coreUtils.resolveWithImportMap(comp.$location.path, importMap, staticMappings) || comp.$location.path
       const src = await readFile(path, 'utf8')
       const from = lineColToOffset(src, comp.$location), end = lineColToOffset(src, to)
-      const {comp: parsedComp, error} = calcProfileActionMap(src.slice(from, end), {tgpModel, filePath: path, ctx: logCtx})
+      const {comp: parsedComp, compDef, error} = calcProfileActionMap(src.slice(from, end), {tgpModel, filePath: path, ctx: logCtx})
       if (error || parsedComp?.syntaxError) throw new Error(error?.syntaxError || error || parsedComp.syntaxError)
-      const formatted = coreUtils.prettyPrintComp(parsedComp, {tgpModel, filePath: path, initialPath: fullCompId, compHeader})
+      const formatted = coreUtils.prettyPrintComp(parsedComp, {tgpModel, filePath: path, initialPath: fullCompId, compDef})
       const changed = formatted != src.slice(from, end)
       if (changed) await writeFile(path, src.slice(0, from) + formatted + src.slice(end))
       logCtx.vars.langServiceLogger?.info?.({t: 'formatComp', fullCompId, path, changed}, {}, {ctx: logCtx})
@@ -133,7 +132,7 @@ Use tgpModel tool to discover available components and their params.`,
   params: [
     {id: 'profileText', as: 'string', asIs: true, mandatory: true, description: `JSON profile to execute, e.g. {$: 'data<common>pipeline', items: [...]}`},
     {id: 'logger', as: 'string', asIs: true, description: `comma-separated loggers, e.g. snippetLogger,langServiceLogger,dbLogger`},
-    {id: 'repoRoot', as: 'string', asIs: true, description: `cross-repo: target repo root, e.g. /home/shaiby/projects/Genie`},
+    {id: 'repoRoot', as: 'string', asIs: true, description: `cross-repo: target repo root, e.g. /home/shaiby/projects/wonder`},
     {id: 'fetchByEnvHttpServer', as: 'string', description: `cross-repo: http server serving that repo, e.g. http://localhost:3000`},
   ],
   impl: mcpTool({
@@ -160,7 +159,7 @@ Returns the recorded {in,out} at that path plus visits, circuitRes, logs and err
       description: `result detail: 'default' = {in,out} at path + visits + circuitRes + errors; 'input'/'output' = only that side; 'all' adds logs, cmd, imports`},
     {id: 'circuit', as: 'string', description: `force circuit comp id (overrides auto-detect), e.g. test<test>circuitForAA`},
     {id: 'logger', as: 'string', description: `comma-separated loggers, e.g. snippetLogger,langServiceLogger,dbLogger`},
-    {id: 'repoRoot', as: 'string', description: `cross-repo: target repo root, e.g. /home/shaiby/projects/Genie`},
+    {id: 'repoRoot', as: 'string', description: `cross-repo: target repo root, e.g. /home/shaiby/projects/wonder`},
     {id: 'fetchByEnvHttpServer', as: 'string', description: `cross-repo: http server serving that repo, e.g. http://localhost:3000`},
   ],
   impl: mcpTool({

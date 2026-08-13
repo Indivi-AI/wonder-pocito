@@ -77,7 +77,7 @@ ES modules, WASM, and data assets, uploads them as raw bytes, and preserves thei
 
 ## Showing Progress
 Chain: impl `logger.progress({step,status,t,pct})`/`logger.status(t)` → `eventEmitter.emit('progress')` → a `progressIndicator<react>` (`stepper`/`byProgress`) on `react-comp.comp`, during the enrichCtx wait; auto-streams browser←node. Files: `jb-logging.js`, `room-lambda-client.js`.
-Read `public/3rd-party/@jb6/react/progress-indicators.js` carefully — it defines the indicators (`stepper`,`byProgress`,`byStatus`,`spinner`,`dots`) and their hfuncs (`text`,`textWithPct`,`progressBar`); choose from it, don't invent.
+Read `jb6/react/progress-indicators.js` carefully — it defines the indicators (`stepper`,`byProgress`,`byStatus`,`spinner`,`dots`) and their hfuncs (`text`,`textWithPct`,`progressBar`); choose from it, don't invent.
 
 - **Where does time go?** Feedback goes there; never a slow phase before the first event; cheap phases get nothing.
 - **What does the user count in?** Ordered slow phases → `stepper`; known-N loop → determinate `i/N`/`pct`; unpredictable phase → indeterminate spinner/status, not a fake step.

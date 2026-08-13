@@ -37,7 +37,7 @@ const ReactComp = TgpType('react-comp','react', { isCircuit: true,
 TgpType('vdom','react', { typescript: '(ctx, ctxVars, compParams) => (reactProps) => vdom' })
 TgpType('react-metadata','react')
 const ProgressIndicator = TgpType('progress-indicator','react', {
-  typescript: '(ctx) => () => vdom'
+  typescript: '{ requiredLoggers: (ctx) => string, hFunc: vdom<react> }'
 })
 TgpType('progress-hfunc','react', {
   typescript: '(ctx) => ({progressEvent}) => vdom'
@@ -186,17 +186,19 @@ function readyReactCtx(ctx, importMetas, enrichCtx) {
 function buildNativeComp(host, ctx, {rebuilt} = {}) {
   const { hFunc, enrichCtx, importMetas, progressIndicator } = host
   const { useState, useEffect } = ctx.vars.react
+  const indicator = progressIndicator(ctx)
+  const requiredLoggers = indicator.requiredLoggers(ctx)
+  ctx = coreUtils.ensureLoggers(requiredLoggers, {ctx: ctx.setVars({loggersNeededForUiProgress: requiredLoggers})})
   const readyCtx = readyReactCtx(ctx, importMetas, enrichCtx)
   const async = coreUtils.isPromise(readyCtx)
   ctx.vars.uiLogger?.info?.({t: 'buildNativeComp', comp: ctx.jbCtx.path, rebuilt: !!rebuilt, async, imports: importMetas.length}, {}, {ctx})
-  const syncRes = !async && hFunc(readyCtx)
   const native = async
     ? args => {
         const [rctx, setCtx] = useState(null)
         useEffect(() => { let live = true; readyCtx.then(c => live && setCtx(c)); return () => { live = false } }, [])
-        return rctx ? h(hFunc(rctx), args) : h(progressIndicator(ctx))
+        return rctx ? h(hFunc(rctx), args) : h(indicator.hFunc)
       }
-    : typeof syncRes == 'function' ? syncRes : () => syncRes
+    : hFunc(readyCtx)
   native[hostInfo] = host
   return native
 }
@@ -220,7 +222,7 @@ if (!globalThis.window) {
     const win = globalThis.window = dom.window
     const isLocalHost = win.location.hostname === 'localhost'
 
-    await import('@jb6/react/lib/mutationobserver.min.js')
+    await import('./lib/mutationobserver.min.js')
 
     win.matchMedia = () => ({})
     win.scrollTo     = () => {}

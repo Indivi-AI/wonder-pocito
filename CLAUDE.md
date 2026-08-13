@@ -30,7 +30,7 @@ Component('radialGradient', { type: 'gradient<css>', ... })
 {$: 'gradient<css>linearGradient', direction: 'to right', stops: [{$: 'color<css>rgb', r: 255, g: 99, b: 71}, {$: 'color<css>hsl', h: 45, s: 100, l: 50}]}
 
 
-You must understand tgp before writing or using tgp components. read public/3rd-party/@jb6/core/utils/jb-core.js, jb-args.js, tgp.js, jb-expression.js in details
+You must understand tgp before writing or using tgp components. read jb6/core/utils/jb-core.js, jb-args.js, tgp.js, jb-expression.js in details
 LLM mem is drifting, when you need tgp, ask yourself "can I explain how 'dynamic: true' actually works" - if not, read carefully *again* jb-core,jb-args,tgp.js and explain 'dynamic: true' mechanism in details.
 
 The coding style in TGP is as follows:
@@ -59,6 +59,8 @@ Before you try to fix anti-pattern. read carefully again jb-core,jb-args,tgp.js
 
 
 ## TGP MCP Tools
+When calling this server from Codex, run `curl` outside the restricted network sandbox (`require_escalated`); sandboxed `localhost` cannot reach the host server.
+
 use mcp directly using our localhost mcp server
 curl -s -X POST http://localhost:3000/mcp -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":1, ...
 
@@ -83,7 +85,7 @@ if you want to have bigLogs in a separate file use `roomBigLogLogger2` just as a
 
 
 ## React Components
-public/3rd-party/@jb6/react/react-utils.js - dsl and utils
+jb6/react/react-utils.js - dsl and utils
 react/tests/react-tests.js - use cases
 
 admin/room/room-applet-tests.js - usage in wonder
@@ -120,7 +122,7 @@ After showing me this table, you can fix the new terms, and welocomed to suggest
 ignore this huge files dirs that contains huge data. do not search in it
 
 ## reveal slides
-public/3rd-party/@jb6/react/reveal.js
+jb6/react/reveal.js
 react/tests/react-tests.js
 
 ## File Query (Analytics)

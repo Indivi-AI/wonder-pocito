@@ -18,7 +18,7 @@ import { spawn } from 'child_process'
 const FRONTEND_URL = 'https://jb6-cdn.pages.dev'
 const CODE_PACKAGES_URL = 'https://storage.googleapis.com/wonder-code-packages'
 const PUBLIC_ROOM_BUCKET = 'https://storage.googleapis.com/indiviai-wonder'
-const jb6Pkgs = ['core','common','react','rx','jq','llm-api','llm-guide','mcp','testing','repo','lang-service','probe-studio']
+const jb6Pkgs = ['core','common','react','rx','jq','llm-guide','mcp','testing','repo','lang-service','probe-studio']
 const json = express.json({ limit: '1mb' })
 const respond = (res, r) => res.status(r.error ? 500 : 200).json(r.error ? r : { result: r })
 const extractionPromises = new Map()

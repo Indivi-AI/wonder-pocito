@@ -45,8 +45,7 @@ ReactiveSource('llm.completionsRx', {
         const key = 'llm' + calcHash(model.name + JSON.stringify(messages))
         if (useLocalStorageCache && globalThis.localStorage && localStorage.getItem(key)) {
             const cached = localStorage.getItem(key)
-            ctx.vars.llmCallLogger?.info?.({t: 'llm response', model: model.name, source: 'localStorageCache', chars: cached.length,
-              fullContent: cached, userRequestId: ctx.vars.userRequestId, workflowStack: ctx.vars.workflowStack}, {}, {ctx})
+            ctx.vars.llmTrafficLogger?.info?.({t: 'llm response', model: model.name, source: 'localStorageCache', chars: cached.length, fullContent: cached}, {}, {ctx})
             sink(1,ctx.dataObj(fullContent, {...ctx.vars, fullContent: cached }))
             sink(2)
             return
@@ -77,7 +76,7 @@ ReactiveSource('llm.completionsRx', {
             if (DONE) return
             try {
               const val = line == 'data: [DONE]' ? 'done' : (line.startsWith('data: ') && line.endsWith('}') ? JSON.parse(line.slice(6)) : line)
-              ctx.vars.llmCallDetailLogger?.info?.({t: 'llm processing val', val}, {}, {ctx})
+              ctx.vars.detailedLlmTrafficLogger?.info?.({t: 'llm processing val', val}, {}, {ctx})   // per-SSE-chunk firehose; llmTrafficLogger keeps the clean request/response transcript
               if (val == 'done') {
                 ctx.vars.llmApiLogger?.info?.({t: 'llm source done from content'}, {}, {ctx})
                 if (DONE) logError('source.llmCompletions already DONE error', {val, ctx})
@@ -88,7 +87,7 @@ ReactiveSource('llm.completionsRx', {
               }
               if (typeof val == 'string') {
                 chunkLeft = val
-                ctx.vars.llmCallDetailLogger?.info?.({t: 'llm chunkLeft', chunkLeft}, {}, {ctx})
+                ctx.vars.detailedLlmTrafficLogger?.info?.({t: 'llm chunkLeft', chunkLeft}, {}, {ctx})
               }
               if (typeof val == 'object') {
                 if (val.usage) {
@@ -119,8 +118,7 @@ ReactiveSource('llm.completionsRx', {
               model: model.name
             }
             ctx.vars.llmApiLogger?.info?.({t: 'llm finished', res}, {}, {ctx})
-            ctx.vars.llmCallLogger?.info?.({t: 'llm response', model: model.name, source: 'stream', chars: fullContent.length,
-              duration: res.duration, fullContent, userRequestId: ctx.vars.userRequestId, workflowStack: ctx.vars.workflowStack}, {}, {ctx})
+            ctx.vars.llmTrafficLogger?.info?.({t: 'llm response', model: model.name, source: 'stream', chars: fullContent.length, duration: res.duration, fullContent}, {}, {ctx})
             useLocalStorageCache && globalThis.localStorage && localStorage.setItem(key,res.fullContent)
           }
       })      
@@ -345,10 +343,9 @@ jb.llmUtils = {
       reqObj.url = '/proxy'
     }
 
-    ctx.vars.llmCallLogger?.info?.({t: 'llm request', model: model.name, url: reqObj.url, stream,
-      userRequestId: ctx.vars.userRequestId, workflowStack: ctx.vars.workflowStack,
-      turns: asArray(messages).map(m => ({role: m.role,
-        chars: (typeof m.content == 'string' ? m.content : JSON.stringify(m.content || '')).length})), messages}, {}, {ctx})
+    ctx.vars.llmTrafficLogger?.info?.({t: 'llm request', model: model.name, url: reqObj.url, stream,
+      turns: asArray(messages).map(m => ({role: m.role, chars: (typeof m.content == 'string' ? m.content : JSON.stringify(m.content||'')).length})),   // compact conversation shape for scanning
+      messages}, {}, {ctx})   // headers omitted — carry apiKey
     const response = await fetch(reqObj.url, {...reqObj, signal: controller.signal}).catch(e => {
         if (e instanceof DOMException && e.name == "AbortError") {
           ctx.vars.llmApiLogger?.info?.({t: 'llm source done from app logic'}, {}, {ctx})

@@ -14,7 +14,8 @@
     "server-secrets:pull:dev": "node scripts/secrets.js pull dev",
     "server-secrets:pull:prod": "node scripts/secrets.js pull prod",
     "server-secrets:push:dev": "node scripts/secrets.js push dev",
-    "server-secrets:push:prod": "node scripts/secrets.js push prod"
+    "server-secrets:push:prod": "node scripts/secrets.js push prod",
+    "update-jb6": "bash ./scripts/update-jb6.sh"
   },
   "dependencies": {
     "@google-cloud/secret-manager": "^5.6.0",

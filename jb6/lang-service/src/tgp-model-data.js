@@ -11,13 +11,13 @@ const {
 
 Object.assign(coreUtils, { calcTgpModelData, calcExpectedDslsSection, calcImportsForProfile, scanDsl, hashAndGetCache, writeTgpModelCache})
 
-export async function calcTgpModelData(resources) {
-  const { fetchByEnvHttpServer, ctx } = resources
+export async function calcTgpModelData(resources, ctx) {
+  const {fetchByEnvHttpServer} = resources
   const log = ctx?.vars?.langServiceLogger
   const detailed = ctx?.vars?.detailedTgpModelDataLogger
   if (resources.forDsls == 'test' && !resources.entryPointPaths && !resources.forRepo)
     resources.forRepo = await calcRepoRoot()
-  const {importMap, staticMappings, entryFiles, testFiles, projectDir, repoRoot, llmGuideFiles, jb6_llmGuideFiles, jb6_testFiles } = await calcImportData(resources)
+  const {importMap, staticMappings, entryFiles, testFiles, projectDir, repoRoot, llmGuideFiles, jb6_llmGuideFiles, jb6_testFiles } = await calcImportData(resources, ctx)
   const allLlmGuideFiles = unique([...llmGuideFiles || [], ...jb6_llmGuideFiles || []])
   const allTestFiles = unique([...testFiles || [], ...jb6_testFiles || []])
   const rootFilePaths = unique([...entryFiles, ...allTestFiles, ...allLlmGuideFiles])
@@ -259,9 +259,8 @@ function resolvePath(b, r) {
 // (e.g. a lazy import at line 445) are missed, which is fine for a leaf-level mtime check.
 const CRAWL_DATES_TOP_LINES = 40
 const importLineRe = /^\s*import\s+(?:[^'"]*\s+from\s+)?['"]([^'"]+)['"]/
-function harvestImports(src, file) {
-  const lines = src.split('\n')
-  return (file.endsWith('/all-tests.js') ? lines : lines.slice(0, CRAWL_DATES_TOP_LINES))
+function harvestImports(src) {
+  return src.split('\n', CRAWL_DATES_TOP_LINES)
     .map(l => (l.match(importLineRe) || [])[1])
     .filter(spec => spec && ['/', '.', '@', '#'].some(p => spec.startsWith(p)))
 }
@@ -286,7 +285,7 @@ export async function crawlForDates({ importMap, staticMappings, rootFilePaths, 
       const src = await fetchByEnv(rUrl, staticMappings, fetchByEnvHttpServer)
       if (stat && rUrl.startsWith('/'))
         mtimes[rUrl] = (await stat(rUrl)).mtimeMs
-      const imports = harvestImports(src, rUrl).map(rel => resolvePath(rUrl, rel)).filter(x => !x.match(/^\/libs\//))
+      const imports = harvestImports(src).map(rel => resolvePath(rUrl, rel)).filter(x => !x.match(/^\/libs\//))
       await Promise.all(imports.map(crawl))
     } catch (e) {}   // ignore unresolved leaves (bare pkg specifiers etc.)
   }
@@ -317,13 +316,13 @@ async function writeTgpModelCache(key, value) {
   } catch (e) {}
 }
 
-async function hashAndGetCache({ cacheQuery, modelResources, fetchByEnvHttpServer, ctx }) {
+async function hashAndGetCache({cacheQuery, modelResources, fetchByEnvHttpServer}, ctx) {
   if (!isNode) {
     const script = `import { coreUtils } from '@jb6/core'
 import '@jb6/lang-service'
 ;(async()=>{
 try {
-  const result = await coreUtils.hashAndGetCache(${JSON.stringify({ cacheQuery, modelResources: { ...modelResources, ctx: undefined }, fetchByEnvHttpServer })})
+  const result = await coreUtils.hashAndGetCache(${JSON.stringify({cacheQuery, modelResources, fetchByEnvHttpServer})})
   await coreUtils.writeServiceResult(result)
 } catch (e) { console.error(e) }
 })()`
@@ -332,7 +331,7 @@ try {
   }
   const lsLog = ctx?.vars?.langServiceLogger
   try {
-    const { importMap, staticMappings, entryFiles, testFiles, llmGuideFiles, jb6_llmGuideFiles, jb6_testFiles } = await calcImportData(modelResources)
+    const { importMap, staticMappings, entryFiles, testFiles, llmGuideFiles, jb6_llmGuideFiles, jb6_testFiles } = await calcImportData(modelResources, ctx)
     const rootFilePaths = unique([...entryFiles, ...(testFiles || []), ...(jb6_testFiles || []), ...(llmGuideFiles || []), ...(jb6_llmGuideFiles || [])])
     const { key } = await calcTgpModelCacheKey({ query: cacheQuery, importMap, staticMappings, rootFilePaths, fetchByEnvHttpServer })
     const cached = await readTgpModelCache(key)
@@ -500,15 +499,15 @@ async function calcImportsForProfile(input, {repoRoot, fetchByEnvHttpServer, ent
   const parsed = allFullIds.map(id => { const m = id.match(/^([^<]+)<([^>]+)>(.+)$/); return m && { type: m[1], dsl: m[2], shortId: m[3], fullId: id } }).filter(Boolean)
   if (!parsed.length) return { error: `no valid {$: 'type<dsl>id'} found in profile`, topLevelImports: [], importsStr: '' }
   const allDsls = unique(parsed.map(p => p.dsl))
-  const modelResources = {forRepo: entryPointPaths ? undefined : repoRoot, forDsls: allDsls.join(','), fetchByEnvHttpServer, entryPointPaths, ctx}
+  const modelResources = {forRepo: entryPointPaths ? undefined : repoRoot, forDsls: allDsls.join(','), fetchByEnvHttpServer, entryPointPaths}
 
   // file cache: hash the graph mtimes + query, look it up. hit -> return the cached imports; miss -> get
   // back the key to write under after building. hashAndGetCache runs node-side (browser delegates via /run-cli).
   const cacheQuery = { ids: allFullIds.slice().sort(), repoRoot: repoRoot || '', entryPointPaths: [].concat(entryPointPaths || []).join(',') }
-  const { result, key: cacheKey } = await hashAndGetCache({ cacheQuery, modelResources, fetchByEnvHttpServer, ctx })
+  const { result, key: cacheKey } = await hashAndGetCache({cacheQuery, modelResources, fetchByEnvHttpServer}, ctx)
   if (result) return result
 
-  const tgpModel = await calcTgpModelData(modelResources)
+  const tgpModel = await calcTgpModelData(modelResources, ctx)
   if (tgpModel.error) return { error: tgpModel.error }
   const projectDir = tgpModel.projectDir || repoRoot
   const comps = parsed.map(p => tgpModel.dsls[p.dsl]?.[p.type]?.[p.shortId]).filter(Boolean)

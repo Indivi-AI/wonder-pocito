@@ -108,6 +108,10 @@ function calcProfileActionMap(compText, {tgpType = 'comp<tgp>', tgpModel, filePa
         }
 
         compDef = findCompDefById({id: compDefId, tgpModel, dslType})
+        ctx?.vars?.langServiceLogger?.info?.({
+            t: 'lang service parsed comp header', header: topComp[coreUtils.astNode].expression?.callee?.name,
+            compDefId, requestedDslType: dslType, resolvedDslType: compDef?.dslType, filePath
+        }, {}, {ctx})
         topComp.id = topComp[astNode].expression.arguments[0].value
         topComp.$ = jb.dsls.tgp.tgpComp[coreUtils.asJbComp]
         dslType = compDef.dslType

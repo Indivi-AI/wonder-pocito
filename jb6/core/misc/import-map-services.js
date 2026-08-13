@@ -137,7 +137,7 @@ try {
   return await getStaticConfig(repoRoot, pkgJson)
 }
 
-async function calcImportData(resources = {}) {
+async function calcImportData(resources = {}, ctx) {
   const {entryPointPaths, forRepo, forDsls} = resources
   const cacheKey = JSON.stringify(resources)
   if (jb.importMapCache.fileContext[cacheKey]) return jb.importMapCache.fileContext[cacheKey]
@@ -151,7 +151,7 @@ try {
   await coreUtils.writeServiceResult(result)
 } catch (e) { console.error(e) }
 })()`
-    const res = await coreUtils.runNodeCliViaJbWebServer(script)
+    const res = await coreUtils.runNodeCliViaJbWebServer(script, {ctx})
     return res.result
   }
   const validEntryPoints = forRepo ? [] : await normalizeToValidEntryPoints({entryPointPaths, forDsls})
@@ -182,8 +182,8 @@ function createErrorResult(error, entryFiles = [], pkgJson = {}) {
 // defined inline in probe extraCode). We can't resolve its imports from the comp, so we import the
 // given entry files + the repo's entryFiles + ALL repo test files (where Const()/circuits may live).
 async function calcImportsForFiles(files, {repoRoot, ctx} = {}) {
-  repoRoot = repoRoot || await calcRepoRoot()
-  const { entryFiles = [], testFiles = [], importMap, projectDir, error } = await calcImportData({ forRepo: repoRoot })
+  repoRoot = repoRoot || await calcRepoRoot({ctx})
+  const {entryFiles = [], testFiles = [], importMap, projectDir, error} = await calcImportData({forRepo: repoRoot}, ctx)
   if (error) return { error }
   // files may be browser served-URL paths (comp.$location.path, e.g. '/wonder-admin/bi/bi-tests.js'); the CLI child imports by disk path.
   const diskFiles = files.map(f => ({ url: f, disk: urlToDisk(f, importMap?.staticMappings) }))

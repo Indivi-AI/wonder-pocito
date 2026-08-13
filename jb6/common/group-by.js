@@ -1,4 +1,5 @@
 import { coreUtils, dsls, ns } from '@jb6/core'
+import './essentials.js'
 
 const { asArray, unique, RT_types } = coreUtils
 const { 

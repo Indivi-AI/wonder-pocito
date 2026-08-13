@@ -1,5 +1,6 @@
 import { dsls, ns } from '@jb6/core'
 import './lang-service-testers.js'
+import '@jb6/testing/test-data.js'
 
 const {
   tgp: { Component, Const },
@@ -14,8 +15,7 @@ const {
 const { langService } = ns
 
 Test('completionTest.componentWithParams', {
-  impl: completionOptionsTest(`ALL:Component('cmp1', {__
-  type: 'reactive-source<rx>',
+  impl: completionOptionsTest(`ALL:ReactiveSource('cmp1', {__
   params: [
     {id: 'param1', as: 'string'}
   ]
@@ -613,11 +613,17 @@ Test('completionActionTest.defaultValueAsProfile', {
   impl: completionActionTest(`ALL:Component('cmp1', __{ params: [{id: 'x', defaultValue: list()}] })`, {
     completionToActivate: '🔄 reformat',
     expectedEdit: asIs({
-        range: {start: {line: 0, col: 19}, end: {line: 0, col: 62}},
-        newText: `\n  params: [\n    {id: 'x', defaultValue: list()}\n  ]\n`
+        range: {start: {line: 0, col: 0}, end: {line: 0, col: 62}},
+        newText: `Data('cmp1', {\n  params: [\n    {id: 'x', defaultValue: list()}\n  ]\n`
     }),
     expectedCursorPos: '0,18'
   })
+})
+
+Test('completionTest.keepTgpTypeModifier', {
+  impl: completionOptionsTest(`ALL:Aggregator('join', {
+  impl: ''
+})`, [], {filePath: 'packages/common/essentials.js', notInSuggstions: '🔄 reformat'})
 })
 
 Test('completionActionTest.fixUnActivatedMacro', {
@@ -648,8 +654,8 @@ Test('completionActionTest.macroByValue', {
   impl: completionActionTest(`ALL:Component('cmp1', __{ macroByValue: true, params: [{id: 'p'}] })`, {
     completionToActivate: '🔄 reformat',
     expectedEdit: asIs({
-        range: {start: {line: 0, col: 19}, end: {line: 0, col: 60}},
-        newText: `\n  macroByValue: true,\n  params: [\n    {id: 'p'}\n  ]\n`
+        range: {start: {line: 0, col: 0}, end: {line: 0, col: 60}},
+        newText: `Data('cmp1', {\n  macroByValue: true,\n  params: [\n    {id: 'p'}\n  ]\n`
     }),
     expectedCursorPos: '0,18'
   })
@@ -690,8 +696,8 @@ Test('completionActionTest.defaultValueWithDslType', {
     completionToActivate: '🔄 reformat',
     filePath: 'packages/testing/ui-dsl-for-tests.js',
     expectedEdit: asIs({
-        range: {start: {line: 0, col: 20}, end: {line: 0, col: 104}},
-        newText: `\n  type: 'control<ui>',\n  params: [\n    {id: 'f', type: 'feature', defaultValue: method()}\n  ]\n`
+        range: {start: {line: 0, col: 2}, end: {line: 0, col: 104}},
+        newText: `ntrol('ctrl1', {\n  params: [\n    {id: 'f', type: 'feature', defaultValue: method()}\n  ]\n`
     }),
     expectedCursorPos: '0,19'
   })
@@ -714,7 +720,7 @@ Test('completionActionTest.defaultValueWithDslTypeNoTypeError', {
 Test('langServiceTest.provideDefinition', {
   impl: dataTest({
     calculate: langService.definition(calcCompTextAndCursor(`dataTest('', __not())`)),
-    expectedResult: contains('jb-common', { data: '%path%' }),
+    expectedResult: contains('essentials', { data: '%path%' }),
     timeout: '1000'
   })
 })
@@ -729,7 +735,7 @@ Test('langServiceTest.closestComp', {
 Test('langServiceTest.provideDefinition.firstInPipe', {
   impl: dataTest({
     calculate: langService.definition(calcCompTextAndCursor('dataTest(pipeline(l__ist()))')),
-    expectedResult: contains('/common/jb-common.js', { data: '%path%' }),
+    expectedResult: contains('/common/essentials.js', { data: '%path%' }),
     timeout: '3000'
   })
 })
@@ -737,7 +743,7 @@ Test('langServiceTest.provideDefinition.firstInPipe', {
 Test('langServiceTest.provideDefinition.inProfile', {
   impl: dataTest({
     calculate: langService.definition(calcCompTextAndCursor('dataTest(pipeline(l__ist()))')),
-    expectedResult: contains('/common/jb-common.js', { data: '%path%' })
+    expectedResult: contains('/common/essentials.js', { data: '%path%' })
   })
 })
 

@@ -1,5 +1,5 @@
 import { dsls, coreUtils, jb } from '@jb6/core'
-import '@jb6/common'
+import '@jb6/common/essentials.js'
 import '@wonder/db/db-drivers.js'
 const { getAccessToken, wresolve, wresolveInfo, wcachePopulate, wfetch2 } = jb.wonderUtils
 import './duckdb-utils.js'

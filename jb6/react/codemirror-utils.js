@@ -20,7 +20,7 @@ const importCodeMirror = Component('importCodeMirror', {
 
 ReactComp('CodeMirrorJs', {
   impl: comp({
-    hFunc: (ctx, {react: {h, useRef, useEffect}}) => ({ code, onChange, onCursorActivity }) => {
+    hFunc: (ctx, {react: {h, useRef, useEffect}}) => ({ code, onCursorActivity }) => {
         const { EditorState, EditorView, javascript, lineNumbers, syntaxHighlighting, defaultHighlightStyle, keymap, search, openSearchPanel } = reactUtils.imported(CM6_IMPORT)
         const host = useRef()
         const viewRef = useRef()
@@ -32,16 +32,15 @@ ReactComp('CodeMirrorJs', {
             state: EditorState.create({
               doc: code || '',
               extensions: [
-                lineNumbers(), syntaxHighlighting(defaultHighlightStyle), javascript(), search(), EditorView.lineWrapping,
+                lineNumbers(), syntaxHighlighting(defaultHighlightStyle), javascript(), search(),
                 keymap.of([
                   { key: 'Ctrl-f', run: openSearchPanel },
                   { key: 'Ctrl-a', run: view => (view.dispatch({ selection: { anchor: 0, head: view.state.doc.toString().length } }), true) }
                 ]),
-                EditorView.editable.of(!!onChange), EditorState.readOnly.of(!onChange),
+                EditorState.readOnly.of(true),
                 EditorView.theme({ '&': { height: '100%', fontSize: '12px' }, '.cm-scroller': { overflow: 'auto' }, '.cm-content': { fontFamily: 'monospace' } }),
-                ...(onChange || onCursorActivity ? [EditorView.updateListener.of(update => {
-                  if (update.docChanged) onChange?.(update.state.doc.toString())
-                  if (update.selectionSet) onCursorActivity?.(update.view)
+                ...(onCursorActivity ? [EditorView.updateListener.of(update => {
+                  if (update.selectionSet) onCursorActivity(update.view)
                 })] : [])
               ]
             })

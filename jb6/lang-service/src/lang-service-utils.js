@@ -11,16 +11,16 @@ jb.langServiceRegistry = {
     tgpModelsPromise: {}
 }
 
-async function calcCompProps(_compTextAndCursor) {
+async function calcCompProps(_compTextAndCursor, ctx) {
     const compTextAndCursor = _compTextAndCursor ? await _compTextAndCursor : tgpEditorHost().compTextAndCursor()
     const { filePath, compText, inCompOffset } = compTextAndCursor
 
     jb.langServiceRegistry.tgpModels[filePath] = jb.langServiceRegistry.tgpModels[filePath] || await getTgpModel()
     const tgpModel = jb.langServiceRegistry.tgpModels[filePath]
-    return {...compTextAndCursor, tgpModel, ...calcProfileActionMap(compText, {inCompOffset, tgpModel, filePath}) }
+    return {...compTextAndCursor, tgpModel, ...calcProfileActionMap(compText, {inCompOffset, tgpModel, filePath, ctx}) }
 
     function getTgpModel() {
-        return jb.langServiceRegistry.tgpModelsPromise[filePath] = calcTgpModelData({entryPointPaths: filePath})
+        return jb.langServiceRegistry.tgpModelsPromise[filePath] = calcTgpModelData({entryPointPaths: filePath}, ctx)
             .then(v => (jb.langServiceRegistry.tgpModels[filePath] = new tgpModelForLangService(v)))
     }
 }
@@ -278,8 +278,13 @@ ${compText}
     // resolution:'all' keeps the full {in:{data,vars,jbCtx}} record - completions need vars/jbCtx
     // for %$var% suggestions. the lean 'default' projection is only for the MCP wire payload.
     const importStrategy = (extraCode && entryPointPaths) ? 'calcImportsForFiles (no profile scan)' : 'calcImportsForProfile (profile scan)'
-    ctx?.vars?.langServiceLogger?.info?.({ t: 'dataCompletions probe', path, importStrategy, hasExtraCode: !!extraCode, entryPointPaths }, {}, { ctx })
-    const {probeRes, error, cmd} = await runProbeCli(path, {entryPointPaths, extraCode, resolution: 'all' })
+    ctx.vars.langServiceLogger?.info?.({t: 'dataCompletions probe', path, importStrategy, hasExtraCode: !!extraCode, entryPointPaths}, {}, {ctx})
+    const {probeRes, error, cmd} = await runProbeCli(path, {entryPointPaths, extraCode, resolution: 'all', ctx})
+    ctx.vars.langServiceLogger?.info?.({
+        t: 'data completions probe result', path, error: error && String(error), probePath: probeRes?.probePath,
+        circuitCmpId: probeRes?.circuitCmpId, records: probeRes?.result?.length || 0,
+        visits: probeRes?.visits?.[probeRes?.probePath] || 0
+    }, {}, {ctx})
     if (error) {
         globalThis.showUserMessage && showUserMessage('error', `probe cli failed: ${JSON.stringify(error)} ${cmd}`)
         return []
@@ -287,6 +292,10 @@ ${compText}
 
     const item = actionMap.filter(e => e.from <= inCompOffset && inCompOffset < e.to || (e.from == e.to && e.from == inCompOffset))
         .find(e => e.action.indexOf('insideText!') == 0)
+    if (!item) {
+      ctx.vars.langServiceLogger?.warning?.({t: 'data completions missing text action', path, inCompOffset}, {}, {ctx})
+      return []
+    }
     const inputValue = compText.slice(item.from - 1, item.to - 1)
     const selectionStart = inCompOffset - item.from + 1
     const { line, col } = offsetToLineCol(compText, item.from - 1)
@@ -325,6 +334,12 @@ ${compText}
       valueOption('#data', probeCtx.data),
       ...unique(options,x=>x.label)
     ]        
+
+    ctx.vars.langServiceLogger?.info?.({
+        t: 'data completions result', inputValue, selectionStart, text, exp, tail, tailSymbol, base,
+        probeVars: Object.keys(probeCtx.vars || {}), probeArgs: Object.keys(probeCtx.jbCtx?.args || {}),
+        consts: Object.keys(jb.coreRegistry.consts || {}), labels: options.map(x => x.label)
+    }, {}, {ctx})
 
     return options
 
@@ -388,4 +403,3 @@ ${compText}
 Object.assign(langServiceUtils, { provideCompletionItems, calcCompProps, cloneProfile, tgpModelForLangService,  
     tgpModels: jb.langServiceRegistry.tgpModels
 })
-

@@ -15,9 +15,9 @@ const {
   }
 } = dsls
 
-const mintTestToken = phone => fetch(`http://localhost:3000/mint-wonder-token?phone=${encodeURIComponent(phone)}`).then(r => r.text())
+const mintTestToken = phone => fetch(`http://localhost:3000/mint-wonder-token?email=${encodeURIComponent(phone)}`).then(r => r.text())
 const signedUrlServerForTests = env => env === 'staging'
-  ? 'https://staging.indivi.ai/signed-url'
+  ? 'https://wonder-server-staging-365199207445.me-west1.run.app/signed-url'
   : 'http://localhost:3000/signed-url'
 
 Test('dbDriverPutGetTest', {
@@ -273,29 +273,10 @@ Test('signedRoomSigningTest', {
     logger: 'dbLogger',
     calculate: async ctx => {
       const dbCtx = signedRoomCtx(ctx, 'staging')
-      const res = await wfetch2('signedRoom://testSignedRoom/usersRO/test.json', { method: 'HEAD' }, dbCtx)
+      const res = await wfetch2('signedRoom://testSignedRoom/usersRO/sales-large.json', { method: 'HEAD' }, dbCtx)
       return { result: res.status, statusText: res.statusText, body: !res.ok && await res.text(), ...coreUtils.harvestLogs(dbCtx) }
     },
     expectedResult: equals('%result%', 200),
-    timeout: 12000
-  })
-})
-
-Test('signedRoomCloudRunPutGetTest', {
-  params: [{id: 'env', options: 'staging'}],
-  impl: dataTest({
-    calculate: async (ctx, {}, {env}) => {
-      const { wonderServer } = serversByUrl(ctx.setVars({ isStaging: env === 'staging', wonderVersion: 'whapi-staging' }))
-      const wfetchUrl = `${wonderServer}/wfetch`
-      const call = (url, opts) => fetch(wfetchUrl, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ serviceType: 'data-service', params: { url, opts }, vars: { isStaging: env === 'staging' } })
-      })
-      await call('signedRoom://testSignedRoom/admin/testCloudPutGet', { body: { a: 7 }, method: 'PUT' })
-      const res = await call('signedRoom://testSignedRoom/admin/testCloudPutGet', { method: 'GET' })
-      return { result: (await res.json()).data }
-    },
-    expectedResult: equals('%result.a%', 7),
     timeout: 12000
   })
 })

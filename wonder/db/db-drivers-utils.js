@@ -193,8 +193,9 @@ async function getCachedSignedUrl(ctx, path, method) {
   const signedUrlServer = signedUrlServerOf(ctx)
   dbLogger?.info?.({ t: 'signedUrl fetch', path, method, signedUrlServer }, {}, { ctx })
   const idToken = await auth.wonderIdToken(ctx)
-  let res
-  for (let attempt = 0; ; attempt++) {   // burst signing of many NEW files hits the signatures-file mutation rate limit (GCS 429 → 500) - back off and retry
+  const tokenReadyAt = Date.now()
+  let res, attempt = 0
+  for (; ; attempt++) {   // burst signing of many NEW files hits the signatures-file mutation rate limit (GCS 429 → 500) - back off and retry
     res = await fetch(`${signedUrlServer}/${path}?method=${method}`, { headers: { Authorization: `Bearer ${idToken}`,
       ...(ctx.vars.signedRoomLogger && { 'x-wonder-debug-logs': '1' }) } })
     if (res.ok || (res.status < 500 && res.status !== 429) || attempt >= 2) break
@@ -212,10 +213,12 @@ async function getCachedSignedUrl(ctx, path, method) {
     ctx.vars.errorLogger.error({ t: 'signed-url failed', stack, status: res.status, path, method, signedUrlServer }, { body }, { ctx })
     return { ok: false, status: 500, statusText: stack, text: async () => body, json: async () => ({ error: stack }) }
   }
+  const responseAt = Date.now()
   const { signedUrl, signatures, timing, logs } = await res.json()
   Object.entries(logs?.signedRoomLogger || {}).forEach(([channel, entries]) => ctx.vars.signedRoomLogger?.[channel]?.push(...entries))
   if (signatures) cacheSignatures(roomId, signatures)
-  dbLogger?.info?.({ t: 'signedUrl ready', path, method, duration: Date.now() - t0, serverTiming: timing }, {}, { ctx })
+  dbLogger?.info?.({ t: 'signedUrl ready', path, method, duration: Date.now() - t0, idTokenMs: tokenReadyAt - t0,
+    fetchMs: responseAt - tokenReadyAt, responseBodyMs: Date.now() - responseAt, attempts: attempt + 1, serverTiming: timing }, {}, { ctx })
   return signedUrl
 }
 
@@ -246,7 +249,7 @@ Object.assign(jb.wonderUtils, { formatDay, formatTimeWithRandom, wresolve, wreso
 let rawFileExts
 const localhostServer = ctx => ctx.vars.localhostServer || globalThis.process?.env?.WONDER_LOCAL_SERVER || 'http://localhost:3000'
 const signedUrlServerOf = ctx => ctx.vars.signedUrlServer
-  || 'https://staging.indivi.ai/signed-url'
+  || 'https://wonder-server-staging-365199207445.me-west1.run.app/signed-url'
 const methodToAction = method => method === 'GET' || method === 'HEAD' ? 'read' : 'write'
 const sigsStorageKey = roomId => `sigs_${roomId}_${auth.currentPrincipal()}`
 const loadedRooms = new Set()

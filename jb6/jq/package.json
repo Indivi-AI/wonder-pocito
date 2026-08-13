@@ -1,6 +1,6 @@
 {
   "name": "@jb6/jq",
-  "version": "1.260606.0",
+  "version": "1.260813.0",
   "type": "module",
   "exports": {
     ".": "./index.js",
@@ -8,7 +8,7 @@
   },
   "scripts": {},
   "dependencies": {
-    "@jb6/core": "1.260606.0"
+    "@jb6/core": "1.260813.0"
   },
   "repository": {
     "type": "git",

@@ -1,5 +1,5 @@
 import { dsls, jb } from '@jb6/core'
-import '@jb6/common'
+import '@jb6/common/essentials.js'
 import './bi-dsl.js'
 
 const {

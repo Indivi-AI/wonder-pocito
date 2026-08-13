@@ -1,5 +1,5 @@
 // REAL browser with REAL modules (no stubs), use the mcp tool `playwrightHarvest`
-import { dsls, ns, coreUtils } from '@jb6/core'
+import { dsls, ns, coreUtils, jb } from '@jb6/core'
 import { reactUtils } from '@jb6/react' 
 import '@jb6/testing'
 const { asArray, logException } = coreUtils
@@ -109,11 +109,7 @@ UiAction('waitForSelector', {
       return new Promise(resolve => {
         const observer = new win.MutationObserver(check)
         observer.observe(win.document, { childList: true, subtree: true })
-        const timer = setTimeout(() => {
-          observer.disconnect()
-          uiLogger?.info?.({t: 'waitForSelector', selector, found: false, ms: Date.now()-t0}, {}, {ctx})
-          resolve(null)
-        }, timeout)
+        const timer = setTimeout(() => { observer.disconnect(); uiLogger?.info?.({t: 'waitForSelector', selector, found: false, ms: Date.now()-t0}, {}, {ctx}); resolve(null) }, timeout)
         check()
 
         function check() {

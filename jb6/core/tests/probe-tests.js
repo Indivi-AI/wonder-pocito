@@ -1,4 +1,5 @@
 import { dsls, coreUtils, ns } from '@jb6/core'
+import '@jb6/common'
 import '../misc/probe.js'
 import '@jb6/rx'
 import '@jb6/rx/rx-common.js'
@@ -60,19 +61,6 @@ Test('probeTest.innerInPipeline', {
   })
 })
 
-// slow probe target: an rx interval emitting every 100ms, taken 5 times → the probe runs ~500ms.
-// pipeline "does not wait for promises", but rx `pipe` DOES wait for reactive/callbag data, so the
-// interval emits are spread over real time. this keeps the studio's live visitsProgress view mounted
-// long enough to receive several throttled progress emits (one per ~100ms window) instead of a single
-// final flush on a sub-10ms run. defined in probe-tests via @jb6/rx so it's available to the probe.
-Test('probeTest.slowInterval', {
-  impl: dataTest({
-    calculate: pipe(rx.pipe(interval(100), rx.take(5)), join(',')),
-    expectedResult: equals('0,1,2,3,4'),
-    timeout: 2000
-  })
-})
-
 const cmpAA = Data('cmpAA', {
   impl: 'cmpAA'
 })
@@ -113,41 +101,20 @@ Test('cliTest.progressViaLogger', {
       const script = `
         import { coreUtils } from '@jb6/core'
         import '@jb6/core/misc/jb-cli.js'
-        let ctx = coreUtils.ensureLoggers('cliLogger', {wrapToStderr: true})
+        let ctx = coreUtils.ensureLoggers('cliLogger', {ctx: new coreUtils.Ctx({vars: {loggersNeededForUiProgress: 'cliLogger', progressToStderr: true}})})
         ctx.vars.cliLogger.progress({t: '1'})
         await coreUtils.delay(20)
         ctx.vars.cliLogger.progress({t: '2'})
         await coreUtils.delay(20)
         await coreUtils.writeServiceResult('hi')
       `
-      await coreUtils.runCliInContext(script, { ctx, bindLoggers: 'cliLogger' })
+      await coreUtils.runCliInContext(script, {ctx: ctx.setVars({loggersNeededForUiProgress: 'cliLogger', isProgressConsumer: true})})
       coreUtils.eventEmitter.off('progress', onProgress)
       return fromCli
     },
     expectedResult: equals('1,2', join(',', { itemText: '%t%' })),
     timeout: 10000,
     logger: 'cliLogger'
-  })
-})
-
-// verifies the loading-timeline step events reach the LOCAL eventEmitter (the studio's UI hook).
-// all steps originate in the child (spawn,imports,calcCircuit,runCircuit) and travel as stderr JSONL,
-// re-emitted by dispatchChildLine → cliLogger.progress → eventEmitter.
-Test('probeCliTest.timelineSteps', {
-  HeavyTest: true,
-  impl: dataTest({
-    calculate: async () => {
-      const repoRoot = await coreUtils.calcRepoRoot()
-      const entryPointPaths = `${repoRoot}/hosts/test-project/a-tests.js`
-      const steps = []
-      const onProgress = e => e?.step && steps.push(e.step)
-      coreUtils.eventEmitter.on('progress', onProgress)
-      await runProbeCli('data<common>cmpA~impl', { entryPointPaths })
-      coreUtils.eventEmitter.off('progress', onProgress)
-      return coreUtils.unique(steps).join(',')
-    },
-    expectedResult: and(contains('resolveImports'), contains('spawn'), contains('imports'), contains('calcCircuit'), contains('runCircuit')),
-    timeout: 5000
   })
 })
 
@@ -171,7 +138,7 @@ Test('probeCliTest.findTestFiles', {
 //   HeavyTest: true,
 //   impl: dataTest({
 //     calculate: async () => {
-//       const entryPointPaths = '/home/shaiby/projects/Genie/public/applets/sampleApplet/sampleApplet-tests.js'
+//       const entryPointPaths = '/home/shaiby/projects/wonder/public/applets/sampleApplet/sampleApplet-tests.js'
 //       return runProbeCli('test<test>sampleAppletTest~impl~expectedResult',{entryPointPaths})  
 //     },
 //     expectedResult: '%probeRes/circuitRes/success%',

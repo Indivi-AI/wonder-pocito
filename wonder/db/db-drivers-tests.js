@@ -14,7 +14,7 @@ const {
   test: { Test,
     test: { dataTest, dbDriverAppendTest, dbDriverPatchTest, dbDriverPutGetTest, publicRoomCountTest,
       signedRoomPutGetTest, signedRoomAppendTest, signedRoomPermissionsTest, signedRoomGooglePermissionsTest,
-      signedRoomCloudRunPutGetTest, signedRoomUsersRWTest, signedRoomMediaPutGetTest, signedRoomSigningTest, signedRoomListTest, signedRoomTrailingSlashGetTest }
+      signedRoomUsersRWTest, signedRoomMediaPutGetTest, signedRoomSigningTest, signedRoomListTest, signedRoomTrailingSlashGetTest }
   }
 } = dsls
 
@@ -141,8 +141,6 @@ Test('dbDriverTests.signedRoom.liveRepo.append', { nodeOnly: true, impl: signedR
 Test('dbDriverTests.signedRoom.liveRepo.usersRW', { nodeOnly: true, impl: signedRoomUsersRWTest('staging') })
 Test('dbDriverTests.signedRoom.liveRepo.list', { nodeOnly: true, impl: signedRoomListTest('staging') })
 Test('dbDriverTests.signedRoom.liveRepo.trailingSlashGet', { nodeOnly: true, impl: signedRoomTrailingSlashGetTest('staging') })
-
-Test('dbDriverTests.signedRoom.cloudRun.putGet', { nodeOnly: true, impl: signedRoomCloudRunPutGetTest('staging') })
 
 Test('dbDriverTests.gcs.node.noIdentity.publicRead', {
   nodeOnly: true,

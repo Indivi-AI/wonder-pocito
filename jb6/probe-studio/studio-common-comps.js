@@ -51,12 +51,7 @@ ReactComp('reactCompView', {
     },
     metadata: [
       abbr('CMP'),
-      matchData(({}, {probeRes}) => {
-        const circuitCmpId = probeRes?.circuitCmpId
-        const rendersReactComp = circuitCmpId && (circuitCmpId.startsWith('react-comp<react>') ||
-          coreUtils.compByFullId(circuitCmpId.split('~')[0])?.moreTypes?.split(',').includes('react-comp<react>'))
-        return rendersReactComp && circuitCmpId.split('>').pop().split('~')[0]
-      }),
+      matchData(({},{probeRes}) => probeRes?.circuitCmpId?.startsWith('react-comp<react>') && probeRes?.circuitCmpId?.split('>').pop().split('~')[0]),
       priority(2)
     ]
   })

@@ -26,11 +26,7 @@ async function runProbeStudio({ importMapsInCli, imports, staticMappings, topEle
   const path = urlParams.get('path') || 'reactTest.HelloWorld~impl~expectedResult'
   const logger = urlParams.get('logger') || ''
 
-  // harvestable browser loggers: uiLogger (visitsProgress wire diagnostics) + cliLogger (SSE→router→dispatch wire
-  // logs) + probeLogger + any ?logger= names. exposed on window.jbLoggers so playwrightHarvest's
-  // harvestLogs({vars: window.jbLoggers}) can read them. this SAME ctx is passed to runProbeCli so its
-  // browser-side wire diagnostics (cliLogger.info) route into the harvested vars.
-  const loggerCtx = coreUtils.ensureLoggers(['uiLogger', 'cliLogger', 'cliLineLogger', 'probeLogger', ...logger.split(',').map(s => s.trim()).filter(Boolean)])
+  const loggerCtx = coreUtils.ensureLoggers(['uiLogger', 'probeLogger', ...logger.split(',').map(s => s.trim()).filter(Boolean)])
   window.jbLoggers = loggerCtx.vars
   coreUtils.studioUiLogger = loggerCtx.vars.uiLogger   // visitsProgress logs into this
   coreUtils.studioLoggerCtx = loggerCtx                 // domainLogger.info needs a real ctx as 3rd arg

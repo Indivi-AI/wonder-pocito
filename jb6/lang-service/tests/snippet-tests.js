@@ -15,7 +15,7 @@ const {
 Test('nodeOnly.basic', {
   nodeOnly: true,
   impl: dataTest({
-    calculate: () => typeof process !== 'undefined' && !!process.versions?.node,
+    calculate: () => !!globalThis.process?.versions?.node,
     expectedResult: equals(true)
   })
 })
@@ -69,7 +69,7 @@ Test('snippet.runReactTest', {
 Test('genieTest.snippet.jb', {
   HeavyTest: true,
   impl: snippetTest(`{$: 'data<common>asIs', val: {name: 'Homer'} }`, equals('Homer','%name%'), {
-    repoRoot: '/home/shaiby/projects/Genie',
+    repoRoot: '/home/shaiby/projects/wonder',
     fetchByEnvHttpServer: 'http://localhost:3000'
   })
 })

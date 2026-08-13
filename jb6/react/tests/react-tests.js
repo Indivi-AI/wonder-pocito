@@ -4,6 +4,7 @@ import './react-testers.js'
 import '@jb6/react/progress-indicators.js'
 import '@jb6/react/codemirror-utils.js'
 import '@jb6/react/reveal.js'
+import '@jb6/lang-service'
 
 const { json } = ns
 const {
@@ -13,6 +14,7 @@ const {
       test: { dataTest, reactTest }
   },
   common: {
+    Data,
     data: { asIs },
     boolean: { contains, equals, and },
   },
@@ -328,7 +330,7 @@ Test('reactTest.progress.byProgress', {
       },
       progressIndicator: byProgress({
         title: 'Loading report',
-        logger: 'uiLogger',
+        requiredLoggers: 'uiLogger',
         hFunc: ({}, {react: {h}}) => ({progressEvent}) =>
           h('div', {}, `${progressEvent.t} — ${progressEvent.pct}%`)
       })
@@ -336,6 +338,44 @@ Test('reactTest.progress.byProgress', {
     expectedResult: contains('10', '80', { allText: json.stringify('%$uiLogger/uiLog%') }),
     userActions: waitForText('80'),
     logger: 'uiLogger'
+  })
+})
+
+Test('reactTest.progress.requiredLoggers', {
+  impl: reactTest({
+    testedComp: comp({
+      hFunc: (ctx, {react: {h}}) => () => h('div', {}, `required ${ctx.data}`),
+      enrichCtx: ctx => Promise.resolve(ctx.setData(ctx.vars.loggersNeededForUiProgress)),
+      progressIndicator: byProgress({requiredLoggers: () => 'uiLogger'})
+    }),
+    expectedResult: contains('required uiLogger'),
+    userActions: waitForText('required uiLogger'),
+    logger: 'uiLogger'
+  })
+})
+
+const emitProgressForTest = Data('emitProgressForTest', {
+  impl: (ctx, {uiLogger}) => {
+    uiLogger.progress({t: 'remote progress'})
+    return 'done'
+  }
+})
+
+Test('reactTest.progress.overTheWire', {
+  impl: reactTest({
+    testedComp: comp({
+      hFunc: ({}, {react: {h}}) => () => h('div', {}, 'done'),
+      enrichCtx: async ctx => {
+        await coreUtils.runSnippetCli({profile: emitProgressForTest(), ctx})
+        await coreUtils.delay(20)
+        return ctx
+      },
+      progressIndicator: byProgress({requiredLoggers: 'uiLogger'})
+    }),
+    expectedResult: contains('remote progress', { allText: json.stringify('%$uiLogger/uiLog%') }),
+    userActions: waitForText('remote progress'),
+    logger: 'uiLogger',
+    timeout: 12000
   })
 })
 

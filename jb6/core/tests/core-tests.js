@@ -5,6 +5,7 @@ import '@jb6/common'
 import '@jb6/core/misc/pretty-print.js'
 import '@jb6/core/misc/jb-cli.js'
 import '@jb6/core/misc/import-map-services.js'
+import '@jb6/testing/test-data.js'
 
 const {
   tgp: { Const, Component,
@@ -22,13 +23,6 @@ const {
 } = dsls
 const { prettyPrintComp, prettyPrint, getCompField, enrichCtxWithDataContext } = coreUtils
 const { math } = ns
-
-Const('person', {
-    name: 'Homer Simpson',
-    male: true,
-    isMale: 'yes',
-    age: 42
-})
 
 Const('peopleWithChildren', [
   {
@@ -364,6 +358,21 @@ Test('runActions', {
 // })`))
 //   })
 // })
+
+Test('vmTest.minimal', {
+  HeavyTest: true,
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: async () => {
+      await coreUtils.calcJb6RepoRootAndImportMapsInCli()
+      return jb.testingUtils.runTestVm({ testID: 'coreTest.ns', resources: { 
+          entryPointPaths: `${jb.coreRegistry.jb6Root}/packages/core/tests/core-tests.js`}})
+    },
+    expectedResult: equals(2, '%testRes.result%'),
+    timeout: 2000,
+    logger: 'vmLogger'
+  })
+})
 
 const asIsParam = Data({
   params: [

@@ -17,6 +17,11 @@
     import '@jb6/core/misc/import-map-services.js'
     import '@jb6/react/codemirror-utils.js'
     import '@jb6/react/lib/tailwindcss-3.4.17.js'
+    import '@jb6/react/jb-pick-box.js'
+
+    const {
+      react: { 'react-comp': {JbPickerStarter} }
+    } = dsls
 
     import { reactUtils } from '@jb6/react'
     const { h, hh, loadLucid05 } = reactUtils
@@ -35,7 +40,7 @@
     const { reactCmp, props, ctx } = await reactUtils.runOnHost(cmpId, seedCtx)
     window.jbLoggers = ctx.vars
     reactUtils.createRoot(document.getElementById('show')).render(
-      h('div', {}, hh(ctx, reactCmp, props))
+      h('div', {}, hh(ctx, JbPickerStarter), hh(ctx, reactCmp, props))
     )
 
     // prod-clean: tests inject window.__jbOnMounted externally; undefined here = no-op

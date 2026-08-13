@@ -14,15 +14,11 @@ const Logger = TgpType('logger', 'test')
 jb.coreRegistry.urlReservedParams = jb.coreRegistry.urlReservedParams || {}
 Object.assign(jb.coreRegistry.urlReservedParams, {logger: true, browserSpy: true, spy: true})
 
-const ensureLoggers = (names = [], {ctx = new coreUtils.Ctx(), wrapToStderr} = {}) => {
+const ensureLoggers = (names = [], {ctx = new coreUtils.Ctx()} = {}) => {
   names = (Array.isArray(names) ? names : String(names).split(',')).map(s => s.trim()).filter(Boolean)
-  if (wrapToStderr) coreUtils.browserSpy?.initSpy({spyParam: 'all'})
   return [...new Set(['errorLogger', ...names])].reduce((c, name) => {
-    const comp = jb.dsls.test.logger[name]
-      || Logger(name, { impl: domainLogger(name.replace(/Logger$/, '')) })   // unregistered name -> register a default domain logger on the fly
+    const comp = jb.dsls.test.logger[name] || Logger(name, { impl: domainLogger(name.replace(/Logger$/, '')) })   // auto register loggers
     const inst = c.vars[name] || comp.$runWithCtx(c)
-    if (wrapToStderr) wrapLoggerInstanceToStderr(name, inst)
-    if (wrapToStderr && name == 'cliLogger') inst.info({t: 'staticImportsLoaded', staticImportsMs: Math.round(globalThis.performance?.now?.() || 0)}, {}, {ctx: c})
     if (c.vars[name]) return c
     c = c.setVars({[name]: inst})
     return inst.onCreation ? inst.onCreation(c) : c   // onCreation(ctx)->ctx: composite loggers arm ctx (e.g. set benchmark, pull dep loggers)
@@ -73,7 +69,7 @@ let $source = 'browser'   // machine:pid, computed once. stamped on every entry 
 if (typeof process != 'undefined')
   import('os').then(os => $source = `${os.hostname()}:${process.pid}`)
 
-export const domainLogger = Logger('domainLogger', {
+const domainLogger = Logger('domainLogger', {
   params: [
     {id: 'domain', as: 'string'},
     {id: 'addToR1', as: 'string', description: 'add to first param, e.g. userId,fileName'},
@@ -107,7 +103,7 @@ export const domainLogger = Logger('domainLogger', {
         this[logName].push({severity: 'error', ...enriched[0], ...enriched[1]})
         this[errorsName].push({...enriched[0], ...enriched[1]})
         spyLog(logName, {severity: 'error', r1: enriched[0], r2: enriched[1], ctx: r3?.ctx})
-        if (domain === 'error' && !this._wrappedToStderr) globalThis.console?.error?.(enriched[0].$source, enriched[0], enriched[1])
+        if (domain === 'error') globalThis.console?.error?.(enriched[0].$source, enriched[0], enriched[1])
         const errLog = r3?.ctx?.vars?.errorLogger   // tee: every error is ALSO recorded in the always-on errorLogger
         if (errLog && errLog !== this) errLog.error(r1, r2, r3)
       },
@@ -117,10 +113,16 @@ export const domainLogger = Logger('domainLogger', {
       stepPct(step, pct, text) { this.progress({step, pct, ...(text && {t: text})}) },
       stepPlan(steps, labels) { this.progress({stepPlan: steps, ...(labels && {stepLabels: labels}), status: 'plan'}) },
       progress(payload) {
-        const entry = {severity: 'progress', seq: ++progressSeq, at: Date.now() - startTime, $source, logger: `${domain}Logger`, ...payload}
+        const logger = `${domain}Logger`
+        const entry = {severity: 'progress', seq: ++progressSeq, at: Date.now() - startTime, $source, logger, ...payload}
         this[logName].push(entry)
         spyLog(logName, {severity: 'progress', r1: entry})
-        coreUtils.eventEmitter.emit('progress', entry)
+        if (ctx.vars.progressToStderr)
+          globalThis.process?.stderr?.write(`${JSON.stringify(entry)}\n`)
+        else if (typeof document !== 'undefined' || ctx.vars.isProgressConsumer)
+          coreUtils.eventEmitter.emit('progress', entry)
+        else if ((ctx.vars.loggersNeededForUiProgress || '').split(',').map(x => x.trim()).includes(logger))
+          globalThis.process?.stderr?.write(`${JSON.stringify(entry)}\n`)
       },
       $stripData() {
         const custom = coreUtils.loggerSummaries?.[domain]   // per-domain summary override (e.g. rx node rollup); keeps auto-logger path intact
@@ -143,9 +145,6 @@ export const domainLogger = Logger('domainLogger', {
   }
 })
 
-// coreUtils.log: the sole remaining caller is logError/logException (core-utils.js), always severity 'error'.
-// All plain-info call sites now log via `xxLogger?.info?.(...)` off ctx.vars. This routes errors to the always-on
-// errorLogger (the auto-fail test gate). `error` = a raw Error/exception; enrichParams extracts its .stack.
 const bridgeCtx = ensureLoggers('errorLogger')   // prebuilt once: carries the always-on errorLogger
 coreUtils.log = (logNames, logObj = {}) => {
   const {ctx: callerCtx, error, ...data} = logObj
@@ -153,20 +152,3 @@ coreUtils.log = (logNames, logObj = {}) => {
   const errorLogger = callerCtx?.vars?.errorLogger || bridgeCtx.vars.errorLogger
   errorLogger.error({t: logNames, ...data}, {}, {ctx: callerCtx || bridgeCtx, error})
 }
-
-const wrapLoggerInstanceToStderr = (name, inst) => {
-  if (!inst) return inst   // logger not registered in this process (its defining package wasn't imported) - skip, don't crash the run
-  if (inst._wrappedToStderr) return inst   // idempotent - ensureLoggers may run more than once; don't double-emit
-  inst._wrappedToStderr = true
-  for (const ch of ['info','warning','error','progress']) {   // not 'status': status() delegates to progress() which is already wrapped
-    const o = inst[ch]?.bind(inst)
-    if (!o) continue
-    inst[ch] = (...args) => {
-      const event = scrubSignatures(args[0] && typeof args[0] === 'object' ? {...args[0], $source} : args[0])
-      try { process.stderr.write(JSON.stringify({kind:'log', logger:name, channel:ch, event}).replace(/\n/g, '\\n') + '\n') } catch {}
-      return o(event, ...args.slice(1))
-    }
-  }
-  return inst
-}
-coreUtils.wrapLoggerInstanceToStderr = wrapLoggerInstanceToStderr

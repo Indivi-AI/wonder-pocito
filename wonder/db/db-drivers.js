@@ -787,18 +787,40 @@ DbDriverInterceptor('rawFile', {
         // encoding of a STRING body: text mimes (rawText) → utf8; binary mimes (rawBinary) → the string is base64 → decoded.
         // a text format missing from rawText would fall to base64 and CORRUPT (e.g. jsonl mangled as base64 before it was classified text).
         dbLogger?.info?.({ t: 'rawFile PUT', contentType, bytes, streamed: isFile, encoding: isFile ? 'stream' : isTextMime(contentType) ? 'utf8' : 'base64' }, {}, { ctx })
-        // server: authenticated GCS JS API (the public URL rejects unsigned PUTs); browser/localhost: signed url
-        if (coreUtils.isNode && !ctx.vars.onLiveRepo) {
-          const gcsFile = (await auth.gcpStorage(ctx, { native: true })).bucket(bucketName).file(path)
-          if (isFile) await new Promise((res, rej) => sendBody.pipe(gcsFile.createWriteStream({ contentType, resumable: bytes > 5e6 })).on('finish', res).on('error', rej))
-          else await gcsFile.save(sendBody, { contentType })
-        } else if (!coreUtils.isNode) {
+        const uploadStarted = Date.now()
+        let status = 200
+        if (!coreUtils.isNode) {
           const res = await fetch(filePathUrl, { method: 'PUT', headers: { 'content-type': contentType }, body: sendBody })
+          status = res.status
           if (!res.ok) throw new Error(`rawFile PUT failed: ${res.status} ${await res.text()}`)
         } else {
           const { request } = await import('undici')
-          await request(filePathUrl, { method: 'PUT', headers: { 'content-type': contentType }, body: sendBody })
+          const { channel } = await import('diagnostics_channel')
+          const accessToken = await auth.gcpAccessToken(ctx, { method: 'PUT' }), accessTokenMs = Date.now() - uploadStarted
+          const requestStarted = Date.now(), phases = {}, subscriptions = [], mark = phase => message => {
+            if (!phases.request || !message.request || message.request === phases.request || phase === 'request') {
+              phases[phase] = phase === 'request' ? message.request : Date.now() - requestStarted
+            }
+          }
+          ;['request:create', 'client:beforeConnect', 'client:connected', 'request:bodySent', 'request:headers', 'request:trailers'].forEach(name => {
+            const ch = channel(`undici:${name}`), handler = mark(name.split(':').at(-1))
+            ch.subscribe(handler); subscriptions.push([ch, handler])
+          })
+          let responseBody
+          try {
+            const response = await request(`${storagePrefix}/${bucketName}/${path}`, { method: 'PUT',
+              headers: { authorization: `Bearer ${accessToken}`, 'content-type': contentType }, body: sendBody })
+            status = response.statusCode
+            responseBody = await response.body.text()
+          } finally {
+            subscriptions.forEach(([ch, handler]) => ch.unsubscribe(handler))
+          }
+          delete phases.request
+          dbLogger?.info?.({ t: 'rawFile PUT transport', transport: 'GcsHttpApi', accessTokenMs,
+            ...phases, totalMs: Date.now() - requestStarted, status }, {}, { ctx })
+          if (status >= 400) throw new Error(`rawFile PUT failed: ${status} ${responseBody}`)
         }
+        dbLogger?.info?.({ t: 'rawFile PUT done', uploadMs: Date.now() - uploadStarted, status, bytes }, {}, { ctx })
         return successResult
       }
     }

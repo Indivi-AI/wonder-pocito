@@ -1,4 +1,5 @@
 import { coreUtils, dsls } from '@jb6/core'
+import './essentials.js'
 const { RT_types, unique } = coreUtils
 const { 
   common: { Data, Aggregator },
@@ -7,7 +8,7 @@ const {
 Aggregator('aggregate', {
   description: 'in pipeline, calc function on all items, rather then one by one',
   params: [
-    {id: 'aggregator', type: 'data', mandatory: true, dynamic: true}
+    {id: 'aggregator', mandatory: true, dynamic: true}
   ],
   impl: ({}, {}, {aggregator}) => aggregator()
 })
@@ -85,14 +86,6 @@ Aggregator('last', {
     {id: 'items', as: 'array', defaultValue: '%%'}
   ],
   impl: ({}, {}, {items}) => items.slice(-1)[0]
-})
-
-Aggregator('count', {
-  description: 'length, size of array',
-  params: [
-    {id: 'items', as: 'array', defaultValue: '%%'}
-  ],
-  impl: ({}, {}, {items}) => items.length
 })
 
 Aggregator('reverse', {

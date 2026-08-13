@@ -13,15 +13,12 @@ function calcDslType(fullId) {
     return (fullId || '').split('>')[0] + '>'
 }
 
-export function resolveProfileTypes(prof, { astFromParent, expectedType, parent, parentParam, tgpModel, filePath, topComp, parentType, tgpPath = '', ctx} = {}) {
+export function resolveProfileTypes(prof, { astFromParent, expectedType, parent, parentParam, tgpModel, filePath, topComp, parentType, tgpPath = ''} = {}) {
     if (!prof || !prof.constructor || ['Object','Array'].indexOf(prof.constructor.name) == -1) return prof
-    const typeFromParent = expectedType?.startsWith('$asParent<') ? (parentType || calcDslType(parent?.$$)) : expectedType
+    const typeFromParent = expectedType == '$asParent<>' ? (parentType || calcDslType(parent?.$$)) : expectedType
     const dynamicTypeFromParent = parentParam?.dynamicTypeFromParent?.(parent)
     const fromFullId = calcDslType(prof.$$)
     const dslType = dynamicTypeFromParent || typeFromParent || fromFullId 
-    if (prof.$ == 'pipeline' || expectedType?.startsWith('$asParent'))
-      ctx?.vars?.langServiceLogger?.info?.({t: 'tgpProfileTypeResolved', profile: prof.$, expectedType,
-        parentType, parentParamType: parentParam?.$dslType, inheritedType: typeFromParent, resolvedType: dslType, tgpPath}, {}, {ctx})
     if (!dslType || dslType?.indexOf('<') == -1) debugger
     const ast = prof[astNode] || astFromParent
 
@@ -32,11 +29,7 @@ export function resolveProfileTypes(prof, { astFromParent, expectedType, parent,
       prof.$$ = prof.$ instanceof jbComp ? prof.$ : `${comp.$dslType}${comp.id}`
     if (prof.$$ == 'pipeline') debugger
     if (prof.$unresolvedArgs && comp) {
-      const unresolvedArgs = prof.$unresolvedArgs
       Object.assign(prof, argsToProfile(prof, comp), {[astNode]: prof[astNode]})
-      ctx?.vars?.langServiceLogger?.info?.({t: 'tgpProfileArgsResolved', tgpPath, profile: prof.$?.id || prof.$,
-        fullId: `${comp.$dslType}${comp.id}`, paramIds: (comp.params || []).map(p=>p.id),
-        argProfiles: unresolvedArgs.map(x=>x?.$ || typeof x), resolvedKeys: Object.keys(prof).filter(k=>k[0] != '$')}, {}, {ctx})
       if (prof.$delayed) debugger
       prof[OrigArgs] = prof.$unresolvedArgs
       delete prof.$unresolvedArgs
@@ -45,13 +38,12 @@ export function resolveProfileTypes(prof, { astFromParent, expectedType, parent,
     if (Array.isArray(prof)) {
       prof[primitivesAst] = Object.fromEntries(prof.map( (val,i) => isPrimitiveValue(val) && [i,ast?.elements[i]]).filter(Boolean))
       prof.forEach((v,i) =>resolveProfileTypes(v, { 
-        astFromParent: prof[primitivesAst][i], expectedType: dslType, parent, parentParam, topComp, tgpModel, filePath, parentType,
-        tgpPath: [tgpPath,i].join('~'), ctx}))
+        astFromParent: prof[primitivesAst][i], expectedType: dslType, parent, parentParam, topComp, tgpModel, filePath, parentType, tgpPath: [tgpPath,i].join('~')}))
     } else if (comp && prof.$ != 'asIs') {
       ;[...(comp.params || []), ...systemParams].forEach(p=> 
           resolveProfileTypes(prof[p.id], { 
             astFromParent: prof[primitivesAst]?.[p.id], expectedType: p.$dslType, parentType: dslType, parent: prof, 
-            parentParam: p, topComp, tgpModel, filePath, tgpPath: [tgpPath,p.id].join('~'), ctx}))
+            parentParam: p, topComp, tgpModel, filePath, tgpPath: [tgpPath,p.id].join('~')}))
     } else if (!comp && prof.$) {
         logError(`resolveProfile - can not resolve ${prof.$} at ${topComp && topComp.$$} ${tgpPath} expected type ${dslType || 'unknown'}`, 
             {tgpModel, filePath, compId: prof.$, prof, expectedType, dslType, topComp, parentType})
