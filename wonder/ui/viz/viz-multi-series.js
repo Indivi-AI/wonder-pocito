@@ -4,16 +4,16 @@ import './viz-types.js'
 
 const {
   echart: {
-    EChartsOption, 'series-option': {bar}, 'title-option': {title}, 'tooltip-option': {tooltip}, 'legend-option': {legend},
-    'text-style-option': {textStyle}, 'grid-option': {grid}, 'axis-option': {xAxis, yAxis}, 'axis-line-option': {axisLine},
-    'axis-tick-option': {axisTick}, 'axis-label-option': {axisLabel}, 'split-line-option': {splitLine},
-    'axis-pointer-option': {axisPointer}, 'line-style-option': {lineStyle}, 'item-style-option': {itemStyle},
-    'emphasis-option': {emphasis}, 'label-option': {label}
+    ECharts, 'series': {bar}, 'title': {title}, 'tooltip': {tooltip}, 'legend': {legend},
+    'text-style': {textStyle}, 'grid': {grid}, 'axis': {xAxis, yAxis}, 'axis-line': {axisLine},
+    'axis-tick': {axisTick}, 'axis-label': {axisLabel}, 'split-line': {splitLine},
+    'axis-pointer': {axisPointer}, 'line-style': {lineStyle}, 'item-style': {itemStyle},
+    'emphasis': {emphasis}, 'label': {label}
   },
   viz: {'viz-theme': {defaultTheme}, 'viz-value-format': {compact}}
 } = dsls
 
-EChartsOption('viz.groupedBar', {
+ECharts('viz.groupedBar', {
   params: [
     {id: 'categories', as: 'array'},
     {id: 'series', type: 'viz-series<viz>[]'},
@@ -22,7 +22,7 @@ EChartsOption('viz.groupedBar', {
     {id: 'valueFormat', type: 'viz-value-format<viz>', byName: true, defaultValue: compact()},
     {id: 'theme', type: 'viz-theme<viz>', defaultValue: defaultTheme()},
     {id: 'yLabel', as: 'string'},
-    {id: 'mainTitle', type: 'title-option<echart>', dynamic: true, defaultValue: title({
+    {id: 'mainTitle', type: 'title<echart>', dynamic: true, defaultValue: title({
       text: '%title%',
       show: '%showTitle%',
       subtext: '%note%',
@@ -31,19 +31,19 @@ EChartsOption('viz.groupedBar', {
       textStyle: textStyle({ color: '%ink%', fontWeight: 600, fontSize: 15 }),
       subtextStyle: textStyle({ color: '%accent%', fontWeight: 600, fontSize: 12 })
     })},
-    {id: 'gridOption', type: 'grid-option<echart>', dynamic: true, defaultValue: grid({ left: 8, right: 18, top: '%gridTop%', bottom: '%gridBottom%', containLabel: true })},
-    {id: 'tooltipOption', type: 'tooltip-option<echart>', dynamic: true, defaultValue: tooltip({
+    {id: 'gridOption', type: 'grid<echart>', dynamic: true, defaultValue: grid({ left: 8, right: 18, top: '%gridTop%', bottom: '%gridBottom%', containLabel: true })},
+    {id: 'tooltipOption', type: 'tooltip<echart>', dynamic: true, defaultValue: tooltip({
       trigger: 'axis',
       valueFormatter: (ctx, {format}) => format(ctx.data),
       axisPointer: axisPointer({ type: 'shadow', shadowStyle: {color: 'rgba(37,99,235,0.06)'} })
     })},
-    {id: 'legendOption', type: 'legend-option<echart>', dynamic: true, defaultValue: legend({
+    {id: 'legendOption', type: 'legend<echart>', dynamic: true, defaultValue: legend({
       Data: '%legendData%',
       show: '%showLegend%',
       bottom: 2,
       textStyle: textStyle({ color: '#475569', fontSize: 12 })
     })},
-    {id: 'categoryAxis', type: 'axis-option<echart>', dynamic: true, defaultValue: xAxis({
+    {id: 'categoryAxis', type: 'axis<echart>', dynamic: true, defaultValue: xAxis({
       type: 'category',
       Data: '%categories%',
       boundaryGap: true,
@@ -51,7 +51,7 @@ EChartsOption('viz.groupedBar', {
       axisTick: axisTick({ show: false }),
       axisLabel: axisLabel({ show: true, color: '%mute%', fontSize: 10, hideOverlap: true })
     })},
-    {id: 'valueAxis', type: 'axis-option<echart>', dynamic: true, defaultValue: yAxis({
+    {id: 'valueAxis', type: 'axis<echart>', dynamic: true, defaultValue: yAxis({
       type: 'value',
       name: '%yLabel%',
       nameTextStyle: textStyle({ color: '%mute%', fontSize: 11 }),
@@ -64,7 +64,7 @@ EChartsOption('viz.groupedBar', {
       }),
       splitLine: splitLine({ lineStyle: lineStyle({ color: '#f1f5f9' }) })
     })},
-    {id: 'seriesOption', type: 'series-option<echart>', dynamic: true, defaultValue: bar({
+    {id: 'seriesOption', type: 'series<echart>', dynamic: true, defaultValue: bar({
       Data: '%Data%',
       name: '%name%',
       barMaxWidth: 34,
@@ -99,7 +99,7 @@ EChartsOption('viz.groupedBar', {
   }
 })
 
-EChartsOption('viz.stackedBar', {
+ECharts('viz.stackedBar', {
   params: [
     {id: 'categories', as: 'array'},
     {id: 'series', type: 'viz-series<viz>[]'},
@@ -108,7 +108,7 @@ EChartsOption('viz.stackedBar', {
     {id: 'valueFormat', type: 'viz-value-format<viz>', byName: true, defaultValue: compact()},
     {id: 'theme', type: 'viz-theme<viz>', defaultValue: defaultTheme()},
     {id: 'yLabel', as: 'string'},
-    {id: 'mainTitle', type: 'title-option<echart>', dynamic: true, defaultValue: title({
+    {id: 'mainTitle', type: 'title<echart>', dynamic: true, defaultValue: title({
       text: '%title%',
       show: '%showTitle%',
       subtext: '%note%',
@@ -117,19 +117,19 @@ EChartsOption('viz.stackedBar', {
       textStyle: textStyle({ color: '%ink%', fontWeight: 600, fontSize: 15 }),
       subtextStyle: textStyle({ color: '%accent%', fontWeight: 600, fontSize: 12 })
     })},
-    {id: 'gridOption', type: 'grid-option<echart>', dynamic: true, defaultValue: grid({ left: 52, right: 18, top: '%gridTop%', bottom: '%gridBottom%', containLabel: true })},
-    {id: 'tooltipOption', type: 'tooltip-option<echart>', dynamic: true, defaultValue: tooltip({
+    {id: 'gridOption', type: 'grid<echart>', dynamic: true, defaultValue: grid({ left: 52, right: 18, top: '%gridTop%', bottom: '%gridBottom%', containLabel: true })},
+    {id: 'tooltipOption', type: 'tooltip<echart>', dynamic: true, defaultValue: tooltip({
       trigger: 'axis',
       valueFormatter: (ctx, {format}) => format(ctx.data),
       axisPointer: axisPointer({ type: 'shadow', shadowStyle: {color: 'rgba(37,99,235,0.06)'} })
     })},
-    {id: 'legendOption', type: 'legend-option<echart>', dynamic: true, defaultValue: legend({
+    {id: 'legendOption', type: 'legend<echart>', dynamic: true, defaultValue: legend({
       Data: '%legendData%',
       show: '%showLegend%',
       bottom: 2,
       textStyle: textStyle({ color: '#475569', fontSize: 12 })
     })},
-    {id: 'categoryAxis', type: 'axis-option<echart>', dynamic: true, defaultValue: xAxis({
+    {id: 'categoryAxis', type: 'axis<echart>', dynamic: true, defaultValue: xAxis({
       type: 'category',
       Data: '%categories%',
       boundaryGap: true,
@@ -137,7 +137,7 @@ EChartsOption('viz.stackedBar', {
       axisTick: axisTick({ show: false }),
       axisLabel: axisLabel({ show: true, color: '%mute%', fontSize: 10, hideOverlap: true })
     })},
-    {id: 'valueAxis', type: 'axis-option<echart>', dynamic: true, defaultValue: yAxis({
+    {id: 'valueAxis', type: 'axis<echart>', dynamic: true, defaultValue: yAxis({
       type: 'value',
       name: '%yLabel%',
       nameTextStyle: textStyle({ color: '%mute%', fontSize: 11 }),
@@ -150,7 +150,7 @@ EChartsOption('viz.stackedBar', {
       }),
       splitLine: splitLine({ lineStyle: lineStyle({ color: '#f1f5f9' }) })
     })},
-    {id: 'seriesOption', type: 'series-option<echart>', dynamic: true, defaultValue: bar({
+    {id: 'seriesOption', type: 'series<echart>', dynamic: true, defaultValue: bar({
       Data: '%Data%',
       name: '%name%',
       stack: 'total',
@@ -173,7 +173,7 @@ EChartsOption('viz.stackedBar', {
       labelLayout: {hideOverlap: true},
       z: '%z%'
     })},
-    {id: 'totalSeries', type: 'series-option<echart>', dynamic: true, defaultValue: bar({
+    {id: 'totalSeries', type: 'series<echart>', dynamic: true, defaultValue: bar({
       Data: '%totalData%',
       stack: 'total',
       silent: true,

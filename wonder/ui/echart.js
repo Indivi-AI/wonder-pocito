@@ -6,7 +6,7 @@ const { react: { ReactComp, 'react-comp': { comp }, 'react-metadata': { importUr
 
 ReactComp('EChart', {
   params: [
-    {id: 'option', type: 'echarts-option<echart>', dynamic: true}
+    {id: 'option', type: 'echarts<echart>', dynamic: true}
   ],
   impl: comp({
     hFunc: (ctx, {react: {h, useEffect, useRef}}, {option}) => () => {

@@ -2,137 +2,137 @@ import { dsls } from '@jb6/core'
 
 const { tgp: { TgpType } } = dsls
 
-TgpType('text-style-option', 'echart', {
+TgpType('text-style', 'echart', {
   typescript: '{ color?: any, fontStyle?: string, fontWeight?: string | number, fontFamily?: string, fontSize?: number, align?: string, padding?: any }'
 })
-TgpType('item-style-option', 'echart', {
+TgpType('item-style', 'echart', {
   typescript: `{
     color?: any, opacity?: number, borderColor?: string, borderWidth?: number, borderRadius?: any,
     shadowBlur?: number, shadowColor?: string, gapWidth?: number
   }`
 })
-TgpType('line-style-option', 'echart', {typescript: '{ color?: any, width?: number, opacity?: number, type?: string }'})
-TgpType('area-style-option', 'echart', {typescript: '{ color?: any, opacity?: number }'})
-TgpType('label-option', 'echart', {
+TgpType('line-style', 'echart', {typescript: '{ color?: any, width?: number, opacity?: number, type?: string }'})
+TgpType('area-style', 'echart', {typescript: '{ color?: any, opacity?: number }'})
+TgpType('label', 'echart', {
   typescript: `{
     show?: boolean, position?: any, distance?: number, color?: any, fontSize?: number, fontWeight?: string | number,
     formatter?: (params: any) => any, width?: number, overflow?: string, alignTo?: string, edgeDistance?: any, minMargin?: number, rich?: object
   }`
 })
-TgpType('label-line-option', 'echart', {
-  typescript: '{ show?: boolean, length?: number, length2?: number, smooth?: boolean, lineStyle?: LineStyleOption }'
+TgpType('label-line', 'echart', {
+  typescript: '{ show?: boolean, length?: number, length2?: number, smooth?: boolean, lineStyle?: LineStyle }'
 })
-TgpType('emphasis-option', 'echart', {
+TgpType('emphasis', 'echart', {
   typescript: `{
-    focus?: string, scale?: boolean, scaleSize?: number, disabled?: boolean, itemStyle?: ItemStyleOption,
-    label?: LabelOption, lineStyle?: LineStyleOption, areaStyle?: AreaStyleOption
+    focus?: string, scale?: boolean, scaleSize?: number, disabled?: boolean, itemStyle?: ItemStyle,
+    label?: Label, lineStyle?: LineStyle, areaStyle?: AreaStyle
   }`
 })
-TgpType('axis-line-option', 'echart', {typescript: '{ show?: boolean, lineStyle?: LineStyleOption }'})
-TgpType('axis-tick-option', 'echart', {
-  typescript: '{ show?: boolean, alignWithLabel?: boolean, distance?: number, length?: number, lineStyle?: LineStyleOption }'
+TgpType('axis-line', 'echart', {typescript: '{ show?: boolean, lineStyle?: LineStyle }'})
+TgpType('axis-tick', 'echart', {
+  typescript: '{ show?: boolean, alignWithLabel?: boolean, distance?: number, length?: number, lineStyle?: LineStyle }'
 })
-TgpType('axis-label-option', 'echart', {
+TgpType('axis-label', 'echart', {
   typescript: `{
     show?: boolean, color?: any, fontSize?: number, fontWeight?: string | number, formatter?: (value: any) => any,
     interval?: any, hideOverlap?: boolean, rotate?: number, width?: number, overflow?: string, distance?: number
   }`
 })
-TgpType('split-line-option', 'echart', {
-  typescript: '{ show?: boolean, distance?: number, length?: number, lineStyle?: LineStyleOption }'
+TgpType('split-line', 'echart', {
+  typescript: '{ show?: boolean, distance?: number, length?: number, lineStyle?: LineStyle }'
 })
-TgpType('split-area-option', 'echart', {typescript: '{ show?: boolean, areaStyle?: AreaStyleOption }'})
-TgpType('axis-pointer-option', 'echart', {typescript: '{ type?: string, lineStyle?: LineStyleOption, shadowStyle?: object }'})
-TgpType('mark-line-option', 'echart', {
-  typescript: '{ silent?: boolean, symbol?: any, lineStyle?: LineStyleOption, data?: any[] }'
+TgpType('split-area', 'echart', {typescript: '{ show?: boolean, areaStyle?: AreaStyle }'})
+TgpType('axis-pointer', 'echart', {typescript: '{ type?: string, lineStyle?: LineStyle, shadowStyle?: object }'})
+TgpType('mark-line', 'echart', {
+  typescript: '{ silent?: boolean, symbol?: any, lineStyle?: LineStyle, data?: any[] }'
 })
-TgpType('mark-point-option', 'echart', {
-  typescript: '{ symbol?: any, symbolSize?: any, itemStyle?: ItemStyleOption, data?: any[] }'
+TgpType('mark-point', 'echart', {
+  typescript: '{ symbol?: any, symbolSize?: any, itemStyle?: ItemStyle, data?: any[] }'
 })
-TgpType('progress-option', 'echart', {
-  typescript: '{ show?: boolean, width?: number, roundCap?: boolean, itemStyle?: ItemStyleOption }'
+TgpType('progress', 'echart', {
+  typescript: '{ show?: boolean, width?: number, roundCap?: boolean, itemStyle?: ItemStyle }'
 })
-TgpType('pointer-option', 'echart', {
-  typescript: '{ show?: boolean, width?: number, length?: any, offsetCenter?: any[], keepAspect?: boolean, icon?: string, itemStyle?: ItemStyleOption }'
+TgpType('pointer', 'echart', {
+  typescript: '{ show?: boolean, width?: number, length?: any, offsetCenter?: any[], keepAspect?: boolean, icon?: string, itemStyle?: ItemStyle }'
 })
-TgpType('anchor-option', 'echart', {typescript: '{ show?: boolean, size?: number, itemStyle?: ItemStyleOption }'})
-TgpType('detail-option', 'echart', {
+TgpType('anchor', 'echart', {typescript: '{ show?: boolean, size?: number, itemStyle?: ItemStyle }'})
+TgpType('detail', 'echart', {
   typescript: `{
     show?: boolean, valueAnimation?: boolean, formatter?: (value: any) => any, fontSize?: number,
     fontWeight?: string | number, color?: any, offsetCenter?: any[]
   }`
 })
-TgpType('breadcrumb-option', 'echart', {typescript: '{ show?: boolean }'})
-TgpType('in-range-option', 'echart', {typescript: '{ color?: string[] }'})
+TgpType('breadcrumb', 'echart', {typescript: '{ show?: boolean }'})
+TgpType('in-range', 'echart', {typescript: '{ color?: string[] }'})
 TgpType('dataset-transform', 'echart', {
   typescript: `{
     type: string, config?: object,
     transform?: (params: EChartsTransformParams) => EChartsTransformResult | EChartsTransformResult[]
   }`
 })
-TgpType('dataset-option', 'echart', {
+TgpType('dataset', 'echart', {
   typescript: '{ source?: any[], fromDatasetIndex?: number, fromDatasetId?: string, transform?: DatasetTransform }'
 })
-TgpType('encode-option', 'echart', {
+TgpType('encode', 'echart', {
   typescript: '{ x?: string | number, y?: string | number, itemName?: string | number, tooltip?: (string | number)[] }'
 })
-TgpType('echarts-option', 'echart', {
-  modifierId: 'EChartsOption',
+TgpType('echarts', 'echart', {
+  modifierId: 'ECharts',
   typescript: `{
-    color?: string[], animation?: boolean, textStyle?: TextStyleOption,
-    title?: TitleOption | TitleOption[], tooltip?: TooltipOption, legend?: LegendOption,
-    grid?: GridOption, xAxis?: AxisOption | AxisOption[], yAxis?: AxisOption | AxisOption[],
-    dataZoom?: DataZoomOption[], visualMap?: VisualMapOption, radar?: RadarOption,
-    dataset?: DatasetOption | DatasetOption[], graphic?: GraphicElementOption[], series: SeriesOption[]
+    color?: string[], animation?: boolean, textStyle?: TextStyle,
+    title?: Title | Title[], tooltip?: Tooltip, legend?: Legend,
+    grid?: Grid, xAxis?: Axis | Axis[], yAxis?: Axis | Axis[],
+    dataZoom?: DataZoom[], visualMap?: VisualMap, radar?: Radar,
+    dataset?: Dataset | Dataset[], graphic?: GraphicElement[], series: Series[]
   }`
 })
-TgpType('title-option', 'echart', {
+TgpType('title', 'echart', {
   typescript: `{
     show?: boolean, text?: string, subtext?: string, left?: any, top?: any, textVerticalAlign?: string,
-    textStyle?: TextStyleOption, subtextStyle?: TextStyleOption
+    textStyle?: TextStyle, subtextStyle?: TextStyle
   }`
 })
-TgpType('tooltip-option', 'echart', {
+TgpType('tooltip', 'echart', {
   typescript: `{
     show?: boolean, trigger?: string, formatter?: Function, valueFormatter?: Function,
-    position?: any, confine?: boolean, borderColor?: string, textStyle?: TextStyleOption, axisPointer?: AxisPointerOption
+    position?: any, confine?: boolean, borderColor?: string, textStyle?: TextStyle, axisPointer?: AxisPointer
   }`
 })
-TgpType('legend-option', 'echart', {
-  typescript: '{ show?: boolean, data?: string[], type?: string, bottom?: any, itemWidth?: number, itemGap?: number, textStyle?: TextStyleOption }'
+TgpType('legend', 'echart', {
+  typescript: '{ show?: boolean, data?: string[], type?: string, bottom?: any, itemWidth?: number, itemGap?: number, textStyle?: TextStyle }'
 })
-TgpType('grid-option', 'echart', {typescript: '{ left?: any, right?: any, top?: any, bottom?: any, containLabel?: boolean }'})
-TgpType('axis-option', 'echart', {
+TgpType('grid', 'echart', {typescript: '{ left?: any, right?: any, top?: any, bottom?: any, containLabel?: boolean }'})
+TgpType('axis', 'echart', {
   typescript: `{
     type?: string, data?: any[], name?: string, nameLocation?: string, nameGap?: number,
-    nameTextStyle?: TextStyleOption, boundaryGap?: any, axisLine?: AxisLineOption, axisTick?: AxisTickOption,
-    axisLabel?: AxisLabelOption, splitLine?: SplitLineOption, splitArea?: SplitAreaOption, inverse?: boolean,
+    nameTextStyle?: TextStyle, boundaryGap?: any, axisLine?: AxisLine, axisTick?: AxisTick,
+    axisLabel?: AxisLabel, splitLine?: SplitLine, splitArea?: SplitArea, inverse?: boolean,
     scale?: boolean, minInterval?: number, triggerEvent?: boolean
   }`
 })
-TgpType('data-zoom-option', 'echart', {
+TgpType('data-zoom', 'echart', {
   typescript: `{
     type?: string, xAxisIndex?: number, yAxisIndex?: number, height?: number,
     bottom?: any, borderColor?: string, fillerColor?: string
   }`
 })
-TgpType('visual-map-option', 'echart', {
+TgpType('visual-map', 'echart', {
   typescript: `{
     min?: number, max?: number, calculable?: boolean, orient?: string, left?: any, bottom?: any,
-    itemWidth?: number, itemHeight?: number, inRange?: InRangeOption, textStyle?: TextStyleOption, formatter?: Function
+    itemWidth?: number, itemHeight?: number, inRange?: InRange, textStyle?: TextStyle, formatter?: Function
   }`
 })
-TgpType('radar-option', 'echart', {
+TgpType('radar', 'echart', {
   typescript: `{
     indicator?: {name: string, max: number}[], center?: any[], radius?: any,
-    axisName?: TextStyleOption, nameGap?: number, splitNumber?: number, axisLine?: AxisLineOption,
-    splitLine?: SplitLineOption, splitArea?: SplitAreaOption
+    axisName?: TextStyle, nameGap?: number, splitNumber?: number, axisLine?: AxisLine,
+    splitLine?: SplitLine, splitArea?: SplitArea
   }`
 })
-TgpType('graphic-element-option', 'echart', {
+TgpType('graphic-element', 'echart', {
   typescript: '{ type: string, z?: number, right?: any, left?: any, top?: any, style?: object, silent?: boolean }'
 })
-TgpType('series-option', 'echart', {
+TgpType('series', 'echart', {
   typescript: `{
     type: 'pie' | 'bar' | 'line' | 'scatter' | 'heatmap' | 'boxplot' | 'funnel' | 'gauge' | 'treemap' | 'radar',
     name?: string, data?: any[]
@@ -140,11 +140,11 @@ TgpType('series-option', 'echart', {
 })
 
 const { echart: {
-  TextStyleOption, ItemStyleOption, LineStyleOption, AreaStyleOption, LabelOption, LabelLineOption, EmphasisOption,
-  AxisLineOption, AxisTickOption, AxisLabelOption, SplitLineOption, SplitAreaOption, AxisPointerOption, MarkLineOption,
-  MarkPointOption, ProgressOption, PointerOption, AnchorOption, DetailOption, BreadcrumbOption, InRangeOption, EChartsOption,
-  TitleOption, TooltipOption, LegendOption, GridOption, AxisOption, DataZoomOption, VisualMapOption, RadarOption,
-  GraphicElementOption, SeriesOption, DatasetTransform, DatasetOption, EncodeOption
+  TextStyle, ItemStyle, LineStyle, AreaStyle, Label, LabelLine, Emphasis,
+  AxisLine, AxisTick, AxisLabel, SplitLine, SplitArea, AxisPointer, MarkLine,
+  MarkPoint, Progress, Pointer, Anchor, Detail, Breadcrumb, InRange, ECharts,
+  Title, Tooltip, Legend, Grid, Axis, DataZoom, VisualMap, Radar,
+  GraphicElement, Series, DatasetTransform, Dataset, Encode
 } } = dsls
 
 DatasetTransform('boundIQR', {
@@ -176,7 +176,7 @@ DatasetTransform('bin', {
   })
 })
 
-DatasetOption('dataset', {
+Dataset('dataset', {
   params: [
     {id: 'source', byName: true},
     {id: 'fromDatasetIndex', as: 'number'},
@@ -186,7 +186,7 @@ DatasetOption('dataset', {
   impl: ({}, {}, option) => Object.fromEntries(Object.entries(option).filter(([, value]) => value != null && value !== ''))
 })
 
-EncodeOption('encode', {
+Encode('encode', {
   params: [
     {id: 'x', byName: true},
     {id: 'y'},
@@ -195,7 +195,7 @@ EncodeOption('encode', {
   ]
 })
 
-TextStyleOption('textStyle', {
+TextStyle('textStyle', {
   params: [
     {id: 'color', byName: true},
     {id: 'fontStyle', as: 'string', options: 'normal,italic,oblique'},
@@ -207,7 +207,7 @@ TextStyleOption('textStyle', {
   ]
 })
 
-ItemStyleOption('itemStyle', {
+ItemStyle('itemStyle', {
   params: [
     {id: 'color', byName: true},
     {id: 'opacity', as: 'number'},
@@ -220,7 +220,7 @@ ItemStyleOption('itemStyle', {
   ]
 })
 
-LineStyleOption('lineStyle', {
+LineStyle('lineStyle', {
   params: [
     {id: 'color', byName: true},
     {id: 'width', as: 'number'},
@@ -229,14 +229,14 @@ LineStyleOption('lineStyle', {
   ]
 })
 
-AreaStyleOption('areaStyle', {
+AreaStyle('areaStyle', {
   params: [
     {id: 'color', byName: true},
     {id: 'opacity', as: 'number'}
   ]
 })
 
-LabelOption('label', {
+Label('label', {
   params: [
     {id: 'show', byName: true, type: 'boolean<common>'},
     {id: 'position'},
@@ -256,47 +256,47 @@ LabelOption('label', {
     ...(formatter.profile == null ? {} : {formatter: params => formatter(ctx.setData(params))})})
 })
 
-LabelLineOption('labelLine', {
+LabelLine('labelLine', {
   params: [
     {id: 'show', byName: true, type: 'boolean<common>'},
     {id: 'length', as: 'number'},
     {id: 'length2', as: 'number'},
     {id: 'smooth', type: 'boolean<common>'},
-    {id: 'lineStyle', type: 'line-style-option<echart>'}
+    {id: 'lineStyle', type: 'line-style<echart>'}
   ]
 })
 
-EmphasisOption('emphasis', {
+Emphasis('emphasis', {
   params: [
     {id: 'focus', as: 'string', options: 'none,self,series,adjacency', byName: true},
     {id: 'scale', type: 'boolean<common>'},
     {id: 'scaleSize', as: 'number'},
     {id: 'disabled', type: 'boolean<common>'},
-    {id: 'itemStyle', type: 'item-style-option<echart>'},
-    {id: 'label', type: 'label-option<echart>'},
-    {id: 'lineStyle', type: 'line-style-option<echart>'},
-    {id: 'areaStyle', type: 'area-style-option<echart>'}
+    {id: 'itemStyle', type: 'item-style<echart>'},
+    {id: 'label', type: 'label<echart>'},
+    {id: 'lineStyle', type: 'line-style<echart>'},
+    {id: 'areaStyle', type: 'area-style<echart>'}
   ]
 })
 
-AxisLineOption('axisLine', {
+AxisLine('axisLine', {
   params: [
     {id: 'show', byName: true, type: 'boolean<common>'},
-    {id: 'lineStyle', type: 'line-style-option<echart>'}
+    {id: 'lineStyle', type: 'line-style<echart>'}
   ]
 })
 
-AxisTickOption('axisTick', {
+AxisTick('axisTick', {
   params: [
     {id: 'show', byName: true, type: 'boolean<common>'},
     {id: 'alignWithLabel', type: 'boolean<common>'},
     {id: 'distance', as: 'number'},
     {id: 'length', as: 'number'},
-    {id: 'lineStyle', type: 'line-style-option<echart>'}
+    {id: 'lineStyle', type: 'line-style<echart>'}
   ]
 })
 
-AxisLabelOption('axisLabel', {
+AxisLabel('axisLabel', {
   params: [
     {id: 'show', byName: true, type: 'boolean<common>'},
     {id: 'color'},
@@ -314,60 +314,60 @@ AxisLabelOption('axisLabel', {
     ...(formatter.profile == null ? {} : {formatter: value => formatter(ctx.setData(value))})})
 })
 
-SplitLineOption('splitLine', {
+SplitLine('splitLine', {
   params: [
     {id: 'show', byName: true, type: 'boolean<common>'},
     {id: 'distance', as: 'number'},
     {id: 'length', as: 'number'},
-    {id: 'lineStyle', type: 'line-style-option<echart>'}
+    {id: 'lineStyle', type: 'line-style<echart>'}
   ]
 })
 
-SplitAreaOption('splitArea', {
+SplitArea('splitArea', {
   params: [
     {id: 'show', byName: true, type: 'boolean<common>'},
-    {id: 'areaStyle', type: 'area-style-option<echart>'}
+    {id: 'areaStyle', type: 'area-style<echart>'}
   ]
 })
 
-AxisPointerOption('axisPointer', {
+AxisPointer('axisPointer', {
   params: [
     {id: 'type', as: 'string', options: 'line,shadow,none,cross', byName: true},
-    {id: 'lineStyle', type: 'line-style-option<echart>'},
+    {id: 'lineStyle', type: 'line-style<echart>'},
     {id: 'shadowStyle', as: 'object'}
   ]
 })
 
-MarkLineOption('markLine', {
+MarkLine('markLine', {
   params: [
     {id: 'Data', as: 'array', byName: true},
     {id: 'silent', type: 'boolean<common>'},
     {id: 'symbol'},
-    {id: 'lineStyle', type: 'line-style-option<echart>'}
+    {id: 'lineStyle', type: 'line-style<echart>'}
   ],
   impl: ({}, {}, {Data, ...option}) => ({...option, data: Data})
 })
 
-MarkPointOption('markPoint', {
+MarkPoint('markPoint', {
   params: [
     {id: 'Data', as: 'array', byName: true},
     {id: 'symbol'},
     {id: 'symbolSize'},
-    {id: 'itemStyle', type: 'item-style-option<echart>'}
+    {id: 'itemStyle', type: 'item-style<echart>'}
   ],
   impl: ({}, {}, {Data, ...option}) => ({...option, data: Data})
 })
 
-ProgressOption('progress', {
+Progress('progress', {
   params: [
     {id: 'show', byName: true, type: 'boolean<common>'},
     {id: 'width', as: 'number'},
     {id: 'roundCap', type: 'boolean<common>'},
-    {id: 'itemStyle', type: 'item-style-option<echart>'}
+    {id: 'itemStyle', type: 'item-style<echart>'}
   ]
 })
 
-PointerOption('pointer', {
+Pointer('pointer', {
   params: [
     {id: 'show', byName: true, type: 'boolean<common>'},
     {id: 'width', as: 'number'},
@@ -375,19 +375,19 @@ PointerOption('pointer', {
     {id: 'offsetCenter', as: 'array'},
     {id: 'keepAspect', type: 'boolean<common>'},
     {id: 'icon', as: 'string'},
-    {id: 'itemStyle', type: 'item-style-option<echart>'}
+    {id: 'itemStyle', type: 'item-style<echart>'}
   ]
 })
 
-AnchorOption('anchor', {
+Anchor('anchor', {
   params: [
     {id: 'show', byName: true, type: 'boolean<common>'},
     {id: 'size', as: 'number'},
-    {id: 'itemStyle', type: 'item-style-option<echart>'}
+    {id: 'itemStyle', type: 'item-style<echart>'}
   ]
 })
 
-DetailOption('detail', {
+Detail('detail', {
   params: [
     {id: 'show', byName: true, type: 'boolean<common>'},
     {id: 'valueAnimation', type: 'boolean<common>'},
@@ -401,39 +401,39 @@ DetailOption('detail', {
     ...(formatter.profile == null ? {} : {formatter: value => formatter(ctx.setData(value))})})
 })
 
-BreadcrumbOption('breadcrumb', {
+Breadcrumb('breadcrumb', {
   params: [
     {id: 'show', byName: true, type: 'boolean<common>'}
   ]
 })
 
-InRangeOption('inRange', {
+InRange('inRange', {
   params: [
     {id: 'color', as: 'array', byName: true}
   ]
 })
 
-EChartsOption('option', {
+ECharts('option', {
   params: [
-    {id: 'series', type: 'series-option<echart>[]', byName: true},
+    {id: 'series', type: 'series<echart>[]', byName: true},
     {id: 'color', as: 'array'},
     {id: 'animation', type: 'boolean<common>'},
-    {id: 'textStyle', type: 'text-style-option<echart>'},
-    {id: 'title', type: 'title-option<echart>[]'},
-    {id: 'tooltip', type: 'tooltip-option<echart>'},
-    {id: 'legend', type: 'legend-option<echart>'},
-    {id: 'grid', type: 'grid-option<echart>'},
-    {id: 'xAxis', type: 'axis-option<echart>'},
-    {id: 'yAxis', type: 'axis-option<echart>'},
-    {id: 'dataZoom', type: 'data-zoom-option<echart>[]'},
-    {id: 'visualMap', type: 'visual-map-option<echart>'},
-    {id: 'radar', type: 'radar-option<echart>'},
-    {id: 'dataset', type: 'dataset-option<echart>[]'},
-    {id: 'graphic', type: 'graphic-element-option<echart>[]'}
+    {id: 'textStyle', type: 'text-style<echart>'},
+    {id: 'title', type: 'title<echart>[]'},
+    {id: 'tooltip', type: 'tooltip<echart>'},
+    {id: 'legend', type: 'legend<echart>'},
+    {id: 'grid', type: 'grid<echart>'},
+    {id: 'xAxis', type: 'axis<echart>'},
+    {id: 'yAxis', type: 'axis<echart>'},
+    {id: 'dataZoom', type: 'data-zoom<echart>[]'},
+    {id: 'visualMap', type: 'visual-map<echart>'},
+    {id: 'radar', type: 'radar<echart>'},
+    {id: 'dataset', type: 'dataset<echart>[]'},
+    {id: 'graphic', type: 'graphic-element<echart>[]'}
   ]
 })
 
-TitleOption('title', {
+Title('title', {
   params: [
     {id: 'text', as: 'string', byName: true},
     {id: 'show', type: 'boolean<common>'},
@@ -441,12 +441,12 @@ TitleOption('title', {
     {id: 'left'},
     {id: 'top'},
     {id: 'textVerticalAlign', as: 'string', options: 'top,middle,bottom'},
-    {id: 'textStyle', type: 'text-style-option<echart>'},
-    {id: 'subtextStyle', type: 'text-style-option<echart>'}
+    {id: 'textStyle', type: 'text-style<echart>'},
+    {id: 'subtextStyle', type: 'text-style<echart>'}
   ]
 })
 
-TooltipOption('tooltip', {
+Tooltip('tooltip', {
   params: [
     {id: 'trigger', as: 'string', options: 'item,axis,none', byName: true},
     {id: 'formatter', dynamic: true},
@@ -454,8 +454,8 @@ TooltipOption('tooltip', {
     {id: 'position'},
     {id: 'confine', type: 'boolean<common>'},
     {id: 'borderColor', as: 'string'},
-    {id: 'textStyle', type: 'text-style-option<echart>'},
-    {id: 'axisPointer', type: 'axis-pointer-option<echart>'},
+    {id: 'textStyle', type: 'text-style<echart>'},
+    {id: 'axisPointer', type: 'axis-pointer<echart>'},
     {id: 'show', type: 'boolean<common>'}
   ],
   impl: (ctx, {}, {formatter, valueFormatter, ...option}) => ({...option,
@@ -463,7 +463,7 @@ TooltipOption('tooltip', {
     ...(valueFormatter.profile == null ? {} : {valueFormatter: value => valueFormatter(ctx.setData(value))})})
 })
 
-LegendOption('legend', {
+Legend('legend', {
   params: [
     {id: 'Data', as: 'array', byName: true},
     {id: 'show', type: 'boolean<common>'},
@@ -471,12 +471,12 @@ LegendOption('legend', {
     {id: 'bottom'},
     {id: 'itemWidth', as: 'number'},
     {id: 'itemGap', as: 'number'},
-    {id: 'textStyle', type: 'text-style-option<echart>'}
+    {id: 'textStyle', type: 'text-style<echart>'}
   ],
   impl: ({}, {}, {Data, ...option}) => ({...Object.fromEntries(Object.entries(option).filter(([, value]) => value != null)), data: Data})
 })
 
-GridOption('grid', {
+Grid('grid', {
   params: [
     {id: 'left', byName: true},
     {id: 'right'},
@@ -486,20 +486,20 @@ GridOption('grid', {
   ]
 })
 
-AxisOption('xAxis', {
+Axis('xAxis', {
   params: [
     {id: 'type', as: 'string', options: 'value,category,time,log', byName: true},
     {id: 'Data'},
     {id: 'name', as: 'string'},
     {id: 'nameLocation', as: 'string', options: 'start,middle,end'},
     {id: 'nameGap', as: 'number'},
-    {id: 'nameTextStyle', type: 'text-style-option<echart>'},
+    {id: 'nameTextStyle', type: 'text-style<echart>'},
     {id: 'boundaryGap'},
-    {id: 'axisLine', type: 'axis-line-option<echart>'},
-    {id: 'axisTick', type: 'axis-tick-option<echart>'},
-    {id: 'axisLabel', type: 'axis-label-option<echart>'},
-    {id: 'splitLine', type: 'split-line-option<echart>'},
-    {id: 'splitArea', type: 'split-area-option<echart>'},
+    {id: 'axisLine', type: 'axis-line<echart>'},
+    {id: 'axisTick', type: 'axis-tick<echart>'},
+    {id: 'axisLabel', type: 'axis-label<echart>'},
+    {id: 'splitLine', type: 'split-line<echart>'},
+    {id: 'splitArea', type: 'split-area<echart>'},
     {id: 'inverse', type: 'boolean<common>'},
     {id: 'scale', type: 'boolean<common>'},
     {id: 'minInterval', as: 'number'},
@@ -508,20 +508,20 @@ AxisOption('xAxis', {
   impl: ({}, {}, {Data, ...option}) => ({...option, ...(Data == null ? {} : {data: Data})})
 })
 
-AxisOption('yAxis', {
+Axis('yAxis', {
   params: [
     {id: 'type', as: 'string', options: 'value,category,time,log', byName: true},
     {id: 'Data'},
     {id: 'name', as: 'string'},
     {id: 'nameLocation', as: 'string', options: 'start,middle,end'},
     {id: 'nameGap', as: 'number'},
-    {id: 'nameTextStyle', type: 'text-style-option<echart>'},
+    {id: 'nameTextStyle', type: 'text-style<echart>'},
     {id: 'boundaryGap'},
-    {id: 'axisLine', type: 'axis-line-option<echart>'},
-    {id: 'axisTick', type: 'axis-tick-option<echart>'},
-    {id: 'axisLabel', type: 'axis-label-option<echart>'},
-    {id: 'splitLine', type: 'split-line-option<echart>'},
-    {id: 'splitArea', type: 'split-area-option<echart>'},
+    {id: 'axisLine', type: 'axis-line<echart>'},
+    {id: 'axisTick', type: 'axis-tick<echart>'},
+    {id: 'axisLabel', type: 'axis-label<echart>'},
+    {id: 'splitLine', type: 'split-line<echart>'},
+    {id: 'splitArea', type: 'split-area<echart>'},
     {id: 'inverse', type: 'boolean<common>'},
     {id: 'scale', type: 'boolean<common>'},
     {id: 'minInterval', as: 'number'},
@@ -530,7 +530,7 @@ AxisOption('yAxis', {
   impl: ({}, {}, {Data, ...option}) => ({...option, ...(Data == null ? {} : {data: Data})})
 })
 
-DataZoomOption('dataZoom', {
+DataZoom('dataZoom', {
   params: [
     {id: 'type', as: 'string', options: 'inside,slider', byName: true},
     {id: 'xAxisIndex', as: 'number'},
@@ -542,7 +542,7 @@ DataZoomOption('dataZoom', {
   ]
 })
 
-VisualMapOption('visualMap', {
+VisualMap('visualMap', {
   params: [
     {id: 'min', as: 'number', byName: true},
     {id: 'max', as: 'number'},
@@ -552,29 +552,29 @@ VisualMapOption('visualMap', {
     {id: 'bottom'},
     {id: 'itemWidth', as: 'number'},
     {id: 'itemHeight', as: 'number'},
-    {id: 'inRange', type: 'in-range-option<echart>'},
-    {id: 'textStyle', type: 'text-style-option<echart>'},
+    {id: 'inRange', type: 'in-range<echart>'},
+    {id: 'textStyle', type: 'text-style<echart>'},
     {id: 'formatter', dynamic: true}
   ],
   impl: (ctx, {}, {formatter, ...option}) => ({...option,
     ...(formatter.profile == null ? {} : {formatter: value => formatter(ctx.setData(value))})})
 })
 
-RadarOption('radar', {
+Radar('radar', {
   params: [
     {id: 'indicator', as: 'array', byName: true},
     {id: 'center', as: 'array'},
     {id: 'radius'},
-    {id: 'axisName', type: 'text-style-option<echart>'},
+    {id: 'axisName', type: 'text-style<echart>'},
     {id: 'nameGap', as: 'number'},
     {id: 'splitNumber', as: 'number'},
-    {id: 'axisLine', type: 'axis-line-option<echart>'},
-    {id: 'splitLine', type: 'split-line-option<echart>'},
-    {id: 'splitArea', type: 'split-area-option<echart>'}
+    {id: 'axisLine', type: 'axis-line<echart>'},
+    {id: 'splitLine', type: 'split-line<echart>'},
+    {id: 'splitArea', type: 'split-area<echart>'}
   ]
 })
 
-GraphicElementOption('graphic', {
+GraphicElement('graphic', {
   params: [
     {id: 'type', as: 'string', options: 'group,image,text,rect,circle,ring,sector,arc,polygon,polyline,line,bezierCurve', byName: true},
     {id: 'z', as: 'number'},
@@ -587,11 +587,11 @@ GraphicElementOption('graphic', {
 })
 
 const {
-  'item-style-option': {itemStyle}, 'emphasis-option': {emphasis}, 'label-line-option': {labelLine},
-  'line-style-option': {lineStyle}, 'label-option': {label}
+  'item-style': {itemStyle}, 'emphasis': {emphasis}, 'label-line': {labelLine},
+  'line-style': {lineStyle}, 'label': {label}
 } = dsls.echart
 
-SeriesOption('pie', {
+Series('pie', {
   params: [
     {id: 'Data', as: 'array', dynamic: true, byName: true},
     {id: 'name', as: 'string'},
@@ -600,21 +600,21 @@ SeriesOption('pie', {
     {id: 'avoidLabelOverlap', type: 'boolean<common>'},
     {id: 'minAngle', as: 'number', defaultValue: 6},
     {id: 'padAngle', as: 'number', defaultValue: 2},
-    {id: 'itemStyle', type: 'item-style-option<echart>', defaultValue: itemStyle({ borderColor: '#fff', borderWidth: 2, borderRadius: 4 })},
-    {id: 'emphasis', type: 'emphasis-option<echart>', defaultValue: emphasis({
+    {id: 'itemStyle', type: 'item-style<echart>', defaultValue: itemStyle({ borderColor: '#fff', borderWidth: 2, borderRadius: 4 })},
+    {id: 'emphasis', type: 'emphasis<echart>', defaultValue: emphasis({
       scaleSize: 6,
       itemStyle: itemStyle({ shadowBlur: 10, shadowColor: 'rgba(37,99,235,0.25)' })
     })},
     {id: 'selectedMode', defaultValue: 'single'},
     {id: 'selectedOffset', as: 'number'},
-    {id: 'labelLine', type: 'label-line-option<echart>', defaultValue: labelLine({
+    {id: 'labelLine', type: 'label-line<echart>', defaultValue: labelLine({
       show: '%showLabels%',
       length: 12,
       length2: 10,
       smooth: true,
       lineStyle: lineStyle({ color: '%mute%' })
     })},
-    {id: 'label', type: 'label-option<echart>', defaultValue: label({
+    {id: 'label', type: 'label<echart>', defaultValue: label({
       show: '%showLabels%',
       fontSize: 11,
       formatter: ctx => `${ctx.data.name}  ${ctx.data.percent}%`,
@@ -628,7 +628,7 @@ SeriesOption('pie', {
   impl: (ctx, {}, {Data, ...option}) => ({type: 'pie', ...option, data: Data(ctx)})
 })
 
-SeriesOption('bar', {
+Series('bar', {
   params: [
     {id: 'Data', as: 'array', dynamic: true, byName: true},
     {id: 'name', as: 'string'},
@@ -638,20 +638,20 @@ SeriesOption('bar', {
     {id: 'barMaxWidth', as: 'number'},
     {id: 'barGap'},
     {id: 'barCategoryGap'},
-    {id: 'itemStyle', type: 'item-style-option<echart>'},
-    {id: 'emphasis', type: 'emphasis-option<echart>'},
-    {id: 'label', type: 'label-option<echart>'},
+    {id: 'itemStyle', type: 'item-style<echart>'},
+    {id: 'emphasis', type: 'emphasis<echart>'},
+    {id: 'label', type: 'label<echart>'},
     {id: 'labelLayout', asIs: true},
-    {id: 'markLine', type: 'mark-line-option<echart>'},
-    {id: 'tooltip', type: 'tooltip-option<echart>'},
+    {id: 'markLine', type: 'mark-line<echart>'},
+    {id: 'tooltip', type: 'tooltip<echart>'},
     {id: 'datasetIndex', as: 'number'},
-    {id: 'encode', type: 'encode-option<echart>'},
+    {id: 'encode', type: 'encode<echart>'},
     {id: 'z', as: 'number'}
   ],
   impl: (ctx, {}, {Data, ...option}) => ({type: 'bar', ...option, ...(Data.profile == null ? {} : {data: Data(ctx)})})
 })
 
-SeriesOption('line', {
+Series('line', {
   params: [
     {id: 'Data', as: 'array', dynamic: true, byName: true},
     {id: 'name', as: 'string'},
@@ -660,52 +660,52 @@ SeriesOption('line', {
     {id: 'showSymbol', type: 'boolean<common>'},
     {id: 'symbolSize'},
     {id: 'stack', as: 'string'},
-    {id: 'lineStyle', type: 'line-style-option<echart>'},
-    {id: 'itemStyle', type: 'item-style-option<echart>'},
-    {id: 'areaStyle', type: 'area-style-option<echart>'},
-    {id: 'emphasis', type: 'emphasis-option<echart>'},
+    {id: 'lineStyle', type: 'line-style<echart>'},
+    {id: 'itemStyle', type: 'item-style<echart>'},
+    {id: 'areaStyle', type: 'area-style<echart>'},
+    {id: 'emphasis', type: 'emphasis<echart>'},
     {id: 'z', as: 'number'}
   ],
   impl: (ctx, {}, {Data, ...option}) => ({type: 'line', ...option, data: Data(ctx)})
 })
 
-SeriesOption('scatter', {
+Series('scatter', {
   params: [
     {id: 'Data', as: 'array', dynamic: true, byName: true},
     {id: 'name', as: 'string'},
     {id: 'symbol'},
     {id: 'symbolSize'},
-    {id: 'itemStyle', type: 'item-style-option<echart>'},
-    {id: 'emphasis', type: 'emphasis-option<echart>'},
+    {id: 'itemStyle', type: 'item-style<echart>'},
+    {id: 'emphasis', type: 'emphasis<echart>'},
     {id: 'silent', type: 'boolean<common>'},
     {id: 'z', as: 'number'}
   ],
   impl: (ctx, {}, {Data, ...option}) => ({type: 'scatter', ...option, data: Data(ctx)})
 })
 
-SeriesOption('heatmap', {
+Series('heatmap', {
   params: [
     {id: 'Data', as: 'array', dynamic: true, byName: true},
     {id: 'name', as: 'string'},
-    {id: 'itemStyle', type: 'item-style-option<echart>'},
-    {id: 'label', type: 'label-option<echart>'},
-    {id: 'emphasis', type: 'emphasis-option<echart>'}
+    {id: 'itemStyle', type: 'item-style<echart>'},
+    {id: 'label', type: 'label<echart>'},
+    {id: 'emphasis', type: 'emphasis<echart>'}
   ],
   impl: (ctx, {}, {Data, ...option}) => ({type: 'heatmap', ...option, data: Data(ctx)})
 })
 
-SeriesOption('boxplot', {
+Series('boxplot', {
   params: [
     {id: 'Data', as: 'array', dynamic: true, byName: true},
     {id: 'name', as: 'string'},
     {id: 'boxWidth'},
-    {id: 'itemStyle', type: 'item-style-option<echart>'},
-    {id: 'emphasis', type: 'emphasis-option<echart>'}
+    {id: 'itemStyle', type: 'item-style<echart>'},
+    {id: 'emphasis', type: 'emphasis<echart>'}
   ],
   impl: (ctx, {}, {Data, ...option}) => ({type: 'boxplot', ...option, data: Data(ctx)})
 })
 
-SeriesOption('funnel', {
+Series('funnel', {
   params: [
     {id: 'Data', as: 'array', dynamic: true, byName: true},
     {id: 'name', as: 'string'},
@@ -719,15 +719,15 @@ SeriesOption('funnel', {
     {id: 'max', as: 'number'},
     {id: 'funnelAlign', as: 'string', options: 'left,center,right'},
     {id: 'minSize'},
-    {id: 'itemStyle', type: 'item-style-option<echart>'},
-    {id: 'emphasis', type: 'emphasis-option<echart>'},
-    {id: 'label', type: 'label-option<echart>'},
-    {id: 'labelLine', type: 'label-line-option<echart>'}
+    {id: 'itemStyle', type: 'item-style<echart>'},
+    {id: 'emphasis', type: 'emphasis<echart>'},
+    {id: 'label', type: 'label<echart>'},
+    {id: 'labelLine', type: 'label-line<echart>'}
   ],
   impl: (ctx, {}, {Data, ...option}) => ({type: 'funnel', ...option, data: Data(ctx)})
 })
 
-SeriesOption('gauge', {
+Series('gauge', {
   params: [
     {id: 'Data', as: 'array', dynamic: true, byName: true},
     {id: 'name', as: 'string'},
@@ -737,49 +737,49 @@ SeriesOption('gauge', {
     {id: 'center', as: 'array'},
     {id: 'startAngle', as: 'number'},
     {id: 'endAngle', as: 'number'},
-    {id: 'progress', type: 'progress-option<echart>'},
-    {id: 'axisLine', type: 'axis-line-option<echart>'},
-    {id: 'axisTick', type: 'axis-tick-option<echart>'},
-    {id: 'splitLine', type: 'split-line-option<echart>'},
-    {id: 'pointer', type: 'pointer-option<echart>'},
-    {id: 'anchor', type: 'anchor-option<echart>'},
-    {id: 'axisLabel', type: 'axis-label-option<echart>'},
-    {id: 'detail', type: 'detail-option<echart>'},
-    {id: 'title', type: 'title-option<echart>'},
-    {id: 'markLine', type: 'mark-line-option<echart>'},
-    {id: 'markPoint', type: 'mark-point-option<echart>'}
+    {id: 'progress', type: 'progress<echart>'},
+    {id: 'axisLine', type: 'axis-line<echart>'},
+    {id: 'axisTick', type: 'axis-tick<echart>'},
+    {id: 'splitLine', type: 'split-line<echart>'},
+    {id: 'pointer', type: 'pointer<echart>'},
+    {id: 'anchor', type: 'anchor<echart>'},
+    {id: 'axisLabel', type: 'axis-label<echart>'},
+    {id: 'detail', type: 'detail<echart>'},
+    {id: 'title', type: 'title<echart>'},
+    {id: 'markLine', type: 'mark-line<echart>'},
+    {id: 'markPoint', type: 'mark-point<echart>'}
   ],
   impl: (ctx, {}, {Data, ...option}) => ({type: 'gauge', ...option, data: Data(ctx)})
 })
 
-SeriesOption('treemap', {
+Series('treemap', {
   params: [
     {id: 'Data', as: 'array', dynamic: true, byName: true},
     {id: 'name', as: 'string'},
     {id: 'roam', type: 'boolean<common>'},
     {id: 'nodeClick', description: `ECharts navigation mode: 'zoomToNode', 'link', or false to disable navigation`},
-    {id: 'breadcrumb', type: 'breadcrumb-option<echart>'},
+    {id: 'breadcrumb', type: 'breadcrumb<echart>'},
     {id: 'animationDuration', as: 'number'},
     {id: 'top'},
     {id: 'left'},
     {id: 'right'},
     {id: 'bottom'},
-    {id: 'itemStyle', type: 'item-style-option<echart>'},
-    {id: 'label', type: 'label-option<echart>'},
-    {id: 'emphasis', type: 'emphasis-option<echart>'}
+    {id: 'itemStyle', type: 'item-style<echart>'},
+    {id: 'label', type: 'label<echart>'},
+    {id: 'emphasis', type: 'emphasis<echart>'}
   ],
   impl: (ctx, {}, {Data, ...option}) => ({type: 'treemap', ...option, data: Data(ctx)})
 })
 
-SeriesOption('radar', {
+Series('radar', {
   params: [
     {id: 'Data', as: 'array', dynamic: true, byName: true},
     {id: 'name', as: 'string'},
     {id: 'symbolSize'},
-    {id: 'lineStyle', type: 'line-style-option<echart>'},
-    {id: 'itemStyle', type: 'item-style-option<echart>'},
-    {id: 'areaStyle', type: 'area-style-option<echart>'},
-    {id: 'emphasis', type: 'emphasis-option<echart>'},
+    {id: 'lineStyle', type: 'line-style<echart>'},
+    {id: 'itemStyle', type: 'item-style<echart>'},
+    {id: 'areaStyle', type: 'area-style<echart>'},
+    {id: 'emphasis', type: 'emphasis<echart>'},
     {id: 'z', as: 'number'}
   ],
   impl: (ctx, {}, {Data, ...option}) => ({type: 'radar', ...option, data: Data(ctx)})

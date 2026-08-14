@@ -4,16 +4,16 @@ import './viz-types.js'
 
 const {
   echart: {
-    EChartsOption, 'series-option': {bar, boxplot, scatter}, 'title-option': {title}, 'tooltip-option': {tooltip},
-    'text-style-option': {textStyle}, 'grid-option': {grid}, 'axis-option': {xAxis, yAxis}, 'axis-line-option': {axisLine},
-    'axis-tick-option': {axisTick}, 'axis-label-option': {axisLabel}, 'split-line-option': {splitLine},
-    'axis-pointer-option': {axisPointer}, 'line-style-option': {lineStyle}, 'item-style-option': {itemStyle},
-    'emphasis-option': {emphasis}, 'label-option': {label}
+    ECharts, 'series': {bar, boxplot, scatter}, 'title': {title}, 'tooltip': {tooltip},
+    'text-style': {textStyle}, 'grid': {grid}, 'axis': {xAxis, yAxis}, 'axis-line': {axisLine},
+    'axis-tick': {axisTick}, 'axis-label': {axisLabel}, 'split-line': {splitLine},
+    'axis-pointer': {axisPointer}, 'line-style': {lineStyle}, 'item-style': {itemStyle},
+    'emphasis': {emphasis}, 'label': {label}
   },
   viz: {'viz-theme': {defaultTheme}, 'viz-value-format': {compact, integer}}
 } = dsls
 
-EChartsOption('viz.histogram', {
+ECharts('viz.histogram', {
   params: [
     {id: 'values', as: 'array'},
     {id: 'title', as: 'string', byName: true},
@@ -24,7 +24,7 @@ EChartsOption('viz.histogram', {
     {id: 'theme', type: 'viz-theme<viz>', defaultValue: defaultTheme()},
     {id: 'xLabel', as: 'string'},
     {id: 'yLabel', as: 'string', defaultValue: 'count'},
-    {id: 'mainTitle', type: 'title-option<echart>', dynamic: true, defaultValue: title({
+    {id: 'mainTitle', type: 'title<echart>', dynamic: true, defaultValue: title({
       text: '%title%',
       show: '%showTitle%',
       subtext: '%note%',
@@ -33,14 +33,14 @@ EChartsOption('viz.histogram', {
       textStyle: textStyle({ color: '%ink%', fontWeight: 600, fontSize: 15 }),
       subtextStyle: textStyle({ color: '%accent%', fontWeight: 600, fontSize: 12 })
     })},
-    {id: 'gridOption', type: 'grid-option<echart>', dynamic: true, defaultValue: grid({ left: 46, right: 16, top: '%gridTop%', bottom: '%gridBottom%', containLabel: true })},
-    {id: 'tooltipOption', type: 'tooltip-option<echart>', dynamic: true, defaultValue: tooltip({
+    {id: 'gridOption', type: 'grid<echart>', dynamic: true, defaultValue: grid({ left: 46, right: 16, top: '%gridTop%', bottom: '%gridBottom%', containLabel: true })},
+    {id: 'tooltipOption', type: 'tooltip<echart>', dynamic: true, defaultValue: tooltip({
       trigger: 'axis',
       formatter: (ctx, {formatCount}) => `${ctx.data[0].axisValue}<br/><b>${formatCount(ctx.data[0].value)}</b>`,
       textStyle: textStyle({ fontSize: 12 }),
       axisPointer: axisPointer({ type: 'shadow' })
     })},
-    {id: 'categoryAxis', type: 'axis-option<echart>', dynamic: true, defaultValue: xAxis({
+    {id: 'categoryAxis', type: 'axis<echart>', dynamic: true, defaultValue: xAxis({
       type: 'category',
       Data: '%labels%',
       name: '%xLabel%',
@@ -58,7 +58,7 @@ EChartsOption('viz.histogram', {
         rotate: '%rotate%'
       })
     })},
-    {id: 'valueAxis', type: 'axis-option<echart>', dynamic: true, defaultValue: yAxis({
+    {id: 'valueAxis', type: 'axis<echart>', dynamic: true, defaultValue: yAxis({
       type: 'value',
       name: '%yLabel%',
       nameGap: 10,
@@ -71,7 +71,7 @@ EChartsOption('viz.histogram', {
       splitLine: splitLine({ lineStyle: lineStyle({ color: '#f1f5f9' }) }),
       minInterval: 1
     })},
-    {id: 'seriesOption', type: 'series-option<echart>', dynamic: true, defaultValue: bar({
+    {id: 'seriesOption', type: 'series<echart>', dynamic: true, defaultValue: bar({
       Data: '%seriesData%',
       barCategoryGap: 0,
       itemStyle: itemStyle({ color: '#fff', borderColor: '#fff', borderWidth: 1 }),
@@ -111,7 +111,7 @@ EChartsOption('viz.histogram', {
   }
 })
 
-EChartsOption('viz.boxplot', {
+ECharts('viz.boxplot', {
   params: [
     {id: 'groups', as: 'array'},
     {id: 'title', as: 'string', byName: true},
@@ -119,7 +119,7 @@ EChartsOption('viz.boxplot', {
     {id: 'valueFormat', type: 'viz-value-format<viz>', byName: true, defaultValue: compact()},
     {id: 'theme', type: 'viz-theme<viz>', defaultValue: defaultTheme()},
     {id: 'yLabel', as: 'string'},
-    {id: 'mainTitle', type: 'title-option<echart>', dynamic: true, defaultValue: title({
+    {id: 'mainTitle', type: 'title<echart>', dynamic: true, defaultValue: title({
       text: '%title%',
       show: '%showTitle%',
       subtext: '%note%',
@@ -128,16 +128,17 @@ EChartsOption('viz.boxplot', {
       textStyle: textStyle({ color: '%ink%', fontWeight: 600, fontSize: 15 }),
       subtextStyle: textStyle({ color: '%accent%', fontWeight: 600, fontSize: 12 })
     })},
-    {id: 'gridOption', type: 'grid-option<echart>', dynamic: true, defaultValue: grid({ left: 48, right: 16, top: '%gridTop%', bottom: 26, containLabel: true })},
-    {id: 'tooltipOption', type: 'tooltip-option<echart>', dynamic: true, defaultValue: tooltip({
+    {id: 'gridOption', type: 'grid<echart>', dynamic: true, defaultValue: grid({ left: 48, right: 16, top: '%gridTop%', bottom: 26, containLabel: true })},
+    {id: 'tooltipOption', type: 'tooltip<echart>', dynamic: true, defaultValue: tooltip({
       trigger: 'item',
       formatter: (ctx, {format}) => ctx.data.seriesType == 'scatter'
         ? `${ctx.data.name} · outlier ${format(ctx.data.value[1])}`
-        : `<b>${ctx.data.name}</b><br/>max ${format(ctx.data.value[5])}<br/>q3 ${format(ctx.data.value[4])}<br/>median ${format(ctx.data.value[3])}<br/>q1 ${format(ctx.data.value[2])}<br/>min ${format(ctx.data.value[1])}`,
+        : `<b>${ctx.data.name}</b><br/>max ${format(ctx.data.value[5])}<br/>q3 ${format(ctx.data.value[4])}`
+          + `<br/>median ${format(ctx.data.value[3])}<br/>q1 ${format(ctx.data.value[2])}<br/>min ${format(ctx.data.value[1])}`,
       confine: true,
       textStyle: textStyle({ fontSize: 12 })
     })},
-    {id: 'categoryAxis', type: 'axis-option<echart>', dynamic: true, defaultValue: xAxis({
+    {id: 'categoryAxis', type: 'axis<echart>', dynamic: true, defaultValue: xAxis({
       type: 'category',
       Data: '%categories%',
       boundaryGap: true,
@@ -145,7 +146,7 @@ EChartsOption('viz.boxplot', {
       axisTick: axisTick({ show: false }),
       axisLabel: axisLabel({ color: '%mute%', fontSize: 11, interval: 0, hideOverlap: true })
     })},
-    {id: 'valueAxis', type: 'axis-option<echart>', dynamic: true, defaultValue: yAxis({
+    {id: 'valueAxis', type: 'axis<echart>', dynamic: true, defaultValue: yAxis({
       type: 'value',
       name: '%yLabel%',
       nameGap: 12,
@@ -153,14 +154,14 @@ EChartsOption('viz.boxplot', {
       axisLabel: axisLabel({ color: '%mute%', fontSize: 10, formatter: (ctx, {format}) => format(ctx.data) }),
       splitLine: splitLine({ lineStyle: lineStyle({ color: '#f1f5f9' }) })
     })},
-    {id: 'boxSeries', type: 'series-option<echart>', dynamic: true, defaultValue: boxplot({
+    {id: 'boxSeries', type: 'series<echart>', dynamic: true, defaultValue: boxplot({
       Data: '%boxData%',
       boxWidth: [10,34],
       emphasis: emphasis({
         itemStyle: itemStyle({ borderWidth: 2.4, shadowBlur: 8, shadowColor: 'rgba(37,99,235,0.25)' })
       })
     })},
-    {id: 'outlierSeries', type: 'series-option<echart>', dynamic: true, defaultValue: scatter({ Data: '%outlierData%', symbolSize: 6, z: 3 })}
+    {id: 'outlierSeries', type: 'series<echart>', dynamic: true, defaultValue: scatter({ Data: '%outlierData%', symbolSize: 6, z: 3 })}
   ],
   impl: (ctx, {}, {groups, title, highlight, valueFormat, theme, yLabel,
     mainTitle, gridOption, tooltipOption, categoryAxis, valueAxis, boxSeries, outlierSeries}) => {

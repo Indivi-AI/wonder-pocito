@@ -8,9 +8,9 @@ import '../echart.js'
 const {
   tgp: {Const, any: {typeAdapter}},
   echart: {
-    EChartsOption: {option}, SeriesOption: {pie, bar, line, scatter, heatmap, boxplot, funnel, gauge, treemap, radar},
-    AxisOption: {xAxis, yAxis}, AxisLabelOption: {axisLabel}, LabelOption: {label}, DatasetTransform: {boundIQR, bin},
-    DatasetOption: {dataset}, EncodeOption: {encode}
+    ECharts: {option}, Series: {pie, bar, line, scatter, heatmap, boxplot, funnel, gauge, treemap, radar},
+    Axis: {xAxis, yAxis}, AxisLabel: {axisLabel}, Label: {label}, DatasetTransform: {boundIQR, bin},
+    Dataset: {dataset}, Encode: {encode}
   },
   common: {boolean: {contains}},
   react: {'react-comp': {EChart}},
@@ -22,7 +22,7 @@ Const('echartBinTestData', [{duration: 2}, {duration: 3}, {duration: 3}, {durati
 
 Test('echartTest.optionContract', {
   impl: dataTest({
-    calculate: typeAdapter('echarts-option<echart>', option({
+    calculate: typeAdapter('echarts<echart>', option({
       series: [
         pie({ Data: '%$echartTestData%', label: label({ formatter: '%name%:%value%' }) }),
         bar({ Data: '%$echartTestData%' }),

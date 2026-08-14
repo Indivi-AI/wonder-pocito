@@ -4,16 +4,16 @@ import './viz-types.js'
 
 const {
   echart: {
-    EChartsOption, 'series-option': {pie, bar}, 'title-option': {title}, 'tooltip-option': {tooltip},
-    'legend-option': {legend}, 'text-style-option': {textStyle}, 'grid-option': {grid}, 'axis-option': {xAxis, yAxis},
-    'axis-line-option': {axisLine}, 'axis-tick-option': {axisTick}, 'axis-label-option': {axisLabel},
-    'split-line-option': {splitLine}, 'axis-pointer-option': {axisPointer}, 'line-style-option': {lineStyle},
-    'item-style-option': {itemStyle}, 'emphasis-option': {emphasis}, 'label-option': {label}
+    ECharts, 'series': {pie, bar}, 'title': {title}, 'tooltip': {tooltip},
+    'legend': {legend}, 'text-style': {textStyle}, 'grid': {grid}, 'axis': {xAxis, yAxis},
+    'axis-line': {axisLine}, 'axis-tick': {axisTick}, 'axis-label': {axisLabel},
+    'split-line': {splitLine}, 'axis-pointer': {axisPointer}, 'line-style': {lineStyle},
+    'item-style': {itemStyle}, 'emphasis': {emphasis}, 'label': {label}
   },
   viz: { 'viz-theme': {defaultTheme}, 'viz-value-format': {compact} }
 } = dsls
 
-EChartsOption('viz.pie', {
+ECharts('viz.pie', {
   params: [
     {id: 'items', as: 'array'},
     {id: 'title', as: 'string', byName: true},
@@ -24,7 +24,7 @@ EChartsOption('viz.pie', {
     {id: 'showLegend', type: 'boolean<common>', byName: true},
     {id: 'width', as: 'number', defaultValue: 540},
     {id: 'height', as: 'number', defaultValue: 320},
-    {id: 'mainTitle', type: 'title-option<echart>', dynamic: true, defaultValue: title({
+    {id: 'mainTitle', type: 'title<echart>', dynamic: true, defaultValue: title({
       text: '%title%',
       show: '%showTitle%',
       subtext: '%note%',
@@ -33,7 +33,7 @@ EChartsOption('viz.pie', {
       textStyle: textStyle({ color: '%ink%', fontWeight: 600, fontSize: 15 }),
       subtextStyle: textStyle({ color: '%accent%', fontWeight: 600, fontSize: 12 })
     })},
-    {id: 'totalTitle', type: 'title-option<echart>', dynamic: true, defaultValue: title({
+    {id: 'totalTitle', type: 'title<echart>', dynamic: true, defaultValue: title({
       text: '%totalText%',
       show: '%showTotal%',
       left: 'center',
@@ -41,19 +41,19 @@ EChartsOption('viz.pie', {
       textVerticalAlign: 'middle',
       textStyle: textStyle({ color: '%ink%', fontWeight: 700, fontSize: '%totalFontSize%' })
     })},
-    {id: 'tooltipOption', type: 'tooltip-option<echart>', dynamic: true, defaultValue: tooltip({
+    {id: 'tooltipOption', type: 'tooltip<echart>', dynamic: true, defaultValue: tooltip({
       trigger: 'item',
       valueFormatter: (ctx, {format}) => format(ctx.data),
       textStyle: textStyle({ fontSize: 12 })
     })},
-    {id: 'legendOption', type: 'legend-option<echart>', dynamic: true, defaultValue: legend({
+    {id: 'legendOption', type: 'legend<echart>', dynamic: true, defaultValue: legend({
       Data: '%legendData%',
       show: '%showLegend%',
       type: 'scroll',
       bottom: 2,
       textStyle: textStyle({ color: '#475569', fontSize: 12 })
     })},
-    {id: 'seriesOption', type: 'series-option<echart>', dynamic: true, defaultValue: pie({ Data: '%seriesData%', radius: '%radius%', center: '%center%' })}
+    {id: 'seriesOption', type: 'series<echart>', dynamic: true, defaultValue: pie({ Data: '%seriesData%', radius: '%radius%', center: '%center%' })}
   ],
   impl: (ctx, {}, {items, title, highlight, valueFormat, theme, donut = true, showLegend, width, height,
     mainTitle, totalTitle, tooltipOption, legendOption, seriesOption}) => {
@@ -92,7 +92,7 @@ EChartsOption('viz.pie', {
   }
 })
 
-EChartsOption('viz.bar', {
+ECharts('viz.bar', {
   params: [
     {id: 'items', as: 'array'},
     {id: 'title', as: 'string', byName: true},
@@ -102,7 +102,7 @@ EChartsOption('viz.bar', {
     {id: 'xLabel', as: 'string'},
     {id: 'yLabel', as: 'string'},
     {id: 'showValues', type: 'boolean<common>', defaultValue: true},
-    {id: 'mainTitle', type: 'title-option<echart>', dynamic: true, defaultValue: title({
+    {id: 'mainTitle', type: 'title<echart>', dynamic: true, defaultValue: title({
       text: '%title%',
       show: '%showTitle%',
       subtext: '%note%',
@@ -111,14 +111,14 @@ EChartsOption('viz.bar', {
       textStyle: textStyle({ color: '%ink%', fontWeight: 600, fontSize: 15 }),
       subtextStyle: textStyle({ color: '%accent%', fontWeight: 600, fontSize: 12 })
     })},
-    {id: 'gridOption', type: 'grid-option<echart>', dynamic: true, defaultValue: grid({ left: 8, right: 16, top: '%gridTop%', bottom: '%gridBottom%', containLabel: true })},
-    {id: 'tooltipOption', type: 'tooltip-option<echart>', dynamic: true, defaultValue: tooltip({
+    {id: 'gridOption', type: 'grid<echart>', dynamic: true, defaultValue: grid({ left: 8, right: 16, top: '%gridTop%', bottom: '%gridBottom%', containLabel: true })},
+    {id: 'tooltipOption', type: 'tooltip<echart>', dynamic: true, defaultValue: tooltip({
       trigger: 'axis',
       valueFormatter: (ctx, {format}) => format(ctx.data),
       textStyle: textStyle({ fontSize: 12 }),
       axisPointer: axisPointer({ type: 'shadow' })
     })},
-    {id: 'categoryAxis', type: 'axis-option<echart>', dynamic: true, defaultValue: xAxis({
+    {id: 'categoryAxis', type: 'axis<echart>', dynamic: true, defaultValue: xAxis({
       type: 'category',
       Data: '%categories%',
       name: '%xLabel%',
@@ -130,7 +130,7 @@ EChartsOption('viz.bar', {
       axisTick: axisTick({ show: false }),
       axisLabel: axisLabel({ show: true, color: '%mute%', fontSize: 11, interval: 0, hideOverlap: true })
     })},
-    {id: 'valueAxis', type: 'axis-option<echart>', dynamic: true, defaultValue: yAxis({
+    {id: 'valueAxis', type: 'axis<echart>', dynamic: true, defaultValue: yAxis({
       type: 'value',
       name: '%yLabel%',
       nameGap: 12,
@@ -138,7 +138,7 @@ EChartsOption('viz.bar', {
       axisLabel: axisLabel({ color: '%mute%', fontSize: 10, formatter: (ctx, {format}) => format(ctx.data) }),
       splitLine: splitLine({ lineStyle: lineStyle({ color: '#f1f5f9' }) })
     })},
-    {id: 'seriesOption', type: 'series-option<echart>', dynamic: true, defaultValue: bar({
+    {id: 'seriesOption', type: 'series<echart>', dynamic: true, defaultValue: bar({
       Data: '%seriesData%',
       barMaxWidth: 46,
       itemStyle: itemStyle({ borderRadius: [4,4,0,0] }),
@@ -175,7 +175,7 @@ EChartsOption('viz.bar', {
   }
 })
 
-EChartsOption('viz.horizontalBar', {
+ECharts('viz.horizontalBar', {
   params: [
     {id: 'items', as: 'array'},
     {id: 'title', as: 'string', byName: true},
@@ -184,7 +184,7 @@ EChartsOption('viz.horizontalBar', {
     {id: 'theme', type: 'viz-theme<viz>', defaultValue: defaultTheme()},
     {id: 'valueLabel', as: 'string'},
     {id: 'showValues', type: 'boolean<common>', defaultValue: true},
-    {id: 'mainTitle', type: 'title-option<echart>', dynamic: true, defaultValue: title({
+    {id: 'mainTitle', type: 'title<echart>', dynamic: true, defaultValue: title({
       text: '%title%',
       show: '%showTitle%',
       subtext: '%note%',
@@ -193,9 +193,9 @@ EChartsOption('viz.horizontalBar', {
       textStyle: textStyle({ color: '%ink%', fontWeight: 600, fontSize: 15 }),
       subtextStyle: textStyle({ color: '%accent%', fontWeight: 600, fontSize: 12 })
     })},
-    {id: 'gridOption', type: 'grid-option<echart>', dynamic: true, defaultValue: grid({ left: 8, right: 52, top: '%gridTop%', bottom: '%gridBottom%', containLabel: true })},
-    {id: 'tooltipOption', type: 'tooltip-option<echart>', dynamic: true, defaultValue: tooltip({ trigger: 'item', valueFormatter: (ctx, {format}) => format(ctx.data) })},
-    {id: 'valueAxis', type: 'axis-option<echart>', dynamic: true, defaultValue: xAxis({
+    {id: 'gridOption', type: 'grid<echart>', dynamic: true, defaultValue: grid({ left: 8, right: 52, top: '%gridTop%', bottom: '%gridBottom%', containLabel: true })},
+    {id: 'tooltipOption', type: 'tooltip<echart>', dynamic: true, defaultValue: tooltip({ trigger: 'item', valueFormatter: (ctx, {format}) => format(ctx.data) })},
+    {id: 'valueAxis', type: 'axis<echart>', dynamic: true, defaultValue: xAxis({
       type: 'value',
       name: '%valueLabel%',
       nameLocation: 'middle',
@@ -206,7 +206,7 @@ EChartsOption('viz.horizontalBar', {
       axisLabel: axisLabel({ color: '%mute%', fontSize: 10, formatter: (ctx, {format}) => format(ctx.data) }),
       splitLine: splitLine({ lineStyle: lineStyle({ color: '#f1f5f9' }) })
     })},
-    {id: 'categoryAxis', type: 'axis-option<echart>', dynamic: true, defaultValue: yAxis({
+    {id: 'categoryAxis', type: 'axis<echart>', dynamic: true, defaultValue: yAxis({
       type: 'category',
       Data: '%categories%',
       axisLine: axisLine({ show: false }),
@@ -222,7 +222,7 @@ EChartsOption('viz.horizontalBar', {
       inverse: true,
       triggerEvent: true
     })},
-    {id: 'seriesOption', type: 'series-option<echart>', dynamic: true, defaultValue: bar({
+    {id: 'seriesOption', type: 'series<echart>', dynamic: true, defaultValue: bar({
       Data: '%seriesData%',
       barMaxWidth: 26,
       barCategoryGap: '38%',

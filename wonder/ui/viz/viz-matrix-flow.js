@@ -4,17 +4,17 @@ import './viz-types.js'
 
 const {
   echart: {
-    EChartsOption, 'series-option': {bar, heatmap}, 'title-option': {title}, 'tooltip-option': {tooltip},
-    'text-style-option': {textStyle}, 'grid-option': {grid}, 'axis-option': {xAxis, yAxis}, 'axis-line-option': {axisLine},
-    'axis-tick-option': {axisTick}, 'axis-label-option': {axisLabel}, 'split-line-option': {splitLine},
-    'split-area-option': {splitArea}, 'axis-pointer-option': {axisPointer}, 'line-style-option': {lineStyle},
-    'item-style-option': {itemStyle}, 'emphasis-option': {emphasis}, 'label-option': {label}, 'mark-line-option': {markLine},
-    'visual-map-option': {visualMap}, 'in-range-option': {inRange}, 'area-style-option': {areaStyle}
+    ECharts, 'series': {bar, heatmap}, 'title': {title}, 'tooltip': {tooltip},
+    'text-style': {textStyle}, 'grid': {grid}, 'axis': {xAxis, yAxis}, 'axis-line': {axisLine},
+    'axis-tick': {axisTick}, 'axis-label': {axisLabel}, 'split-line': {splitLine},
+    'split-area': {splitArea}, 'axis-pointer': {axisPointer}, 'line-style': {lineStyle},
+    'item-style': {itemStyle}, 'emphasis': {emphasis}, 'label': {label}, 'mark-line': {markLine},
+    'visual-map': {visualMap}, 'in-range': {inRange}, 'area-style': {areaStyle}
   },
   viz: {'viz-theme': {defaultTheme}, 'viz-value-format': {compact}}
 } = dsls
 
-EChartsOption('viz.waterfall', {
+ECharts('viz.waterfall', {
   params: [
     {id: 'steps', as: 'array'},
     {id: 'title', as: 'string', byName: true},
@@ -22,7 +22,7 @@ EChartsOption('viz.waterfall', {
     {id: 'valueFormat', type: 'viz-value-format<viz>', byName: true, defaultValue: compact()},
     {id: 'theme', type: 'viz-theme<viz>', defaultValue: defaultTheme()},
     {id: 'yLabel', as: 'string'},
-    {id: 'mainTitle', type: 'title-option<echart>', dynamic: true, defaultValue: title({
+    {id: 'mainTitle', type: 'title<echart>', dynamic: true, defaultValue: title({
       text: '%title%',
       show: '%showTitle%',
       subtext: '%note%',
@@ -31,8 +31,8 @@ EChartsOption('viz.waterfall', {
       textStyle: textStyle({ color: '%ink%', fontWeight: 600, fontSize: 15 }),
       subtextStyle: textStyle({ color: '%accent%', fontWeight: 600, fontSize: 12 })
     })},
-    {id: 'gridOption', type: 'grid-option<echart>', dynamic: true, defaultValue: grid({ left: 8, right: 18, top: '%gridTop%', bottom: 28, containLabel: true })},
-    {id: 'tooltipOption', type: 'tooltip-option<echart>', dynamic: true, defaultValue: tooltip({
+    {id: 'gridOption', type: 'grid<echart>', dynamic: true, defaultValue: grid({ left: 8, right: 18, top: '%gridTop%', bottom: 28, containLabel: true })},
+    {id: 'tooltipOption', type: 'tooltip<echart>', dynamic: true, defaultValue: tooltip({
       trigger: 'axis',
       formatter: (ctx, {format, normalizedSteps}) => {
         const step = normalizedSteps[ctx.data[0].dataIndex]
@@ -40,7 +40,7 @@ EChartsOption('viz.waterfall', {
       },
       axisPointer: axisPointer({ type: 'shadow' })
     })},
-    {id: 'categoryAxis', type: 'axis-option<echart>', dynamic: true, defaultValue: xAxis({
+    {id: 'categoryAxis', type: 'axis<echart>', dynamic: true, defaultValue: xAxis({
       type: 'category',
       Data: '%categories%',
       boundaryGap: true,
@@ -48,21 +48,21 @@ EChartsOption('viz.waterfall', {
       axisTick: axisTick({ show: false }),
       axisLabel: axisLabel({ color: '%mute%', fontSize: 10, interval: 0, hideOverlap: true })
     })},
-    {id: 'valueAxis', type: 'axis-option<echart>', dynamic: true, defaultValue: yAxis({
+    {id: 'valueAxis', type: 'axis<echart>', dynamic: true, defaultValue: yAxis({
       type: 'value',
       name: '%yLabel%',
       nameTextStyle: textStyle({ color: '%mute%', fontSize: 11 }),
       axisLabel: axisLabel({ color: '%mute%', fontSize: 10, formatter: (ctx, {format}) => format(ctx.data) }),
       splitLine: splitLine({ lineStyle: lineStyle({ color: '#f1f5f9' }) })
     })},
-    {id: 'baseSeries', type: 'series-option<echart>', dynamic: true, defaultValue: bar({
+    {id: 'baseSeries', type: 'series<echart>', dynamic: true, defaultValue: bar({
       Data: '%baseData%',
       stack: 'waterfall',
       silent: true,
       itemStyle: itemStyle({ color: 'transparent' }),
       emphasis: emphasis({ disabled: true })
     })},
-    {id: 'stepSeries', type: 'series-option<echart>', dynamic: true, defaultValue: bar({
+    {id: 'stepSeries', type: 'series<echart>', dynamic: true, defaultValue: bar({
       Data: '%stepData%',
       stack: 'waterfall',
       barMaxWidth: 46,
@@ -115,7 +115,7 @@ EChartsOption('viz.waterfall', {
   }
 })
 
-EChartsOption('viz.heatmap', {
+ECharts('viz.heatmap', {
   params: [
     {id: 'xCategories', as: 'array'},
     {id: 'yCategories', as: 'array'},
@@ -124,7 +124,7 @@ EChartsOption('viz.heatmap', {
     {id: 'highlight', type: 'viz-highlight<viz>', byName: true},
     {id: 'valueFormat', type: 'viz-value-format<viz>', byName: true, defaultValue: compact()},
     {id: 'theme', type: 'viz-theme<viz>', defaultValue: defaultTheme()},
-    {id: 'mainTitle', type: 'title-option<echart>', dynamic: true, defaultValue: title({
+    {id: 'mainTitle', type: 'title<echart>', dynamic: true, defaultValue: title({
       text: '%title%',
       show: '%showTitle%',
       subtext: '%note%',
@@ -133,15 +133,15 @@ EChartsOption('viz.heatmap', {
       textStyle: textStyle({ color: '%ink%', fontWeight: 600, fontSize: 15 }),
       subtextStyle: textStyle({ color: '%accent%', fontWeight: 600, fontSize: 12 })
     })},
-    {id: 'gridOption', type: 'grid-option<echart>', dynamic: true, defaultValue: grid({ left: 4, right: 12, top: '%gridTop%', bottom: 48, containLabel: true })},
-    {id: 'tooltipOption', type: 'tooltip-option<echart>', dynamic: true, defaultValue: tooltip({
+    {id: 'gridOption', type: 'grid<echart>', dynamic: true, defaultValue: grid({ left: 4, right: 12, top: '%gridTop%', bottom: 48, containLabel: true })},
+    {id: 'tooltipOption', type: 'tooltip<echart>', dynamic: true, defaultValue: tooltip({
       formatter: (ctx, {format, xCategories, yCategories}) =>
         `${yCategories[ctx.data.value[1]]} · ${xCategories[ctx.data.value[0]]}<br/><b>${format(ctx.data.value[2])}</b>`,
       position: 'top',
       borderColor: '%dim%',
       textStyle: textStyle({ fontSize: 12 })
     })},
-    {id: 'xCategoryAxis', type: 'axis-option<echart>', dynamic: true, defaultValue: xAxis({
+    {id: 'xCategoryAxis', type: 'axis<echart>', dynamic: true, defaultValue: xAxis({
       type: 'category',
       Data: '%xCategories%',
       boundaryGap: true,
@@ -150,7 +150,7 @@ EChartsOption('viz.heatmap', {
       axisLabel: axisLabel({ color: '%mute%', fontSize: 10, interval: 0, hideOverlap: true }),
       splitArea: splitArea({ show: true, areaStyle: areaStyle({ color: ['#fff','#fafbfc'] }) })
     })},
-    {id: 'yCategoryAxis', type: 'axis-option<echart>', dynamic: true, defaultValue: yAxis({
+    {id: 'yCategoryAxis', type: 'axis<echart>', dynamic: true, defaultValue: yAxis({
       type: 'category',
       Data: '%yCategories%',
       boundaryGap: true,
@@ -159,7 +159,7 @@ EChartsOption('viz.heatmap', {
       axisLabel: axisLabel({ color: '%mute%', fontSize: 10, interval: 0, hideOverlap: true }),
       splitArea: splitArea({ show: true, areaStyle: areaStyle({ color: ['#fff','#fafbfc'] }) })
     })},
-    {id: 'visualMapOption', type: 'visual-map-option<echart>', dynamic: true, defaultValue: visualMap({
+    {id: 'visualMapOption', type: 'visual-map<echart>', dynamic: true, defaultValue: visualMap({
       min: '%min%',
       max: '%max%',
       calculable: true,
@@ -172,7 +172,7 @@ EChartsOption('viz.heatmap', {
       textStyle: textStyle({ color: '%mute%', fontSize: 10 }),
       formatter: (ctx, {format}) => format(ctx.data)
     })},
-    {id: 'seriesOption', type: 'series-option<echart>', dynamic: true, defaultValue: heatmap({
+    {id: 'seriesOption', type: 'series<echart>', dynamic: true, defaultValue: heatmap({
       Data: '%seriesData%',
       itemStyle: itemStyle({ borderColor: '#fff', borderWidth: 1.5 }),
       label: label({ show: true, fontSize: 10, formatter: (ctx, {format}) => format(ctx.data.value[2]) }),
