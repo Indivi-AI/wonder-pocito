@@ -11,8 +11,8 @@ import { comaxAgentPanelTemplateFlow } from './Agents/parallel-agent.js'
 import { verifiedAnalyticsTemplateFlow } from './Agents/agentic-agents.js'
 
 const {
-  react: { ReactComp, 'react-comp': { comp } },
-  test: { Test, test: { reactTest }, 'ui-action': { waitForText } },
+  react: { ReactComp, 'react-comp': { comp }, 'ui-action': { waitForText } },
+  test: { Test, test: { reactTest } },
   common: { boolean: { contains } }
 } = dsls
 const LLM_PROXY = 'https://node25-automations-server-365199207445.me-west1.run.app/llmProxy', MODEL = 'groq/openai/gpt-oss-20b'

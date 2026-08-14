@@ -43,9 +43,10 @@
       h('div', {}, hh(ctx, JbPickerStarter), hh(ctx, reactCmp, props))
     )
 
-    // prod-clean: tests inject window.__jbOnMounted externally; undefined here = no-op
-    await window.__jbOnMounted?.(ctx, reactUtils)
-    window.jbMounted = true
+    if (urlParams.has('automation')) {
+      await import('@jb6/react/automation.js')
+      await reactUtils.startAutomation(ctx, window)
+    }
 
   </script>
 </body>

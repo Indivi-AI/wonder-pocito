@@ -2,7 +2,7 @@ import { dsls, jb, coreUtils } from '@jb6/core'
 import '@jb6/common'
 import '@jb6/testing'
 import '@jb6/react/tests/react-testers.js'
-import '../../../viz/viz-index.js'
+import '@wonder/ui/viz/viz-index.js'
 import { salesHomeData } from '../App/comaxApp.js'
 import '../App/dashboards.js'
 import '../Comps/human-feedback-preview.js'
@@ -21,8 +21,8 @@ const {
   react: { 'react-comp': {
     AnalyticsAssistantResponse, branchDrillPanel, inventoryDrillPanel,
     HumanFeedbackMessageTestHarness, HumanFeedbackAutoResolvedHarness, Dashboards
-  } },
-  test: { Test, 'ui-action': { delay, click, clickVizShape }, test: { dataTest, reactTest } }
+  }, 'ui-action': { delay, click, clickVizShape, waitForText } },
+  test: { Test, test: { dataTest, reactTest } }
 } = dsls
 const REPORTS_ROOT = new URL('../../../../files/rooms/comaxDemo/usersRO/parquet/OEM_BI_4466', import.meta.url).pathname
 
@@ -140,7 +140,7 @@ Test('reactTest.comax.drillSend', {
   impl: reactTest({
     testedComp: answerComp,
     expectedResult: contains('sent:נתח את תל אביב לפי קטגוריית מוצר'),
-    userActions: [delay(120), clickVizShape(), delay(80)]
+    userActions: [clickVizShape(), waitForText('sent:נתח את תל אביב לפי קטגוריית מוצר')]
   })
 })
 
@@ -151,7 +151,7 @@ Test('reactTest.comax.drillDrawerBadgeKind', {
       return h('div', {}, h('div', {}, 'drawer:' + (details.badgeKind || '')), hh(ctx, AnalyticsAssistantResponse, { element: answer, openDetails: setDetails, send: () => {} }))
     },
     expectedResult: contains('drawer:verified'),
-    userActions: [delay(120), clickVizShape(), delay(80)]
+    userActions: [clickVizShape(), waitForText('drawer:verified')]
   })
 })
 
@@ -234,7 +234,7 @@ Test('reactTest.comax.widgetWithoutDrillKeepsDrawerClosed', {
   impl: reactTest({
     testedComp: drawerHarness({ ...answer, widgets: answer.widgets.map(({ drill, ...widget }) => widget) }),
     expectedResult: contains('drawer:closed'),
-    userActions: [delay(120), clickVizShape(), delay(80)]
+    userActions: clickVizShape()
   })
 })
 
@@ -354,7 +354,7 @@ Test('reactTest.comax.drillPanelDuckDb', {
   impl: reactTest({
     testedComp: (ctx, { react: { hh } }) => () => hh(ctx, AnalyticsAssistantResponse, { element: drillAnswer, send: () => {} }),
     expectedResult: and(contains('מכירות שבועיות — תל אביב'), contains('W2')),
-    userActions: [delay(150), clickVizShape(), delay(800)],
+    userActions: [clickVizShape(), waitForText('W2')],
     timeout: 10000
   })
 })
@@ -363,7 +363,7 @@ Test('reactTest.comax.drillPanelRoomUrl', {
   impl: reactTest({
     testedComp: (ctx, { react: { hh } }) => () => hh(ctx, AnalyticsAssistantResponse, { element: roomDrillAnswer, send: () => {} }),
     expectedResult: and(contains('שורות קופה — תל אביב'), contains('line_ok')),
-    userActions: [delay(150), clickVizShape(), delay(800)],
+    userActions: [clickVizShape(), waitForText('line_ok')],
     timeout: 10000
   })
 })

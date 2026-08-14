@@ -1,0 +1,92 @@
+import { dsls } from '@jb6/core'
+
+const { tgp: { DefComponents }, react: { ReactComp, 'react-comp': { comp } } } = dsls
+
+DefComponents('Pie,Bar,HBar,Scatter,Bubble,Boxplot,Heatmap,Funnel,Treemap,Waterfall,Bullet', templateParam =>
+  ReactComp(`viz.${templateParam}`, {
+    params: [
+      {id: 'title', as: 'string'},
+      {id: 'items', as: 'array'},
+      {id: 'xLabel', as: 'string'},
+      {id: 'yLabel', as: 'string'},
+      {id: 'sizeLabel', as: 'string'},
+      {id: 'xCategories', as: 'array'},
+      {id: 'yCategories', as: 'array'},
+      {id: 'donut', as: 'boolean', type: 'boolean<common>'},
+      {id: 'showValues', as: 'boolean', type: 'boolean<common>'},
+      {id: 'valueFormat', as: 'string'},
+      {id: 'xFormat', as: 'string'},
+      {id: 'yFormat', as: 'string'},
+      {id: 'highlight', type: 'viz-highlight<viz>'},
+      {id: 'drill', type: 'viz-drill<viz>[]'},
+      {id: 'width', as: 'number'},
+      {id: 'height', as: 'number'}
+    ],
+    impl: comp({
+      hFunc: (ctx, { react: { hh } }, { items, ...props }) => runtimeProps => hh(ctx,
+        dsls.react['react-comp'][`${templateParam[0].toLowerCase()}${templateParam.slice(1)}Widget`],
+        { ...props, data: items, ...runtimeProps })
+    })
+  })
+)
+
+DefComponents('GroupedBar,StackedBar,Line,Area,Radar', templateParam =>
+  ReactComp(`viz.${templateParam}`, {
+    params: [
+      { id: 'title', as: 'string' }, { id: 'categories', as: 'array' }, { id: 'indicators', as: 'array' },
+      { id: 'series', type: 'viz-series<viz>[]' }, { id: 'xType', as: 'string' }, { id: 'stacked', as: 'boolean' },
+      { id: 'xLabel', as: 'string' }, { id: 'yLabel', as: 'string' }, { id: 'valueFormat', as: 'string' },
+      { id: 'highlight', type: 'viz-highlight<viz>' }, { id: 'drill', type: 'viz-drill<viz>[]' }
+    ],
+    impl: comp({
+      hFunc: (ctx, { react: { hh } }, props) => runtimeProps => hh(ctx,
+        dsls.react['react-comp'][`${templateParam[0].toLowerCase()}${templateParam.slice(1)}Widget`],
+        { ...props, ...runtimeProps })
+    })
+  })
+)
+
+ReactComp('viz.Histogram', {
+  params: [
+    { id: 'title', as: 'string' }, { id: 'values', as: 'array' }, { id: 'bins', as: 'number' },
+    { id: 'valueFormat', as: 'string' }, { id: 'highlight', type: 'viz-highlight<viz>' }, { id: 'drill', type: 'viz-drill<viz>[]' }
+  ],
+  impl: comp({
+    hFunc: (ctx, { react: { hh } }, props) => runtimeProps =>
+      hh(ctx, dsls.react['react-comp'].histogramWidget, { ...props, ...runtimeProps })
+  })
+})
+
+ReactComp('viz.Gauge', {
+  params: [
+    { id: 'title', as: 'string' }, { id: 'value', as: 'number' }, { id: 'min', as: 'number' }, { id: 'max', as: 'number' },
+    { id: 'target', as: 'number' }, { id: 'valueFormat', as: 'string' }, { id: 'highlight', type: 'viz-highlight<viz>' },
+    { id: 'drill', type: 'viz-drill<viz>[]' }
+  ],
+  impl: comp({
+    hFunc: (ctx, { react: { hh } }, props) => runtimeProps =>
+      hh(ctx, dsls.react['react-comp'].gaugeWidget, { ...props, ...runtimeProps })
+  })
+})
+
+ReactComp('viz.Table', {
+  params: [
+    { id: 'title', as: 'string' }, { id: 'columns', type: 'viz-column<viz>[]' }, { id: 'rows', as: 'array' },
+    { id: 'highlight', type: 'viz-highlight<viz>' }, { id: 'drill', type: 'viz-drill<viz>[]' }
+  ],
+  impl: comp({
+    hFunc: (ctx, { react: { hh } }, props) => runtimeProps =>
+      hh(ctx, dsls.react['react-comp'].tableWidget, { ...props, ...runtimeProps })
+  })
+})
+
+ReactComp('viz.Kpi', {
+  params: [
+    { id: 'title', as: 'string' }, { id: 'items', as: 'array' },
+    { id: 'highlight', type: 'viz-highlight<viz>' }, { id: 'drill', type: 'viz-drill<viz>[]' }
+  ],
+  impl: comp({
+    hFunc: (ctx, { react: { hh } }, props) => runtimeProps =>
+      hh(ctx, dsls.react['react-comp'].kpiWidget, { ...props, ...runtimeProps })
+  })
+})

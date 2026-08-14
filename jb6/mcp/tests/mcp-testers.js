@@ -138,6 +138,7 @@ Component('mcpToolTest', {
     {id: 'tool', as: 'string'},
     {id: 'args', as: 'object'},
     {id: 'mcpUrl', as: 'string', defaultValue: 'http://localhost:8083/mcp'},
+    {id: 'timeout', as: 'number', defaultValue: 5000},
     {id: 'expectedResult', type: 'boolean', dynamic: true}
   ],
   impl: dataTest({
@@ -156,7 +157,7 @@ Component('mcpToolTest', {
         return mcpRes
     },
     expectedResult: '%$expectedResult()%',
-    timeout: 5000
+    timeout: '%$timeout%'
   })
 })
 

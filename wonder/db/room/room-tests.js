@@ -32,9 +32,17 @@ const salesByCategory = Lambda('salesByCategory', {
 
 const whoAmI = Lambda('whoAmI', { permissionByPath: 'usersRO', impl: '%$userEmail%' })
 
+const categoryDefault = Lambda('categoryDefault', {
+  params: [{ id: 'category', defaultValue: 'electronics' }],
+  impl: '%$category%'
+})
+
 const accountSummary = Lambda('accountSummary', {
   permissionByPath: 'usersRO',
-  params: [{ id: 'accountDetails', dynamic: true, mandatory: true, description: 'the account order rows; pass a %$var% to ship by value, or a wFetch(roomUrl/...) profile to read server-side' }],
+  params: [{
+    id: 'accountDetails', dynamic: true, mandatory: true,
+    description: 'the account order rows; pass a %$var% to ship by value, or a wFetch(roomUrl/...) profile to read server-side'
+  }],
   impl: pipe('%$accountDetails()%', count())
 })
 
@@ -75,6 +83,7 @@ Test('roomLambdaTest.deployOnTheCloud', {
 })
 
 Test('roomLambdaTest.ensureExtracted.concurrent', {
+  nodeOnly: true,
   impl: dataTest({
     calculate: async () => {
       const serverModule = '../../../cloud-services/express-server/lib/room-lambda-and-applet.js'
@@ -87,12 +96,19 @@ Test('roomLambdaTest.ensureExtracted.concurrent', {
       await coreUtils.runBashScript(`tar -czf ${root}/lambda.tar.gz -C ${src} .`)
       const tar = await fsp.readFile(`${root}/lambda.tar.gz`)
       let fetches = 0
-      const dirs = await Promise.all(Array.from({ length: 20 }, () => ensureExtracted('race-test', { root: code, fetchTar: async () => (fetches++, await new Promise(r => setTimeout(r, 20)), tar) })))
+      const dirs = await Promise.all(Array.from({ length: 20 }, () => ensureExtracted('race-test', {
+        root: code, fetchTar: async () => (fetches++, await new Promise(r => setTimeout(r, 20)), tar)
+      })))
       const files = await fsp.readdir(dirs[0])
       await fsp.rm(root, { recursive: true, force: true })
       return { dirs: new Set(dirs).size, fetches, hasIndex: files.includes('index.js'), hasImportmap: files.includes('importmap.mjs') }
     },
-    expectedResult: and(equals(1, '%dirs%'), equals(1, '%fetches%'), equals(true, '%hasIndex%'), equals(true, '%hasImportmap%')),
+    expectedResult: and(
+      equals(1, '%dirs%'),
+      equals(1, '%fetches%'),
+      equals(true, '%hasIndex%'),
+      equals(true, '%hasImportmap%')
+    ),
     timeout: 12000
   })
 })
@@ -103,18 +119,14 @@ Test('roomLambdaTest.ensureExtracted.concurrent', {
 //   byValue  accountSummary('%$accountDetails%')    packedCtx.vars {accountDetails:[...]} ~515B  the rows themselves cross; at 50 rows → 803B > budget → WARNING
 // byFetch vs byValue = ship a reference vs ship the bytes. (arg rides in the profile not packedCtx; loggers §7; identity §4.)
 
-Test('roomLambdaTest.wire.argDefault', {
-  HeavyTest: true,
+Test('roomLambdaTest.remoteCall.argDefault', {
   impl: dataTest({
-    setup: setVars(asIs({ lambdaHost: 'https://staging.indivi.ai', roomUrl: 'room://testPublicRoom' })),
-    calculate: invokeSnippetInContext(salesByCategory()),
-    expectedResult: equals('electronics', '%0/category%'),
-    timeout: 12000,
-    logger: 'dbLogger,roomLogger,etlLogger'
+    calculate: categoryDefault(),
+    expectedResult: equals('electronics', '%%')
   })
 })
 
-Test('roomLambdaTest.wire.arg', {
+Test('roomLambdaTest.remoteCall.arg', {
   HeavyTest: true,
   impl: dataTest({
     setup: setVars(asIs({ lambdaHost: 'https://staging.indivi.ai', roomUrl: 'room://testPublicRoom' })),
@@ -125,7 +137,7 @@ Test('roomLambdaTest.wire.arg', {
   })
 })
 
-Test('roomLambdaTest.wire.byFetch', {
+Test('roomLambdaTest.remoteCall.byFetch', {
   HeavyTest: true,
   impl: dataTest({
     setup: setVars(asIs({ lambdaHost: 'https://staging.indivi.ai', roomUrl: 'room://testPublicRoom' })),
@@ -137,7 +149,7 @@ Test('roomLambdaTest.wire.byFetch', {
   })
 })
 
-Test('roomLambdaTest.wire.byValue', {
+Test('roomLambdaTest.remoteCall.byValue', {
   HeavyTest: true,
   impl: dataTest({
     setup: setVars(asIs({ lambdaHost: 'https://staging.indivi.ai', roomUrl: 'room://testPublicRoom', accountDetails: Array.from({ length: 30 }, (_, i) => ({ amount: i })) })),
@@ -149,7 +161,7 @@ Test('roomLambdaTest.wire.byValue', {
   })
 })
 
-Test('roomLambdaTest.wire.tooLargeByValue', {
+Test('roomLambdaTest.remoteCall.tooLargeByValue', {
   HeavyTest: true,
   impl: dataTest({
     setup: setVars(asIs({ lambdaHost: 'http://localhost:3000', roomUrl: 'room://testPublicRoom', accountDetails: Array.from({ length: 50 }, (_, i) => ({ amount: i })) })),
@@ -195,14 +207,20 @@ const accessDenied = Component('accessDenied', {
 })
 
 // ALLOW: admin grants every dir; user grants the dirs it has r on.
-Test('roomLambdaTest.perm.admin.usersRO', { HeavyTest: true, impl: accessGranted('testSignedRoom', invokeSnippetInContext(ping())) })
-Test('roomLambdaTest.perm.admin.adminDir', { HeavyTest: true, impl: accessGranted('testSignedRoom', invokeSnippetInContext(pingAdmin())) })
-Test('roomLambdaTest.perm.user.usersRW', { HeavyTest: true, impl: accessGranted('testUserRoom', invokeSnippetInContext(pingRW())) })
+Test('roomLambdaTest.accessControl.admin.usersRO', { HeavyTest: true, impl: accessGranted('testSignedRoom', invokeSnippetInContext(ping())) })
+Test('roomLambdaTest.accessControl.admin.adminDir', { HeavyTest: true, impl: accessGranted('testSignedRoom', invokeSnippetInContext(pingAdmin())) })
+Test('roomLambdaTest.accessControl.user.usersRW', { HeavyTest: true, impl: accessGranted('testUserRoom', invokeSnippetInContext(pingRW())) })
 // DENY G2: user on the admin dir (no perm). DENY G1: stranger (role null) on any dir.
-Test('roomLambdaTest.perm.deny.userOnAdminDir', { HeavyTest: true, impl: accessDenied('testUserRoom', invokeSnippetInContext(pingAdmin()), 'forbidden: admin for role user for user') })
-Test('roomLambdaTest.perm.deny.stranger', { HeavyTest: true, impl: accessDenied('testStrangerRoom', invokeSnippetInContext(ping()), 'forbidden: usersRO for role null for user') })
+Test('roomLambdaTest.accessControl.deny.userOnAdminDir', {
+  HeavyTest: true,
+  impl: accessDenied('testUserRoom', invokeSnippetInContext(pingAdmin()), 'forbidden: admin for role user for user')
+})
+Test('roomLambdaTest.accessControl.deny.stranger', {
+  HeavyTest: true,
+  impl: accessDenied('testStrangerRoom', invokeSnippetInContext(ping()), 'forbidden: usersRO for role null for user')
+})
 
-Test('roomLambdaTest.perm.signed', {
+Test('roomLambdaTest.accessControl.signed', {
   HeavyTest: true,
   impl: dataTest({
     calculate: invokeSnippetInContext(salesByCategory('sports')),

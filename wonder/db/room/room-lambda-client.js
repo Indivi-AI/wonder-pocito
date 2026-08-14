@@ -151,7 +151,8 @@ DbDriverInterceptor('roomLambda', {
             json: async () => ({ error: `room-lambda ${res.status}: ${raw.slice(0, 200)}` }), text: async () => raw }
         }
         if (!res.ok) {   // 401/403/... carry {error} and no result - surface it; asResponse would mask it as an ok-null (the "failed: 200" trap)
-          if (globalThis.window && (json?.error === 'authorization token expired' || json?.error?.endsWith('role null for user devMachine')))
+          if (globalThis.window && (json?.error === 'authorization token expired'
+            || typeof json?.error === 'string' && json.error.endsWith('role null for user devMachine')))
             (await import('@wonder/db/oauth2.js')).reLogin()
           roomLogger?.error?.({ t: 'roomLambda rejected', roomId, name, status: res.status, serverError: json?.error }, {}, { ctx })
           return { ok: false, status: res.status, json: async () => ({ error: json?.error || `room-lambda ${res.status}` }), text: async () => raw }

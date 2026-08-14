@@ -1,0 +1,75 @@
+import { jb, coreUtils } from '@jb6/core'
+
+export const ECHARTS_IMPORT = '@jb6/react/lib/echarts/echarts.mjs'
+export const PALETTE = ['#2563eb', '#16a34a', '#f59e0b', '#dc2626', '#7c3aed', '#db2777', '#0d9488', '#ea580c']
+export const DIM = '#cbd5e1', INK = '#1e293b', MUTE = '#64748b'
+export const colorAt = index => PALETTE[((index % PALETTE.length) + PALETTE.length) % PALETTE.length]
+
+export const useEcharts = (ctx, props, option, clickInfo) => {
+  const { useEffect, useRef } = ctx.vars.react
+  const ref = useRef(null)
+  const width = props.width || 540, height = props.height || 320
+  useEffect(() => {
+    const el = ref.current, echarts = jb.reactRepository.importCache[ECHARTS_IMPORT]
+    if (!el || !echarts) return
+    if (globalThis.window?.testing && !jb.__echartsReady) {
+      jb.__echartsReady = true
+      const measureText = text => ({ width: String(text).length * 7.2 })
+      echarts.setPlatformAPI({ measureText, createCanvas: () => ({ getContext: () => ({ measureText }) }) })
+    }
+    const chart = echarts.init(el, null, { renderer: 'svg', width: el.clientWidth || width, height })
+    const render = () => {
+      chart.resize({ width: el.clientWidth || width })
+      chart.setOption({ color: PALETTE, animation: !globalThis.window?.testing, ...option(el.clientWidth || width) }, { notMerge: true })
+    }
+    render()
+    props.onEvent && chart.on('click', event => props.onEvent({ type: 'drill', ...clickInfo(event, props), spec: props }))
+    const observer = globalThis.ResizeObserver && new globalThis.ResizeObserver(render)
+    observer?.observe(el)
+    return () => { observer?.disconnect(); chart.dispose() }
+  }, [JSON.stringify(props)])
+  return { ref, width, height }
+}
+
+export const formatNumber = (value, format) => {
+  if (value == null || isNaN(+value)) return ''
+  const n = +value, abs = Math.abs(n)
+  const compact = abs >= 1e9 ? `${+(n / 1e9).toFixed(1)}B` : abs >= 1e6 ? `${+(n / 1e6).toFixed(1)}M`
+    : abs >= 1e3 ? `${+(n / 1e3).toFixed(1)}K` : String(Math.round(n * 100) / 100)
+  return format == '$' ? `$${compact}` : format == '₪' ? `${compact} ₪` : format == '%' ? `${compact}%`
+    : format == 'int' ? String(Math.round(n)) : compact
+}
+
+export const highlightList = highlight => highlight == null ? [] : Array.isArray(highlight) ? highlight : [highlight]
+export const matchesHighlight = (highlight, name, index) => highlightList(highlight).some(item =>
+  typeof item == 'number' ? item == index : typeof item == 'string' ? item == name
+    : item?.name != null ? String(item.name) == String(name) : item?.index == index)
+export const defaultClickInfo = event => ({
+  name: String(event.name || event.data?.name || event.seriesName || ''), series: event.seriesName,
+  x: event.name ?? (Array.isArray(event.value) ? event.value[0] : undefined),
+  y: Array.isArray(event.value) ? event.value[1] : event.value
+})
+
+export const resolveExtremes = (highlight, items) => highlightList(highlight).map(item => {
+  if (item && (item.min || item.max) && items.length) {
+    const selected = items.reduce((a, b) => item.max ? b.value > a.value ? b : a : b.value < a.value ? b : a)
+    return { name: selected.name, note: item.note }
+  }
+  return item
+})
+export const highlightNote = (highlight, name) => highlightList(highlight)
+  .find(item => item?.note && (item.name == null || String(item.name) == String(name)))?.note
+export const itemColors = (highlight, items) => items.map((item, index) => highlightList(highlight).length
+  ? matchesHighlight(highlight, item.name, index) ? item.color || colorAt(index) : DIM : item.color || colorAt(index))
+export const titleBlock = (title, note) => title || note ? { title: {
+  text: title || '', subtext: note || '', left: 8, top: 6,
+  textStyle: { fontSize: 15, fontWeight: 600, color: INK }, subtextStyle: { fontSize: 12, fontWeight: 600, color: PALETTE[0] }
+} } : {}
+export const legendBlock = (show, names) => show ? { legend: {
+  data: names, bottom: 2, textStyle: { color: '#475569', fontSize: 12 }
+} } : {}
+export const vizUtils = {
+  PALETTE, DIM, INK, MUTE, colorAt, fmtNum: formatNumber, asArray: coreUtils.asArray,
+  hasHighlight: highlight => highlightList(highlight).length > 0, resolveExtremes,
+  matchHighlight: matchesHighlight, highlightNote, itemColors, titleBlock, legendBlock
+}

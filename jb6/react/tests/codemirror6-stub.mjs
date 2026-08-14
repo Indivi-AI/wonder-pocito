@@ -1,6 +1,6 @@
 // Minimal cm6 stand-in for react tests. Same export surface CodeMirrorJs destructures,
 // but no layout: selection is pure {from,to,head} offsets. Only selection, click and
-// key-shortcut are meaningful. The UiActions clickInCodeMirror/selectInCodeMirror/
+// key-shortcut are meaningful. The UI actions clickInCodeMirror/selectInCodeMirror/
 // keyPressInCodeMirror drive it via EditorView.findFromDOM(el)._cmView.
 const win = globalThis.window
 

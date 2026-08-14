@@ -210,19 +210,17 @@ Tool('scrambleText', {
 })
 
 Tool('playwrightHarvest', {
-  description: `Load a react-comp-view.html url in headless Chromium, run a ui-action<test> profile against the mounted comp and harvest its jb6 loggers + browser errors.
-url carries query params: logger, cmpId, urlsToLoad.
+  description: `Load a tests.html, react-comp-view.html or room applet URL in Chromium, run ui-action<react> automation and harvest its loggers and browser errors.
 Returns { done, errors, logs, html?, timeline }.`,
   params: [
-    {id: 'url', as: 'string', asIs: true, mandatory: true, description: 'full react-comp-view.html url incl. logger/cmpId/urlsToLoad query params'},
-    {id: 'uiActionJsonStr', as: 'string', asIs: true, description: `ui-action<test> profile to run against the mounted comp.
-MUST be JSON escaped as a string, NOT an object. e.g. "{\\"$\\":\\"ui-action<test>selectInCodeMirror\\",\\"from\\":2,\\"to\\":8}"`},
+    {id: 'url', as: 'string', asIs: true, mandatory: true},
+    {id: 'automation', as: 'string', asIs: true, description: 'serialized ui-action<react> profile; empty only harvests the target'},
     {id: 'timeout', as: 'number', defaultValue: 5000, description: 'ms to wait for the page to mount and its uiAction to finish'},
     {id: 'domSelector', as: 'string', description: 'optional css selector; when set returns that element outerHTML'},
     {id: 'seedLocalStorage', as: 'string', asIs: true,
       description: 'id of a data<common> comp whose result object seeds localStorage before boot'},
   ],
-  impl: mcpTool(async (ctx, {}, {url, uiActionJsonStr, timeout, domSelector, seedLocalStorage}) => {
+  impl: mcpTool(async (ctx, {}, {url, automation, timeout, domSelector, seedLocalStorage}) => {
     let seed = null
     await coreUtils.ensureImportMapsInCli() // needed for external repos with import maps
     if (seedLocalStorage) {
@@ -238,6 +236,10 @@ MUST be JSON escaped as a string, NOT an object. e.g. "{\\"$\\":\\"ui-action<tes
       redirect = { from: url, status: res.status, to: location }
       url = location
     }
+    const targetUrl = new URL(url)
+    targetUrl.searchParams.set('automation', automation || '')
+    targetUrl.searchParams.set('automationTimeout', timeout)
+    url = targetUrl.href
     const script = `
 import { coreUtils } from '@jb6/core'
 import '@jb6/core/misc/import-map-services.js'
@@ -252,19 +254,12 @@ page.on('pageerror', e => errors.push(String(e?.stack || e)))
 await page.addInitScript(() => window.addEventListener('unhandledrejection', e => console.error('unhandledrejection: ' + (e.reason?.stack || e.reason))))
 const seed = ${JSON.stringify(seed)}
 if (seed) await page.addInitScript(s => Object.entries(s).forEach(([k, v]) => localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v))), seed)
-await page.addInitScript(() => {
-  window.__jbOnMounted = async (ctx, reactUtils) => {
-    await import('@jb6/react/tests/react-testers.js')
-    window.jbRunAndHarvest = (uiActionJsonStr, limit) => reactUtils.runAndHarvest(ctx, window, uiActionJsonStr, limit)
-    ctx.vars.uiLogger?.info?.({ t: 'jbOnMounted.installed', msg: 'test harness injected externally into prod page; driver ready' }, {}, { ctx })
-  }
-})
 let done, logs, html, harvestError
 try {
   await page.goto(${JSON.stringify(url)}, { waitUntil: 'domcontentloaded', timeout: ${timeout} }); mark('loaded')
-  await page.waitForFunction(() => window.jbMounted, null, { timeout: ${timeout} }); mark('mounted')
-  const uiActionJsonStr = ${JSON.stringify(uiActionJsonStr || '')}
-  ;({ done, logs } = await page.evaluate(([s, limit]) => window.jbRunAndHarvest(s, limit), [uiActionJsonStr, ${timeout}])); mark('done')
+  await page.waitForFunction(() => window.jbAutomation?.done, null, { timeout: ${timeout} }); mark('done')
+  const state = await page.evaluate(() => window.jbAutomation)
+  ;({ done, logs, error: harvestError } = state)
   await page.waitForTimeout(500)   // drain late async render errors / unhandled rejections before closing
   html = ${JSON.stringify(domSelector || '')} ? await page.evaluate(s => document.querySelector(s)?.outerHTML, ${JSON.stringify(domSelector || '')}) : undefined
 } catch (e) { harvestError = String(e?.message || e); mark('failed:' + (timeline.at(-1)?.phase || 'goto')) }

@@ -12,7 +12,7 @@ import './Agents/parallel-agent.js'   // registers the comaxAgentPanel workflow 
 import './nostalgy/retrieval-analytics-agent.js'   // registers retrievalAnalytics workflow (RAG over verified-questions.md)
 import './Agents/agentic-agents.js'   // registers verifiedAnalytics (critic loop) + agenticAnalytics (replan-tailed flow)
 import './Agents/agents-repo.js'   // Data('comaxAnalyticsAgents') — the selectable-agents repo
-import '../../viz/viz-index.js'   // VizWidget + all inline chart widgets the assistant can emit
+import '@wonder/ui/viz/viz-index.js'   // VizWidget + all inline chart widgets the assistant can emit
 import { comaxDrillQuestion, comaxFixDrillSql } from './Comps/drill-helpers.js'
 import { comaxLogo, comaxFontCss } from './Comps/comax-brand.js'
 

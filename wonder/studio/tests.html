@@ -10,16 +10,24 @@
   <script type="importmap">JB_IMPORT_MAP</script>
   <script type="module">
     const query = name => new URLSearchParams(location.search).get(name)
+    const { coreUtils } = await import('@jb6/core')
     const { runTests } = await import('@jb6/testing')
     const { browserSpy } = await import('@jb6/core/utils/browser-spy.js')
 
     await import(query('modulePath') || '/tests/all-tests.js')
     browserSpy.initSpyByUrl()
-    runTests({
+    const automation = query('automation')
+    await runTests({
       specificTest: query('test'),
       notPattern: query('not'),
-      ...Object.fromEntries(['pattern', 'take', 'includeHeavy', 'showOnly', 'action'].map(name => [name, query(name) || query(name) != null]))
+      ...Object.fromEntries(['pattern', 'take', 'includeHeavy'].map(name => [name, query(name) || query(name) != null])),
+      showOnly: query('showOnly') != null || automation != null
     })
+    if (automation != null) {
+      const { reactUtils } = await import('@jb6/react')
+      await import('@jb6/react/automation.js')
+      await reactUtils.startAutomation(new coreUtils.Ctx().setVars(window.jbLoggers || {}), window)
+    }
   </script>
 </head>
 <body>

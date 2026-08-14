@@ -142,12 +142,13 @@ Test('mcpTest.playwrightHarvest', {
   impl: mcpToolTest({
     tool: 'playwrightHarvest',
     args: asIs({
-      url: 'http://localhost:8083/packages/react/react-comp-view.html?logger=uiLogger&cmpId=codeMirrorTest&urlsToLoad=@jb6/react/tests/react-tests.js',
-      uiActionJsonStr: `{"$":"ui-action<test>actions","actions":[{"$":"ui-action<test>selectInCodeMirror","from":2,"to":8}]}`,
+      url: 'http://localhost:8083/packages/testing/tests.html?test=reactTest.buttonToClick&logger=uiLogger',
+      automation: `{"$":"ui-action<react>click","buttonText":"Click me"}`,
       seedLocalStorage: 'mockAuthSeed',
       domSelector: 'body'
     }),
-    expectedResult: and(contains('selected: lect-a'), contains('cm-editor'))
+    expectedResult: and(contains('Clicked!'), contains('<button>'), notContains('harvestError')),
+    timeout: 10000
   })
 })
 

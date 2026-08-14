@@ -8,7 +8,7 @@ import '../Agents/analytics-agent.js'   // registers the basicAnalytics workflow
 import { PROMOTION_ACTION_QUESTION } from '../Agents/reports-template-agent.js'
 import '../Agents/fast-report-agent.js'   // registers fast-report (quick report widgets + delayed LLM summary)
 import '../Agents/agents-repo.js'   // Data('comaxAnalyticsAgents') — the selectable-agents repo
-import '../../../viz/viz-index.js'   // VizWidget + all inline chart widgets the assistant can emit
+import '@wonder/ui/viz/viz-index.js'   // VizWidget + all inline chart widgets the assistant can emit
 import './dashboards.js'
 import { comaxDrillQuestion, comaxFixDrillSql } from '../Comps/drill-helpers.js'
 import { runViaRoomLambda } from '@wonder/ai/duckdb-sql-step.js'

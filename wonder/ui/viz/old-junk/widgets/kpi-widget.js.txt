@@ -1,0 +1,47 @@
+import { dsls, jb, coreUtils } from '@jb6/core'
+import '../viz-core.js'
+
+const { react: { ReactComp, 'react-comp': { comp } } } = dsls
+
+// kpiWidget — scorecard of headline numbers, read at a glance. DOM (not a chart): no echarts, no
+// importUrl. Value dominates > muted uppercase label > colored delta arrow; highlight accents one card (border+tint+INK), mutes rest, note under title.
+ReactComp('kpiWidget', {
+  description: 'KPI scorecard of headline numbers; highlight emphasizes one card',
+  impl: comp({
+    hFunc: (ctx, { react: { h } }) => props => {
+      const V = jb.vizUtils
+const items = (V.asArray(props.items) || []).map((d, i) => ({
+        name: String(d.label ?? i), value: +d.value || 0, delta: d.delta, format: d.format ?? props.valueFormat,
+        deltaFormat: props.deltaFormat ?? d.format ?? props.valueFormat, unit: d.unit
+      }))
+      const highlight = V.asArray(props.highlight)?.map(h => h && typeof h === 'object' && h.label != null ? { ...h, name: h.label } : h)
+      const hl = V.resolveExtremes(highlight, items)
+      const note = items.map(d => V.highlightNote(hl, d.name)).find(Boolean)
+      const width = props.width || 540, active = V.hasHighlight(hl), accent = V.PALETTE[0]
+      const deltaColor = d => d === 0 ? V.MUTE : d > 0 ? V.PALETTE[1] : V.PALETTE[3]
+      const card = (d, i) => {
+        const on = active && V.matchHighlight(hl, d.name, i), muted = active && !on, dir = d.delta > 0 ? '▲' : d.delta < 0 ? '▼' : '▬'
+        return h('div', { key: i, className: props.onEvent ? 'cursor-pointer' : undefined,
+          onClick: props.onEvent && (() => props.onEvent({ type: 'drill', name: d.name, value: d.value, spec: props })),
+          style: { flex: '1 1 130px', minWidth: 0, padding: '13px 15px', borderRadius: '12px',
+            background: on ? '#eff6ff' : '#f8fafc', border: on ? `2px solid ${accent}` : '1px solid #eef2f7',
+            opacity: muted ? 0.6 : 1, boxSizing: 'border-box', cursor: props.onEvent ? 'pointer' : undefined } },
+          h('div', { style: { fontSize: '11px', fontWeight: 600, color: muted ? V.DIM : V.MUTE,
+            textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: '7px', whiteSpace: 'nowrap',
+            overflow: 'hidden', textOverflow: 'ellipsis' } }, d.name),
+          h('div', { style: { fontSize: '27px', fontWeight: 700, color: muted ? V.MUTE : V.INK, lineHeight: 1.1,
+            fontVariantNumeric: 'tabular-nums', letterSpacing: '-.01em' } },
+            V.fmtNum(d.value, d.format) + (d.unit ? ' ' + d.unit : '')),
+          d.delta != null && h('div', { style: { fontSize: '12px', fontWeight: 600, marginTop: '5px',
+            color: deltaColor(d.delta), fontVariantNumeric: 'tabular-nums' } },
+            `${dir} ${V.fmtNum(Math.abs(d.delta), d.deltaFormat)}`))
+      }
+      return h('div:viz-widget', { style: { width: '100%', maxWidth: width + 'px', background: '#fff',
+        border: '1px solid #f1f5f9', borderRadius: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+        padding: '16px', boxSizing: 'border-box', fontFamily: 'ui-sans-serif, system-ui, sans-serif' } },
+        props.title && h('div', { style: { fontSize: '15px', fontWeight: 600, color: V.INK, marginBottom: '2px' } }, props.title),
+        note && h('div', { style: { fontSize: '12px', fontWeight: 600, color: accent, marginBottom: '8px' } }, note),
+        h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '12px' } }, items.map(card)))
+    }
+  })
+})

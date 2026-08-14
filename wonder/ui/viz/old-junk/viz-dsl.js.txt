@@ -1,0 +1,34 @@
+import { dsls } from '@jb6/core'
+
+const { tgp: { TgpType } } = dsls
+
+const VizHighlight = TgpType('viz-highlight', 'viz', {
+  typescript: '{ name?: string, index?: number, min?: boolean, max?: boolean, note?: string }',
+  coerce: highlight => typeof highlight == 'string' ? dsls.viz['viz-highlight'].byName(highlight)
+    : typeof highlight == 'number' ? dsls.viz['viz-highlight'].byIndex(highlight) : highlight
+})
+
+VizHighlight('byName', { params: [{ id: 'name', as: 'string', byName: true }, { id: 'note', as: 'string' }] })
+VizHighlight('byIndex', { params: [{ id: 'index', as: 'number', byName: true }, { id: 'note', as: 'string' }] })
+VizHighlight('maximum', { params: [{ id: 'note', as: 'string', byName: true }], impl: (ctx, {}, { note }) => ({ max: true, note }) })
+VizHighlight('minimum', { params: [{ id: 'note', as: 'string', byName: true }], impl: (ctx, {}, { note }) => ({ min: true, note }) })
+
+const VizSeries = TgpType('viz-series', 'viz', { typescript: '{ name: string, values?: number[], points?: { x: any, y: number }[] }' })
+VizSeries('values', { params: [{ id: 'name', as: 'string', byName: true }, { id: 'values', as: 'array' }] })
+VizSeries('points', { params: [{ id: 'name', as: 'string', byName: true }, { id: 'points', as: 'array' }] })
+
+const VizColumn = TgpType('viz-column', 'viz', { typescript: '{ key: string, label?: string, format?: string }' })
+VizColumn('column', {
+  params: [{ id: 'key', as: 'string', byName: true }, { id: 'label', as: 'string' }, { id: 'format', as: 'string' }]
+})
+
+const VizDrill = TgpType('viz-drill', 'viz', {
+  typescript: '{ kind?: string, title?: string, sql?: string, question?: string, label?: string, valueFormat?: string }'
+})
+VizDrill('query', {
+  params: [
+    { id: 'kind', as: 'string', byName: true }, { id: 'sql', as: 'string' }, { id: 'title', as: 'string' },
+    { id: 'question', as: 'string' }, { id: 'label', as: 'string' }, { id: 'valueFormat', as: 'string' }
+  ]
+})
+VizDrill('question', { params: [{ id: 'question', as: 'string', byName: true }, { id: 'label', as: 'string' }] })

@@ -61,7 +61,13 @@ Test('snippet.runTest', {
 Test('snippet.runReactTest', {
   HeavyTest: true,
   impl: snippetTest({
-    profileText: `{$: 'test<test>reactTest', testedComp: ({},{react: {h, useState}}) => () => { const [text, setText] = useState('Click me'); return h('button', { onClick: () => setText('Clicked!') }, text) }, expectedResult: {$: 'boolean<common>contains', text: 'Clicked!'}, userActions: {$: 'ui-action<test>click', buttonText: 'Click me'}}`,
+    profileText: `{$: 'test<test>reactTest',
+      testedComp: ({},{react: {h, useState}}) => () => {
+        const [text, setText] = useState('Click me')
+        return h('button', {onClick: () => setText('Clicked!')}, text)
+      },
+      expectedResult: {$: 'boolean<common>contains', text: 'Clicked!'},
+      userActions: {$: 'ui-action<react>click', buttonText: 'Click me'}}`,
     expectedResult: '%success%',
   })
 })

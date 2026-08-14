@@ -4,9 +4,9 @@ import '@jb6/react/tests/react-testers.js'
 import './finance-demo.js'
 
 const {
-  test: { Test, test: { reactTest }, 'ui-action': { waitForText } },
+  test: { Test, test: { reactTest } },
   common: { boolean: { and, contains } },
-  react: { 'react-comp': { FinanceDemo } }
+  react: { 'react-comp': { FinanceDemo }, 'ui-action': { waitForText } }
 } = dsls
 
 Test('financeApplet.homeReports', {

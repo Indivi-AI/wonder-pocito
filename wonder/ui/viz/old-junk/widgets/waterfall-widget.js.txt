@@ -1,0 +1,49 @@
+import { dsls, jb, coreUtils } from '@jb6/core'
+import '../viz-core.js'
+
+
+// waterfallWidget — a starting total built up/down to an ending total via sequential +/- steps.
+// A transparent stacked base floats each visible delta to its running cumulative; connectors link
+// step tops. increase=green, decrease=red, total=neutral ink; highlight keeps one step full-color,
+// dims the rest to V.DIM and surfaces its note as blue subtext.
+const waterfallOption = (props, V) => {
+  const GREEN = V.colorAt(1), RED = V.colorAt(3)
+  let cum = 0
+  const steps = (V.asArray(props.data) || []).map((d, i) => {
+    const name = String(d.name ?? d.label ?? i)
+    if (d.total) { const end = +(d.value ?? cum) || cum; const s = { name, total: true, delta: end, base: 0, top: end }; cum = end; return s }
+    const delta = +(d.value ?? d.y ?? 0) || 0, start = cum; cum = start + delta
+    return { name, delta, base: Math.min(start, cum), top: cum }
+  })
+  const hl = V.resolveExtremes(props.highlight, steps.map(s => ({ name: s.name, value: s.delta })))
+  const note = steps.map(s => V.highlightNote(hl, s.name)).find(Boolean)
+  const active = V.hasHighlight(hl)
+  const dimmed = (s, i) => active && !V.matchHighlight(hl, s.name, i)
+  const colorOf = (s, i) => dimmed(s, i) ? V.DIM : s.total ? V.INK : s.delta >= 0 ? GREEN : RED
+  const sign = v => (v > 0 ? '+' : '') + V.fmtNum(v, props.valueFormat)
+  const connectors = steps.slice(0, -1).map((s, i) => [{ xAxis: i, yAxis: s.top }, { xAxis: i + 1, yAxis: s.top }])
+  return {
+    ...V.titleBlock(props.title, note),
+    grid: { left: 8, right: 18, top: props.title ? (note ? 62 : 46) : 16, bottom: 28, containLabel: true },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
+      formatter: ps => { const s = steps[ps[0].dataIndex]; return `${s.name}<br/>${s.total ? V.fmtNum(s.delta, props.valueFormat) : sign(s.delta)} → ${V.fmtNum(s.top, props.valueFormat)}` } },
+    xAxis: { type: 'category', data: steps.map(s => s.name), axisTick: { show: false }, axisLine: { lineStyle: { color: V.DIM } },
+      axisLabel: { color: V.MUTE, fontSize: 10, interval: 0, hideOverlap: true } },
+    yAxis: { type: 'value', name: props.yLabel, nameTextStyle: { color: V.MUTE, fontSize: 11 },
+      axisLabel: { color: V.MUTE, fontSize: 10, formatter: v => V.fmtNum(v, props.valueFormat) }, splitLine: { lineStyle: { color: '#f1f5f9' } } },
+    series: [
+      { type: 'bar', stack: 'wf', silent: true, itemStyle: { color: 'transparent' }, emphasis: { disabled: true }, data: steps.map(s => s.base) },
+      { type: 'bar', stack: 'wf', barMaxWidth: 46, itemStyle: { borderRadius: [3, 3, 0, 0] },
+        emphasis: { focus: 'series', itemStyle: { shadowBlur: 8, shadowColor: 'rgba(30,41,59,0.2)' } },
+        data: steps.map((s, i) => ({ value: Math.abs(s.delta), itemStyle: { color: colorOf(s, i) } })),
+        markLine: { silent: true, symbol: 'none', lineStyle: { color: V.DIM, type: 'dashed', width: 1 }, data: connectors },
+        label: { show: true, position: 'top', fontSize: 10,
+          color: p => dimmed(steps[p.dataIndex], p.dataIndex) ? V.DIM : active ? V.INK : V.MUTE,
+          fontWeight: p => active && !dimmed(steps[p.dataIndex], p.dataIndex) ? 700 : 400,
+          formatter: p => steps[p.dataIndex].total ? V.fmtNum(steps[p.dataIndex].delta, props.valueFormat) : sign(steps[p.dataIndex].delta) } }
+    ]
+  }
+}
+
+jb.vizUtils.vizComp('waterfall', waterfallOption, 'Waterfall chart: a running total built from sequential +/- contributions; highlight emphasizes one step')
+

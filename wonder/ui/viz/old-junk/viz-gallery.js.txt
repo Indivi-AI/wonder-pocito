@@ -1,0 +1,162 @@
+import { dsls, ns } from '@jb6/core'
+import '@jb6/common'
+import '@jb6/testing'
+import '@jb6/react/tests/react-testers.js'
+
+const {
+  common: { boolean: { and, contains } },
+  test: { Test, test: { reactTest } },
+  react: { ReactComp, 'react-comp': { comp }, 'ui-action': { waitForText } }
+} = dsls
+const viz = ns.viz
+
+ReactComp('viz.Gallery', {
+  params: [
+    {id: 'visualizations', type: 'react-comp<react>[]'}
+  ],
+  impl: comp({
+    hFunc: (ctx, { react: { h } }, { visualizations }) => () => h('div', {
+      style: { background: '#f8fafc', padding: '20px', minHeight: '100vh', fontFamily: 'ui-sans-serif, system-ui' }
+    },
+    h('h1', { style: { fontSize: '20px', fontWeight: 700, color: '#0f172a', marginBottom: '16px' } }, 'Visualization gallery'),
+    h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-start' } },
+      visualizations.map((visualization, i) => h('div', {
+        key: i, style: { flex: '1 1 320px', minWidth: 0, maxWidth: '620px' }
+      }, h(visualization)))))
+  })
+})
+
+ReactComp('vizGallery', {
+  impl: viz.Gallery([
+    viz.Pie('Messages by sender', [
+      {name: 'Alice', value: 120},
+      {name: 'Bob', value: 80}
+    ], {
+      highlight: 'Alice'
+    }),
+    viz.Pie('Revenue share', [
+      {name: 'Search', value: 5200},
+      {name: 'Social', value: 3100}
+    ], {
+      donut: true,
+      valueFormat: '$'
+    }),
+    viz.Bar('Sessions by day', [
+      {name: 'Mon', value: 30},
+      {name: 'Thu', value: 70}
+    ], {
+      yLabel: 'sessions',
+      highlight: {max: true}
+    }),
+    viz.HBar('Top destinations', [
+      {name: 'USA', value: 5200},
+      {name: 'UK', value: 3100}
+    ], {
+      valueFormat: 'compact'
+    }),
+    viz.GroupedBar({
+      categories: ['Mon','Tue'],
+      series: [
+        {name: 'Plan', values: [40,50]},
+        {name: 'Actual', values: [38,55]}
+      ]
+    }),
+    viz.StackedBar({
+      categories: ['Mon','Tue'],
+      series: [
+        {name: 'Paid', values: [20,25]},
+        {name: 'Organic', values: [10,18]}
+      ]
+    }),
+    viz.Line('Weekly trend', {
+      series: [
+        {name: 'Revenue', points: [{x: 'Mon', y: 30}, {x: 'Tue', y: 45}]}
+      ],
+      xType: 'category'
+    }),
+    viz.Area('Cumulative signups', {
+      series: [
+        {name: 'Free', points: [{x: 0, y: 10}, {x: 1, y: 20}]}
+      ],
+      stacked: true
+    }),
+    viz.Scatter('Spend vs conversions', [
+      {x: 10, y: 5, name: 'A'},
+      {x: 40, y: 22, name: 'C'}
+    ]),
+    viz.Bubble('Markets', [
+      {x: 10, y: 4, size: 30, name: 'A'},
+      {x: 30, y: 8, size: 80, name: 'B'}
+    ]),
+    viz.Histogram('Session length', [2,3,3,4,4,5,6,8,12], { bins: 6 }),
+    viz.Boxplot('Latency by region', [
+      {name: 'US', values: [20,22,25,30]},
+      {name: 'EU', values: [30,35,40,45]}
+    ]),
+    viz.Heatmap({
+      title: 'Activity',
+      items: [
+        {x: 'M', y: 'AM', value: 20},
+        {x: 'T', y: 'AM', value: 40},
+        {x: 'M', y: 'PM', value: 60},
+        {x: 'T', y: 'PM', value: 80}
+      ],
+      xCategories: ['M','T'],
+      yCategories: ['AM','PM']
+    }),
+    viz.Radar('Product profile', {
+      indicators: [
+        {name: 'Speed', max: 100},
+        {name: 'UX', max: 100}
+      ],
+      series: [
+        {name: 'Us', values: [80,90]}
+      ]
+    }),
+    viz.Funnel('Conversion funnel', [
+      {name: 'Sessions', value: 10000},
+      {name: 'Converters', value: 620}
+    ]),
+    viz.Gauge('Goal attainment', 72, { min: 0, max: 100, target: 80 }),
+    viz.Treemap('Spend by category', [
+      {name: 'Ads', value: 5200},
+      {name: 'Tools', value: 1400}
+    ], {
+      valueFormat: '$'
+    }),
+    viz.Waterfall('Profit bridge', [
+      {name: 'Start', value: 1000},
+      {name: 'Costs', value: -300},
+      {name: 'End', total: true}
+    ]),
+    viz.Table({
+      title: 'Campaign metrics',
+      columns: [
+        {key: 'name', label: 'Campaign'},
+        {key: 'revenue', label: 'Revenue', format: '$'}
+      ],
+      rows: [
+        {name: 'Brand', revenue: 18400},
+        {name: 'Search', revenue: 9200}
+      ]
+    }),
+    viz.Kpi('This week', [
+      {label: 'Revenue', value: 18400, format: '$', delta: 12},
+      {label: 'CVR', value: 6.2, unit: '%'}
+    ]),
+    viz.Bullet('KPIs vs target', [
+      {name: 'Revenue', value: 184, target: 200, ranges: [120,170,220]}
+    ])
+  ])
+})
+
+Test('reactTest.viz.namespacedPie', {
+  impl: reactTest({
+    testedComp: viz.Pie('TGP pie', [
+      {name: 'A', value: 2},
+      {name: 'B', value: 1}
+    ], { highlight: 'A' }),
+    expectedResult: and(contains('TGP pie'), contains('A')),
+    userActions: waitForText('TGP pie')
+  })
+})

@@ -10,7 +10,7 @@ import '@wonder/db/etl/file-query.js'
 
 // How to run the test via mcp:
 // 1) fast nodejs, default: runTest({testId:'roomAppletTest.summaryApplet', logger:'dbLogger,roomLogger'}).
-// 2) in browser via playwrightHarvest() 
+// 2) in browser via playwrightHarvest({url, automation})
 //    http://localhost:3000/room/<room>/applet/summaryApplet?logger=roomLogger,dbLogger is using liveRepo, no need to upload applet
 //    https://staging.indivi.ai, after working on localhost and loading applet via mcp
 //   To save time, look at the logs, do not trust green tests
@@ -19,8 +19,8 @@ const {
   tgp: { Component, 'ctx-enricher': { setData } },
   common: { Data, boolean: { contains }, data: { invokeSnippetInContext, salesByCategory, fileQuery } },
   lambda: { 'lambda-packaging': { roomLambda } },
-  test: { Test, test: { reactTest }, 'ui-action': { waitForText } },
-  react: { ReactComp, 'react-comp': { comp }, 'progress-indicator': { stepper, dots } },
+  test: { Test, test: { reactTest } },
+  react: { ReactComp, 'react-comp': { comp }, 'progress-indicator': { stepper, dots }, 'ui-action': { waitForText } },
   etl: { 'cli-extract': { cachedWonderUrl }, 'cli-transform': { duckdb } }
 } = dsls
 
@@ -43,7 +43,8 @@ const dailySales = Data('dailySales', {
   params: [{ id: 'date', as: 'string' }],
   impl: fileQuery({
     from: cachedWonderUrl('room://aTeam/usersRO/sales-large.json'),
-    query: duckdb("SELECT category, sum(amount) AS total FROM read_json_auto({%$inputFile%}) WHERE day = '{%$date%}' GROUP BY category ORDER BY total DESC", { format: 'JSON, ARRAY' })
+    query: duckdb(`SELECT category, sum(amount) AS total FROM read_json_auto({%$inputFile%})
+      WHERE day = '{%$date%}' GROUP BY category ORDER BY total DESC`, { format: 'JSON, ARRAY' })
   })
 })
 
@@ -77,4 +78,6 @@ const summaryAppletTest = Component('summaryAppletTest', {
 
 Test('roomAppletTest.summaryApplet', { impl: summaryAppletTest('room://testPublicRoom') })
 Test('roomAppletTest.signedSummaryApplet', { impl: summaryAppletTest('signedRoom://testSignedRoom') })
-Test('roomAppletTest.signedSummaryApplet.cloud', { impl: summaryAppletTest({ roomUrl: 'signedRoom://testSignedRoom', onLiveRepo: false, lambdaHost: 'https://staging.indivi.ai' }) })
+Test('roomAppletTest.signedSummaryApplet.cloud', {
+  impl: summaryAppletTest({ roomUrl: 'signedRoom://testSignedRoom', onLiveRepo: false, lambdaHost: 'https://staging.indivi.ai' })
+})

@@ -10,7 +10,6 @@ const { json } = ns
 const {
   tgp: { Component, 'ctx-enricher': { Var, loadReveal } },
   test: { Test,
-      'ui-action': { click, longPress, actions, waitForText, clickInCodeMirror, selectInCodeMirror, keyPressInCodeMirror },
       test: { dataTest, reactTest }
   },
   common: {
@@ -19,6 +18,7 @@ const {
     boolean: { contains, equals, and },
   },
   react: { ReactComp,
+    'ui-action': { click, longPress, actions, waitForText, clickInCodeMirror, selectInCodeMirror, keyPressInCodeMirror },
     'react-comp': { comp, CodeMirrorJs },
     'react-metadata': { containerComp, importUrl },
     'progress-indicator': { spinner, dots, byStatus, byProgress }
@@ -29,14 +29,14 @@ Test('reactTest.helloWorld', {
   impl: reactTest(({}, {react: {h}}) => () => h('div', {}, 'hello world'), contains('hello world'))
 })
 
-Test('reactTest.buttonClick', {
+Test('reactTest.buttonToClick', {
+  description: 'Renders an untouched button for playwrightHarvest to click with external automation; intentionally has no userActions',
   impl: reactTest({
     testedComp: ({}, {react: {h, useState}}) => () => {
       const [text, setText] = useState('Click me')
       return h('button', { onClick: () => setText('Clicked!') }, text)
     },
-    expectedResult: contains('Clicked!'),
-    userActions: actions(click('Click me')),
+    expectedResult: contains('Click me'),
     logger: 'uiLogger'
   })
 })
@@ -141,7 +141,7 @@ Test('reactTest.refreshMainWithNewVars', {
         return hhStrongRefresh(ctx.setVars(vars), refreshMainInner, { refreshMain: (vars) => setVars(vars) })
     },
     expectedResult: contains('User: Jane'),
-    userActions: actions(waitForText('Change to Jane'), click(), waitForText('Jane'))
+    userActions: [waitForText('Change to Jane'), click(), waitForText('Jane')]
   })
 })
 

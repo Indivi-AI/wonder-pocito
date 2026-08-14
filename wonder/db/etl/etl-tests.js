@@ -86,6 +86,11 @@ Data('testCsvData', {
 
 const { testCsvData } = dsls.common.data
 
+const runCategoryQueries = Data('runCategoryQueries', {
+  params: [{id: 'first', dynamic: true}, {id: 'second', dynamic: true}],
+  impl: async (ctx, {}, {first, second}) => [await first(ctx.setVars({category: 'sports'})), await second(ctx.setVars({category: 'electronics'}))]
+})
+
 const writeCsvSetup = Component('writeCsvSetup', {
   type: 'ctx-enricher<tgp>',
   impl: async ctx => {
@@ -117,7 +122,8 @@ Test('cliEtl.duckdb.groupBy', {
     setup: writeCsvSetup(),
     calculate: cliEtl({
       extract: localFile(testCsvPath),
-      transform: duckdb("SELECT campaign_name, count(*) as sessions, sum(revenue) as revenue, sum(estimated_revenue) as estimated_revenue FROM read_csv('{%$inputFile%}') GROUP BY campaign_name ORDER BY revenue DESC"),
+      transform: duckdb(`SELECT campaign_name, count(*) as sessions, sum(revenue) as revenue,
+          sum(estimated_revenue) as estimated_revenue FROM read_csv('{%$inputFile%}') GROUP BY campaign_name ORDER BY revenue DESC`),
       load: copyToFile(testOutputPath)
     }),
     expectedResult: and(
@@ -266,7 +272,8 @@ Test('fileQuery.duckdb', {
     setup: writeCsvSetup(),
     calculate: fileQuery({
       from: localFile(testCsvPath),
-      query: duckdb("SELECT campaign_name, count(*) as sessions, sum(revenue) as revenue FROM read_csv('{%$inputFile%}') GROUP BY campaign_name ORDER BY revenue DESC", { format: 'JSON, ARRAY' })
+      query: duckdb(`SELECT campaign_name, count(*) as sessions, sum(revenue) as revenue
+          FROM read_csv('{%$inputFile%}') GROUP BY campaign_name ORDER BY revenue DESC`, { format: 'JSON, ARRAY' })
     }),
     expectedResult: contains('camp_a', { allText: json.stringify() }),
     timeout: 12000,
@@ -284,5 +291,25 @@ Test('fileQuery.mlr', {
     expectedResult: contains('camp_a', { allText: json.stringify() }),
     timeout: 12000,
     logger: 'dbLogger,etlLogger'
+  })
+})
+
+Test('fileQuery.dynamicVarCache', {
+  impl: dataTest({
+    setup: writeCsvSetup(),
+    calculate: runCategoryQueries(
+      fileQuery({
+        from: localFile(testCsvPath),
+        query: duckdb("SELECT '{%$category%}' AS category", { format: 'JSON, ARRAY' }),
+        clearCache: true
+      }),
+      fileQuery({
+        from: localFile(testCsvPath),
+        query: duckdb("SELECT '{%$category%}' AS category", { format: 'JSON, ARRAY' })
+      })
+    ),
+    expectedResult: contains('sports,electronics', { allText: join(',', { items: '%%/category' }) }),
+    timeout: 12000,
+    logger: 'etlLogger'
   })
 })

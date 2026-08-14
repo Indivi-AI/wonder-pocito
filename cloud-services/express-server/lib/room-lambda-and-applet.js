@@ -54,8 +54,13 @@ const cmpId = new URLSearchParams(location.search).get('cmpId') || appletSpec.cm
 const noAuth = new URLSearchParams(location.search).has('noAuth') && roomUrl?.startsWith('room://')
 const root = document.getElementById('root')
 if (appletSpec.liveRepo) await import('@wonder/db/room/room-lambda-live-repo.js')
-// harvest harness wiring, run on BOTH branches: __jbOnMounted (injected externally by playwrightHarvest) installs jbRunAndHarvest; jbMounted unblocks its wait.
-const harvestReady = async mCtx => { window.jbLoggers = mCtx.vars; await window.__jbOnMounted?.(mCtx, reactUtils); window.jbMounted = true }
+const runAutomation = async mCtx => {
+  window.jbLoggers = mCtx.vars
+  if (new URLSearchParams(location.search).has('automation')) {
+    await import('@jb6/react/automation.js')
+    await reactUtils.startAutomation(mCtx, window)
+  }
+}
 // extendCtxWithUrl seeds ctx-* query params (e.g. ?ctx-reportUrl=…) + loggers from the URL; then add react + the applet's roomUrl.
 const ctx = reactUtils.extendCtxWithUrl().setVars({ react: reactUtils, ...(roomUrl && { roomUrl }), ...(noAuth && { noAuth: true }) })
 const uiSource = appletSpec.liveRepo
@@ -65,11 +70,11 @@ ctx.vars.roomLogger?.info?.({ t: 'serve applet shell', roomUrl, cmpId, urlsToLoa
 document.getElementById('loading')?.remove()
 // the lambda runner is gated per-user (runs AS the caller) ⇒ an anonymous applet silently gets no data. force login first (into #root).
 // ensureLogin also completes the OAuth redirect (GOT_CODE) and returns true, so post-login the shell falls through and renders the applet.
-if (!noAuth && !await ensureLogin(ctx)) { await harvestReady(ctx) } else {
+if (!noAuth && !await ensureLogin(ctx)) { await runAutomation(ctx) } else {
 if (urlsToLoad) await Promise.all(urlsToLoad.split(',').map(f => import(f)))
 const { reactCmp, ctx: cmpCtx } = await reactUtils.runOnHost(cmpId, ctx)
 reactUtils.createRoot(root).render(reactUtils.h('div', {}, reactUtils.hh(cmpCtx, reactCmp)))
-await harvestReady(cmpCtx)
+await runAutomation(cmpCtx)
 }
 </script></body></html>`
 
