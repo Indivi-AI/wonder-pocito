@@ -1,14 +1,14 @@
 import { dsls, coreUtils } from '@jb6/core'
 import '../echart-dsl.js'
-import './viz-types.js'
 
 const {
   echart: {
-    ECharts, 'series': {pie, bar}, 'title': {title}, 'tooltip': {tooltip},
+    ECharts, 'series': {pie, bar, gauge}, 'title': {title}, 'tooltip': {tooltip},
     'legend': {legend}, 'text-style': {textStyle}, 'grid': {grid}, 'axis': {xAxis, yAxis},
     'axis-line': {axisLine}, 'axis-tick': {axisTick}, 'axis-label': {axisLabel},
     'split-line': {splitLine}, 'axis-pointer': {axisPointer}, 'line-style': {lineStyle},
-    'item-style': {itemStyle}, 'emphasis': {emphasis}, 'label': {label}
+    'item-style': {itemStyle}, 'emphasis': {emphasis}, 'label': {label}, 'progress': {progress},
+    'pointer': {pointer}, 'anchor': {anchor}, 'detail': {detail}, 'gauge-title': {gaugeTitle}
   },
   viz: { 'viz-theme': {defaultTheme}, 'viz-value-format': {compact} }
 } = dsls
@@ -254,5 +254,102 @@ ECharts('viz.horizontalBar', {
     return {color: palette, animation: !globalThis.window?.testing, textStyle: {fontFamily}, title: mainTitle(optionCtx),
       grid: gridOption(optionCtx), tooltip: tooltipOption(optionCtx), xAxis: valueAxis(optionCtx), yAxis: categoryAxis(optionCtx),
       series: [seriesOption(optionCtx)]}
+  }
+})
+
+ECharts('viz.gauge', {
+  params: [
+    {id: 'value', as: 'number'},
+    {id: 'title', as: 'string', byName: true},
+    {id: 'min', as: 'number', defaultValue: 0},
+    {id: 'max', as: 'number', defaultValue: 100},
+    {id: 'target', as: 'number'},
+    {id: 'highlight', type: 'viz-highlight<viz>', byName: true},
+    {id: 'valueFormat', type: 'viz-value-format<viz>', byName: true, defaultValue: compact()},
+    {id: 'theme', type: 'viz-theme<viz>', defaultValue: defaultTheme()},
+    {id: 'mainTitle', type: 'title<echart>', dynamic: true, defaultValue: title({
+      text: '%title%',
+      show: '%showTitle%',
+      subtext: '%note%',
+      left: 8,
+      top: 6,
+      textStyle: textStyle({ color: '%ink%', fontWeight: 600, fontSize: 15 }),
+      subtextStyle: textStyle({ color: '%accent%', fontWeight: 600, fontSize: 12 })
+    })},
+    {id: 'seriesOption', type: 'series<echart>', dynamic: true, defaultValue: gauge({
+      Data: '%Data%',
+      name: '%title%',
+      min: '%min%',
+      max: '%max%',
+      radius: '76%',
+      center: ['50%','58%'],
+      startAngle: 215,
+      endAngle: -35,
+      progress: progress({ show: true, width: 16, roundCap: true, itemStyle: itemStyle({ color: '%arc%' }) }),
+      axisLine: axisLine({ lineStyle: lineStyle({ color: ctx => [[1, ctx.data.dim]], width: 16 }) }),
+      axisTick: axisTick({ distance: -20, length: 5, lineStyle: lineStyle({ color: '%mute%', width: 1 }) }),
+      splitLine: splitLine({ distance: -22, length: 12, lineStyle: lineStyle({ color: '%mute%', width: 2 }) }),
+      pointer: pointer({ width: 5, length: '62%', itemStyle: itemStyle({ color: '%ink%' }) }),
+      anchor: anchor({ show: true, size: 14, itemStyle: itemStyle({ color: '%ink%' }) }),
+      axisLabel: axisLabel({
+        color: '%mute%',
+        fontSize: 10,
+        formatter: (ctx, {format}) => format(ctx.data),
+        distance: -2
+      }),
+      detail: detail({
+        valueAnimation: false,
+        formatter: (ctx, {format}) => format(ctx.data),
+        fontSize: 30,
+        fontWeight: 700,
+        color: '%ink%',
+        offsetCenter: [0,'32%']
+      }),
+      title: gaugeTitle({
+        show: '%showTarget%',
+        offsetCenter: [0,'58%'],
+        color: '%mute%',
+        fontSize: 12,
+        fontWeight: 600
+      })
+    })},
+    {id: 'targetSeries', type: 'series<echart>', dynamic: true, defaultValue: gauge({
+      Data: '%targetData%',
+      name: '%title%',
+      min: '%min%',
+      max: '%max%',
+      radius: '76%',
+      center: ['50%','58%'],
+      startAngle: 215,
+      endAngle: -35,
+      axisLine: axisLine({ show: false, lineStyle: lineStyle({ color: ctx => [[1, ctx.data.dim]] }) }),
+      axisTick: axisTick({ show: false }),
+      splitLine: splitLine({ show: false }),
+      pointer: pointer({
+        show: true,
+        width: 3,
+        length: '92%',
+        offsetCenter: [0,0],
+        keepAspect: false,
+        icon: 'rect',
+        itemStyle: itemStyle({ color: '%targetColor%' })
+      }),
+      anchor: anchor({ show: false }),
+      axisLabel: axisLabel({ show: false }),
+      detail: detail({ show: false }),
+      title: gaugeTitle({ show: false })
+    })}
+  ],
+  impl: (ctx, {}, {value, title, min, max, target, highlight, valueFormat, theme, mainTitle, seriesOption, targetSeries}) => {
+    const {palette, dim, ink, mute, fontFamily} = theme, format = value => valueFormat(ctx.setData(value))
+    const onTarget = target == null || value >= target, targetNote = target == null ? ''
+      : `${format(value)} ${onTarget ? 'above' : 'below'} target ${format(target)}`
+    const note = coreUtils.asArray(highlight).find(item => item.note)?.note || (highlight == null ? '' : targetNote)
+    const optionCtx = ctx.setData({title: title || '', showTitle: !!(title || note), note, ink, mute, dim, accent: palette[0], min, max,
+      arc: target == null ? palette[0] : palette[onTarget ? 1 : 2], showTarget: target != null,
+      targetColor: palette[onTarget ? 1 : 3], Data: [{value, name: target == null ? title || '' : `target ${format(target)}`}],
+      targetData: target == null ? [] : [{value: target, name: 'target'}]}).setVars({format})
+    return {color: palette, animation: !globalThis.window?.testing, textStyle: {fontFamily}, title: mainTitle(optionCtx),
+      series: [seriesOption(optionCtx), targetSeries(optionCtx)]}
   }
 })

@@ -6,13 +6,15 @@ const { react: { ReactComp, 'react-comp': { comp }, 'react-metadata': { importUr
 
 ReactComp('EChart', {
   params: [
-    {id: 'option', type: 'echarts<echart>', dynamic: true}
+    {id: 'option', type: 'echarts<echart>', dynamic: true},
+    {id: 'onEvent', type: 'action<common>', dynamic: true}
   ],
   impl: comp({
-    hFunc: (ctx, {react: {h, useEffect, useRef}}, {option}) => () => {
+    hFunc: (ctx, {react: {h, useEffect, useRef}}, {option, onEvent}) => () => {
       const width = 540, height = 320
-      const host = useRef(), chartRef = useRef(), optionRef = useRef()
+      const host = useRef(), chartRef = useRef(), optionRef = useRef(), eventRef = useRef()
       optionRef.current = option
+      eventRef.current = onEvent
       useEffect(() => {
         const echarts = reactUtils.imported('@jb6/react/lib/echarts/echarts.mjs')
         if (globalThis.window?.testing && !jb.__echartsReady) {
@@ -23,12 +25,20 @@ ReactComp('EChart', {
         const chart = chartRef.current = echarts.init(host.current, null, {renderer: 'svg', width: host.current.clientWidth || width, height})
         chart.on('mouseover', ({targetType, value}) => targetType == 'axisLabel' && host.current?.setAttribute('title', value))
         chart.on('mouseout', ({targetType}) => targetType == 'axisLabel' && host.current?.removeAttribute('title'))
+        chart.on('click', event => {
+          const value = event.value, point = Array.isArray(value), bubble = event.seriesType == 'scatter' && value.length > 2
+          eventRef.current.profile != null && eventRef.current(ctx.setData(event.seriesType == 'gauge'
+            ? {type: 'drill', name: String(event.seriesName || ''), value}
+            : point ? {type: 'drill', name: String(event.name || value[3] || ''), x: value[0], y: value[1], ...(bubble ? {value: value[2]} : {})}
+            : {type: 'drill', name: String(event.name || ''), series: event.seriesName, x: event.name, y: value, value}))
+        })
         const render = () => {
           chart.resize({width: host.current.clientWidth || width})
           const nextOption = optionRef.current(ctx.setVars({echartWidth: host.current.clientWidth || width,
             echartHeight: host.current.clientHeight || height}))
           const transforms = [], clean = value => Array.isArray(value) ? value.map(clean) : value && typeof value == 'object'
             ? Object.fromEntries(Object.entries(value).flatMap(([key, inner]) => {
+              if (inner == null) return []
               if (key == 'transform' && typeof inner == 'function') {
                 transforms.push({type: value.type, transform: inner})
                 return []

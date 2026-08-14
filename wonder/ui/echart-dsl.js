@@ -62,6 +62,9 @@ TgpType('detail', 'echart', {
     fontWeight?: string | number, color?: any, offsetCenter?: any[]
   }`
 })
+TgpType('gauge-title', 'echart', {
+  typescript: '{ show?: boolean, offsetCenter?: any[], color?: any, fontSize?: number, fontWeight?: string | number }'
+})
 TgpType('breadcrumb', 'echart', {typescript: '{ show?: boolean }'})
 TgpType('in-range', 'echart', {typescript: '{ color?: string[] }'})
 TgpType('dataset-transform', 'echart', {
@@ -125,7 +128,7 @@ TgpType('visual-map', 'echart', {
 TgpType('radar', 'echart', {
   typescript: `{
     indicator?: {name: string, max: number}[], center?: any[], radius?: any,
-    axisName?: TextStyle, nameGap?: number, splitNumber?: number, axisLine?: AxisLine,
+    axisName?: TextStyle, axisNameGap?: number, splitNumber?: number, axisLine?: AxisLine,
     splitLine?: SplitLine, splitArea?: SplitArea
   }`
 })
@@ -143,7 +146,7 @@ const { echart: {
   TextStyle, ItemStyle, LineStyle, AreaStyle, Label, LabelLine, Emphasis,
   AxisLine, AxisTick, AxisLabel, SplitLine, SplitArea, AxisPointer, MarkLine,
   MarkPoint, Progress, Pointer, Anchor, Detail, Breadcrumb, InRange, ECharts,
-  Title, Tooltip, Legend, Grid, Axis, DataZoom, VisualMap, Radar,
+  Title, Tooltip, Legend, Grid, Axis, DataZoom, VisualMap, Radar, GaugeTitle,
   GraphicElement, Series, DatasetTransform, Dataset, Encode
 } } = dsls
 
@@ -401,6 +404,16 @@ Detail('detail', {
     ...(formatter.profile == null ? {} : {formatter: value => formatter(ctx.setData(value))})})
 })
 
+GaugeTitle('gaugeTitle', {
+  params: [
+    {id: 'show', byName: true, type: 'boolean<common>'},
+    {id: 'offsetCenter', as: 'array'},
+    {id: 'color'},
+    {id: 'fontSize', as: 'number'},
+    {id: 'fontWeight'}
+  ]
+})
+
 Breadcrumb('breadcrumb', {
   params: [
     {id: 'show', byName: true, type: 'boolean<common>'}
@@ -560,13 +573,13 @@ VisualMap('visualMap', {
     ...(formatter.profile == null ? {} : {formatter: value => formatter(ctx.setData(value))})})
 })
 
-Radar('radar', {
+Radar('radarConfig', {
   params: [
     {id: 'indicator', as: 'array', byName: true},
     {id: 'center', as: 'array'},
     {id: 'radius'},
     {id: 'axisName', type: 'text-style<echart>'},
-    {id: 'nameGap', as: 'number'},
+    {id: 'axisNameGap', as: 'number'},
     {id: 'splitNumber', as: 'number'},
     {id: 'axisLine', type: 'axis-line<echart>'},
     {id: 'splitLine', type: 'split-line<echart>'},
@@ -745,7 +758,7 @@ Series('gauge', {
     {id: 'anchor', type: 'anchor<echart>'},
     {id: 'axisLabel', type: 'axis-label<echart>'},
     {id: 'detail', type: 'detail<echart>'},
-    {id: 'title', type: 'title<echart>'},
+    {id: 'title', type: 'gauge-title<echart>'},
     {id: 'markLine', type: 'mark-line<echart>'},
     {id: 'markPoint', type: 'mark-point<echart>'}
   ],
