@@ -4,9 +4,7 @@ import '@wonder/ui/ui-utils.js'
 const { createShortUrl, formatTimeWithRandom, shareHandler, wAppend, wGet, wPut } = jb.wonderUtils
 import '@wonder/applets/applet.js'
 import '@wonder-admin/room/room-lambda-client.js'   // roomLambda db-driver-interceptor - routes the <roomUrl>/lambda/<name> POSTs of the remote duckDbSql hook
-import '../Agents/analytics-agent.js'   // registers the basicAnalytics workflow (run in-browser; its duckDbSql offloads duckdb to /run-bash)
-import { PROMOTION_ACTION_QUESTION } from '../Agents/reports-template-agent.js'
-import '../Agents/fast-report-agent.js'   // registers fast-report (quick report widgets + delayed LLM summary)
+import '../comax-v2-agent.js'
 import '../Agents/agents-repo.js'   // Data('comaxAnalyticsAgents') — the selectable-agents repo
 import '@wonder/ui/viz/viz-index.js'   // VizWidget + all inline chart widgets the assistant can emit
 import './dashboards.js'
@@ -23,7 +21,7 @@ const {
 } = dsls
 
 const availableAgents = () => dsls.common.data.comaxAnalyticsAgents.$run()
-const DEFAULT_WORKFLOW = 'fast-report'
+const DEFAULT_WORKFLOW = 'comaxVerifiedReports'
 // debug-mode model picker: label → the model id the workflow receives as its `model` param
 const MODELS = [
   ['Gemini Flash 3.5', 'gemini/gemini-3.5-flash'],
@@ -73,7 +71,7 @@ const promotionHomeData = x => [`${fmtHome(x.losingPromos)} מבצעים מפס�
   ['מומלצים להפעלה', fmtHome(x.recommendedPromos), x.recommendedPromos, x.activePromos, 'good']]]
 const homeCards = [
   ['sales-overview', 'TrendingUp', 'מכירות חודש מלא אחרון', 'מכירות החודש ביחס לחודש שעבר', salesHomeData],
-  ['promotions', 'BellRing', 'המלצות מבצעים', PROMOTION_ACTION_QUESTION, r => [fmtHome(r.losing_promos),
+  ['promotions', 'BellRing', 'המלצות מבצעים', 'נתח ביצועי מבצעים והמלץ על פעולות', r => [fmtHome(r.losing_promos),
     'מבצעים מפסידים — טוען המלצות', [
       ['רווחיים', fmtHome(r.profitable_promos), r.profitable_promos, r.active_promos, 'good'],
       ['מפסידים', fmtHome(r.losing_promos), r.losing_promos, r.active_promos, 'bad'],
@@ -213,7 +211,7 @@ const reportUiKey = x => [x?.reportId, x?.slot, x?.cmpId].join(':')
 export const uniqueReportReactComps = xs => coreUtils.asArray(xs)
   .filter((x, i, all) => all.findIndex(y => reportUiKey(y) == reportUiKey(x)) == i)
 const pickFinalFields = o => Object.fromEntries(
-  `pollQuestion pollOptions pollVotes selectedOption host applet widgets reactComps narrative sql rows followUps parts partsLayout
+  `pollQuestion pollOptions pollVotes selectedOption host applet widgets reactComps viewId reportId showIn narrative sql rows followUps parts partsLayout
     longText longAnswer reportsUsed verified verificationWarning customAnswer`.split(/\s+/).map(k => [k, o?.[k]]).filter(([,v]) => v !== undefined))
 // honest failure handling: the workflow owns its retry (one planner retry with feedback); the app never races
 // a second agent behind the user's back - a failed run gets an honest message and a one-click re-run
@@ -423,8 +421,11 @@ const AnalyticsAssistantResponse = ReactComp('AnalyticsAssistantResponse', {
       const showAdminLink = (isDebug || element?.content === '??') && adminUrl
       const widgets = (Array.isArray(element?.widgets) ? element.widgets : [])
         .slice().sort((a, b) => (a?.kind == 'table') - (b?.kind == 'table'))   // charts first, tables after (stable within each group)
-      const reactComps = uniqueReportReactComps(element?.reactComps)
-      const reportVerified = coreUtils.asArray(element?.reportsUsed ?? element?.runRes?.reportsUsed).length > 0
+      const reactComps = uniqueReportReactComps([
+        ...coreUtils.asArray(element?.reactComps),
+        ...(element?.viewId ? [{ cmpId: element.viewId, rows: element.rows }] : [])
+      ])
+      const reportVerified = !!element?.viewId || coreUtils.asArray(element?.reportsUsed ?? element?.runRes?.reportsUsed).length > 0
       const badgeKind = element?.verificationWarning || element?.verified === false ? 'warning'
         : reportVerified ? 'verified' : widgets.length || reactComps.length ? 'warning' : ''
       const badgeWrap = x => badgeKind ? h('div:flex items-start gap-2', {}, h('span:pt-1 shrink-0', {}, trustBadge(h, badgeKind)), h('div:min-w-0 flex-1', {}, x)) : x
@@ -669,7 +670,7 @@ const AgentComparison = ReactComp('AgentComparison', {
   })
 })
 
-ReactComp('basicAnalyticsApplet', {
+ReactComp('unverifiedAgentApplet', {
   impl: comp({
   hFunc: (ctx, { roomId, isDebug, comaxView = 'chat', colors = { text: '#111827' }, wonderMain, initChatElements, shareShortUrl
     , react: { h, hh, useRef, useState, useEffect } }) => () => {
@@ -836,7 +837,6 @@ const buildAssistantPayload = wfres => {
 async function sendMessage({ txt, agents: agentIds, model, chatElements, setChatElements, ctx, setWorkingUserId }) {
   if (!txt?.trim()) return
   const ids = agentIds?.length ? agentIds : [ctx.vars.analyticsWorkflow || DEFAULT_WORKFLOW]
-  let partialId = null
   const msg = { id: Math.random().toString(36).slice(2, 12), time: Date.now(), sender: 'User', content: txt, type: 'text' }
   const nextMsgs = [...chatElements, msg]
   setChatElements(nextMsgs)
@@ -850,17 +850,11 @@ async function sendMessage({ txt, agents: agentIds, model, chatElements, setChat
     return next
   })
 
-  const onFastPartial = payload => {
-    if (ids.length != 1 || ids[0] != 'fast-report') return
-    partialId = partialId || Math.random().toString(36).slice(2, 12)
-    upsertAssistant({ id: partialId, time: Date.now(), sender: 'Assistant', ...buildAssistantPayload({ runRes: payload }) })
-  }
   const onHumanFeedback = req => {
     const feedbackMsg = { id: req.id, requestId: req.id, time: Date.now(), sender: 'Assistant', content: req.question, ...req }
     setChatElements(xs => [...xs, feedbackMsg])
     chatUser() && wAppend(cts.privateChat, feedbackMsg, ctx)
   }
-  coreUtils.eventEmitter.on('fastReportPartial', onFastPartial)
   coreUtils.eventEmitter.on('humanFeedbackRequest', onHumanFeedback)
 
   const chatHistory = buildChatHistory(chatElements.filter(Boolean))
@@ -881,7 +875,7 @@ async function sendMessage({ txt, agents: agentIds, model, chatElements, setChat
   let assistantMsg
   try {
     const results = await Promise.all(ids.map(id => withDeadline(runOne(id), 150000, { agent: id, durMs: 150000, error: 'agent timeout' })))
-    const base = { id: partialId || Math.random().toString(36).slice(2, 12), time: Date.now(), sender: 'Assistant' }
+    const base = { id: Math.random().toString(36).slice(2, 12), time: Date.now(), sender: 'Assistant' }
     assistantMsg = results.length === 1
       ? { ...base, durMs: results[0].durMs, ...(results[0].payload || { content: results[0].error || '??', type: 'text' }) }
       : { ...base, type: 'agentComparison', content: `השוואת ${results.length} סוכנים`, comparison: results }
@@ -893,7 +887,6 @@ async function sendMessage({ txt, agents: agentIds, model, chatElements, setChat
         ...(results[0].payload?.adminUrl && { adminUrl: results[0].payload.adminUrl }) }
     }
   } finally {
-    coreUtils.eventEmitter.off('fastReportPartial', onFastPartial)
     coreUtils.eventEmitter.off('humanFeedbackRequest', onHumanFeedback)
     assistantMsg && upsertAssistant(assistantMsg)
     setWorkingUserId(null)

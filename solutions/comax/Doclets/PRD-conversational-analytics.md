@@ -18,7 +18,7 @@ We already ship a working "chat with your CRM data" app: a user asks a question 
 - `Data('runAnalytics')` is the server entry (published per-room via `uploadRoomLambda`). It seeds vars (`db:'local'`, `userMessage`, `accumulatedContext.chatHistory`) and calls `basicAnalytics.$runWithCtx(wfCtx).calcWorkflow(wfCtx)`. It already receives `chatHistory` but only forwards it as loose context.
 
 **Applet UI — `admin/comax/App/comaxApp.js`**
-- `ReactComp('basicAnalyticsApplet')` — message list, autoscroll, streaming "typed status" from the workflow `progress` SSE, and a `MessageInput2` composer.
+- `ReactComp('unverifiedAgentApplet')` — message list, autoscroll, streaming "typed status" from the workflow `progress` SSE, and a `MessageInput2` composer.
 - `sendMessage()` builds `chatHistory` from prior turns, calls `invokeSnippetInContext(runAnalytics(txt, chatHistory), { pack: roomLambda({ streamProgress:true }) })`, then persists an assistant message that carries `content` (text) and `widgets` (the specs) plus `adminUrl`.
 - `AnalyticsAssistantResponse` renders the text, then maps `element.widgets` → `VizWidget` (`h('div', {key}, hh(ctx, VizWidget, { spec }))`). There is a debug `adminUrl` link. **There is no UI for follow-ups, drill-down, or SQL.**
 

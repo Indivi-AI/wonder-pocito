@@ -95,7 +95,7 @@ use `localhost:3000/room/:roomId/applet/:appletId` for liverepo run. no need for
 provide clickable links for the master
 
 ## wonder rooms, wonder DB & wfetch
-public/core/db-drivers.js
+db/db-drivers.js
 read admin/room/room-tests.js
 use mcp wFetch(wUrl) to work directly with the data
 aTeam crm example:

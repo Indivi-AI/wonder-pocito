@@ -17,7 +17,7 @@ const {
 
 const mintTestToken = phone => fetch(`http://localhost:3000/mint-wonder-token?email=${encodeURIComponent(phone)}`).then(r => r.text())
 const signedUrlServerForTests = env => env === 'staging'
-  ? 'https://wonder-server-staging-365199207445.me-west1.run.app/signed-url'
+  ? 'https://staging.indivi.ai/signed-url'
   : 'http://localhost:3000/signed-url'
 
 Test('dbDriverPutGetTest', {
@@ -69,7 +69,7 @@ Test('dbDriverAppendTest', {
 
 function signedRoomCtx(ctx, env) {
   return ctx.setVars({ forceGCS: false, isStaging: env === 'staging',
-    ...(env === 'staging' && { signedUrlServer: 'https://wonder-server-staging-365199207445.me-west1.run.app/signed-url' }) })
+    ...(env === 'staging' && { signedUrlServer: 'https://staging.indivi.ai/signed-url' }) })
 }
 
 Test('signedRoomPutGetTest', {

@@ -2,7 +2,8 @@ import { dsls, coreUtils } from '@jb6/core'
 import '@jb6/core/misc/import-map-services.js'
 import { langServiceUtils } from './lang-service-parsing-utils.js'
 
-const { jb, astToTgpObj, asJbComp, logError, resolveWithImportMap, fetchByEnv, unique, asArray, logVsCode, calcImportData, calcRepoRoot, toCapitalType, absPathToImportUrl, discoverDslEntryPoints, tgpProfileToJson, isNode } = coreUtils
+const { jb, astToTgpObj, asJbComp, logError, resolveWithImportMap, fetchByEnv, unique, asArray, logVsCode, calcImportData,
+  calcRepoRoot, toCapitalType, absPathToImportUrl, discoverDslEntryPoints, tgpProfileToJson, isNode } = coreUtils
 const { calcProfileActionMap, lineColToOffset, parseWithFallback: parse } = langServiceUtils
 const {
   tgp: { TgpType, TgpTypeModifier },
@@ -19,7 +20,7 @@ export async function calcTgpModelData(resources, ctx) {
     resources.forRepo = await calcRepoRoot()
   const {importMap, staticMappings, entryFiles, testFiles, projectDir, repoRoot, llmGuideFiles, jb6_llmGuideFiles, jb6_testFiles } = await calcImportData(resources, ctx)
   const allLlmGuideFiles = unique([...llmGuideFiles || [], ...jb6_llmGuideFiles || []])
-  const allTestFiles = unique([...testFiles || [], ...jb6_testFiles || []])
+  const allTestFiles = resources.entryPointPaths ? [] : unique([...testFiles || [], ...jb6_testFiles || []])
   const rootFilePaths = unique([...entryFiles, ...allTestFiles, ...allLlmGuideFiles])
   const short = p => (p || '').replace(repoRoot + '/', '')   // strip common prefix to shrink logs
   const compsByFile = {}
@@ -156,7 +157,8 @@ export async function calcTgpModelData(resources, ctx) {
     }
     if (typeof compDefs[compDefId] !== 'function') {
       if (compDefs[compDefId] !== undefined)
-        logError(`calcTgpModelData compDef "${compDefId}" is not a function (got ${typeof compDefs[compDefId]}). Known compDefs: ${Object.keys(compDefs).join(', ')}`, { filePath, ...offsetToLineCol(src, decl.start) })
+        logError(`calcTgpModelData compDef "${compDefId}" is not a function (got ${typeof compDefs[compDefId]}). Known compDefs: `
+          + Object.keys(compDefs).join(', '), { filePath, ...offsetToLineCol(src, decl.start) })
       return
     }
 
@@ -332,7 +334,8 @@ try {
   const lsLog = ctx?.vars?.langServiceLogger
   try {
     const { importMap, staticMappings, entryFiles, testFiles, llmGuideFiles, jb6_llmGuideFiles, jb6_testFiles } = await calcImportData(modelResources, ctx)
-    const rootFilePaths = unique([...entryFiles, ...(testFiles || []), ...(jb6_testFiles || []), ...(llmGuideFiles || []), ...(jb6_llmGuideFiles || [])])
+    const rootFilePaths = unique([...entryFiles, ...(!modelResources.entryPointPaths ? [...testFiles || [], ...jb6_testFiles || []] : []),
+      ...(llmGuideFiles || []), ...(jb6_llmGuideFiles || [])])
     const { key } = await calcTgpModelCacheKey({ query: cacheQuery, importMap, staticMappings, rootFilePaths, fetchByEnvHttpServer })
     const cached = await readTgpModelCache(key)
     if (cached) {
@@ -593,8 +596,8 @@ async function scanDsl({dsl, details = 'comps', repoRoot, ctx}) {
   const tgpModel = await calcTgpModelData({forRepo: repoRoot})
   if (tgpModel.error) return tgpModel.error
 
-  // comps are grouped by the scanned type-bucket they sit in. moreTypes registers a comp in extra buckets (tgp.js), so a data<common> comp with moreTypes:'etl<etl>' also lives in dsls.etl.etl and shows there when etl is scanned - no synthetic type needed
-  const tgpTypes = [], comps = [], grouped = [], tsByType = {}, demoComp = {}, typeLoc = {}   // grouped: {comp, groupKey}; demoComp: typeKey -> demoProfile id(s); typeLoc: typeKey -> TgpType def $location
+  // moreTypes registers a comp in extra type buckets, so scans show it without a synthetic type.
+  const tgpTypes = [], comps = [], grouped = [], tsByType = {}, demoComp = {}, typeLoc = {}
   Object.entries(tgpModel.dsls).forEach(([d, dslObj]) =>
     Object.entries(dslObj).forEach(([bucket, val]) => {
       if (typeof val == 'function' && val.dslType) {
@@ -623,7 +626,8 @@ async function scanDsl({dsl, details = 'comps', repoRoot, ctx}) {
   const { staticMappings, importMap } = await calcImportData({forRepo: repoRoot})
   const locRank = dt => { const l = typeLoc[dt]; return l ? `${l.path}:${String(l.line).padStart(6,'0')}` : '~' }
   const orderedTypes = unique(tgpTypes).sort((a, b) => locRank(a) < locRank(b) ? -1 : 1)   // TgpType/modifier source-file order
-  ctx?.vars?.langServiceLogger?.info?.({ t: 'scanDsl', dsl, details, orderedTypes: orderedTypes.map(dt => `${dt} @ ${short(typeLoc[dt]?.path || '')}:${typeLoc[dt]?.line}`), compCount: comps.length }, {}, { ctx })
+  ctx?.vars?.langServiceLogger?.info?.({ t: 'scanDsl', dsl, details,
+    orderedTypes: orderedTypes.map(dt => `${dt} @ ${short(typeLoc[dt]?.path || '')}:${typeLoc[dt]?.line}`), compCount: comps.length }, {}, { ctx })
   const demoIds = dt => asArray(demoComp[dt])   // demoProfile is a single id or a list — normalize to ids[]
   const typeHeader = dt => [dt, demoIds(dt).length && `  demo: ${demoIds(dt).join(', ')}`, usedBy[dt] && `  usedBy: ${usedBy[dt].join(', ')}`].filter(Boolean).join('\n')
   const header = `## TgpTypes\n${orderedTypes.map(typeHeader).join('\n')}`
@@ -645,7 +649,8 @@ async function scanDsl({dsl, details = 'comps', repoRoot, ctx}) {
   const implLines = c => (c.$location.to?.line || c.$location.line) - c.$location.line + 1
   const at = c => `${c.$location.path.split('/').pop()}:${c.$location.line}`
   const compLine = c => `${c.id} ${at(c)} ${(c.params || []).length} prms, ${implLines(c)} lines${c.description ? ` — ${c.description}` : ''}`
-  const paramLine = p => `    ${p.id}${p.type ? ` <${p.type}>` : p.as ? ` (${p.as})` : ''}${p.defaultValue != null ? ` = ${JSON.stringify(p.defaultValue)}` : ''}${p.description ? ` — ${p.description}` : ''}`
+  const paramLine = p => `    ${p.id}${p.type ? ` <${p.type}>` : p.as ? ` (${p.as})` : ''}`
+    + `${p.defaultValue != null ? ` = ${JSON.stringify(p.defaultValue)}` : ''}${p.description ? ` — ${p.description}` : ''}`
   const compLines = c => withParams ? [`${c.id} ${at(c)}`, ...(c.params || []).map(paramLine)] : [compLine(c)]
   const byType = {}
   comps.forEach(c => (byType[groupKey(c)] ||= []).push(c))

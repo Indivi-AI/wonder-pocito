@@ -1,5 +1,6 @@
 import { Storage } from '@google-cloud/storage'
 import { signWonderToken, verifyToken } from './auth-utils.js'
+import { authHttpLogger, safeError } from './auth-http-logger.js'
 export { signWonderToken }
 
 const storage = new Storage()
@@ -84,11 +85,17 @@ async function makeSignatures(sigs, filesToSign) {
 export function setupSignedUrlRoute(app) {
   app.get('/signed-url/*', async (req, res) => {
     const { timing, tick } = makeTiming()
+    const log = authHttpLogger(req, 'protected-signer')
+    const reply = (status, body) => res.status(status).json(log.body(body))
+    let stage = 'receive request'
     try {
       const token = req.headers['x-user-authorization']?.replace('Bearer ', '')
-      if (!token) return res.status(401).json({ error: 'missing token' })
+      log.info({t: 'signer received', requestUrl: req.originalUrl, hasUserAuth: !!token})
+      if (!token) return log.error({t: 'authentication denied', reason: 'missing user token'}), reply(401, {error: 'missing token'})
       tick('verifyToken')
+      stage = 'verify user token'
       const { email } = await verifyToken(token)
+      log.info({t: 'user token verified', email})
 
       const [roomId, accessLevel, ...rest] = req.params[0].split('/')
       const pathUserId = accessLevel === 'userProtected' ? rest.shift() : null
@@ -97,20 +104,25 @@ export function setupSignedUrlRoute(app) {
       const action = method === 'GET' || method === 'HEAD' ? 'read' : 'write'
 
       tick('getUsers')
+      stage = 'read room policy'
       const users = await readJson(`${roomId}/admin/users.json`)
       tick('checkAccess')
       const role = getRole(users, email)
-      console.log('signed-url check', { email, role, roomId, accessLevel, action, hasUsers: !!users, admins: users?.admins })
-      if (!checkAccess(users, accessLevel, role, action, email, pathUserId))
-        return res.status(403).json({ error: 'access denied' })
+      const permissions = users?.accessLevels?.[accessLevel]?.[role] || ''
+      const requiresUserMatch = permissions.includes('u'), userMatches = !requiresUserMatch || email === pathUserId
+      const allowed = checkAccess(users, accessLevel, role, action, email, pathUserId)
+      log[allowed ? 'info' : 'error']({t: allowed ? 'access granted' : 'access denied', email, role, roomId, accessLevel, action, permissions,
+        requiresUserMatch, userMatches, allowed})
+      if (!allowed) return reply(403, {error: 'access denied'})
 
       const fileInRoom = `${accessLevel}/${fileName}`
       const gcsPath = `${roomId}/${fileInRoom}`
+      stage = 'sign object'
       if (signIndividually(fileInRoom)) {
         tick('signFile')
         const { url } = await signFile(gcsPath, action)
         tick('return')
-        return res.json({ signedUrl: url, timing })
+        return reply(200, {signedUrl: url, timing})
       }
       const sigPath = signaturesPath(roomId, role, pathUserId)
       tick('readSigs')
@@ -121,29 +133,38 @@ export function setupSignedUrlRoute(app) {
       tick('writeSigs')
       if (changed) await writeJson(sigPath, sigs)
       tick('return')
-      res.json({ signedUrl: sigs[entryKey].url, signatures: sigs, timing })
+      reply(200, {signedUrl: sigs[entryKey].url, signatures: sigs, timing})
     } catch (err) {
       tick('error')
-      console.error('signed-url error', timing, err)
-      res.status(500).json({ error: err.stack || String(err), timing })
+      log.error({t: 'signer failed', stage, error: safeError(err)})
+      reply(500, {error: err.message || String(err), timing})
     }
   })
 
   app.get('/signed-urls/:roomId', async (req, res) => {
     const { timing, tick } = makeTiming()
+    const log = authHttpLogger(req, 'protected-signer')
+    const reply = (status, body) => res.status(status).json(log.body(body))
+    let stage = 'receive request'
     try {
       const token = req.headers['x-user-authorization']?.replace('Bearer ', '')
-      if (!token) return res.status(401).json({ error: 'missing token' })
+      log.info({t: 'signer received', requestUrl: req.originalUrl, hasUserAuth: !!token})
+      if (!token) return log.error({t: 'authentication denied', reason: 'missing user token'}), reply(401, {error: 'missing token'})
       tick('verifyToken')
+      stage = 'verify user token'
       const { email } = await verifyToken(token)
+      log.info({t: 'user token verified', email})
 
       tick('getUsers')
+      stage = 'read room policy'
       const { roomId } = req.params
       const users = await readJson(`${roomId}/admin/users.json`)
       const role = getRole(users, email)
-      if (!role) return res.status(403).json({ error: `${email} is not a member of room ${roomId}` })
+      log[role ? 'info' : 'error']({t: role ? 'membership granted' : 'membership denied', email, role, roomId, allowed: !!role})
+      if (!role) return reply(403, {error: `${email} is not a member of room ${roomId}`})
 
       tick('readSigs')
+      stage = 'prepare room signatures'
       const sigPath = signaturesPath(roomId, role)
       const sigs = await readJson(sigPath) || {}
       const excludedKeys = Object.keys(sigs).filter(key => signIndividually(key.replace(/:(read|write)$/, '')))
@@ -152,7 +173,7 @@ export function setupSignedUrlRoute(app) {
       const now = Date.now(), keys = Object.keys(sigs)
       if (!changed && keys.length && keys.every(k => sigs[k].exp - now >= REFRESH_THRESHOLD)) {
         tick('return')
-        return res.json({ signatures: sigs, timing, cached: true })
+        return reply(200, {signatures: sigs, timing, cached: true})
       }
       const levelActions = Object.entries(users.accessLevels || {})
         .map(([al, perms]) => {
@@ -171,11 +192,11 @@ export function setupSignedUrlRoute(app) {
       if (changed) await writeJson(sigPath, sigs)
       tick('return')
 
-      res.json({ signatures: sigs, timing })
+      reply(200, {signatures: sigs, timing})
     } catch (err) {
       tick('error')
-      console.error('signed-urls error', timing, err)
-      res.status(500).json({ error: err.stack || String(err), timing })
+      log.error({t: 'signer failed', stage, error: safeError(err)})
+      reply(500, {error: err.message || String(err), timing})
     }
   })
 

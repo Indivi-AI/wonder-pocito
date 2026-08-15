@@ -112,14 +112,18 @@ async function serveMcpViaCli(app, { express }) {
             const reactJbComp = dsls.react?.['react-comp']?.[id]?.[coreUtils.asJbComp]
             if (!reactJbComp) return { name: id, description: toolComp.description || `Tool: ${id}`,
               inputSchema: { type: 'object',
-                properties: (toolComp.params || []).reduce((props, param) => { props[param.id] = { type: param.as === 'number' ? 'number' : 'string', description: param.description || '' }; return props }, {}),
+                properties: (toolComp.params || []).reduce((props, param) => {
+                  props[param.id] = { type: param.as === 'number' ? 'number' : 'string', description: param.description || '' }; return props
+                }, {}),
                 required: (toolComp.params || []).filter(p => p.mandatory).map(p => p.id) } }
             const metadata = typeof reactJbComp.impl.metadata === 'function' ? reactJbComp.impl.metadata() : reactJbComp.impl.metadata
             const mcpMeta = coreUtils.asArray(metadata).find(m => m.calcData || m.fullScreen)
             const csp = { resourceDomains: [origin], connectDomains: [origin], baseUriDomains: [origin] }
             return { name: id, description: toolComp.description || `Tool: ${id}`,
               inputSchema: { type: 'object',
-                properties: (toolComp.params || []).reduce((props, param) => { props[param.id] = { type: param.as === 'number' ? 'number' : 'string', description: param.description || '' }; return props }, {}),
+                properties: (toolComp.params || []).reduce((props, param) => {
+                  props[param.id] = { type: param.as === 'number' ? 'number' : 'string', description: param.description || '' }; return props
+                }, {}),
                 required: (toolComp.params || []).filter(p => p.mandatory).map(p => p.id) },
               _meta: { ui: { resourceUri: `ui://react-comp/${id}`, csp, ...(mcpMeta?.fullScreen && { displayMode: 'fullscreen' }) } } }
           })
@@ -142,7 +146,7 @@ async function serveMcpViaCli(app, { express }) {
 import { jb, dsls, coreUtils } from '@jb6/core'
 jb.coreRegistry.repoRoot = '${repoRoot}'
 jb.coreRegistry.jb6Root = '${jb.coreRegistry.jb6Root}'
-await import('@jb6/mcp/mcp-jb-tools.js')
+await import('${repoRoot}/.jb6/mcp.js')
 await import('${toolPath}')
 const { runMcpTool } = await import('@jb6/mcp/mcp-utils.js')
 const toolComp = dsls.mcp.tool['${toolId}'][coreUtils.asJbComp]
@@ -265,7 +269,10 @@ async function serveMcpViaVm(app, { express, entryPointPaths, builtIn = {}, vers
             const reactJbComp = dsls.react?.['react-comp']?.[id]?.[coreUtils.asJbComp]
             const base = { name: id, description: tc.description || 'Tool: ' + id,
               inputSchema: { type: 'object',
-                properties: (tc.params || []).reduce((p, param) => { p[param.id] = { type: param.as === 'number' ? 'number' : 'string', description: param.description || '', ...(param.options ? {enum: param.options.split(',')} : {}) }; return p }, {}),
+                properties: (tc.params || []).reduce((p, param) => {
+                  p[param.id] = { type: param.as === 'number' ? 'number' : 'string', description: param.description || '',
+                    ...(param.options ? {enum: param.options.split(',')} : {}) }; return p
+                }, {}),
                 required: (tc.params || []).filter(p => p.mandatory).map(p => p.id) } }
             if (!reactJbComp) return base
             const metadata = typeof reactJbComp.impl.metadata === 'function' ? reactJbComp.impl.metadata() : reactJbComp.impl.metadata

@@ -111,6 +111,15 @@ Test('reactTest.comax.narrativeNeverRendered', {
   })
 })
 
+Test('reactTest.comax.verifiedReportView', {
+  impl: reactTest({
+    testedComp: answerWith({ content: 'דוח מאומת', viewId: 'salesOverview.reportView.comax.nextChatItem',
+      rows: [{ department: 'מזון', net: 1200, profit: 240 }] }),
+    expectedResult: and(contains('Sales overview'), contains('₪1.2K'), contains('מאומת על בסיס דוח')),
+    userActions: [delay(80)]
+  })
+})
+
 Test('reactTest.comax.longAnswerCollapsed', {
   impl: reactTest({
     testedComp: answerComp,
@@ -553,7 +562,7 @@ Test('comaxAgentsRepo.listsRegisteredAgents', {
   impl: dataTest({
     calculate: () => dsls.common.data.comaxAnalyticsAgents.$run(),
     expectedResult: ctx => { const xs = ctx.data
-      return JSON.stringify(xs.map(x => x.id).sort()) == JSON.stringify(['basicAnalytics', 'fast-report'])
+      return JSON.stringify(xs.map(x => x.id)) == JSON.stringify(['comaxVerifiedReports'])
         && xs.every(a => dsls.workflow.workflow[a.id] && a.label && a.hint) }
   })
 })

@@ -361,7 +361,7 @@ Tool('uploadRoomLambda', {
   params: [
     {id: 'lambdaId', as: 'string' },
     {id: 'roomId', as: 'string', description: 'protected room id, e.g. schematics'},
-    {id: 'entryPath', as: 'string', description: 'module path that defines the comp, e.g. @solution/comax/finance-analytics.js'},
+    {id: 'entryPath', as: 'string', description: 'module path that defines the comp, e.g. @solution/...'},
   ],
   impl: mcpTool(async (ctx, {}, {lambdaId, roomId, entryPath}) => {
     // CLI (host realm): bundle closure + import entryPath so the comp resolves, then write the public def.
@@ -389,7 +389,7 @@ Tool('uploadRoomApplet', {
   description: 'Publish a react comp as a room applet (browser twin of uploadRoomLambda): bundle the comp closure to CDN, then write <roomId>/applets/<name>.json = {cmpId, urlsToLoad, appletV, entryCompFullId}. name = comp id. Entry URL: /room/<roomId>/applet/<name> (same for public & signed rooms).',
   params: [
     {id: 'roomId', as: 'string', description: 'room id, e.g. demoRoom'},
-    {id: 'entryPath', as: 'string', description: 'module path that defines the comp, e.g. @solution/comax/Comps/report-index.js'},
+    {id: 'entryPath', as: 'string', description: 'module path that defines the comp, e.g. @solution/...'},
     {id: 'entryCompFullId', as: 'string', description: 'full comp id, e.g. react-comp<react>cubeApplet. name + cmpId derived from the comp.'},
     {id: 'ogTitle', as: 'string', description: 'optional link-preview title for this applet (og:title). Else falls back to room admin/branding.json then wonder default.'},
     {id: 'ogDescription', as: 'string', description: 'optional link-preview description (og:description).'},

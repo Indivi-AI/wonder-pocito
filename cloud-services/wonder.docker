@@ -20,7 +20,6 @@ ENV COLS_CACHE_EXT=/usr/src/app/wonder/bi/cols-cache/cols_cache.duckdb_extension
 COPY nodejs-importmap.js nodejs-importmap-loader.js ./
 COPY jb6 ./jb6
 COPY wonder ./wonder
-COPY indiviai ./indiviai
 COPY cloud-services ./cloud-services
 COPY cloud-services/express-server/.env.${BUILD_TARGET} .env
 

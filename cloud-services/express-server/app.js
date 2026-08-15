@@ -11,7 +11,7 @@ import { setupGCSProxyRoute } from './lib/gcs-proxy.js'
 import { setupSignedUrlForwarder } from './lib/signed-url-forwarder.js'
 import { setupRoomLambdaAndApplet } from './lib/room-lambda-and-applet.js'
 import { roomPolicy, signWonderToken } from './lib/auth-utils.js'
-import { readDef, serveAppletShell } from './lib/room-lambda-and-applet.js'
+import { readDef, serveAppletPage } from './lib/room-lambda-and-applet.js'
 import { useCors } from './lib/use-cors.js'
 
 function setupLocalFiles(app, root) {
@@ -57,6 +57,8 @@ function setupLocalFiles(app, root) {
 async function setupLiveRepo(app) {
   const root = await coreUtils.calcRepoRoot(), { importMap, staticMappings } = await coreUtils.getStaticServeConfig(root)
   process.env.HOST_NODE_MODULES_BASE = root
+  app.get('/wonder.html', (_, res) => res.type('html').send(`<script type="importmap">${JSON.stringify(importMap)}</script>
+<script type="module">import { handleAuth } from '@wonder/db/oauth2.js'; await handleAuth({})</script>`))
   app.get('/studio/tests.html', async (_, res) => {
     const html = await fs.readFile(path.join(root, 'wonder/studio/tests.html'), 'utf8')
     res.type('html').send(html.replace('JB_IMPORT_MAP', JSON.stringify(importMap)))
@@ -69,7 +71,7 @@ async function setupLiveRepo(app) {
       const { roomId, name } = req.params, applet = await readDef(roomId, `applets/${name}.json`)
       if (!applet) return next()
       const roomUrl = `${await roomPolicy(roomId) ? 'signedRoom' : 'room'}://${roomId}`
-      await serveAppletShell({ ...applet, roomUrl, og: [await readDef(roomId, 'admin/branding.json'), applet.og] }, res, importMap.imports)
+      await serveAppletPage({ ...applet, roomUrl, og: [await readDef(roomId, 'admin/branding.json'), applet.og] }, res, importMap.imports)
     } catch { next() }
   })
   for (const { urlPath, diskPath } of staticMappings) {
@@ -84,6 +86,8 @@ async function setupLiveRepo(app) {
 
 export async function createApp(mode = process.env.WONDER_SERVICE || 'public') {
   const app = express().set('trust proxy', 1)
+  app.use((_, res, next) => (res.set({'X-Wonder-Service': mode,
+    ...(process.env.K_REVISION && {'X-Wonder-Revision': process.env.K_REVISION})}), next()))
   useCors(app)
   app.use(express.json({ limit: mode === 'local' ? '50mb' : '10mb' }))
   if (mode === 'local') app.use(express.raw({ type: req => !/^application\/json/i.test(req.headers['content-type'] || ''), limit: '50mb' }))

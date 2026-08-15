@@ -1,6 +1,7 @@
 import { coreUtils, dsls } from '@jb6/core'
 
-const { common: { Data } } = dsls
+const { common: { Data }, test: { Logger, logger: { domainLogger } } } = dsls
+Logger('authLogger', { impl: domainLogger('auth', 'roomId,email') })
 const registry = { accessTokenByScope: {} }
 const authStore = () => globalThis.localStorage
 export const readAuth = () => { try { return JSON.parse(authStore()?.getItem('auth2') || '{}') } catch { return {} } }

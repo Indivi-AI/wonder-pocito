@@ -127,14 +127,16 @@ DbDriverInterceptor('roomLambda', {
       // route result shape is { result: { result, error, logs } }. Merge the lambda's per-logger logs INTO the caller's
       // same-named logger instances (so a test's `logger:` harvest picks them up natively), then unwrap the value.
       const streamed = !!opts.body?.stream
-      const asResponse = inner => {
-        Object.entries(inner?.logs || {}).forEach(([lname, le]) => {
+      const mergeLogs = logs => Object.entries(logs || {}).forEach(([lname, le]) => {
           const inst = ctx.vars[lname]
           if (inst && le) Object.entries(le).forEach(([k, arr]) => {
             if (!Array.isArray(inst[k]) || !Array.isArray(arr)) return
             inst[k].push(...arr.filter(e => !(streamed && e?.severity === 'progress')).map(e => ({ ...e, $lambda: name })))
+            if (lname === 'authLogger') inst[k].sort((a, b) => (a.atEpoch || Infinity) - (b.atEpoch || Infinity))
           })
         })
+      const asResponse = inner => {
+        mergeLogs(inner?.logs)
         if (inner?.error) roomLogger?.error?.({ t: 'roomLambda error', roomId, name, error: inner.error }, {}, { ctx })
         return { ok: !inner?.error, status: inner?.error ? 500 : 200, text: async () => JSON.stringify(inner?.result), json: async () => inner?.result }
       }
@@ -151,6 +153,7 @@ DbDriverInterceptor('roomLambda', {
             json: async () => ({ error: `room-lambda ${res.status}: ${raw.slice(0, 200)}` }), text: async () => raw }
         }
         if (!res.ok) {   // 401/403/... carry {error} and no result - surface it; asResponse would mask it as an ok-null (the "failed: 200" trap)
+          mergeLogs(json?.logs)
           if (globalThis.window && (json?.error === 'authorization token expired'
             || typeof json?.error === 'string' && json.error.endsWith('role null for user devMachine')))
             (await import('@wonder/db/oauth2.js')).reLogin()
@@ -166,7 +169,8 @@ DbDriverInterceptor('roomLambda', {
       })
       const headersMs = performance.now() - requestAt, headersAtEpoch = Date.now()
       if (!res.ok) {   // gate rejected (401/403/404/...) — surface the server's reason, don't silently return undefined
-        const { error: serverError = res.status } = await res.json()
+        const rejected = await res.json(), serverError = rejected.error ?? res.status
+        mergeLogs(rejected.logs)
         if (serverError === 'authorization token expired' && globalThis.window)
           (await import('@wonder/db/oauth2.js')).reLogin()
         roomLogger?.error?.({ t: 'roomLambda rejected', roomId, name, dir: ctx.vars.lambdaDir, status: res.status, serverError }, {}, { ctx })
