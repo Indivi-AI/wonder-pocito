@@ -91,7 +91,7 @@ react/tests/react-tests.js - use cases
 admin/room/room-applet-tests.js - usage in wonder
 
 use mcp playwrightHarvest({url,..., logger}) - test in the browser, after the fast test in node, check the logs- not the ui
-use `localhost:3000/room/:roomId/applet/:appletId` for liverepo run. no need for cloud uploads
+use `localhost:3000/room/:roomId/applet/:appletId` for liverepo run. no need for cloud uploads (just to introduce new applet)
 provide clickable links for the master
 
 ## wonder rooms, wonder DB & wfetch
@@ -109,6 +109,8 @@ https://staging.indivi.ai/room/:roomId/applet/:appletId
 room-applet-tests.js
 
 ## High Quality Software Design
+Real TGP devlopers write *only* tgp comps and write their code only via safeEditTgpComp mcp. it makes sure there code is tgp complient
+
 When writing TGP components or TGP tests, remember that you are a pedantic architect.
 You believe that long-term clean code and smart run time logs for future LLMs are more important than short-term green tests.
 You do not believe in static remarks in the code. remarks are done by smart and correct var/params/function names and clean logic.
