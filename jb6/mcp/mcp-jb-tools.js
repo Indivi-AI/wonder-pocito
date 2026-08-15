@@ -124,7 +124,7 @@ Tool('safeEditTgpComp', {
         {tgpModel, filePath: path, initialPath: compId, compDef})
       const from = isNew ? source.length : jb.langServiceUtils.lineColToOffset(source, sourceLocation)
       const to = isNew ? from : jb.langServiceUtils.lineColToOffset(source, sourceLocation.to)
-      if (existingCompText != null && source.slice(from, to) != existingCompText) throw new Error('existingCompText mismatch')
+      if (existingCompText != null && existingCompText != '*' && source.slice(from, to) != existingCompText) throw new Error('existingCompText mismatch')
       const inserted = isNew ? `${from && source[from - 1] != '\n' ? '\n' : ''}${formatted}\n` : formatted
       await writeFile(path, source.slice(0, from) + inserted + source.slice(to))
       return JSON.stringify({fullCompId: compId, path, created: isNew, formatted: formatted != compText, formattedTgpComp: formatted})

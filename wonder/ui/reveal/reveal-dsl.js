@@ -15,7 +15,17 @@ const Comment = TgpType('comment', 'reveal', {
 const Column = TgpType('column', 'reveal', { typescript: '{ title: string; items: ColumnItem[] }' })
 const ColumnItem = TgpType('column-item', 'reveal', { typescript: '{ text: string; href?: string; sub?: boolean }' })
 const ListItem = TgpType('list-item', 'reveal', { typescript: '{ title: string; viz?: string; note?: string; muted?: boolean }' })
-const Theme = TgpType('theme', 'reveal', { typescript: '{ name?: string }' })
+const Theme = TgpType('theme', 'reveal', {
+  typescript: '{ name?: string; fonts?: RevealFont[]; palette?: RevealPalette; typography?: RevealTypography; logo?: RevealLogo; spacing?: RevealSpacing }'
+})
+const Font = TgpType('font', 'reveal', { typescript: '{ family: string; stylesheetUrl?: string; weights?: string; fallback?: string }' })
+const Palette = TgpType('palette', 'reveal', { typescript: 'Record<string, string>' })
+const TextStyle = TgpType('text-style', 'reveal', {
+  typescript: '{ family?: string; size?: number; weight?: number; lineHeight?: number; letterSpacing?: string }'
+})
+const Typography = TgpType('typography', 'reveal', { typescript: 'Record<string, RevealTextStyle>' })
+const Logo = TgpType('logo', 'reveal', { typescript: '{ src?: string; mark?: string; wordmark?: string; placement?: string; showOn?: string }' })
+const Spacing = TgpType('spacing', 'reveal', { typescript: 'Record<string, number>' })
 const Controls = TgpType('controls', 'reveal', {
   typescript: '{ navigation: boolean; progress: boolean; hash: boolean }'
 })
@@ -27,7 +37,76 @@ const LiveEditor = TgpType('live-editor', 'reveal', {
 
 const theme = Theme('theme', {
   params: [
-    {id: 'name', as: 'string', options: 'black,white,league,beige,sky,night,serif,simple,solarized,moon,dracula,blood'}
+    {id: 'name', as: 'string', options: 'black,white,league,beige,sky,night,serif,simple,solarized,moon,dracula,blood'},
+    {id: 'fonts', type: 'font<reveal>[]'},
+    {id: 'palette', type: 'palette<reveal>'},
+    {id: 'typography', type: 'typography<reveal>'},
+    {id: 'logo', type: 'logo<reveal>'},
+    {id: 'spacing', type: 'spacing<reveal>'},
+    {id: 'cssClass', as: 'string'},
+    {id: 'tailwindCss', as: 'text'}
+  ]
+})
+Font('font', {
+  params: [
+    {id: 'family', as: 'string'},
+    {id: 'stylesheetUrl', as: 'string'},
+    {id: 'weights', as: 'string'},
+    {id: 'fallback', as: 'string'}
+  ]
+})
+Palette('palette', {
+  params: [
+    {id: 'background', as: 'string'},
+    {id: 'surface', as: 'string'},
+    {id: 'text', as: 'string'},
+    {id: 'textSecondary', as: 'string'},
+    {id: 'muted', as: 'string'},
+    {id: 'border', as: 'string'},
+    {id: 'accent', as: 'string'},
+    {id: 'accentText', as: 'string'},
+    {id: 'accentSoft', as: 'string'},
+    {id: 'accentBorder', as: 'string'},
+    {id: 'darkSurface', as: 'string'},
+    {id: 'onDark', as: 'string'}
+  ]
+})
+TextStyle('textStyle', {
+  params: [
+    {id: 'family', as: 'string'},
+    {id: 'size', as: 'number'},
+    {id: 'weight', as: 'number'},
+    {id: 'lineHeight', as: 'number'},
+    {id: 'letterSpacing', as: 'string'}
+  ]
+})
+Typography('typography', {
+  params: [
+    {id: 'coverTitle', type: 'text-style<reveal>'},
+    {id: 'title', type: 'text-style<reveal>'},
+    {id: 'subtitle', type: 'text-style<reveal>'},
+    {id: 'body', type: 'text-style<reveal>'},
+    {id: 'eyebrow', type: 'text-style<reveal>'},
+    {id: 'code', type: 'text-style<reveal>'}
+  ]
+})
+Logo('logo', {
+  params: [
+    {id: 'src', as: 'string'},
+    {id: 'mark', as: 'string'},
+    {id: 'wordmark', as: 'string'},
+    {id: 'placement', as: 'string', options: 'top-left,top-right,bottom-left,bottom-right'},
+    {id: 'showOn', as: 'string', options: 'cover,content,all'}
+  ]
+})
+Spacing('spacing', {
+  params: [
+    {id: 'slideTop', as: 'number'},
+    {id: 'slideRight', as: 'number'},
+    {id: 'slideBottom', as: 'number'},
+    {id: 'slideLeft', as: 'number'},
+    {id: 'sectionGap', as: 'number'},
+    {id: 'gridGap', as: 'number'}
   ]
 })
 const controls = Controls('controls', {
@@ -70,7 +149,8 @@ Slide('itemListSlide', {
     {id: 'title', as: 'string'},
     {id: 'subtitle', as: 'string'},
     {id: 'items', type: 'list-item[]'},
-    {id: 'comments', type: 'comment<reveal>[]'}
+    {id: 'comments', type: 'comment<reveal>[]'},
+    {id: 'cssClass', as: 'string'}
   ]
 })
 
@@ -78,7 +158,8 @@ Slide('columnsSlide', {
   params: [
     {id: 'title', as: 'string'},
     {id: 'columns', type: 'column[]'},
-    {id: 'comments', type: 'comment<reveal>[]'}
+    {id: 'comments', type: 'comment<reveal>[]'},
+    {id: 'cssClass', as: 'string'}
   ]
 })
 
@@ -136,7 +217,7 @@ ReactComp('deckViewer', {
   ],
   impl: comp({
     hFunc: (ctx, { react: { cloneElement, h, useEffect, useRef, useState }, reveal }, { deck }) => () => {
-      const { slides, controls, features } = deck
+      const { slides, controls, features, theme } = deck
       const host = useRef(), injectionViews = useRef(new Map()), loggedSlides = useRef(new Set()), loggedVisitors = useRef(new Set())
       const strongRefreshViews = useRef(false)
       const [, setRefresh] = useState(0), [activeSlideIndex, setActiveSlideIndex] = useState(0)
@@ -197,11 +278,13 @@ ReactComp('deckViewer', {
             viewId: view?.[coreUtils.asJbComp]?.id, slide }, {}, { ctx })
         }
         const visitSlideVdom = args => visitVdom({ ...args, slidePath: tgpPath, slide })
-        return view && h('section', { key: i, 'data-label': slide.title },
+        return view && h('section', { key: i, className: ['slide', slideType.split('>').pop(), slide.cssClass].filter(Boolean).join(' '),
+          'data-reveal-slide-type': slideType, 'data-label': slide.title },
           renderView(view, { slide, tgpPath, visitVdom: visitSlideVdom }, strongRefresh))
       })
       const revealTree = h('div:reveal', { ref: host }, h('div:slides', {}, ...sections))
-      const layout = h('div:reveal-deck-layout', {}, h('style', {}, `.reveal-deck-layout{height:100%;position:relative}.reveal-stage{height:100%}
+      const layout = h('div:reveal-deck-layout', { className: theme.cssClass },
+        h('style', { type: 'text/tailwindcss' }, theme.tailwindCss), h('style', {}, `.reveal-deck-layout{height:100%;position:relative}.reveal-stage{height:100%}
         .reveal-topRight{position:absolute;z-index:40;right:20px;top:18px}.reveal-bottomLeft{position:absolute;z-index:40;left:24px;bottom:24px}
         .reveal-bottomRight{position:absolute;z-index:40;right:24px;bottom:24px}
         .reveal-enter-edit{position:relative;display:grid;place-items:center;width:34px;height:34px;padding:0;border:1px solid #cbd5e1;border-radius:10px;

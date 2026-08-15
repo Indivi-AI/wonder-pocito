@@ -4,6 +4,7 @@ import '@jb6/testing'
 import '@jb6/react/tests/react-testers.js'
 import '@wonder/ui/applet.js'
 import './reveal-dsl.js'
+import './reveal-themes.js'
 import './reveal-editor.js'
 
 const { json } = ns
@@ -14,7 +15,7 @@ const {
     deck: { deck },
     comment: { comment },
     slide: { coverSlide, titleSlide, columnsSlide }, column: { column }, 'column-item': { item },
-    theme: { theme }, controls: { controls },
+    theme: { wonderForPayoneer }, controls: { controls },
     'live-editor': { liveEditor }
   },
   react: { ReactComp, UiAction, 'react-comp': { comp, deckViewer }, 'react-metadata': { applet },
@@ -123,17 +124,18 @@ const dragRevealSourceDialog = UiAction('dragRevealSourceDialog', {
 ReactComp('deckShell.revealSample', {
   impl: comp({
     hFunc: ({}, { react: { h } }) => ({ children }) => h('main:reveal-sample', {},
-    h('style', {}, `.reveal-sample{height:100vh;background:#f8fafc}.reveal-sample>.reveal{height:100%}
-      .reveal-sample .slides{text-align:left}.sample-slide{height:100%;padding:80px;background:linear-gradient(135deg,#fff,#e0f2fe)}
-      .sample-slide h1,.sample-slide h2{color:#0f172a;text-transform:none}.sample-slide p,.sample-slide li{color:#334155}`), children)
+      h('style', {}, `.reveal-sample{height:100vh;background:#f8fafc}.reveal-sample>.reveal{height:100%}
+        .reveal-sample .slides{text-align:left}.sample-slide{height:100%;padding:80px;background:linear-gradient(135deg,#fff,#e0f2fe)}
+        .sample-slide h1,.sample-slide h2{color:#0f172a;text-transform:none}.sample-slide p,.sample-slide li{color:#334155}`), children)
   })
 })
 
 ReactComp('coverSlide.revealSample', {
   impl: comp({
-    hFunc: ({}, { react: { h } }) => ({ slide, tgpPath, visitVdom }) => h('div:sample-slide', {},
-    visitVdom({ vdom: h('h1', {}, slide.title), revealType: 'editable-text<reveal>', tgpPath: `${tgpPath}~title` }),
-    visitVdom({ vdom: h('p', {}, slide.subtitle), revealType: 'editable-text<reveal>', tgpPath: `${tgpPath}~subtitle` }))
+    hFunc: ({}, { react: { h } }) => ({ slide, tgpPath, visitVdom }) => h('div:slideContent', {},
+      h('div:logo', {}, 'W  |  Wonder'),
+      visitVdom({ vdom: h('h1:title', {}, slide.title), revealType: 'editable-text<reveal>', tgpPath: `${tgpPath}~title` }),
+      visitVdom({ vdom: h('p:subtitle', {}, slide.subtitle), revealType: 'editable-text<reveal>', tgpPath: `${tgpPath}~subtitle` }))
   })
 })
 
@@ -146,20 +148,23 @@ ReactComp('titleSlide.revealSample', {
 
 ReactComp('columnsSlide.revealSample', {
   impl: comp({
-    hFunc: ({}, { react: { h } }) => ({ slide, tgpPath, visitVdom }) => h('div:sample-slide', {},
-      visitVdom({ vdom: h('h2', {}, slide.title), revealType: 'editable-text<reveal>', tgpPath: `${tgpPath}~title` }),
-      ...slide.columns.map((col, colIndex) => h('div', {},
-        visitVdom({ vdom: h('h3', {}, col.title), revealType: 'editable-text<reveal>',
-          tgpPath: `${tgpPath}~columns~${colIndex}~title` }),
-        h('ul', {}, ...coreUtils.asArray(col.items).map((entry, itemIndex) => visitVdom({ vdom: h('li', {}, entry.text),
-          revealType: 'editable-text<reveal>', tgpPath: `${tgpPath}~columns~${colIndex}~items~${itemIndex}~text` }))))))
+    hFunc: ({}, { react: { h } }) => ({ slide, tgpPath, visitVdom }) => h('div:slideContent', {},
+      h('div:logo', {}, 'W  |  Wonder'),
+      visitVdom({ vdom: h('h2:title', {}, slide.title), revealType: 'editable-text<reveal>', tgpPath: `${tgpPath}~title` }),
+      h('div:columns', {}, ...slide.columns.map((col, colIndex) =>
+        h('article:column', {},
+          visitVdom({ vdom: h('h3:columnTitle', {}, col.title), revealType: 'editable-text<reveal>',
+            tgpPath: `${tgpPath}~columns~${colIndex}~title` }),
+          h('ul:body', {}, ...coreUtils.asArray(col.items).map((entry, itemIndex) =>
+            visitVdom({ vdom: h('li:item', {}, entry.text), revealType: 'editable-text<reveal>',
+              tgpPath: `${tgpPath}~columns~${colIndex}~items~${itemIndex}~text` })))))))
   })
 })
 
 const revealSampleDeck = Deck('revealSample.deck', {
   impl: deck({
     slides: [
-      coverSlide('Reveal DSL sample 121', 'In edit mode, click text to edit or comment', {
+      coverSlide('Reveal DSL sample', 'In edit mode, click text to edit or comment', {
         comments: [
           comment('title', 'Review this title', { author: 'shaiby', timestamp: '2026-08-15T12:00:00.000Z' })
         ]
@@ -173,7 +178,7 @@ const revealSampleDeck = Deck('revealSample.deck', {
         comments: []
       })
     ],
-    theme: theme('white'),
+    theme: wonderForPayoneer(),
     controls: controls(),
     features: [
       liveEditor({ author: 'shaiby' })
