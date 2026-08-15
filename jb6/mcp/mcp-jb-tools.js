@@ -98,6 +98,42 @@ Tool('formatAndValidateTgpComp', {
   })
 })
 
+Tool('safeEditTgpComp', {
+  description: 'Validate and TGP-format a component, replacing it or appending a new component at the end of location',
+  params: [
+    {id: 'compText', as: 'string', asIs: true, mandatory: true},
+    {id: 'fullCompId', as: 'string', asIs: true},
+    {id: 'location', as: 'string', asIs: true},
+    {id: 'existingCompText', as: 'string', asIs: true}
+  ],
+  impl: mcpTool(async (ctx, {}, {compText, fullCompId, location, existingCompText}) => {
+    try {
+      await import('@jb6/lang-service')
+      const repoRoot = await coreUtils.calcRepoRoot(), tgpModel = await coreUtils.calcTgpModelData({forRepo: repoRoot}, ctx)
+      const newLocation = location && {path: location}, current = fullCompId && coreUtils.compByFullId(fullCompId, tgpModel)
+      const {comp, compId, compDef, error} = jb.langServiceUtils.calcProfileActionMap(compText, {tgpModel, filePath: newLocation?.path, ctx})
+      if (!comp || error || comp.syntaxError) throw new Error(error?.syntaxError || error || comp?.syntaxError || 'Invalid TGP component')
+      if (fullCompId && compId != fullCompId) throw new Error(`component id mismatch: expected '${fullCompId}', found '${compId}'`)
+      const isNew = !current, sourceLocation = current?.$location || newLocation
+      if (isNew && !location) throw new Error('location is mandatory for a new component')
+      if (!isNew && !fullCompId) throw new Error(`component '${compId}' already exists`)
+      const {readFile, writeFile} = await import('fs/promises')
+      const {importMap, staticMappings} = await coreUtils.calcImportData({forRepo: repoRoot})
+      const path = coreUtils.resolveWithImportMap(sourceLocation.path, importMap, staticMappings) || sourceLocation.path
+      const source = await readFile(path, 'utf8'), formatted = coreUtils.prettyPrintComp(comp,
+        {tgpModel, filePath: path, initialPath: compId, compDef})
+      const from = isNew ? source.length : jb.langServiceUtils.lineColToOffset(source, sourceLocation)
+      const to = isNew ? from : jb.langServiceUtils.lineColToOffset(source, sourceLocation.to)
+      if (existingCompText != null && source.slice(from, to) != existingCompText) throw new Error('existingCompText mismatch')
+      const inserted = isNew ? `${from && source[from - 1] != '\n' ? '\n' : ''}${formatted}\n` : formatted
+      await writeFile(path, source.slice(0, from) + inserted + source.slice(to))
+      return JSON.stringify({fullCompId: compId, path, created: isNew, formatted: formatted != compText, formattedTgpComp: formatted})
+    } catch (error) {
+      return JSON.stringify({error: error.message || String(error)})
+    }
+  })
+})
+
 Tool('macroToJson', {
   description: `Convert TGP macro syntax to JSON profile. e.g. pipeline([1,2,3], join("-")) → {$: "data<common>pipeline", ...}.
 Use tgpModel tool to discover available components.`,

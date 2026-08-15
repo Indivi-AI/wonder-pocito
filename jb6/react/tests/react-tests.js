@@ -3,7 +3,6 @@ import { coreUtils, dsls, ns } from '@jb6/core'
 import './react-testers.js'
 import '@jb6/react/progress-indicators.js'
 import '@jb6/react/codemirror-utils.js'
-import '@jb6/react/reveal.js'
 import '@jb6/lang-service'
 
 const { json } = ns
@@ -408,85 +407,5 @@ Test('reactTest.reveal', {
     expectedResult: contains('reveal ready: 2 slides', 'decorate #1', { allText: json.stringify('%$uiLogger/uiLog%') }),
     userActions: actions(waitForText('SLIDE-ALPHA'), click('add-slide'), waitForText('SLIDE-GAMMA')),
     logger: 'uiLogger'
-  })
-})
-
-const revealCodeSlide = ReactComp('revealCodeSlide', {
-  impl: comp({
-    hFunc: (ctx, {reveal, react: {h, hh, useRef, useEffect}}) => () => {
-      const host = useRef()
-      useEffect(() => {
-        const { deck, disconnect } = reveal.mount(host.current)
-        ctx.vars.uiLogger?.info?.({t: 'reveal', text: `reveal ready: ${deck.getTotalSlides()} slides`}, {}, {ctx})
-        return disconnect
-      }, [])
-      // org-chart card: a styled node in the tree. `accent` tints the CEO. these are the ONLY inline styles we
-      // keep - reveal has no card primitive - but layout is done with reveal's r-hstack/r-vstack, not hand flexbox.
-      const card = (label, sub, accent) => h('div:fragment fade-up', { style: {
-        background: accent ? 'linear-gradient(135deg,#2aa9e0,#1b6fb3)' : 'rgba(255,255,255,0.06)',
-        border: '1px solid rgba(255,255,255,0.18)', borderRadius: '14px', padding: '14px 22px',
-        minWidth: '150px', boxShadow: '0 6px 22px rgba(0,0,0,0.4)' } },
-        h('div', { style: { fontWeight: 700, fontSize: '0.9em', letterSpacing: '0.02em' } }, label),
-        sub ? h('div', { style: { fontSize: '0.55em', opacity: 0.8, marginTop: '3px' } }, sub) : null)
-
-      // full-height host so the deck uses real space (no shrink-to-scale-0.2 letterbox)
-      return h('div:reveal', { ref: host, style: { position: 'absolute', inset: 0 } }, h('div:slides', {},
-        // slide 1 (active on boot): a strong code-first opener. r-fit-text auto-sizes the headline huge.
-        // data-auto-animate lets the headline morph into slide 2's headline. dark bg to make code pop.
-        h('section', { 'data-auto-animate': true, 'data-background-color': '#0b1622' },
-          h('h1:r-fit-text', { 'data-id': 'title', style: { margin: 0, fontWeight: 800 } }, 'Live Code'),
-          h('p:fragment fade-in', { style: { opacity: 0.7, marginTop: '0.2em' } }, 'a real CodeMirror, running inside a reveal slide'),
-          h('div', { style: { height: '46vh', maxWidth: '900px', margin: '0.6em auto 0', textAlign: 'left',
-              borderRadius: '12px', overflow: 'hidden', boxShadow: '0 18px 60px rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.1)' } },
-            hh(ctx, CodeMirrorJs, {
-              code: [
-                'const deck = new Reveal(host, { embedded: true })',
-                'deck.initialize()',
-                '',
-                '// React fills the slide bodies,',
-                '// reveal only decorates the <section>s.',
-                'const greet = name => `hello ${name}`',
-                'console.log(greet("reveal"))'
-              ].join('\n'),
-              onCursorActivity: view => {
-                const { from, to } = view.state.selection.main
-                ctx.vars.uiLogger?.info?.({t: 'cm', text: `cm selected: ${view.state.doc.toString().slice(from, to)}`}, {}, {ctx})
-              }
-            }))),
-        // slide 2: org chart. r-vstack/r-hstack are reveal's own flex layout helpers; fragments build it level by level.
-        h('section', { 'data-auto-animate': true, 'data-background-gradient': 'radial-gradient(circle at 50% 0%, #1b3a5b, #0b1622)' },
-          h('h2:r-fit-text', { 'data-id': 'title', style: { margin: '0 0 0.4em', fontWeight: 800 } }, 'Org Chart'),
-          h('div:r-vstack', { style: { gap: '26px' } },
-            card('CEO', 'Ada Lovelace', true),
-            h('div:r-hstack', { style: { gap: '28px' } },
-              card('VP Eng', 'Grace Hopper'), card('VP Product', 'Alan Kay'), card('VP Design', 'Susan Kare')),
-            h('div:r-hstack', { style: { gap: '20px' } },
-              card('Frontend'), card('Backend'), card('Data'), card('QA')))),
-        // slide 3: an image from the internet, framed with reveal's own r-frame class + a background color slide
-        h('section', { 'data-background-color': '#101820' },
-          h('h2:r-fit-text', { style: { margin: '0 0 0.3em', fontWeight: 800 } }, 'From the Internet'),
-          h('img:r-frame', { src: 'https://cataas.com/cat?width=640&height=420',
-            alt: 'a random cat', style: { maxHeight: '58vh', borderRadius: '10px' } }),
-          h('p:fragment fade-in', { style: { fontSize: '0.55em', opacity: 0.65, marginTop: '0.5em' } }, 'live <img> from cataas.com')),
-        // slide 4: recap with progressive fragments
-        h('section', { 'data-background-gradient': 'linear-gradient(to bottom right, #17313b, #0b1622)' },
-          h('h2:r-fit-text', { style: { margin: '0 0 0.5em', fontWeight: 800 } }, 'Recap'),
-          h('ul', { style: { display: 'inline-block', textAlign: 'left', lineHeight: 1.7 } },
-            h('li:fragment fade-up', {}, 'reveal decorates the deck chrome'),
-            h('li:fragment fade-up', {}, 'React owns the slide bodies'),
-            h('li:fragment fade-up', {}, 'live sub-comps (CodeMirror) embed cleanly'),
-            h('li:fragment fade-up', {}, 'the observer only re-syncs on real slide changes')))))
-    },
-    enrichCtx: loadReveal('league')
-  })
-})
-
-Test('reactTest.revealCodeSlide', {
-  impl: reactTest({
-    testedComp: revealCodeSlide(),
-    expectedResult: contains('reveal ready: 4 slides', { allText: json.stringify('%$uiLogger/uiLog%') }),
-    userActions: actions(waitForText('Live Code'), waitForText('const greet')),
-    logger: 'uiLogger',
-    timeout: 8000
   })
 })

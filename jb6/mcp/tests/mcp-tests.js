@@ -11,7 +11,7 @@ const {
     boolean: { equals, contains, notContains, and, not },
     prop: { prop },
   },
-  mcp: { tool: { formatAndValidateTgpComp } },
+  mcp: { tool: { formatAndValidateTgpComp, safeEditTgpComp } },
 } = dsls
 const { json } = ns
 
@@ -133,6 +133,18 @@ Test('mcpTest.prettyPrintCompDef', {
   impl: dataTest({
     calculate: () => coreUtils.prettyPrintComp(formatAndValidateTgpComp, {tgpModel: jb}),
     expectedResult: contains(`Tool('formatAndValidateTgpComp'`)
+  })
+})
+
+Test('mcpTest.safeEditRequiresLocationForCreate', {
+  HeavyTest: true,
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: async () => (await safeEditTgpComp.$run({
+      compText: `Test('mcpTest.safeCreateCandidate', { impl: dataTest({ expectedResult: true }) })`
+    })).content[0].text,
+    expectedResult: contains('location is mandatory for a new component'),
+    timeout: 5000
   })
 })
 

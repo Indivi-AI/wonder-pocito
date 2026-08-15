@@ -35,7 +35,8 @@ Component('loadReveal', {
         scheduled = true
         requestAnimationFrame(() => {
           scheduled = false; decorating = true
-          ctx.vars.uiLogger?.info?.({ t: 'reveal', text: `decorate #${++n}` }, {}, { ctx })
+          ;(ctx.vars.revealLogger || ctx.vars.uiLogger)?.info?.({ t: 'reveal.slidesSynced', syncCount: ++n,
+            slideCount: deck.getTotalSlides() }, {}, { ctx })
           decorate()
           requestAnimationFrame(() => { decorating = false })
         })
