@@ -1,7 +1,8 @@
 import { dsls, coreUtils, jb } from '@jb6/core'
 import '@wonder/db/db-drivers.js'
+import { storage } from '@wonder/db/storage.js'
 
-const { wfetch2, wresolve, getAccessToken } = jb.wonderUtils
+const { wfetch2 } = jb.wonderUtils
 import '@jb6/common'
 import '@jb6/mcp'
 import '@jb6/react'
@@ -106,11 +107,10 @@ export async function uploadCompDependencies(urlsToLoad, onVersion) {
   const path = await import('path')
   const fsp = await import('fs/promises')
   const esbuild = await import('esbuild')
-  const { Pool } = await import('undici')
   timer.phase('imports')
 
   const baseDir = await coreUtils.calcRepoRoot()
-  const dbCtx = new coreUtils.Ctx().setVars({ db: 'gcs' })
+  const dbCtx = new coreUtils.Ctx().setVars({ db: 'bucket' })
 
   const sourceFiles = urlsToLoad.split(',').map(f => f.trim()).filter(Boolean)
   if (!sourceFiles.length) throw new Error('no source files')
@@ -158,21 +158,13 @@ export async function uploadCompDependencies(urlsToLoad, onVersion) {
   const appletV = `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
     + `-${Math.random().toString(36).slice(2,6)}`
   timer.phase('versions')
-  const resolved = await wresolve(`codePackages://shared/${appletV}/${relForUpload(inputs[0])}`, dbCtx, 'PUT')
-  const [, bucket, prefix] = resolved.match(/storage\.googleapis\.com\/([^/]+)\/(.*)$/)   // prefix = shared/<appletV>/<rel[0]>
-  const gcsPrefix = prefix.slice(0, prefix.length - relForUpload(inputs[0]).length)        // strip rel[0] → shared/<appletV>/
-  const token = await getAccessToken(dbCtx, { method: 'PUT' })
-  const auth = { authorization: `Bearer ${token}` }
+  const bucket = (await storage(dbCtx, { native: true })).bucket(CDN_BUCKET)
+  const prefix = `shared/${appletV}/`
   const ctypeOf = f => /\.mjs$|\.js$/.test(f) ? 'text/javascript' : /\.wasm$/.test(f) ? 'application/wasm'
     : /\.css$/.test(f) ? 'text/css' : /\.json$/.test(f) ? 'application/json' : 'application/octet-stream'
   const bodies = await Promise.all(inputs.map(f => fsp.readFile(path.resolve(baseDir, f))))
-  const pool = new Pool('https://storage.googleapis.com', { connections: inputs.length + 1, pipelining: 1, keepAliveTimeout: 60000 })
-  const put = async (f, body) => {
-    const r = await pool.request({ method: 'PUT', path: `/${bucket}/${encodeURI(gcsPrefix + relForUpload(f))}`, headers: { ...auth, 'content-type': ctypeOf(f) }, body })
-    await r.body.dump()
-    if (r.statusCode >= 400) throw new Error(`PUT ${relForUpload(f)} → ${r.statusCode}`)
-  }
-  try { await Promise.all([onVersion?.({ appletV, dbCtx }), ...inputs.map((f, i) => put(f, bodies[i]))]) } finally { await pool.close() }
+  await Promise.all([onVersion?.({ appletV, dbCtx }), ...inputs.map((f, i) =>
+    bucket.file(prefix + relForUpload(f)).save(bodies[i], { contentType: ctypeOf(f) }))])
   timer.phase('upload')
 
   return { appletV, fileCount: inputs.length, uploadMs: timer.totalMs, timeline: timer.timeline }
@@ -187,12 +179,11 @@ export async function uploadLambdaCompDependencies(entryPath) {
   const fsp = await import('fs/promises')
   const esbuild = await import('esbuild')
   const { execSync } = await import('child_process')
-  const { Pool } = await import('undici')
   const tar = await import('tar')
   timer.phase('imports')
 
   const baseDir = await coreUtils.calcRepoRoot()
-  const dbCtx = new coreUtils.Ctx().setVars({ db: 'gcs' })
+  const dbCtx = new coreUtils.Ctx().setVars({ db: 'bucket' })
   // Version identity = git sha + entry path. Clean tree → deterministic reuse per package entry.
   // Dirty tree → `MMDD-HHMM-<gitSha>-<rand>` so every uncommitted change rebuilds. Computed first to allow early reuse.
   const gitSha = execSync('git rev-parse --short HEAD', { encoding: 'utf8', cwd: baseDir }).trim()
@@ -326,17 +317,8 @@ register('./loader.mjs', import.meta.url)
   })
   timer.phase('tarGzip')
 
-  // direct-to-GCS PUT of the tar (same fast path as the applet upload) — resolve bucket/key, mint write token, one keep-alive Pool.
-  const resolved = await wresolve(`codePackages://lambdas/${lambdaV}.tar.gz`, dbCtx, 'PUT')
-  const [, bucket, key] = resolved.match(/storage\.googleapis\.com\/([^/]+)\/(.*)$/)
-  const token = await getAccessToken(dbCtx, { method: 'PUT' })
-  const pool = new Pool('https://storage.googleapis.com', { keepAliveTimeout: 60000 })
-  try {
-    const r = await pool.request({ method: 'PUT', path: `/${bucket}/${encodeURI(key)}`,
-      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/gzip' }, body: tarBuffer })
-    await r.body.dump()
-    if (r.statusCode >= 400) throw new Error(`PUT ${lambdaV}.tar.gz → ${r.statusCode}`)
-  } finally { await pool.close() }
+  await (await storage(dbCtx, { native: true })).bucket(CDN_BUCKET).file(`lambdas/${lambdaV}.tar.gz`)
+    .save(tarBuffer, { contentType: 'application/gzip' })
   await fsp.rm(stageRoot, { recursive: true, force: true })
   timer.phase('upload')
 
@@ -345,7 +327,7 @@ register('./loader.mjs', import.meta.url)
 }
 
 Tool('uploadAdHokSnippetForAdmin', {
-  description: 'Upload an admin entry with its full Node-side dependency closure to GCS. POST a TGP profile to /admin-run-snippet/<lambdaV> to execute.',
+  description: 'Upload an admin entry with its full Node-side dependency closure to the configured bucket.',
   params: [
     {id: 'entryPath', as: 'string'}
   ],
@@ -472,7 +454,8 @@ await coreUtils.writeServiceResult({ lambdaId: ${JSON.stringify(lambdaId)}, defP
     const { result, error } = await coreUtils.runCliInContext(script, { importMapsInCli: jb.coreRegistry.importMapsInCli })
     if (error || result?.error)
       return JSON.stringify({ error: result?.error || error, stderr: result?.stderr, lambdaId, roomId, entryPath })
-    return JSON.stringify({ ...result, runUrl: `https://staging.indivi.ai/run-room-lambda/${resolvedRoomId}/${lambdaId}` })
+    const serviceUrl = process.env.WONDER_SERVICE_URL || 'https://staging.indivi.ai'
+    return JSON.stringify({ ...result, runUrl: `${serviceUrl}/run-room-lambda/${resolvedRoomId}/${lambdaId}` })
   })
 })
 
@@ -516,16 +499,17 @@ try {
     const cliCtx = coreUtils.ensureLoggers(['cliLogger', 'cliLineLogger'])   // over-the-wire: child stderr lines -> these loggers
     const { result, error } = await coreUtils.runCliInContext(script, { ctx: cliCtx, importMapsInCli: jb.coreRegistry.importMapsInCli })
     if (error || result?.error) return JSON.stringify({ error: result?.error || error, cliLog: coreUtils.harvestLogs(cliCtx, ['cliLineLogger']).cliLineLogger })
-    return JSON.stringify({ ...result, entryUrl: `https://staging.indivi.ai/room/${resolvedRoomId}/applet/${result.cmpId}` })
+    const serviceUrl = process.env.WONDER_SERVICE_URL || 'https://staging.indivi.ai'
+    return JSON.stringify({ ...result, entryUrl: `${serviceUrl}/room/${resolvedRoomId}/applet/${result.cmpId}` })
   })
 })
 
 // recover a lambda's entryPath from its published tar: parse the root index.js (`import '<entryPath>'`).
 export async function lambdaEntryPath(lambdaV) {
   const zlib = await import('zlib')
-  const r = await fetch(`https://storage.googleapis.com/${CDN_BUCKET}/lambdas/${lambdaV}.tar.gz`)
-  if (!r.ok) throw new Error(`tar fetch ${lambdaV} → ${r.status}`)
-  const raw = zlib.gunzipSync(Buffer.from(await r.arrayBuffer()))
+  const [tar] = await (await storage(new coreUtils.Ctx(), { native: true })).bucket(CDN_BUCKET)
+    .file(`lambdas/${lambdaV}.tar.gz`).download()
+  const raw = zlib.gunzipSync(tar)
   for (let off = 0; off + 512 <= raw.length; ) {
     const name = raw.toString('utf8', off, off + 100).replace(/\0.*/, '')
     if (!name) break
@@ -549,6 +533,7 @@ import { jb, coreUtils } from '@jb6/core'
 import '@wonder/db/db-drivers.js'
 try {
 const roomWUrl = ${JSON.stringify(roomWUrl)}, dbCtx = new coreUtils.Ctx()
+const serviceUrl = process.env.WONDER_SERVICE_URL || 'https://staging.indivi.ai'
 const defsIn = async dir => {
   const dirUrl = \`${roomWUrl}/\${dir}/\`
   const files = await (await jb.wonderUtils.wfetch2(dirUrl, { method: 'GET' }, dbCtx)).json()
@@ -570,7 +555,7 @@ const lambdaResults = await Promise.all(lambdas.map(async ({ name, url, def }) =
     const [dir] = coreUtils.getCompField(def.entryCompFullId, 'permissionByPath')
     await save(url, { lambdaV, entryCompFullId: def.entryCompFullId, dir, roomWUrl })
     return { name, entryPath, dir, from, to: lambdaV, changed: from !== lambdaV, reused: !!reused,
-      runUrl: \`https://staging.indivi.ai/run-room-lambda/${resolvedRoomId}/\${name}\` }
+      runUrl: \`\${serviceUrl}/run-room-lambda/${resolvedRoomId}/\${name}\` }
   } catch (e) { coreUtils.logException(e, 'updateLambdasAndApplets lambda',
     { roomId: '${resolvedRoomId}', name, from }); return { name, from, error: e.stack || String(e) } }
 }))
@@ -583,7 +568,7 @@ const appletResults = await Promise.all(applets.map(async ({ name, url, def }) =
     const { appletV, fileCount } = await uploadCompDependencies(def.urlsToLoad)
     await save(url, { ...def, appletV, roomWUrl })
     return { name, entryPath: def.urlsToLoad, fileCount, from, to: appletV, changed: from !== appletV,
-      entryUrl: \`https://staging.indivi.ai/room/${resolvedRoomId}/applet/\${name}\` }
+      entryUrl: \`\${serviceUrl}/room/${resolvedRoomId}/applet/\${name}\` }
   } catch (e) { coreUtils.logException(e, 'updateLambdasAndApplets applet',
     { roomId: '${resolvedRoomId}', name, from }); return { name, from, error: e.stack || String(e) } }
 }))

@@ -4,3 +4,5 @@ node_modules/**
 cloud-services/.local/
 .DS_Store
 .cache/
+
+wonder.zip

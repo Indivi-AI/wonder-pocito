@@ -30,7 +30,8 @@ const productSpanCell = BrushData('productSpanCell', {
 // rebuilds the cube node-side from productCube() in productSpanCell's sub-profiles, reading queryPeriod for the silver paths.
 const productDrill = CtxEnricher('productDrill', {
   impl: enrichCtx(
-    setVars(asIs({ db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomWUrl: 'room://testPublicRoom', queryPeriod: '2026-01-01' })),
+    setVars(asIs({ db: 'bucket', bucketProvider: 'gcs', hasGcpIdentity: true, onLiveRepo: true,
+      roomWUrl: 'room://testPublicRoom', queryPeriod: '2026-01-01' })),
     setVar('valueSource', invokeSnippetInContext(productSpanCell()))
   )
 })

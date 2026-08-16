@@ -159,7 +159,7 @@ Lambda('runFinanceAnalytics', {
   ],
   impl: async (ctx, {}, { userMessage, chatHistory }) => {
     const vars = {
-      db: 'gcs', userMessage, llmProxyUrl: LLM_PROXY, summaryModel: SUMMARY_MODEL,
+      db: 'bucket', userMessage, llmProxyUrl: LLM_PROXY, summaryModel: SUMMARY_MODEL,
       accumulatedContext: { chatHistory }, categories: { finance: true, local: true, viz: true }
     }
     const cubeCtx = await Promise.resolve(ctx.setVars(vars).run(setupCube(demoFinanacialCubeV2())))

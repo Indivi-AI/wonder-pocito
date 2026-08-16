@@ -71,6 +71,7 @@ async function setupLiveRepo(app) {
       const { roomId, name } = req.params, applet = await readDef(roomId, `applets/${name}.json`)
       if (!applet) return next()
       await serveAppletPage({ ...applet,
+        noAuth: process.env.WONDER_AUTH_MODE === 'none' && applet.roomWUrl?.startsWith('room://'),
         og: [await readDef(roomId, 'admin/branding.json'), applet.og] }, res, importMap.imports)
     } catch { next() }
   })
@@ -102,7 +103,6 @@ location.replace(url)
     setupAuthRoutes(app)
     setupSignedUrlForwarder(app)
     if (mode === 'local') {
-      await import('@jb6/mcp')
       await import('../../.jb6/mcp.js')
       await import('@jb6/server-utils/serve-mcp.js')
       await import('@jb6/server-utils/serve-edit-source.js')

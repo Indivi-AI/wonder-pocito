@@ -38,9 +38,30 @@ Test('dbDriverTests.gcs.browser.localhost.putGet', {
 Test('dbDriverTests.minio.driverSelection', {
   nodeOnly: true,
   impl: dataTest({
-    calculate: async ctx => ({ result: (await getDBDriver('room:minio//testRoom/item.json', ctx))?.id,
-      ...coreUtils.harvestLogs(ctx) }),
-    expectedResult: equals('%result%', 'bucket.minio'),
+    calculate: async ctx => {
+      const dbCtx = ctx.setVars({ hasGcpIdentity: false })
+      const read = await getDBDriver('room:minio//testRoom/item.json', dbCtx.setVars({ method: 'GET' }))
+      const write = await getDBDriver('room:minio//testRoom/item.json', dbCtx.setVars({ method: 'PUT' }))
+      return { result: { read: read?.id, write: write?.id, canList: !!read?.list.profile }, ...coreUtils.harvestLogs(ctx) }
+    },
+    expectedResult: equals('%result%', asIs({ read: 'bucket.minio.public', write: 'bucket.minio', canList: false })),
+    logger: 'dbLogger'
+  })
+})
+
+Test('dbDriverTests.bucket.providerSelection', {
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: async ctx => {
+      const providerCtx = provider => ctx.setVars({ db: 'bucket', bucketProvider: provider, dbHost: 'node',
+        hasGcpIdentity: provider === 'gcs' })
+      const select = provider => getDBDriver('codePackages://shared/item.js', providerCtx(provider))
+      const minioUrl = await wresolve('codePackages://shared/item.js', providerCtx('minio'))
+      const endpoint = (process.env.MINIO_ENDPOINT || 'http://127.0.0.1:9000').replace(/\/$/, '')
+      return { result: { drivers: [(await select('minio'))?.id, (await select('gcs'))?.id], endpoint: minioUrl.startsWith(endpoint) },
+        ...coreUtils.harvestLogs(ctx) }
+    },
+    expectedResult: equals('%result%', asIs({ drivers: ['bucket.minio', 'GCS.node.gcpIdentity'], endpoint: true })),
     logger: 'dbLogger'
   })
 })
@@ -133,7 +154,7 @@ Test('dbDriverTests.minio.list', {
   nodeOnly: true,
   impl: dataTest({
     calculate: async (ctx, { testSessionId }) => {
-      const dir = `room:minio//testRoom/tests/${testSessionId}/list/`
+      const dir = `codePackages:minio//tests/${testSessionId}/list/`
       await Promise.all(['a', 'b'].map(name => wfetch2(`${dir}${name}.json`, { method: 'PUT', body: { name } }, ctx)))
       const items = await (await wfetch2(dir, { method: 'GET' }, ctx)).json()
       return { result: items.map(item => item.name.split('/').at(-1)).sort(), ...coreUtils.harvestLogs(ctx) }
@@ -280,7 +301,7 @@ Test('dbDriverTests.resolveLocations', {
       const [nodeLocal, browserLocal, nodeMem, browserMem, cache, gcs] = await Promise.all([
         resolveWith({ db: 'local', dbHost: 'node' }), resolveWith({ db: 'local', dbHost: 'browser' }),
         resolveWith({ db: 'fs-mem', dbHost: 'node' }), resolveWith({ db: 'fs-mem', dbHost: 'browser' }),
-        resolveWith({ db: 'wcache', dbHost: 'node' }), resolveWith({ db: 'gcs', dbHost: 'node', forceGCS: true })
+        resolveWith({ db: 'wcache', dbHost: 'node' }), resolveWith({ db: 'bucket', dbHost: 'node', forceGCS: true })
       ])
       return { result: [nodeLocal.endsWith('/files/rooms/testPublicRoom/usersRO/stores.parquet'), browserLocal,
         nodeMem.endsWith('/files/testPublicRoom/usersRO/stores.parquet'), browserMem, cache, gcs], ...coreUtils.harvestLogs(ctx) }
@@ -302,7 +323,7 @@ Test('dbDriverTests.wcachePopulate', {
     logger: 'dbLogger',
     calculate: async ctx => {
       const { promises: fsp } = await import('fs')
-      const dbCtx = ctx.setVars({ db: 'gcs', forceGCS: false, onLiveRepo: true, hasGcpIdentity: true })
+      const dbCtx = ctx.setVars({ db: 'bucket', bucketProvider: 'gcs', forceGCS: false, onLiveRepo: true, hasGcpIdentity: true })
       const at = async u => { const p = await wcachePopulate(u, dbCtx); return !!p && (await fsp.stat(p)).size > 0 }
       return { result: [
         await at('signedRoom://testSignedRoom/usersRO/sales-large.json'),
@@ -321,7 +342,7 @@ Test('dbDriverTests.rawFileViaWfetch2', {
   impl: dataTest({
     logger: 'dbLogger',
     calculate: async ctx => {
-      const dbCtx = ctx.setVars({ db: 'gcs', forceGCS: false, onLiveRepo: true, hasGcpIdentity: true })
+      const dbCtx = ctx.setVars({ db: 'bucket', bucketProvider: 'gcs', forceGCS: false, onLiveRepo: true, hasGcpIdentity: true })
       const body = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64').toString('base64')
       const at = async url => {
         await wfetch2(url, { body, method: 'PUT' }, dbCtx)
@@ -371,7 +392,7 @@ Test('dbDriverTests.wcachePopulate.rawCsvFs', {
     logger: 'dbLogger',
     calculate: async ctx => {
       const { promises: fsp } = await import('fs')
-      const dbCtx = ctx.setVars({ db: 'gcs', forceGCS: false, onLiveRepo: true, hasGcpIdentity: true })
+      const dbCtx = ctx.setVars({ db: 'bucket', bucketProvider: 'gcs', forceGCS: false, onLiveRepo: true, hasGcpIdentity: true })
       const url = `room://testPublicRoom/wcache-raw-${ctx.vars.testSessionId}.csv`
       const csv = 'campaign_name,revenue\ncamp_a,10\ncamp_b,5'
       await wfetch2(url, { body: csv, method: 'PUT' }, dbCtx)
@@ -437,7 +458,7 @@ Test('dbDriverTests.roomLogs.writeAndList', {
   impl: dataTest({
     logger: 'dbLogger',
     calculate: async (ctx) => {
-      const dbCtx = ctx.setVars({db: 'gcs', dbHost: 'node', forceGCS: true, hasGcpIdentity: true})
+      const dbCtx = ctx.setVars({db: 'bucket', bucketProvider: 'gcs', dbHost: 'node', forceGCS: true, hasGcpIdentity: true})
       const url = 'roomLogs:gcs//testRoom/2026-04-01/s1-p1-0.json'
       const body = JSON.stringify({date: '2026-04-01', sessionId: 's1', playerId: 'p1', counter: 0, ev: 'pageView'})
       const driver = await getDBDriver(url, dbCtx)
@@ -459,7 +480,7 @@ Test('dbDriverTests.roomLogs.listRoomRoot', {
   impl: dataTest({
     logger: 'dbLogger',
     calculate: async (ctx) => {
-      const dbCtx = ctx.setVars({db: 'gcs', dbHost: 'node', forceGCS: true, hasGcpIdentity: true})
+      const dbCtx = ctx.setVars({db: 'bucket', bucketProvider: 'gcs', dbHost: 'node', forceGCS: true, hasGcpIdentity: true})
       const url = 'roomLogs:gcs//testRoom/'
       const list = await wfetch2(url, { method: 'GET' }, dbCtx).then(r => r.json()).catch(e => ({error: String(e?.message || e)}))
       const arr = Array.isArray(list) ? list : []

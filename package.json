@@ -16,7 +16,8 @@
     "server-secrets:pull:prod": "node scripts/secrets.js pull prod",
     "server-secrets:push:dev": "node scripts/secrets.js push dev",
     "server-secrets:push:prod": "node scripts/secrets.js push prod",
-    "update-jb6": "bash ./scripts/update-jb6.sh"
+    "update-jb6": "bash ./scripts/update-jb6.sh",
+    "bgn": "bash scripts/zip-wonder.sh"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1109.0",

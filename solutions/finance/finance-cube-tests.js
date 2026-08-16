@@ -90,7 +90,8 @@ Test('financeCube.consolidatedTopPayersMatchesLegacy', {
     calculate: async ctx => {
       const cubeRows = await cubeQuery.$runWithCtx(ctx,
         'select Description as "name", money_in as "value" group by 1 having money_in is not null order by 2 desc limit 8')
-      const union = (await Promise.all(['freelancer', 'ecommerce', 'marketplace'].map(p => legacyCsv(ctx, p)))).map(path => `SELECT * FROM read_csv_auto('${path}')`).join(' UNION ALL ')
+      const paths = await Promise.all(['freelancer', 'ecommerce', 'marketplace'].map(p => legacyCsv(ctx, p)))
+      const union = paths.map(path => `SELECT * FROM read_csv_auto('${path}')`).join(' UNION ALL ')
       const legacyRows = await jb.biUtils.runDuckdb(`SELECT Description AS "name", ROUND(SUM(CASE WHEN Direction='in' AND Status='completed' THEN "Amount (USD)" END)) AS "value"
 FROM (${union}) GROUP BY 1 HAVING "value" IS NOT NULL ORDER BY 2 DESC LIMIT 8`, ctx)
       const [c, l] = [cubeRows, legacyRows].map(rows => rows.map(r => [r.name, +r.value]))
@@ -201,9 +202,12 @@ Test('financeCube.reportsTableShape', {
   impl: dataTest({
     calculate: async ctx => {
       const tableSql = `select "Transaction ID" as "tid", "Date & Time" as "dt", Date, Direction as "dir", "Transaction Type" as "ttype", Description as "descr", entity,
-  "Counterparty Type" as "ctype", Source as "src", Target as "tgt", Amount as "amt", Currency as "cur", "Amount (USD)" as "usd", Status as "status", Fee as "fee", "Running Balance" as "bal", "Store Name" as "store", "Reference ID" as "refid", "Additional Description" as "addl"
+  "Counterparty Type" as "ctype", Source as "src", Target as "tgt", Amount as "amt", Currency as "cur",
+  "Amount (USD)" as "usd", Status as "status", Fee as "fee", "Running Balance" as "bal", "Store Name" as "store",
+  "Reference ID" as "refid", "Additional Description" as "addl"
 order by "Date & Time" DESC limit 25 offset 0`
-      const where = `Date >= DATE '2025-06-01' AND Date <= DATE '2025-06-30' AND Direction = 'in' AND ("Transaction ID" ILIKE '%TX%' OR Description ILIKE '%TX%' OR "Store Name" ILIKE '%TX%')`
+      const where = `Date >= DATE '2025-06-01' AND Date <= DATE '2025-06-30' AND Direction = 'in'
+        AND ("Transaction ID" ILIKE '%TX%' OR Description ILIKE '%TX%' OR "Store Name" ILIKE '%TX%')`
       const [rows, sum, sc] = await runEntries(ctx, [
         { sql: tableSql, where },
         { sql: 'select txns as "n", money_in as "mi", money_out as "mo"', where },
@@ -316,14 +320,14 @@ Test('financeCube.askAiWorkflowUtilsIntact', {
   })
 })
 
-// REPRO: financeCube over a signed-room dataRoot under db:'gcs' whose finance_*.parquet do NOT exist. wresolveInfo stamps
-// signedRoom:gcs//… ; colsCacheFrom hands DuckDB that wUrl; colsCacheService's onTail footer fetch gets a 404 → 'gcs 404 for tail'
+// REPRO: financeCube over a signed-room dataRoot under db:'bucket' whose finance_*.parquet do NOT exist. wresolveInfo stamps
+// signedRoom:bucket//… ; colsCacheFrom hands DuckDB that wUrl; colsCacheService's onTail footer fetch gets a 404
 // (the same shape as the room:gcs//noop/<date>.parquet failure, just anchored to testSignedRoom's baseWUrl).
 Test('financeCube.missingParquetGcs404', {
   impl: dataTest({
     calculate: cubeQuery('select Description as "name", money_in as "value" group by 1 having money_in is not null order by 2 desc limit 8'),
     setup: setupCube(financeCube({ dataRoot: 'signedRoom://testSignedRoom/usersRO/data' })),
-    vars: setVars(asIs({ db: 'gcs', hasGcpIdentity: true, onLiveRepo: true })),
+    vars: setVars(asIs({ db: 'bucket', bucketProvider: 'gcs', hasGcpIdentity: true, onLiveRepo: true })),
     allowError: true,
     expectedResult: contains('404 for tail', { allText: join(',', { items: '%$biLogger.biErrors.error%' }) }),
     timeout: 15000,

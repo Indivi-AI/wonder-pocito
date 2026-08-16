@@ -2,7 +2,7 @@ FROM node:24.3
 WORKDIR /usr/src/app
 
 RUN apt-get update && apt-get install -y \
-    fonts-liberation fonts-noto-core fontconfig wget unzip \
+    fonts-liberation fonts-noto-core fontconfig git wget unzip \
     --no-install-recommends && rm -rf /var/lib/apt/lists/*
 
 RUN wget https://github.com/rsms/inter/releases/download/v4.0/Inter-4.0.zip -O /tmp/inter.zip \
@@ -12,7 +12,8 @@ RUN wget https://github.com/rsms/inter/releases/download/v4.0/Inter-4.0.zip -O /
     && fc-cache -f -v \
     && rm -rf /tmp/inter /tmp/inter.zip
 
-ENV IN_DOCKER=true
+ENV IN_DOCKER=true PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
 
 COPY package.json package-lock.json ./
 RUN npm ci
+RUN npx playwright install --with-deps --only-shell chromium && chmod -R a+rX "$PLAYWRIGHT_BROWSERS_PATH"

@@ -22,3 +22,4 @@ policy indiviai-wonder '["s3:GetObject","s3:PutObject"]'
 policy wonder-code-packages '["s3:GetObject"]'
 policy logs-bucket-me-west1 '["s3:PutObject"]'
 mc anonymous set private "$ALIAS/indiviai-wonder-protected"
+MINIO_ALIAS="$ALIAS" bash "$(dirname "$0")/deploy-cdn.sh"

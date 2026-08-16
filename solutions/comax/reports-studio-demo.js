@@ -2,11 +2,7 @@ import { dsls, coreUtils, jb } from '@jb6/core'
 import '@jb6/common'
 import '@jb6/react'
 import '@wonder/ai/report-step.js'
-<<<<<<< HEAD
 import '@wonder/bi/viz/viz-index.js'
-=======
-import '@wonder/ui/viz/viz-index.js'
->>>>>>> origin/master
 import './Reports/index.js'
 import './Agents/report-edit-agent.js'
 import '@wonder/db/db-drivers.js'
@@ -33,7 +29,8 @@ const root = () =>
     : 'files/rooms/comaxDemo/usersRO/parquet/OEM_BI_4466'
 const roomFile = (roomWUrl, file) => `${String(roomWUrl || ROOM).replace(/\/$/, '')}/report-studio/${file}`
 const loadJson = async (url, ctx) => {
-  const r = await wfetch2(url, { method: 'GET' }, ctx.setVars({ db: 'gcs', ...(!coreUtils.isNode && { dbHost: 'browser' }) })).catch(() => null)
+  const r = await wfetch2(url, { method: 'GET' }, ctx.setVars({ db: 'bucket',
+    ...(!coreUtils.isNode && { dbHost: 'browser' }) })).catch(() => null)
   return r?.ok ? r.json() : null
 }
 const QUESTIONS_URL = '/solutions/comax/Doclets/50-retail-manager-questions.md'
@@ -264,7 +261,9 @@ ReactComp('comaxReportsStudioDemo', {
         const save = async () => {
           setBusy(true)
           setStatus('שומר דוח פעיל...')
-          const r = await publishReportStudioDraft.$runWithCtx(ctx.setVars({ currentReport: report, roomWUrl, db: 'gcs', dbHost: coreUtils.isNode ? 'node' : 'browser' }), {
+          const r = await publishReportStudioDraft.$runWithCtx(ctx.setVars({
+            currentReport: report, roomWUrl, db: 'bucket', dbHost: coreUtils.isNode ? 'node' : 'browser'
+          }), {
             report,
             reportId: report.id,
             roomWUrl,

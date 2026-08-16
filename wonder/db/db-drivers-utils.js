@@ -17,7 +17,7 @@ const formatTimeWithRandom = () => {
 async function wresolve(url, _ctx, method = 'GET') {
   const dbLogger = _ctx.vars.dbLogger
   let ctx = _ctx.setVars({ url, method, dbLogger, localhostServer: localhostServer(_ctx) })
-  const extracted = extractFromUrl(url, ctx), db = extracted.db || ctx.vars.db || 'gcs'
+  const extracted = extractFromUrl(url, ctx), db = extracted.db || ctx.vars.db || 'bucket'
   const backend = dsls.wonder['db-backend'][db.replace(/-/g, '')]?.$runWithCtx(ctx)
   if (backend?.enrichCtx) ctx = await backend.enrichCtx(ctx)
   const { fileName } = extracted
@@ -29,6 +29,7 @@ async function wresolve(url, _ctx, method = 'GET') {
 
 async function resolveWUrl(roomId, ctx) {
   if (/^\w+:(?:[^/]*)\/\//.test(roomId)) return roomId.replace(/\/$/, '')
+  if (globalThis.process?.env?.WONDER_AUTH_MODE === 'none') return `room://${roomId}`
   const exists = async url => {
     const res = await jb.wonderUtils.wfetch2(url, { method: 'HEAD' }, ctx)
     if (res.status === 404) return false
@@ -42,7 +43,7 @@ async function resolveWUrl(roomId, ctx) {
 async function wresolveInfo(url, _ctx, method = 'GET') {
   if (!/^\w+:\/\//.test(url))
     return { url, db: null, fullyResolvedUrl: url, resolved: url, isWUrl: false, isLocal: true }   // bare disk path (csv/parquet) — not a wUrl, read as-is
-  const db = extractFromUrl(url, _ctx)?.db ?? _ctx.vars.db ?? 'gcs'
+  const db = extractFromUrl(url, _ctx)?.db ?? _ctx.vars.db ?? 'bucket'
   const resolved = await wresolve(url, _ctx, method)
   const fullyResolvedUrl = url.replace(/^(\w+):[^/]*\/\//, `$1:${db}//`)
   const isLocal = resolved != null && !/^https?:\/\//.test(resolved)   // wresolve returns a directly-readable path (fs or repo-relative mirror) for local; an https url for remote
@@ -60,7 +61,7 @@ const { wcachePopulate } = jb.wonderUtils
 } catch (e) { await coreUtils.writeServiceResult({ error: e.stack || String(e) }) } })()`
     return (await coreUtils.runCliInContext(script, { ctx: _ctx, bindLoggers: 'dbLogger' })).result
   }
-  const ctx = _ctx.setVars({ db: 'gcs' })
+  const ctx = _ctx.setVars({ db: 'bucket' })
   try {
     const t0 = Date.now(), cachePath = await wresolve(wUrl, ctx.setVars({ db: 'wcache' })), fs = await import('fs/promises')
     if (validate) {
@@ -92,7 +93,7 @@ async function saveRoomBigLog2(ctx, id = formatTimeWithRandom()) {
 }
 
 async function prefetchSignedUrls(ctx) {
-  if (ctx.vars.db && ctx.vars.db !== 'gcs') return
+  if (ctx.vars.db && !['bucket', 'gcs'].includes(ctx.vars.db)) return
   const { roomId } = ctx.vars
   const t0 = Date.now()
   const idToken = await auth.wonderIdToken(ctx)

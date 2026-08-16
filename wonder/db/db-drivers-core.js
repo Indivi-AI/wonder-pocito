@@ -151,7 +151,8 @@ const dbBackend = DbBackend('dbBackend', {
 
 DbBackend('gcs', {
   impl: dbBackend({ categories: ['bucket', 'google', 'gcs'],
-    enrichCtx: Var('bucketEndpoint', 'https://storage.googleapis.com') })
+    enrichCtx: Var('bucketEndpoint', () => globalThis.WONDER_STORAGE_URL || globalThis.process?.env?.WONDER_STORAGE_URL
+      || 'https://storage.googleapis.com') })
 })
 
 DbBackend('amazon', {
@@ -168,12 +169,18 @@ DbBackend('minio', {
   impl: dbBackend({
     categories: ['bucket','s3','minio'],
     enrichCtx: [
-      Var('bucketEndpoint', 'http://127.0.0.1:9000'),
-      Var('bucketRegion', 'us-east-1'),
-      Var('bucketAccessKeyId', 'wonder'),
-      Var('bucketSecretAccessKey', 'wonder-minio-local')
+      Var('bucketEndpoint', () => coreUtils.isNode ? globalThis.process?.env?.MINIO_ENDPOINT || 'http://127.0.0.1:9000'
+        : globalThis.WONDER_STORAGE_URL || globalThis.process?.env?.MINIO_PUBLIC_ENDPOINT || 'http://127.0.0.1:9000'),
+      Var('bucketRegion', () => globalThis.process?.env?.MINIO_REGION || 'us-east-1'),
+      Var('bucketAccessKeyId', () => globalThis.process?.env?.MINIO_ACCESS_KEY),
+      Var('bucketSecretAccessKey', () => globalThis.process?.env?.MINIO_SECRET_KEY)
     ]
   })
+})
+
+DbBackend('bucket', {
+  impl: ctx => dsls.wonder['db-backend'][ctx.vars.bucketProvider || globalThis.WONDER_BUCKET_PROVIDER
+    || globalThis.process?.env?.STORAGE_PROVIDER || (globalThis.process?.env?.MINIO_ENDPOINT ? 'minio' : 'gcs')].$runWithCtx(ctx)
 })
 
 DbBackend('fs', { impl: dbBackend({ categories: ['fs'] }) })
@@ -296,9 +303,9 @@ async function getDBDriver(url, ctx) {
   const hasGcp = ctx.vars.hasGcpIdentity ?? await auth.hasGcpIdentity(ctx)
   const extracted = url ? extractFromUrl(url, ctx) : {}
   const isPublicBucket = extracted?.scope?.bucket === wonderBucketName
-  // public-bucket READS go anonymous-HTTPS (GCS.node.publicGCS) — no token mint, no SDK ctor → 0 init (key on cloud).
+  // Public bucket reads are anonymous: no token mint or SDK startup.
   const isPublicRead = isPublicBucket && methodToAction((ctx.vars.opts?.method || ctx.vars.method || 'GET').toUpperCase()) === 'read'
-  const db = extracted.db || ctx.vars.db || (isPublicBucket ? 'gcs' : dbFromCtx) || 'gcs'
+  const db = extracted.db || ctx.vars.db || (isPublicBucket ? 'bucket' : dbFromCtx) || 'bucket'
   const dbNormalized = forceGCS ? 'gcs' : db === 'local' ? 'fs' : db.replace(/-/g, '')
   const scopeId = extracted?.scope?.id
   const backend = dsls.wonder['db-backend'][dbNormalized]?.$runWithCtx(ctx)
@@ -311,7 +318,7 @@ async function getDBDriver(url, ctx) {
     ...Object.fromEntries((backend?.categories || []).map(category => [category.toLowerCase(), true])),
     ...(onLiveRepo && {liverepo: true}),
     ...(hasGcp && {gcpidentity: true}),
-    ...(isPublicBucket && {publicgcs: true, public: true}),
+    ...(isPublicRead && {publicgcs: true, public: true}),
     ...(hasGcp && {identity: true}),
     ...(scopeId === 'signedRoom' && {signedroom: true}),
     ...((scopeId === 'logs' || scopeId === 'roomLogs') && {logs: true}),
@@ -378,7 +385,7 @@ async function wfetch2(_url, opts, _ctx) {
 
   const extracted = extractFromUrl(url, ctx)
   const explicitDb = /^\w+:[^/]+\/\//.test(url), runtimeDbValue = runtimeDb(ctx)
-  const rawDb = extracted.db || runtimeDbValue || 'gcs'
+  const rawDb = extracted.db || runtimeDbValue || 'bucket'
   const db = ctx.vars.forceGCS ? 'gcs' : rawDb === 'local' ? 'fs' : rawDb.replace(/-/g, '')
   const backend = dsls.wonder['db-backend'][db]?.$runWithCtx(ctx)
   const backendCtx = backend?.enrichCtx ? await backend.enrichCtx(ctx) : ctx
@@ -914,6 +921,19 @@ DbDriver('bucket.minio', {
     append: wappend.getAndPut(),
     head: whead.viaBucketApi(),
     list: wlist.viaS3BucketApi(),
+    filePathUrl: '%$bucketEndpoint%/%$bucketName%/%$path%'
+  })
+})
+
+DbDriver('bucket.minio.public', {
+  impl: dbDriver({
+    whenAndWhyToUse: 'Anonymous object access to a public MinIO bucket; listing is intentionally unavailable.',
+    authToken: authToken.anonymous(),
+    authMethod: authMethod.none(),
+    get: wget.viaBucketApi(),
+    put: wput.viaBucketApi(),
+    append: wappend.getAndPut(),
+    head: whead.viaBucketApi(),
     filePathUrl: '%$bucketEndpoint%/%$bucketName%/%$path%'
   })
 })

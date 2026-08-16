@@ -1,29 +1,37 @@
 # Existing Kubernetes/OpenShift + MinIO
 
-The scripts make no internet calls. Mirror the Wonder image into the client's registry and install `kubectl` plus MinIO's `mc` on the deployment machine.
-The MinIO administrator must allow the Wonder web origin through global or per-bucket API CORS; MinIO's global default is `*`.
-
-Create the four Wonder buckets with bucket-administrator credentials:
+Outside the air gap, commit the required source and build one transfer directory:
 
 ```sh
-MINIO_ENDPOINT=https://minio-admin.client \
-MINIO_ACCESS_KEY=... MINIO_SECRET_KEY=... \
-bash cloud-services/on-prem/deploy-buckets.sh
+bash cloud-services/on-prem/export-airgap.sh /transfer/wonder-kit
 ```
 
-Deploy the public and protected Wonder lambda services into the existing cluster:
+The export builds Linux dependencies and the runtime image. It requires Git, Docker or Podman, gzip, tar and internet access.
+Set `CONTAINER_ENGINE=podman` or `PLATFORM=linux/arm64` when needed.
+
+Inside the air gap, log in to the internal image registry and select the target Kubernetes context. Install Git, Docker or Podman, `kubectl`, `mc`
+and tar. The existing MinIO CORS policy must allow the Wonder web origin, then run:
 
 ```sh
-WONDER_IMAGE=registry.client/wonder:VERSION \
-MINIO_ENDPOINT=https://minio.internal.client \
-MINIO_PUBLIC_ENDPOINT=https://minio.client \
-MINIO_ACCESS_KEY=... MINIO_SECRET_KEY=... \
-WONDER_ENV_FILE=cloud-services/express-server/.env.prod \
-bash cloud-services/on-prem/deploy-lambdas.sh
+export WONDER_IMAGE=registry.client/wonder:VERSION
+export MINIO_ENDPOINT=https://minio.internal.client
+export MINIO_ADMIN_ENDPOINT=https://minio-admin.client
+export MINIO_PUBLIC_ENDPOINT=https://minio.client
+export MINIO_ACCESS_KEY=... MINIO_SECRET_KEY=...
+export MINIO_ADMIN_ACCESS_KEY=... MINIO_ADMIN_SECRET_KEY=...
+bash /transfer/wonder-kit/install-airgap.sh /transfer/wonder-kit /opt/wonder
 ```
 
-The Kubernetes resources, probes, limits and OpenShift-compatible security context are in `wonder.yaml`; the script only creates the runtime secret,
-injects `WONDER_IMAGE`, applies the manifest and waits for both rollouts.
-Use a scoped MinIO service account here with runtime access to the four buckets, not the bucket-administrator credentials.
-`MINIO_ENDPOINT` is used by pods; `MINIO_PUBLIC_ENDPOINT` is embedded in browser-facing and presigned URLs.
-`wonder-protected` stays cluster-internal. Expose only `wonder-public` with the client's existing OpenShift Route or Kubernetes Ingress policy.
+The `MINIO_ADMIN_*` values are optional and default to the runtime values. The installer verifies the transfer, restores a Git checkout and matching
+native dependencies, pushes the image, creates and seeds the buckets, applies `wonder.yaml`, and waits for both deployments.
+
+Start the MCP publisher from the restored checkout:
+
+```sh
+export WONDER_SERVICE_URL=https://wonder.client
+bash /transfer/wonder-kit/run-mcp.sh /opt/wonder
+```
+
+The MCP helper runs the restored checkout in the transferred image, so the inside host does not need Node or npm. Use `uploadRoomAppletOnPrem`,
+`uploadRoomLambdaOnPrem` and `updateLambdasAndAppletsOnPrem`. The deployment uses unsigned rooms and does not expose bucket listing. Expose only
+`wonder-public`; browsers must resolve and trust the TLS certificates for Wonder and `MINIO_PUBLIC_ENDPOINT`.

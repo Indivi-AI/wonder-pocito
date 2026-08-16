@@ -13,7 +13,9 @@ kubectl get namespace "$NAMESPACE" >/dev/null 2>&1 || kubectl create namespace "
 SECRET_ARGS=(--from-literal=STORAGE_PROVIDER=minio --from-literal="MINIO_ENDPOINT=$MINIO_ENDPOINT"
   --from-literal="MINIO_PUBLIC_ENDPOINT=$MINIO_PUBLIC_ENDPOINT" --from-literal="MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY"
   --from-literal="MINIO_SECRET_KEY=$MINIO_SECRET_KEY" --from-literal="MINIO_REGION=${MINIO_REGION:-us-east-1}"
-  --from-literal=PROTECTED_LAMBDA_AUTH=none --from-literal=PROTECTED_LAMBDA_URL=http://wonder-protected:8080)
+  --from-literal="WONDER_STORAGE_URL=${MINIO_PUBLIC_ENDPOINT%/}" --from-literal="WONDER_CDN_URL=${MINIO_PUBLIC_ENDPOINT%/}/wonder-code-packages/cdn"
+  --from-literal=WONDER_AUTH_MODE=none --from-literal=PROTECTED_LAMBDA_AUTH=none
+  --from-literal=PROTECTED_LAMBDA_URL=http://wonder-protected:8080)
 if [[ -n "${WONDER_ENV_FILE:-}" ]]; then
   while IFS= read -r entry || [[ -n "$entry" ]]; do
     [[ -z "$entry" || "$entry" == \#* ]] || SECRET_ARGS+=(--from-literal="$entry")

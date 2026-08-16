@@ -494,7 +494,7 @@ Component('cachedWonderUrl', {
         url,
         inputFile: async (ctx) => await wcachePopulate(url(ctx), ctx, { validate: true }) || await urlToCachePath(url(ctx), ctx),
         lastModified: async (ctx) => {
-            const res = await wfetch2(url(ctx), { method: 'HEAD' }, ctx.setVars({ db: 'gcs' }))
+            const res = await wfetch2(url(ctx), { method: 'HEAD' }, ctx.setVars({ db: 'bucket' }))
             return res?.headers?.get?.('Last-Modified') || null
         }
     })
