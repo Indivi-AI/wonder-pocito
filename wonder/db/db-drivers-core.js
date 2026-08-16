@@ -53,8 +53,8 @@ Data('wResolve', {
 const Scope = TgpType('scope', 'wonder', { typescript: '{ db, bucket, folderInBucket, path: [] }' })
 const scope = Scope('scope', {
   params: [
-    {id: 'db', as: 'string'},
     {id: 'bucket', as: 'string', defaultValue: 'indiviai-wonder'},
+    {id: 'db', as: 'string', byName: true},
     {id: 'folderInBucket', as: 'string', defaultValue: '', byName: true},
     {id: 'path', as: 'array'},
     {id: 'fetchPath', as: 'array'}
@@ -67,7 +67,7 @@ Scope('room', {
 })
 
 Scope('protected', {
-  impl: scope('amazon', 'wonder-rooms-585008076838', { path: ['roomId','fileName'] })
+  impl: scope({ db: 'amazon', bucket: 'wonder-rooms-585008076838', path: ['roomId','fileName'] })
 })
 
 Scope('userGlobal', {

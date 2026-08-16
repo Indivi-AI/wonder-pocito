@@ -1,7 +1,6 @@
 import { dsls, coreUtils, jb } from '@jb6/core'
 import '@jb6/testing'
 import '@wonder/db/db-drivers.js'
-//import { Pool } from 'undici'
 
 const { wresolve } = jb.wonderUtils
 const {
@@ -105,6 +104,7 @@ Data('fetchComaxRanges', {
     { id: 'ranges', as: 'object', mandatory: true }
   ],
   impl: async (ctx, {}, { sources, ranges }) => {
+    const Pool  = await import('undici')
     const pool = new Pool('http://localhost:3000')
     const at = performance.now(), plans = sources.map(({ wUrl, url }) => {
       const file = wUrl.split('/').pop()
