@@ -84,9 +84,12 @@ async function prefetchSignedUrls(ctx) {
   const t0 = Date.now()
   const idToken = await auth.wonderIdToken(ctx)
   const signedUrlServer = signedUrlServerOf(ctx)
-  const res = await fetch(`${signedUrlServer.replace('/signed-url', '')}/signed-urls/${roomId}`, { headers: { Authorization: `Bearer ${idToken}` } })
+  const logger = ctx.vars.authLogger ? '?logger=authLogger' : ''
+  const res = await fetch(`${signedUrlServer.replace('/signed-url', '')}/signed-urls/${roomId}${logger}`,
+    {headers: {Authorization: `Bearer ${idToken}`}})
+  const { signatures, cached, timing, logs } = await res.json()
+  Object.entries(logs?.authLogger || {}).forEach(([channel, entries]) => ctx.vars.authLogger?.[channel]?.push(...entries))
   if (!res.ok) return
-  const { signatures, cached, timing } = await res.json()
   if (signatures) cacheSignatures(roomId, signatures)
   ctx?.vars?.dbLogger?.info?.({ t: 'prefetchSignedUrls timing', roomId, ms: Date.now() - t0, cached, timing,
     signatures: signatures && Object.keys(signatures).length }, {}, { ctx })
@@ -179,6 +182,9 @@ async function getCachedSignedUrl(ctx, path, method) {
   // works with cloud-services/express-server/lib/signed-url.js
   const { signedUrlCache } = jb.dbDriversRegistry
   const dbLogger = ctx.vars.dbLogger
+  const authLogger = ctx.vars.authLogger
+  const mergeAuthLogs = logs => Object.entries(logs?.authLogger || {}).forEach(([channel, entries]) =>
+    authLogger?.[channel]?.push(...entries))
   const slashIdx = path.indexOf('/')
   const roomId = path.slice(0, slashIdx)
   const fileKey = path.slice(slashIdx + 1)
@@ -188,27 +194,50 @@ async function getCachedSignedUrl(ctx, path, method) {
   }
   const cacheKey = `${fileKey}:${methodToAction(method)}`
   const cached = signedUrlCache.get(cacheKey)
-  dbLogger?.info?.({ t: 'signedUrl cacheLookup', cacheKey, hit: !!(cached && cached.exp > Date.now()), cacheSize: signedUrlCache.size }, {}, { ctx }) // log to delete
   if (cached && cached.exp > Date.now()) return cached.url
   const t0 = Date.now()
   const signedUrlServer = signedUrlServerOf(ctx)
   dbLogger?.info?.({ t: 'signedUrl fetch', path, method, signedUrlServer }, {}, { ctx })
   const idToken = await auth.wonderIdToken(ctx)
   const tokenReadyAt = Date.now()
-  let res, attempt = 0
+  authLogger?.info?.({t: 'signed-url token ready', atEpoch: tokenReadyAt, tokenMs: tokenReadyAt - t0,
+    hasUserToken: !!idToken}, {}, {ctx})
+  let res, requestUrl, callId, attempt = 0
   for (; ; attempt++) {   // burst signing of many NEW files hits the signatures-file mutation rate limit (GCS 429 → 500) - back off and retry
-    res = await fetch(`${signedUrlServer}/${path}?method=${method}`, { headers: { Authorization: `Bearer ${idToken}`,
-      ...(ctx.vars.signedRoomLogger && { 'x-wonder-debug-logs': '1' }) } })
-    if (res.ok || (res.status < 500 && res.status !== 429) || attempt >= 2) break
+    const logger = authLogger ? '&logger=authLogger' : ''
+    callId = authLogger && `${coreUtils.isNode ? process.pid : 'browser'}-${Date.now()}-${attempt + 1}`
+    requestUrl = `${signedUrlServer}/${path}?method=${method}${logger}${callId ? `&callId=${callId}` : ''}`
+    const runtime = coreUtils.isNode ? {runtime: 'node', runtimeVersion: process.version,
+      service: process.env.K_SERVICE, revision: process.env.K_REVISION} : {runtime: 'browser'}
+    authLogger?.info?.({t: 'remote signed-url call', atEpoch: Date.now(), callId, transport: 'https',
+      from: runtime, to: {server: signedUrlServer, url: requestUrl}, method, attempt: attempt + 1,
+      requestedLogger: 'authLogger', hasUserToken: !!idToken}, {}, {ctx})
+    const requestAt = Date.now()
+    res = await fetch(requestUrl, {headers: {Authorization: `Bearer ${idToken}`}})
+    const willRetry = !res.ok && (res.status >= 500 || res.status === 429) && attempt < 2
+    authLogger?.info?.({t: 'remote signed-url response', atEpoch: Date.now(), callId, server: signedUrlServer, url: requestUrl,
+      attempt: attempt + 1, status: res.status, statusText: res.statusText, ok: res.ok, requestMs: Date.now() - requestAt,
+      contentType: res.headers.get('content-type'), responseServer: res.headers.get('server'),
+      responsePoweredBy: res.headers.get('x-powered-by'), responseWonderService: res.headers.get('x-wonder-service'),
+      responseRevision: res.headers.get('x-wonder-revision'), traceId: res.headers.get('x-cloud-trace-context'),
+      willRetry}, {}, {ctx})
+    if (!willRetry) break
     dbLogger?.info?.({ t: 'signedUrl retry', path, status: res.status, attempt }, {}, { ctx })
     await new Promise(ok => setTimeout(ok, 1500 * (attempt + 1)))
   }
   if (!res.ok) {
     const body = await res.text()
-    try {
-      const remote = JSON.parse(body).logs?.signedRoomLogger
-      Object.entries(remote || {}).forEach(([channel, entries]) => ctx.vars.signedRoomLogger?.[channel]?.push(...entries))
-    } catch {}
+    let parsed
+    try { parsed = JSON.parse(body) } catch {}
+    mergeAuthLogs(parsed?.logs)
+    authLogger?.error?.({t: 'signed-url rejected', atEpoch: Date.now(), callId, path, method, status: res.status,
+      statusText: res.statusText, contentType: res.headers.get('content-type'), responseKind: parsed ? 'json' : 'non-json',
+      remoteAuthTrace: !!parsed?.logs?.authLogger, retry: false, clientAction: 'return failed DB response', returnedStatus: 500,
+      server: signedUrlServer, url: requestUrl, attempt: attempt + 1, responseServer: res.headers.get('server'),
+      responsePoweredBy: res.headers.get('x-powered-by'), traceId: res.headers.get('x-cloud-trace-context'),
+      responseWonderService: res.headers.get('x-wonder-service'), responseRevision: res.headers.get('x-wonder-revision')}, {}, {ctx})
+    const permissionDenial = res.status === 403 && await checkPermissionDenial(ctx, roomId, fileKey, method)
+    if (permissionDenial) authLogger.info(permissionDenial, {}, {ctx})
     const message = `signed-url failed: ${res.status} ${method} ${path} via ${signedUrlServer}`
     const stack = new Error(message).stack
     ctx.vars.errorLogger.error({ t: 'signed-url failed', stack, status: res.status, path, method, signedUrlServer }, { body }, { ctx })
@@ -216,11 +245,27 @@ async function getCachedSignedUrl(ctx, path, method) {
   }
   const responseAt = Date.now()
   const { signedUrl, signatures, timing, logs } = await res.json()
-  Object.entries(logs?.signedRoomLogger || {}).forEach(([channel, entries]) => ctx.vars.signedRoomLogger?.[channel]?.push(...entries))
+  mergeAuthLogs(logs)
+  authLogger?.info?.({t: 'signed-url accepted', atEpoch: Date.now(), path, method, status: res.status}, {}, {ctx})
   if (signatures) cacheSignatures(roomId, signatures)
   dbLogger?.info?.({ t: 'signedUrl ready', path, method, duration: Date.now() - t0, idTokenMs: tokenReadyAt - t0,
     fetchMs: responseAt - tokenReadyAt, responseBodyMs: Date.now() - responseAt, attempts: attempt + 1, serverTiming: timing }, {}, { ctx })
   return signedUrl
+}
+
+async function checkPermissionDenial(ctx, room, file, method) {
+  if (!ctx.vars.authLogger || !coreUtils.isNode || process.env.K_SERVICE || !/^[\w.-]+$/.test(room)) return
+  const {execFile} = await import('node:child_process'), {promisify} = await import('node:util')
+  const {stdout} = await promisify(execFile)('gsutil', ['cat', `gs://indiviai-wonder-protected/${room}/admin/users.json`])
+  const users = JSON.parse(stdout), username = ctx.vars.userEmail || await auth.devEmail(ctx)
+  const role = users.admins.includes(username) ? 'admin'
+    : users.users.includes(username) || users.users.includes('authenticated') ? 'user' : null
+  const [accessLevel, pathUserId] = file.split('/'), permissions = users.accessLevels[accessLevel]?.[role] || ''
+  const action = methodToAction(method), requiresUserMatch = permissions.includes('u')
+  const userMatches = !requiresUserMatch || username === pathUserId
+  const allowed = userMatches && permissions.includes(action === 'read' ? 'r' : 'w')
+  return {t: 'users.json', atEpoch: Date.now(), username, room, users, role, accessLevel, permissions, action,
+    requiresUserMatch, userMatches, allowed, permissionDenied: !allowed}
 }
 
 const isLocalFile = (body, opts) => typeof body === 'string' && opts?.headers?.['x-wonder-body'] === 'localFile'

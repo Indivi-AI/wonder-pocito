@@ -8,7 +8,8 @@ const { isNode, logException, pathJoin,pathParent, unique, asArray } = coreUtils
 jb.importMapCache = {
   fileContext: {}
 }
-Object.assign(coreUtils, { getStaticServeConfig, calcImportData, calcImportsForFiles, resolveWithImportMap, fetchByEnv, calcRepoRoot, calcJb6RepoRootAndImportMapsInCli, ensureImportMapsInCli, discoverDslEntryPoints, absPathToImportUrl })
+Object.assign(coreUtils, { getStaticServeConfig, calcImportData, calcImportsForFiles, resolveWithImportMap, fetchByEnv, calcRepoRoot,
+  resolveDeveloperEntryPoint, calcJb6RepoRootAndImportMapsInCli, ensureImportMapsInCli, discoverDslEntryPoints, absPathToImportUrl })
 
 const ignoreDirs = [ 'node_modules', '3rd-party', '.git'] 
 async function calcRepoRoot(options) {
@@ -36,6 +37,26 @@ async function calcRepoRoot(options) {
   while (dir !== path.dirname(dir)) {
     if (await exists(path.join(dir, '.git'))) return jb.coreRegistry.repoRoot = dir
     dir = path.dirname(dir)
+  }
+}
+
+async function resolveDeveloperEntryPoint(ctx) {
+  if (!isNode) {
+    const res = await coreUtils.runNodeCliViaJbWebServer(`import { coreUtils } from '@jb6/core'
+import '@jb6/core/misc/import-map-services.js'
+await coreUtils.writeServiceResult(await coreUtils.resolveDeveloperEntryPoint())`, { ctx })
+    return jb.coreRegistry.developerEntryPoint = res.result
+  }
+  try {
+    const { promisify } = await import('node:util'), { execFile } = await import('node:child_process')
+    const { access } = await import('node:fs/promises'), repoRoot = await calcRepoRoot()
+    const { stdout } = await promisify(execFile)('git', ['config', 'user.email']), id = stdout.trim().split('@')[0]
+    const path = pathJoin(repoRoot, '.jb6', `entry-points-${id}.js`)
+    await access(path)
+    return jb.coreRegistry.developerEntryPoint = path
+  } catch (error) {
+    logException(error, 'resolve developer entry point', { ctx })
+    throw error
   }
 }
 
@@ -337,7 +358,8 @@ async function discoverFiles(staticMappings, pkgJson, {projectDir}) {
 }
 
 
-// inverse of absPathToUrl: map a served-URL path (e.g. '/wonder-admin/bi/x.js') to its disk path via the longest urlPath match. non-served paths (real disk) match nothing → returned unchanged.
+// inverse of absPathToUrl: map a served-URL path to its disk path via the longest urlPath match.
+// non-served paths (real disk) match nothing and are returned unchanged.
 function urlToDisk(url, staticMappings = []) {
   const m = staticMappings.reduce((best, e) => e.diskPath != e.urlPath && url.startsWith(e.urlPath) && e.urlPath.length > (best?.urlPath.length||0) ? e : best, null)
   return m ? pathJoin(m.diskPath, url.slice(m.urlPath.length)) : url
@@ -361,7 +383,8 @@ function resolveWithImportMap(specifier, importMap, staticMappings) {
 }
 
 function absPathToUrl(path, staticMappings = []) {
-  const servedEntry = staticMappings.reduce((best, x) => x.diskPath != x.urlPath && path.indexOf(x.diskPath) == 0 && x.diskPath.length > (best?.diskPath.length||0) ? x : best, null)
+  const servedEntry = staticMappings.reduce((best, x) =>
+    x.diskPath != x.urlPath && path.indexOf(x.diskPath) == 0 && x.diskPath.length > (best?.diskPath.length||0) ? x : best, null)
   return servedEntry ? path.replace(servedEntry.diskPath, servedEntry.urlPath) : path
 }
 

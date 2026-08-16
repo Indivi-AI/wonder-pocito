@@ -4,8 +4,8 @@
 // If PROTECTED_LAMBDA_URL is unset, falls back to handling the route locally — so the same image
 // can be deployed twice: public lambda forwards, protected lambda handles.
 import { GoogleAuth } from 'google-auth-library'
-import { coreUtils } from '@jb6/core'
 import { setupSignedUrlRoute } from './signed-url.js'
+import { authHttpLogger, safeError } from './auth-http-logger.js'
 
 const auth = new GoogleAuth({ clientOptions: { transporterOptions: { fetchImplementation: globalThis.fetch } } })
 const clientByAudience = {}
@@ -13,55 +13,45 @@ const idTokenClient = audience => clientByAudience[audience] ||= auth.getIdToken
 
 export function setupSignedUrlForwarder(app) {
     const target = process.env.PROTECTED_LAMBDA_URL
-    if (!target) {
-        console.log('[signed-url-forwarder] PROTECTED_LAMBDA_URL unset — handling locally') // log to delete
-        return setupSignedUrlRoute(app)
-    }
-    console.log('[signed-url-forwarder] forwarding /signed-url/* →', target) // log to delete
+    if (!target) return setupSignedUrlRoute(app)
 
     const forward = async (req, res) => {
         const t0 = Date.now()
-        const debugLogs = req.headers['x-wonder-debug-logs'] === '1'
-        const ctx = debugLogs ? coreUtils.ensureLoggers('signedRoomLogger') : null
-        const log = ctx?.vars.signedRoomLogger
+        const log = authHttpLogger(req, 'signed-url-forwarder')
+        let stage = 'receive request'
         try {
-            log?.info?.({ t: 'public signer entered', method: req.method, path: req.path, target,
-                incomingUserAuth: !!req.headers.authorization }, {}, { ctx })
-            const client = process.env.PROTECTED_LAMBDA_AUTH === 'none' ? null : await idTokenClient(target)
-            const authHeaders = client ? await client.getRequestHeaders() : {}
+            log.info({t: 'forwarder received', method: req.method, requestUrl: req.originalUrl,
+                hasUserAuth: !!req.headers.authorization})
+            stage = 'mint service token'
+            const client = await idTokenClient(target)
+            const authHeaders = await client.getRequestHeaders()
             const googleHeaders = authHeaders?.entries ? Object.fromEntries(authHeaders.entries()) : { ...authHeaders }
             const googleAuthorization = googleHeaders.authorization || googleHeaders.Authorization
-            log?.info?.({ t: 'Google ID token headers ready', headersType: authHeaders?.constructor?.name,
-                enumerableKeys: Object.keys(authHeaders || {}), normalizedKeys: Object.keys(googleHeaders), hasGoogleAuthorization: !!googleAuthorization }, {}, { ctx })
-            console.log('[signed-url-forwarder] →', req.method, req.originalUrl, 'token?', !!authHeaders.Authorization, 'userAuth?', !!req.headers.authorization) // log to delete
+            log.info({t: 'service token ready', hasServiceAuth: !!googleAuthorization})
+            stage = 'call protected signer'
             const { host, authorization, ...incoming } = req.headers
             const url = target.replace(/\/$/, '') + req.originalUrl
+            log.info({t: 'forwarder calling protected signer', target: url, hasUserAuth: !!authorization,
+                hasServiceAuth: !!googleAuthorization})
             const init = { method: req.method, headers: { ...incoming, ...googleHeaders, ...(authorization ? { 'x-user-authorization': authorization } : {}) } }
-            log?.info?.({ t: 'public signer sending protected request', url, hasGoogleAuthorization: !!googleAuthorization,
-                hasUserAuthorization: !!authorization }, {}, { ctx })
             if (req.method !== 'GET' && req.method !== 'HEAD')
                 init.body = Buffer.isBuffer(req.body) ? req.body : JSON.stringify(req.body)
             const upstream = await fetch(url, init)
+            stage = 'read protected response'
             const buf = Buffer.from(await upstream.arrayBuffer())
-            log?.info?.({ t: 'protected signer response', status: upstream.status, contentType: upstream.headers.get('content-type'), ms: Date.now() - t0 }, {}, { ctx })
-            console.log('[signed-url-forwarder] ←', upstream.status, `${Date.now()-t0}ms`, upstream.status >= 400 ? buf.toString('utf8').slice(0, 500) : '') // log to delete
-            if (debugLogs) {
+            log[upstream.ok ? 'info' : 'error']({t: 'protected signer response', status: upstream.status, ms: Date.now() - t0})
+            if (req.query.logger === 'authLogger') {
                 let body
                 try { body = JSON.parse(buf.toString('utf8')) } catch { body = { error: buf.toString('utf8').slice(0, 500) } }
-                const logs = coreUtils.harvestLogs(ctx, ['signedRoomLogger'])
-                const protectedLogs = body.logs?.signedRoomLogger
-                if (protectedLogs) Object.entries(protectedLogs).forEach(([channel, entries]) =>
-                    logs.signedRoomLogger[channel]?.push(...entries))
-                return res.status(upstream.status).json({ ...body, logs })
+                log.merge(body.logs?.authLogger)
+                return res.status(upstream.status).json(log.body(body))
             }
             res.status(upstream.status)
             upstream.headers.forEach((v, k) => res.setHeader(k, v))
             res.send(buf)
         } catch (e) {
-            log?.error?.({ t: 'public signer failed', ms: Date.now() - t0 }, {}, { ctx, error: e })
-            console.error('[signed-url-forwarder] forward failed:', e.stack || e) // log to delete
-            res.status(502).json({ error: 'signed-url forward failed', detail: String(e?.message || e),
-                ...(debugLogs && { logs: coreUtils.harvestLogs(ctx, ['signedRoomLogger']) }) })
+            log.error({t: 'forwarder failed', stage, ms: Date.now() - t0, error: safeError(e)})
+            res.status(502).json(log.body({error: 'signed-url forward failed', detail: String(e?.message || e)}))
         }
     }
     app.all('/signed-url/*', forward)

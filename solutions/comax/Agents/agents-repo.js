@@ -7,8 +7,6 @@ const { common: { Data } } = dsls
 // so importing/removing an agent module automatically updates every selector.
 Data('comaxAnalyticsAgents', {
   impl: () => [
-    { id: 'basicAnalytics', label: 'SQL', hint: 'שאילתה חופשית מעל נתוני ה-ERP' },
-    { id: 'comaxCubeAnalytics', label: 'קיוב', hint: 'שאילתות מעל שכבת הקיוב הסמנטית — מדדים ומגבלות מובנים' },
-    { id: 'fast-report', label: 'fast-report', hint: 'דוחות מהירים: ווידג׳טים מיד, סיכום אחר כך' }
+    { id: 'comaxVerifiedReports', label: 'דוחות מאומתים', hint: 'בחירת דוח מוגדר ומאומת מראש' }
   ].filter(a => dsls.workflow.workflow[a.id])
 })

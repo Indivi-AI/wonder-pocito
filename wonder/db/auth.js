@@ -1,6 +1,7 @@
 import { coreUtils, dsls } from '@jb6/core'
 
-const { common: { Data } } = dsls
+const { common: { Data }, test: { Logger, logger: { domainLogger } } } = dsls
+Logger('authLogger', { impl: domainLogger('auth', 'roomId,email') })
 const registry = { accessTokenByScope: {} }
 const authStore = () => globalThis.localStorage
 export const readAuth = () => { try { return JSON.parse(authStore()?.getItem('auth2') || '{}') } catch { return {} } }
@@ -34,21 +35,25 @@ const hasGcpIdentity = async () => {
 
 const wonderIdToken = async ctx => {
   const dbLogger = ctx?.vars.dbLogger
+  if (ctx?.vars.idToken) return ctx.vars.idToken
   if (!coreUtils.isNode) {
     const stored = readAuth()
     if (stored.id_token && (!stored.expiresAt || stored.expiresAt > Date.now())) return stored.id_token
+    if (isLocalHost(ctx)) {
+      const email = stored.email || await devEmail(ctx)
+      const id_token = await fetch(`${localhostServer(ctx)}/mint-wonder-token?email=${encodeURIComponent(email)}`).then(r => r.text())
+      writeAuth({ ...stored, id_token, email, expiresAt: Date.now() + 86400e3 })
+      return id_token
+    }
     if (stored.id_token) await (await import('./oauth2.js')).handleAuth()
     if (readAuth().id_token) return readAuth().id_token
-    if (!isLocalHost(ctx)) return dbLogger?.error?.({ t: 'wonderIdToken: login required' }, {}, { ctx }) || null
-    const email = await devEmail(ctx)
-    const id_token = await fetch(`${localhostServer(ctx)}/mint-wonder-token?email=${encodeURIComponent(email)}`).then(r => r.text())
-    writeAuth({ ...stored, id_token, email, expiresAt: Date.now() + 86400e3 })
-    return id_token
+    return dbLogger?.error?.({ t: 'wonderIdToken: login required' }, {}, { ctx }) || null
   }
   if (registry.idToken) return registry.idToken
   if (process.env.K_SERVICE) {
     const { GoogleAuth } = await import('google-auth-library')
-    return registry.idToken = (await (await new GoogleAuth().getIdTokenClient('unused')).getRequestHeaders()).Authorization.split(' ')[1]
+    const headers = await (await new GoogleAuth().getIdTokenClient('unused')).getRequestHeaders()
+    return registry.idToken = (headers.get?.('authorization') || headers.authorization || headers.Authorization).split(' ')[1]
   }
   return registry.idToken = fetch(`${localhostServer(ctx)}/mint-wonder-token?email=${encodeURIComponent(await devEmail(ctx))}`).then(r => r.text())
 }

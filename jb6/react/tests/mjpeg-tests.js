@@ -3,10 +3,10 @@ import './react-testers.js'
 
 const { 
   test: { Test, 
-      'ui-action': { click, longPress, actions, waitForText },
       test: { dataTest, reactTest }
   }, 
   react: { ReactComp, 
+    'ui-action': { click, longPress, actions, waitForText },
     'react-comp': { comp },
   }
 } = dsls

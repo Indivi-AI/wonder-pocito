@@ -11,7 +11,7 @@ const {
     boolean: { equals, contains, notContains, and, not },
     prop: { prop },
   },
-  mcp: { tool: { formatAndValidateTgpComp } },
+  mcp: { tool: { formatAndValidateTgpComp, safeEditTgpComp } },
 } = dsls
 const { json } = ns
 
@@ -136,18 +136,31 @@ Test('mcpTest.prettyPrintCompDef', {
   })
 })
 
+Test('mcpTest.safeEditRequiresLocationForCreate', {
+  HeavyTest: true,
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: async () => (await safeEditTgpComp.$run({
+      compText: `Test('mcpTest.safeCreateCandidate', { impl: dataTest({ expectedResult: true }) })`
+    })).content[0].text,
+    expectedResult: contains('location is mandatory for a new component'),
+    timeout: 5000
+  })
+})
+
 Test('mcpTest.playwrightHarvest', {
   HeavyTest: true,
   doNotRunInTests: true,
   impl: mcpToolTest({
     tool: 'playwrightHarvest',
     args: asIs({
-      url: 'http://localhost:8083/packages/react/react-comp-view.html?logger=uiLogger&cmpId=codeMirrorTest&urlsToLoad=@jb6/react/tests/react-tests.js',
-      uiActionJsonStr: `{"$":"ui-action<test>actions","actions":[{"$":"ui-action<test>selectInCodeMirror","from":2,"to":8}]}`,
+      url: 'http://localhost:8083/packages/testing/tests.html?test=reactTest.buttonToClick&logger=uiLogger',
+      automation: `{"$":"ui-action<react>click","buttonText":"Click me"}`,
       seedLocalStorage: 'mockAuthSeed',
       domSelector: 'body'
     }),
-    expectedResult: and(contains('selected: lect-a'), contains('cm-editor'))
+    expectedResult: and(contains('Clicked!'), contains('<button>'), notContains('harvestError')),
+    timeout: 10000
   })
 })
 

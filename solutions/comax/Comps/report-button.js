@@ -1,7 +1,11 @@
 import { dsls, jb } from '@jb6/core'
 import '@jb6/react'
 import '@wonder/db/db-drivers.js'
+<<<<<<< HEAD
 import '@wonder/bi/viz/viz-index.js'
+=======
+import '@wonder/ui/viz/viz-index.js'
+>>>>>>> origin/master
 import { comaxLogo, comaxFontCss } from './comax-brand.js'
 
 const { wfetch2 } = jb.wonderUtils

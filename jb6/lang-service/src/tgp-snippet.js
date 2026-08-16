@@ -1,4 +1,4 @@
-import { coreUtils, dsls } from '@jb6/core'
+import { coreUtils, dsls, jb } from '@jb6/core'
 import { langServiceUtils } from './lang-service-parsing-utils.js'
 import '@jb6/core/misc/import-map-services.js'
 import './tgp-model-data.js' // provides coreUtils.calcImportsForProfile
@@ -30,6 +30,8 @@ function toJson(v) {
 async function runSnippetCli(args) {
   const _t0 = Date.now()
   const repoRoot = args.repoRoot || await calcRepoRoot({ ctx: args.ctx })
+  const developerEntryPoint = await jb.coreRegistry.developerEntryPoint
+  args.entryPointPaths ||= developerEntryPoint && coreUtils.asArray(developerEntryPoint)
   const _tRepoRoot = Date.now()
   const loggerNames = (args.logger || '').split(',').map(s => s.trim()).filter(Boolean)
   const loggersNeededForUiProgress = args.ctx?.vars?.loggersNeededForUiProgress || args.loggersNeededForUiProgress || ''
@@ -47,7 +49,8 @@ async function runSnippetCli(args) {
     const script = `import { coreUtils } from '@jb6/core'
 import '@jb6/lang-service'
 ;(async()=>{ try {
-  await coreUtils.writeServiceResult(await coreUtils.runSnippetCli(${JSON.stringify({ ...args, profile: undefined, profileText, ctxEnricher, repoRoot, loggersNeededForUiProgress, logger: undefined, ctx: undefined })}))
+  await coreUtils.writeServiceResult(await coreUtils.runSnippetCli(${JSON.stringify({ ...args, profile: undefined, profileText,
+    ctxEnricher, repoRoot, loggersNeededForUiProgress, logger: undefined, ctx: undefined })}))
 } catch (e) { console.error(e) } })()`
     const res = await coreUtils.runCliInContext(script, {ctx})
     return { ...(res.result || res), ...harvest() }
@@ -57,7 +60,8 @@ import '@jb6/lang-service'
   // here we cache the WHOLE snippet run (imports build + child spawn), so a hit skips the ~825ms child too.
   const allDsls = unique([...(profileText + (ctxEnricher || '')).matchAll(/["']\$["']\s*:\s*["']([^"']+)<([^"']+)>/g)].map(m => m[2]))
   const isTestProfile = /(?:["']\$["']|\$)\s*:\s*["']test<test>/.test(profileText)
-  const modelResources = {forRepo: args.entryPointPaths ? undefined : repoRoot, forDsls: allDsls.join(','), fetchByEnvHttpServer: args.fetchByEnvHttpServer, entryPointPaths: args.entryPointPaths}
+  const modelResources = {forRepo: args.entryPointPaths ? undefined : repoRoot, forDsls: allDsls.join(','),
+    fetchByEnvHttpServer: args.fetchByEnvHttpServer, entryPointPaths: args.entryPointPaths}
   const cacheQuery = {snippet: true, profileText, ctxEnricher: ctxEnricher || '', repoRoot: repoRoot || '', entryPointPaths: [].concat(args.entryPointPaths || []).join(',')}
   const { result: cached, key: cacheKey } = await coreUtils.hashAndGetCache({cacheQuery, modelResources, fetchByEnvHttpServer: args.fetchByEnvHttpServer}, ctx)
   if (cached && !isTestProfile && !loggersNeededForUiProgress && !loggerNames.length) {
@@ -66,7 +70,8 @@ import '@jb6/lang-service'
   }
 
   const res = await calcJsonProfileScript({...args, ctx, loggersNeededForUiProgress, profileText, ctxEnricher, repoRoot})
-  ctx?.vars?.snippetLogger?.info?.({t: 'runSnippetCli preSpawn', calcRepoRootMs: _tRepoRoot - _t0, calcImportsMs: Date.now() - _tRepoRoot, preSpawnMs: Date.now() - _t0, fileCount: res.topLevelImports?.length}, {}, {ctx})
+  ctx?.vars?.snippetLogger?.info?.({t: 'runSnippetCli preSpawn', calcRepoRootMs: _tRepoRoot - _t0,
+    calcImportsMs: Date.now() - _tRepoRoot, preSpawnMs: Date.now() - _t0, fileCount: res.topLevelImports?.length}, {}, {ctx})
   const { ecmScript, projectDir, importMapsInCli, topLevelImports, error } = res
   if (error) return { ...res, ...harvest() }
   try {
@@ -95,7 +100,8 @@ async function calcJsonProfileScript({profileText, repoRoot, fetchByEnvHttpServe
   const { importsStr, projectDir, importMapsInCli } = imp
   const enrichStmt = ctxEnricher ? `.run(${ctxEnricher})` : ''
   const loggerSetup = `
-    const loggerCtx = coreUtils.ensureLoggers(${JSON.stringify(loggersNeededForUiProgress)}, {ctx: new coreUtils.Ctx({vars: {loggersNeededForUiProgress: ${JSON.stringify(loggersNeededForUiProgress)}, progressToStderr: true}})})${enrichStmt}
+    const loggerCtx = coreUtils.ensureLoggers(${JSON.stringify(loggersNeededForUiProgress)}, {ctx: new coreUtils.Ctx({vars:
+      {loggersNeededForUiProgress: ${JSON.stringify(loggersNeededForUiProgress)}, progressToStderr: true}})})${enrichStmt}
     const result = await loggerCtx.run(${profileText})`
   const ecmScript = `
   // dir: ${projectDir}

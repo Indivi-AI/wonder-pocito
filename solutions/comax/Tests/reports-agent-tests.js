@@ -22,7 +22,8 @@ const {
   common: { data: {
     editReportStudioDraft, runReport, queryReportFullData, verifiedReportsRegistry, loadVerifiedReportsAsAssets, testVerifiedSlot
   }, boolean: { contains, equals, notContains, and } },
-  test: { Test, test: { dataTest, reactTest }, 'ui-action': { actions, click, waitForText, delay } },
+  test: { Test, test: { dataTest, reactTest } },
+  react: { 'ui-action': { actions, click, waitForText, delay } },
   react: { 'react-comp': { reportsWorkspace, reportStudio } },
   workflow: { 'flow-elem': { finalAnswerFromReport } }
 } = dsls

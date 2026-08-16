@@ -6,9 +6,8 @@ import {cleanAnswer, combineReportResults, normalizeReportRoute, PROMOTION_ACTIO
 import {chatHistoryEntry, promotionAlertData, uniqueReportReactComps} from '../App/comaxApp.js'
 import '../Comps/promotion-report-ui.js'
 
-const {common: {boolean: {and, contains}}, test: {
-  Test, 'ui-action': {actions, click, waitForText}, test: {dataTest, reactTest}
-}} = dsls
+const {common: {boolean: {and, contains}}, test: {Test, test: {dataTest, reactTest}},
+  react: {'ui-action': {actions, click, waitForText}}} = dsls
 const SHABBAT_CAVEAT = 'אם היום המלא האחרון הוא שבת — יופיעו רק סניפי השבת.'
 const accumulatedContext = {
   chatHistory: [

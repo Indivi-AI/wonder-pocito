@@ -17,18 +17,25 @@
 
     const modulePath = urlQuery('modulePath') || '@jb6/testing/all-jb6-tests.js'
     console.log('modulePath', modulePath)
-    // show/showOnly/action render the real component visibly -> load real modules, not stubs
-    if (['show','showOnly','action'].some(p => urlQuery(p) != null)) window.noStubs = true
+    // visible browser runs load real modules, not stubs
+    if (['show','showOnly','automation'].some(p => urlQuery(p) != null)) window.noStubs = true
     await import(modulePath)
 
+    const automation = urlQuery('automation')
     const params = {
       specificTest: urlQuery('test'),
       notPattern:    urlQuery('not'),
-      ...Object.fromEntries(['pattern','take','includeHeavy','showOnly','action'].map(x => [x, urlQuery(x) || urlQuery(x) != null]))
+      ...Object.fromEntries(['pattern','take','includeHeavy'].map(x => [x, urlQuery(x) || urlQuery(x) != null])),
+      showOnly: urlQuery('showOnly') != null || automation != null
     }
 
     browserSpy.initSpyByUrl()
-    runTests(params)
+    await runTests(params)
+    if (automation != null) {
+      const {reactUtils} = await import('@jb6/react')
+      await import('@jb6/react/automation.js')
+      await reactUtils.startAutomation(new coreUtils.Ctx().setVars(window.jbLoggers || {}), window)
+    }
   </script>
 </head>
 

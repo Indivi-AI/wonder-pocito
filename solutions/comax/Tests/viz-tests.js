@@ -3,11 +3,16 @@ import '@jb6/common'
 import '@jb6/testing'
 import '@jb6/react/tests/react-testers.js'
 import '@wonder/ai/llm-flow-main-workflow.js'
+<<<<<<< HEAD
 import '@wonder/bi/viz/viz-index.js' // registers VizWidget + every widget + its reactTests
+=======
+import '@wonder/ui/viz/viz-index.js'        // registers VizWidget + every widget + its reactTests
+>>>>>>> origin/master
 import '../Agents/analytics-agent.js' // registers the basicAnalytics workflow + viz doclets
 import '../App/comaxApp.js' // registers AnalyticsAssistantResponse (the chat answer renderer)
 
 const {
+<<<<<<< HEAD
   common: {
     boolean: { contains, notContains, and, equals },
   },
@@ -22,6 +27,12 @@ const {
   workflow: {
     workflow: { basicAnalytics },
   },
+=======
+  common: { boolean: { contains, notContains, and, equals } },
+  react: { 'react-comp': { AnalyticsAssistantResponse }, 'ui-action': { delay, click } },
+  test: { Test, test: { dataTest, reactTest } },
+  workflow: { workflow: { basicAnalytics } }
+>>>>>>> origin/master
 } = dsls
 
 // ── the campaign rows from the real failing case (sessions per campaign) ─────

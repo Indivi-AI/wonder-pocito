@@ -98,6 +98,42 @@ Tool('formatAndValidateTgpComp', {
   })
 })
 
+Tool('safeEditTgpComp', {
+  description: 'Validate and TGP-format a component, replacing it or appending a new component at the end of location',
+  params: [
+    {id: 'compText', as: 'string', asIs: true, mandatory: true},
+    {id: 'fullCompId', as: 'string', asIs: true},
+    {id: 'location', as: 'string', asIs: true},
+    {id: 'existingCompText', as: 'string', asIs: true}
+  ],
+  impl: mcpTool(async (ctx, {}, {compText, fullCompId, location, existingCompText}) => {
+    try {
+      await import('@jb6/lang-service')
+      const repoRoot = await coreUtils.calcRepoRoot(), tgpModel = await coreUtils.calcTgpModelData({forRepo: repoRoot}, ctx)
+      const newLocation = location && {path: location}, current = fullCompId && coreUtils.compByFullId(fullCompId, tgpModel)
+      const {comp, compId, compDef, error} = jb.langServiceUtils.calcProfileActionMap(compText, {tgpModel, filePath: newLocation?.path, ctx})
+      if (!comp || error || comp.syntaxError) throw new Error(error?.syntaxError || error || comp?.syntaxError || 'Invalid TGP component')
+      if (fullCompId && compId != fullCompId) throw new Error(`component id mismatch: expected '${fullCompId}', found '${compId}'`)
+      const isNew = !current, sourceLocation = current?.$location || newLocation
+      if (isNew && !location) throw new Error('location is mandatory for a new component')
+      if (!isNew && !fullCompId) throw new Error(`component '${compId}' already exists`)
+      const {readFile, writeFile} = await import('fs/promises')
+      const {importMap, staticMappings} = await coreUtils.calcImportData({forRepo: repoRoot})
+      const path = coreUtils.resolveWithImportMap(sourceLocation.path, importMap, staticMappings) || sourceLocation.path
+      const source = await readFile(path, 'utf8'), formatted = coreUtils.prettyPrintComp(comp,
+        {tgpModel, filePath: path, initialPath: compId, compDef})
+      const from = isNew ? source.length : jb.langServiceUtils.lineColToOffset(source, sourceLocation)
+      const to = isNew ? from : jb.langServiceUtils.lineColToOffset(source, sourceLocation.to)
+      if (existingCompText != null && existingCompText != '*' && source.slice(from, to) != existingCompText) throw new Error('existingCompText mismatch')
+      const inserted = isNew ? `${from && source[from - 1] != '\n' ? '\n' : ''}${formatted}\n` : formatted
+      await writeFile(path, source.slice(0, from) + inserted + source.slice(to))
+      return JSON.stringify({fullCompId: compId, path, created: isNew, formatted: formatted != compText, formattedTgpComp: formatted})
+    } catch (error) {
+      return JSON.stringify({error: error.message || String(error)})
+    }
+  })
+})
+
 Tool('macroToJson', {
   description: `Convert TGP macro syntax to JSON profile. e.g. pipeline([1,2,3], join("-")) → {$: "data<common>pipeline", ...}.
 Use tgpModel tool to discover available components.`,
@@ -210,19 +246,17 @@ Tool('scrambleText', {
 })
 
 Tool('playwrightHarvest', {
-  description: `Load a react-comp-view.html url in headless Chromium, run a ui-action<test> profile against the mounted comp and harvest its jb6 loggers + browser errors.
-url carries query params: logger, cmpId, urlsToLoad.
+  description: `Load a tests.html, react-comp-view.html or room applet URL in Chromium, run ui-action<react> automation and harvest its loggers and browser errors.
 Returns { done, errors, logs, html?, timeline }.`,
   params: [
-    {id: 'url', as: 'string', asIs: true, mandatory: true, description: 'full react-comp-view.html url incl. logger/cmpId/urlsToLoad query params'},
-    {id: 'uiActionJsonStr', as: 'string', asIs: true, description: `ui-action<test> profile to run against the mounted comp.
-MUST be JSON escaped as a string, NOT an object. e.g. "{\\"$\\":\\"ui-action<test>selectInCodeMirror\\",\\"from\\":2,\\"to\\":8}"`},
+    {id: 'url', as: 'string', asIs: true, mandatory: true},
+    {id: 'automation', as: 'string', asIs: true, description: 'serialized ui-action<react> profile; empty only harvests the target'},
     {id: 'timeout', as: 'number', defaultValue: 5000, description: 'ms to wait for the page to mount and its uiAction to finish'},
     {id: 'domSelector', as: 'string', description: 'optional css selector; when set returns that element outerHTML'},
     {id: 'seedLocalStorage', as: 'string', asIs: true,
       description: 'id of a data<common> comp whose result object seeds localStorage before boot'},
   ],
-  impl: mcpTool(async (ctx, {}, {url, uiActionJsonStr, timeout, domSelector, seedLocalStorage}) => {
+  impl: mcpTool(async (ctx, {}, {url, automation, timeout, domSelector, seedLocalStorage}) => {
     let seed = null
     await coreUtils.ensureImportMapsInCli() // needed for external repos with import maps
     if (seedLocalStorage) {
@@ -240,6 +274,10 @@ MUST be JSON escaped as a string, NOT an object. e.g. "{\\"$\\":\\"ui-action<tes
       redirect = { from: url, status: res.status, to: location }
       url = location
     }
+    const targetUrl = new URL(url)
+    targetUrl.searchParams.set('automation', automation || '')
+    targetUrl.searchParams.set('automationTimeout', timeout)
+    url = targetUrl.href
     const script = `
 import { coreUtils } from '@jb6/core'
 import '@jb6/core/misc/import-map-services.js'
@@ -254,19 +292,12 @@ page.on('pageerror', e => errors.push(String(e?.stack || e)))
 await page.addInitScript(() => window.addEventListener('unhandledrejection', e => console.error('unhandledrejection: ' + (e.reason?.stack || e.reason))))
 const seed = ${JSON.stringify(seed)}
 if (seed) await page.addInitScript(s => Object.entries(s).forEach(([k, v]) => localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v))), seed)
-await page.addInitScript(() => {
-  window.__jbOnMounted = async (ctx, reactUtils) => {
-    await import('@jb6/react/tests/react-testers.js')
-    window.jbRunAndHarvest = (uiActionJsonStr, limit) => reactUtils.runAndHarvest(ctx, window, uiActionJsonStr, limit)
-    ctx.vars.uiLogger?.info?.({ t: 'jbOnMounted.installed', msg: 'test harness injected externally into prod page; driver ready' }, {}, { ctx })
-  }
-})
 let done, logs, html, harvestError
 try {
   await page.goto(${JSON.stringify(url)}, { waitUntil: 'domcontentloaded', timeout: ${timeout} }); mark('loaded')
-  await page.waitForFunction(() => window.jbMounted, null, { timeout: ${timeout} }); mark('mounted')
-  const uiActionJsonStr = ${JSON.stringify(uiActionJsonStr || '')}
-  ;({ done, logs } = await page.evaluate(([s, limit]) => window.jbRunAndHarvest(s, limit), [uiActionJsonStr, ${timeout}])); mark('done')
+  await page.waitForFunction(() => window.jbAutomation?.done, null, { timeout: ${timeout} }); mark('done')
+  const state = await page.evaluate(() => window.jbAutomation)
+  ;({ done, logs, error: harvestError } = state)
   await page.waitForTimeout(500)   // drain late async render errors / unhandled rejections before closing
   html = ${JSON.stringify(domSelector || '')} ? await page.evaluate(s => document.querySelector(s)?.outerHTML, ${JSON.stringify(domSelector || '')}) : undefined
 } catch (e) { harvestError = String(e?.message || e); mark('failed:' + (timeline.at(-1)?.phase || 'goto')) }

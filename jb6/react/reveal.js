@@ -1,16 +1,14 @@
 import { dsls } from '@jb6/core'
 import { reactUtils } from '@jb6/react'
 
-const { tgp: { Component } } = dsls
+const { tgp: { CtxEnricher } } = dsls
 
 const REVEAL_VERSION = '5.2.1'
 const cdn = path => `https://cdn.jsdelivr.net/npm/reveal.js@${REVEAL_VERSION}/dist/${path}`
 
-Component('loadReveal', {
-  type: 'ctx-enricher<tgp>',
+CtxEnricher('loadReveal', {
   params: [
-    {id: 'theme', as: 'string', options: 'black,white,league,beige,sky,night,serif,simple,solarized,moon,dracula,blood',
-      description: 'theme name. empty uses the bundled offline black theme'}
+    {id: 'theme', as: 'string', options: 'black,white,league,beige,sky,night,serif,simple,solarized,moon,dracula,blood', description: 'theme name; empty uses bundled black theme'}
   ],
   impl: async (ctx, {}, {theme}) => {
     const { Reveal, css } = await reactUtils.loadReveal()
@@ -22,6 +20,8 @@ Component('loadReveal', {
     const mount = (hostEl, options) => {
       const deck = new Reveal(hostEl, { embedded: true, ...options })
       deck.initialize()
+      const resizeObserver = globalThis.ResizeObserver && new ResizeObserver(() => requestAnimationFrame(() => deck.layout()))
+      resizeObserver?.observe(hostEl)
 
       const decorate = () => deck.sync()
       const slidesEl = hostEl.querySelector('.slides')
@@ -35,14 +35,15 @@ Component('loadReveal', {
         scheduled = true
         requestAnimationFrame(() => {
           scheduled = false; decorating = true
-          ctx.vars.uiLogger?.info?.({ t: 'reveal', text: `decorate #${++n}` }, {}, { ctx })
+          ;(ctx.vars.revealLogger || ctx.vars.uiLogger)?.info?.({ t: 'reveal.slidesSynced', syncCount: ++n,
+            slideCount: deck.getTotalSlides() }, {}, { ctx })
           decorate()
           requestAnimationFrame(() => { decorating = false })
         })
       })
       observer.observe(slidesEl, { childList: true, subtree: true })
 
-      const disconnect = () => { observer.disconnect(); deck.destroy() }
+      const disconnect = () => { observer.disconnect(); resizeObserver?.disconnect(); deck.destroy() }
       return { deck, decorate, disconnect }
     }
     return ctx.setVars({ reveal: { mount } })

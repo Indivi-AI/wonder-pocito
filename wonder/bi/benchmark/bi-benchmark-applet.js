@@ -4,7 +4,6 @@ import '@jb6/core/misc/pretty-print.js'
 import '@jb6/lang-service/src/tgp-snippet.js'
 import '@jb6/core/misc/jb-remote-via-cli.js'
 import './bi-benchmarks.js'
-import '@solution/comax2/comax-benchmark.js'
 import '@wonder/db/db-drivers-utils.js'
 
 const { formatTimeWithRandom } = jb.wonderUtils

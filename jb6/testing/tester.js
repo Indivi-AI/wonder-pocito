@@ -29,10 +29,12 @@ Component('dataTest', {
         logger = ctx.vars.overrideTestLoggers ?? logger   // ambient override (e.g. from runTest mcp) wins over the profile's logger param, without editing the test
         const loggerNames = [...new Set(['errorLogger', ...(logger || '').split(',').map(s => s.trim()).filter(Boolean)])]   // errorLogger always-on + always harvested
         const loggerObj = Object.fromEntries(
-          loggerNames.map(n => [n, (dsls.test.logger[n] || Logger(n, { impl: domainLogger(n.replace(/Logger$/, '')) })).$runWithCtx(ctx)])     // domainLogger('xx') is registered on the fly
+          loggerNames.map(n => [n, (dsls.test.logger[n]
+            || Logger(n, {impl: domainLogger(n.replace(/Logger$/, ''))})).$runWithCtx(ctx)])
         )
         const testID = ctx.vars.testID || (ctx.jbCtx.lexicalStack.slice(-1)[0]||'').split('~')[0]
 		let ctxToUse = ctx.setVars({testID, isTest: true, testSessionId: `test-${Date.now()}`, testLoggers: logger, ...loggerObj})
+		if (!isNode) globalThis.jbLoggers = ctxToUse.vars
 		if (setup.profile || typeof setup === 'function') ctxToUse = await setup(ctxToUse) || ctxToUse
 		const {singleTest}  = ctxToUse.vars
 		const remoteTimeout = testID.match(/([rR]emote)|([wW]orker)|(jbm)/) ? 15000 : null
@@ -103,7 +105,9 @@ async function runTestVm(args, ctx) {
     })()`
           vmLogger?.info?.({t: 'calling runNodeCliViaJbWebServer', testID}, {}, {ctx})
           const res = await coreUtils.runNodeCliViaJbWebServer(script, {ctx})
-          vmLogger?.info?.({t: 'runNodeCliViaJbWebServer returned', testID, hasResult: !!res?.result, error: res?.error, keys: Object.keys(res||{}), stderr: String(res?.stderr || '').slice(0,500), textToParse: String(res?.textToParse || '').slice(0,500)}, {}, {ctx})
+          vmLogger?.info?.({t: 'runNodeCliViaJbWebServer returned', testID, hasResult: !!res?.result,
+            error: res?.error, keys: Object.keys(res || {}), stderr: String(res?.stderr || '').slice(0, 500),
+            textToParse: String(res?.textToParse || '').slice(0, 500)}, {}, {ctx})
           return res.result
       }
       await import ('@jb6/core/misc/jb-vm.js')
@@ -139,7 +143,7 @@ async function runTestInVm(testID, params, httpReqId) {
     return res
 }
 
-export async function runTest(testID, {fullTestId, singleTest, action, httpReqId, params} = {}) {
+export async function runTest(testID, {fullTestId, singleTest, httpReqId, params} = {}) {
     !singleTest && await cleanBeforeRun()
     const jbComp = Test[testID][asJbComp]
     const testCtx = coreUtils.ensureLoggers('testLogger')
@@ -159,16 +163,6 @@ export async function runTest(testID, {fullTestId, singleTest, action, httpReqId
     try {
         const ctx = new Ctx().setVars({ testID, fullTestId,singleTest, httpReqId, win1: globalThis })
         res = await jbComp.runProfile({...params}, ctx)
-        if (action) {
-            const actionId = action.split(':')[0]
-            const actionParam = action.slice(actionId.length+1)
-            const actionProxy = dsls.test['ui-action'][actionId]
-            if (actionProxy) {
-                await actionProxy.$run(actionParam).exec(ctx)
-            } else {
-                logError(`can not find ui-action ${actionId}`)
-            }
-        }
     } catch (e) {
         res = { success: false, reason: e}
     }
@@ -234,8 +228,7 @@ const printFail = line => {
   lastLineLength = 0
 }
 
-export async function runTests({specificTest,show,pattern,notPattern,take,repo,showOnly,includeHeavy,action}={}) {
-    showOnly = showOnly || action
+export async function runTests({specificTest,show,pattern,notPattern,take,repo,showOnly,includeHeavy}={}) {
     specificTest = specificTest && decodeURIComponent(specificTest).split('>').pop()
 
     let tests = globalsOfTypeIds(Test)
@@ -296,7 +289,8 @@ export async function runTests({specificTest,show,pattern,notPattern,take,repo,s
             // todo - show here
         }
     }, Promise.resolve())
-    const summary = `total: ${tests.length}, \x1b[32msuccess: ${success_counter}, \x1b[31mfailures: ${fail_counter}, \x1b[33mmemory: ${usedJSHeapSize()}M, time: ${Date.now() - startTime} ms`
+    const summary = `total: ${tests.length}, \x1b[32msuccess: ${success_counter}, \x1b[31mfailures: ${fail_counter}, `
+      + `\x1b[33mmemory: ${usedJSHeapSize()}M, time: ${Date.now() - startTime} ms`
     if (isNode) {
         printLive(summary+'\n')
         process.exit(0)

@@ -7,8 +7,8 @@ import '@wonder/db/db-drivers.js'            // wFetch comp + logs scope (write-
 const {
   tgp: { Component, CtxEnricher, 'ctx-enricher': { enrichCtx, setVars } },
   common: { Data, boolean: { contains }, data: { wFetch } },
-  test: { Test, test: { reactTest }, 'ui-action': { actions, click, waitForText } },
-  react: { ReactComp, 'react-comp': { comp } }
+  test: { Test, test: { reactTest } },
+  react: { ReactComp, 'react-comp': { comp }, 'ui-action': { actions, click, waitForText } }
 } = dsls
 
 // ---------------------------------------------------------------------------

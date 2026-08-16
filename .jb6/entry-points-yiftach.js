@@ -1,0 +1,7 @@
+import '@wonder/ai/category-dsl-tests.js'
+import '@wonder/ai/verified-report-tests.js'
+import '@wonder/db/db-drivers-tests.js'
+import '@wonder/db/etl/etl-tests.js'
+import '@wonder/db/room/room-tests.js'
+import '@wonder/db/room/room-applet-tests.js'
+import '@wonder/db/room/signed-room-applet-tests.js'

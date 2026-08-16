@@ -6,8 +6,9 @@ const {
   tgp: { CtxEnricher, 'ctx-enricher': { productDrill, enrichCtx, setVars, setData, setupCube } },
   common: { data: { asIs, squeezeAndHighlight, pipe, filter, firstSucceeding, join, spanCell, cubeQuery, resolveKeySpan, spanView, invokeSnippetInContext }, boolean: { and, contains, gt, equals } },
   bi: { 'code-locator': { sqlLocator }, cube: { productCube, cube }, 'silver-builder': { parquetSource }, metric: { metric } },
-  react: { ReactComp, 'react-comp': { comp, productBrush, brushResultFirst, brushPanes, brushInline } },
-  test: { Test, test: { reactTest, dataTest }, 'ui-action': { actions, click, waitForText } }
+  react: { ReactComp, 'react-comp': { comp, productBrush, brushResultFirst, brushPanes, brushInline },
+    'ui-action': { actions, click, waitForText } },
+  test: { Test, test: { reactTest, dataTest } }
 } = dsls
 
 // ── Brush infra · liveSetup + brushTest template ──
@@ -22,7 +23,7 @@ const brushTest = Test('brushTest', {
   params: [
     {id: 'testedComp', type: 'react-comp<react>', dynamic: true},
     {id: 'expectedResult', type: 'boolean', dynamic: true},
-    {id: 'userActions', type: 'ui-action[]'},
+    {id: 'userActions', type: 'ui-action<react>[]'},
     {id: 'setup', type: 'ctx-enricher<tgp>', dynamic: true, defaultValue: liveSetup()}
   ],
   impl: reactTest({
