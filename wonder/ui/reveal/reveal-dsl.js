@@ -153,11 +153,19 @@ Slide('itemListSlide', {
     {id: 'cssClass', as: 'string'}
   ]
 })
-
 Slide('columnsSlide', {
   params: [
     {id: 'title', as: 'string'},
     {id: 'columns', type: 'column[]'},
+    {id: 'comments', type: 'comment<reveal>[]'},
+    {id: 'cssClass', as: 'string'}
+  ]
+})
+Slide('reactCompSlide', {
+  params: [
+    {id: 'title', as: 'string'},
+    {id: 'subtitle', as: 'string'},
+    {id: 'content', type: 'react-comp<react>'},
     {id: 'comments', type: 'comment<reveal>[]'},
     {id: 'cssClass', as: 'string'}
   ]
