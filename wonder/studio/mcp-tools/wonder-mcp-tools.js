@@ -27,9 +27,11 @@ export const exportedTools = ['runWorkflow', 'biglogContent', 'listBiglogs', 'Bi
 Tool('wFetch', {
   description: 'read db-driver.js . wUrl = <scheme>://<roomId>/<dir>/<file>?user=<id>; room:// public, signedRoom:// protected (dirs admin/ usersRO/ usersRW/)',
   params: [
-    {id: 'url', as: 'string', asIs: true, mandatory: true, description: 'e.g. room://aTeam/assets.json · signedRoom://schematics/usersRW/cube.json?user=me · room://aTeam/ (list) · append ?jq=<enc> to slice json'},
+    {id: 'url', as: 'string', asIs: true, mandatory: true,
+      description: 'room wUrl; trailing slash lists, and ?jq=<encoded-expression> slices JSON'},
     {id: 'method', as: 'string', defaultValue: 'GET', options: 'GET,PUT,POST,PATCH,HEAD'},
-    {id: 'body', asIs: true, description: 'JSON object/array. PUT replaces file, POST appends, PATCH merges. With header x-wonder-body:localFile, body is instead a server file path to stream.'},
+    {id: 'body', asIs: true,
+      description: 'JSON body; PUT replaces, POST appends, PATCH merges. x-wonder-body:localFile makes it a file path.'},
     {id: 'headers', asIs: true, description: 'JSON object of extra headers. {"x-wonder-body":"localFile"} streams the file at `body` path (for binary: parquet/jpg/mp4).'},
     {id: 'logger', as: 'string', defaultValue: 'dbLogger', description: 'comma-separated loggers to harvest; result returns {result, ...logs}'},
   ],
@@ -40,8 +42,10 @@ Tool('wFetch', {
         const asObj = (v, name) => {
           if (v == null || typeof v === 'object') return v
           if (typeof v !== 'string') throw new Error(`wFetch '${name}' must be a JSON object or JSON string, got ${typeof v}. Read the '${name}' param description.`)
-          if (v.includes('[object Object]')) throw new Error(`wFetch '${name}' got the string "[object Object]": an object was stringified upstream. FIX: pass '${name}' as a JSON object, e.g. {"x-wonder-body":"localFile"}. Read the '${name}' param description.`)
-          try { return JSON.parse(v) } catch { throw new Error(`wFetch '${name}' is not valid JSON: ${v.slice(0,80)}. FIX: pass a JSON object or a valid JSON string. Read the '${name}' param description.`) }
+          if (v.includes('[object Object]'))
+            throw new Error(`wFetch '${name}' was stringified upstream; pass it as a JSON object`)
+          try { return JSON.parse(v) }
+          catch { throw new Error(`wFetch '${name}' is not valid JSON: ${v.slice(0,80)}`) }
         }
         const hdrs = asObj(headers, 'headers')
         const rawBody = hdrs?.['x-wonder-body'] === 'localFile' ? body : asObj(body, 'body')
@@ -146,12 +150,13 @@ export async function uploadCompDependencies(urlsToLoad, onVersion) {
   timer.phase('esbuildGraph')
 
   const inputs = [...new Set([...Object.keys(result.metafile.inputs), ...assets])]
-    .filter(f => !f.includes('node_modules') && f !== '<stdin>' && !/(^|\/)jb6\/react\/lib\//.test(f))   // React lib is already mapped to jb6-cdn; other relative-imported lib files must travel
+    .filter(f => !f.includes('node_modules') && f !== '<stdin>' && !/(^|\/)jb6\/react\/lib\//.test(f))
   // Repository paths already match the browser snapshot layout.
   const relForUpload = f => f
 
   const d = new Date()
-  const appletV = `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}-${Math.random().toString(36).slice(2,6)}`   // share snapshot id; UI library assets resolve through the server's CDN import map
+  const appletV = `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+    + `-${Math.random().toString(36).slice(2,6)}`
   timer.phase('versions')
   const resolved = await wresolve(`codePackages://shared/${appletV}/${relForUpload(inputs[0])}`, dbCtx, 'PUT')
   const [, bucket, prefix] = resolved.match(/storage\.googleapis\.com\/([^/]+)\/(.*)$/)   // prefix = shared/<appletV>/<rel[0]>
@@ -194,18 +199,22 @@ export async function uploadLambdaCompDependencies(entryPath) {
   const entryHash = (await import('crypto')).createHash('sha1').update(entryPath).digest('hex').slice(0, 6)
   const isDirty = execSync('git status --porcelain', { encoding: 'utf8', cwd: baseDir }).trim().length > 0
   const d = new Date()
-  const datePart = `${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`
+  const datePart = `${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`
+    + `-${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`
   const dirtySuffix = Math.random().toString(36).slice(2, 8)
   const lambdaV = isDirty ? `${datePart}-${gitSha}-${entryHash}-${dirtySuffix}` : `${gitSha}-${entryHash}`
   const runtimeBase = `/tmp/code/${lambdaV}`
   if (!isDirty) {   // rebuild-on-change: clean sha already uploaded ⇒ skip esbuild/stage/tar/PUT
     const head = await wfetch2(`codePackages://lambdas/${lambdaV}.tar.gz`, { method: 'HEAD' }, dbCtx).catch(() => null)
     timer.phase('reuseCheck')
-    if (head?.ok) return { lambdaV, reused: true, gitSha, isDirty, runtimeBase, uploadMs: timer.totalMs, timeline: timer.timeline, description: `version ${gitSha} built ${head.headers?.get('last-modified') || 'unknown date'}` }
+    if (head?.ok) return { lambdaV, reused: true, gitSha, isDirty, runtimeBase,
+      uploadMs: timer.totalMs, timeline: timer.timeline,
+      description: `version ${gitSha} built ${head.headers?.get('last-modified') || 'unknown date'}` }
   }
 
   const pkg = JSON.parse(await fsp.readFile(path.join(baseDir, 'package.json'), 'utf8'))
-  const nodeBuiltins = ['fs', 'fs/promises', 'path', 'url', 'util', 'crypto', 'child_process', 'zlib', 'stream', 'events', 'http', 'https', 'net', 'os', 'tls', 'querystring', 'buffer', 'v8']
+  const nodeBuiltins = ['fs', 'fs/promises', 'path', 'url', 'util', 'crypto', 'child_process', 'zlib', 'stream',
+    'events', 'http', 'https', 'net', 'os', 'tls', 'querystring', 'buffer', 'v8']
   const externals = [...Object.keys(pkg.dependencies || {}), ...Object.keys(pkg.devDependencies || {}),
     ...nodeBuiltins, ...nodeBuiltins.map(n => 'node:' + n)]
 
@@ -218,7 +227,7 @@ export async function uploadLambdaCompDependencies(entryPath) {
     stdin: { contents: `import '${absEntry}'\nimport '@jb6/core/misc/jb-remote.js'`, resolveDir: baseDir },
     bundle: true, write: false, metafile: true, format: 'esm', platform: 'node',
     external: externals,
-    packages: 'external',   // graph-discovery only: never resolve INTO node_modules (they're runtime deps, filtered out below). avoids bundler-only CJS/ESM interop fails (e.g. @tailwindcss/node → enhanced-resolve)
+    packages: 'external',
     alias: Object.fromEntries(Object.entries(repoScopes).map(([scope, dir]) => [scope, path.join(baseDir, dir)])),
     logLevel: 'silent',
     plugins: [{
@@ -323,7 +332,8 @@ register('./loader.mjs', import.meta.url)
   const token = await getAccessToken(dbCtx, { method: 'PUT' })
   const pool = new Pool('https://storage.googleapis.com', { keepAliveTimeout: 60000 })
   try {
-    const r = await pool.request({ method: 'PUT', path: `/${bucket}/${encodeURI(key)}`, headers: { authorization: `Bearer ${token}`, 'content-type': 'application/gzip' }, body: tarBuffer })
+    const r = await pool.request({ method: 'PUT', path: `/${bucket}/${encodeURI(key)}`,
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/gzip' }, body: tarBuffer })
     await r.body.dump()
     if (r.statusCode >= 400) throw new Error(`PUT ${lambdaV}.tar.gz → ${r.statusCode}`)
   } finally { await pool.close() }
@@ -358,39 +368,118 @@ await coreUtils.writeServiceResult(await uploadLambdaCompDependencies(${JSON.str
   })
 })
 
+Tool('applyProtectedRoomPolicy', {
+  description: 'Apply a protected room admin/room-iam-policy.json to the AWS IAM group WONDER_ADMINS.',
+  params: [{id: 'roomId', as: 'string', mandatory: true, description: 'room id or protected room wUrl'}],
+  impl: mcpTool(async (ctx, {}, {roomId}) => {
+    const roomWUrl = await jb.wonderUtils.resolveWUrl(roomId, ctx)
+    if (!roomWUrl.startsWith('protected://')) throw new Error(`${roomWUrl} is not a protected room`)
+    const resolvedRoomId = roomWUrl.split('://')[1]
+    const policy = await (await wfetch2(`${roomWUrl}/admin/room-iam-policy.json`, { method: 'GET' }, ctx)).json()
+    const bucketArn = 'arn:aws:s3:::wonder-rooms-585008076838'
+    const statements = policy?.Statement || [], resources = statements.flatMap(({Resource}) => [Resource].flat())
+    if (policy?.Version !== '2012-10-17' || !statements.length
+      || statements.some(({Action}) => [Action].flat().some(action => !action.startsWith('s3:')))
+      || resources.some(resource => resource !== bucketArn && !resource.startsWith(`${bucketArn}/${resolvedRoomId}/`)))
+      throw new Error(`invalid protected-room IAM policy for ${resolvedRoomId}`)
+    const script = `
+import { execFileSync } from 'node:child_process'
+import { coreUtils } from '@jb6/core'
+const group = 'WONDER_ADMINS', policyName = ${JSON.stringify(`WonderRoom-${resolvedRoomId}`)}
+const policy = ${JSON.stringify(policy)}
+const canonical = value => JSON.stringify(value, (_, v) => v && typeof v === 'object' && !Array.isArray(v)
+  ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a.localeCompare(b))) : v)
+let before
+try { before = JSON.parse(execFileSync('aws', ['iam', 'get-group-policy', '--group-name', group,
+  '--policy-name', policyName, '--output', 'json'], { encoding: 'utf8' })).PolicyDocument } catch {}
+const changed = canonical(before) !== canonical(policy)
+if (changed) execFileSync('aws', ['iam', 'put-group-policy', '--group-name', group,
+  '--policy-name', policyName, '--policy-document', JSON.stringify(policy)], { stdio: 'pipe' })
+await coreUtils.writeServiceResult({ group, policyName, roomWUrl: ${JSON.stringify(roomWUrl)}, changed })`
+    await coreUtils.calcJb6RepoRootAndImportMapsInCli()
+    const { result, error } = await coreUtils.runCliInContext(script, { importMapsInCli: jb.coreRegistry.importMapsInCli })
+    if (error || result?.error) return JSON.stringify({ error: result?.error || error, roomWUrl })
+    return JSON.stringify(result)
+  })
+})
+
+Tool('applyRoomPublicPolicy', {
+  description: 'Merge a protected room admin/room-public-policy.json into its S3 bucket policy.',
+  params: [{id: 'roomId', as: 'string', mandatory: true, description: 'room id or protected room wUrl'}],
+  impl: mcpTool(async (ctx, {}, {roomId}) => {
+    const roomWUrl = await jb.wonderUtils.resolveWUrl(roomId, ctx)
+    if (!roomWUrl.startsWith('protected://')) throw new Error(`${roomWUrl} is not a protected room`)
+    const resolvedRoomId = roomWUrl.split('://')[1], bucket = 'wonder-rooms-585008076838'
+    const policy = await (await wfetch2(`${roomWUrl}/admin/room-public-policy.json`, { method: 'GET' }, ctx)).json()
+    const prefix = `arn:aws:s3:::${bucket}/${resolvedRoomId}/`, statements = policy?.Statement || []
+    if (policy?.Version !== '2012-10-17' || !statements.length
+      || statements.some(({Effect, Principal, Action, Resource}) => Effect !== 'Allow' || Principal !== '*'
+        || [Action].flat().some(action => action !== 's3:GetObject')
+        || [Resource].flat().some(resource => !resource.startsWith(prefix))))
+      throw new Error(`invalid room public policy for ${resolvedRoomId}`)
+    const script = `
+import { execFileSync } from 'node:child_process'
+import { coreUtils } from '@jb6/core'
+const bucket = ${JSON.stringify(bucket)}, roomPrefix = ${JSON.stringify(prefix)}, roomPolicy = ${JSON.stringify(policy)}
+const aws = args => execFileSync('aws', args, { encoding: 'utf8' })
+const canonical = value => JSON.stringify(value, (_, v) => v && typeof v === 'object' && !Array.isArray(v)
+  ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a.localeCompare(b))) : v)
+let current = { Version: '2012-10-17', Statement: [] }
+try { current = JSON.parse(JSON.parse(aws(['s3api', 'get-bucket-policy', '--bucket', bucket, '--query',
+  'Policy', '--output', 'json']))) } catch {}
+const belongsToRoom = statement => [statement.Resource].flat().some(resource => resource?.startsWith(roomPrefix))
+const merged = { Version: '2012-10-17',
+  Statement: [...current.Statement.filter(statement => !belongsToRoom(statement)), ...roomPolicy.Statement] }
+const changed = canonical(current) !== canonical(merged)
+aws(['s3api', 'put-public-access-block', '--bucket', bucket, '--public-access-block-configuration',
+  'BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=false,RestrictPublicBuckets=false'])
+if (changed) aws(['s3api', 'put-bucket-policy', '--bucket', bucket, '--policy', JSON.stringify(merged)])
+await coreUtils.writeServiceResult({ roomWUrl: ${JSON.stringify(roomWUrl)}, changed,
+  publicResources: roomPolicy.Statement.flatMap(statement => [statement.Resource].flat()) })`
+    await coreUtils.calcJb6RepoRootAndImportMapsInCli()
+    const { result, error } = await coreUtils.runCliInContext(script, { importMapsInCli: jb.coreRegistry.importMapsInCli })
+    if (error || result?.error) return JSON.stringify({ error: result?.error || error, roomWUrl })
+    return JSON.stringify(result)
+  })
+})
+
 Tool('uploadRoomLambda', {
-  description: 'Publish a registered comp as a room lambda: upload its node closure, then write <roomId>/lambdas/<name>.json = {lambdaV, entryCompFullId}. name = comp id. The runner builds {$:entryCompFullId, ...userVars} at call time. Invoke via POST /run-room-lambda/<roomId>/<name>.',
+  description: 'Publish a registered comp as a room lambda; roomId resolves to its canonical room wUrl.',
   params: [
     {id: 'lambdaId', as: 'string' },
-    {id: 'roomId', as: 'string', description: 'protected room id, e.g. schematics'},
+    {id: 'roomId', as: 'string', description: 'room id or full room wUrl', mandatory: true},
     {id: 'entryPath', as: 'string', description: 'module path that defines the comp, e.g. @solution/...'},
   ],
   impl: mcpTool(async (ctx, {}, {lambdaId, roomId, entryPath}) => {
-    // CLI (host realm): bundle closure + import entryPath so the comp resolves, then write the public def.
+    const roomWUrl = await jb.wonderUtils.resolveWUrl(roomId, ctx)
+    const resolvedRoomId = roomWUrl.split('://')[1]
     const script = `
 import { uploadLambdaCompDependencies } from '@wonder/studio/mcp-tools/wonder-mcp-tools.js'
-import { dsls, coreUtils } from '@jb6/core'
+import { jb, coreUtils } from '@jb6/core'
+import '@wonder/db/db-drivers.js'
 import ${JSON.stringify(entryPath)}
 try {
 const { lambdaV, fileCount, tarBytes, importGraph, uploadMs, timeline } = await uploadLambdaCompDependencies(${JSON.stringify(entryPath)})
 const [dir] = coreUtils.getCompField('data<common>${lambdaId}', 'permissionByPath')   // the dir the lambda reads
-const def = { lambdaV, entryCompFullId: 'data<common>${lambdaId}', dir }   // the lambdas/<lambdaId>.json the gate reads
-const { Storage } = await import('@google-cloud/storage')
-await new Storage().bucket('indiviai-wonder').file(\`${roomId}/lambdas/${lambdaId}.json\`).save(JSON.stringify(def), { contentType: 'application/json' })
-await coreUtils.writeServiceResult({ lambdaId: ${JSON.stringify(lambdaId)}, defPath: \`room://${roomId}/lambdas/${lambdaId}.json\`, def,
+const roomWUrl = ${JSON.stringify(roomWUrl)}
+const def = { lambdaV, entryCompFullId: 'data<common>${lambdaId}', dir, roomWUrl }
+await jb.wonderUtils.wfetch2(\`${roomWUrl}/lambdas/${lambdaId}.json\`, { method: 'PUT', body: def }, new coreUtils.Ctx())
+await coreUtils.writeServiceResult({ lambdaId: ${JSON.stringify(lambdaId)}, defPath: \`${roomWUrl}/lambdas/${lambdaId}.json\`, def,
   fileCount, tarBytes, importGraph, uploadMs, timeline })
-} catch (e) { await coreUtils.writeServiceResult({ error: e.stack || String(e), lambdaId: ${JSON.stringify(lambdaId)}, roomId: ${JSON.stringify(roomId)}, entryPath: ${JSON.stringify(entryPath)} }) }`
+} catch (e) { await coreUtils.writeServiceResult({ error: e.stack || String(e), lambdaId: ${JSON.stringify(lambdaId)},
+  roomId: ${JSON.stringify(roomId)}, entryPath: ${JSON.stringify(entryPath)} }) }`
     await coreUtils.calcJb6RepoRootAndImportMapsInCli()
     const { result, error } = await coreUtils.runCliInContext(script, { importMapsInCli: jb.coreRegistry.importMapsInCli })
-    if (error || result?.error) return JSON.stringify({ error: result?.error || error, stderr: result?.stderr, textToParse: result?.textToParse, lambdaId, roomId, entryPath })
-    return JSON.stringify({ ...result, runUrl: `https://staging.indivi.ai/run-room-lambda/${roomId}/${lambdaId}` })
+    if (error || result?.error)
+      return JSON.stringify({ error: result?.error || error, stderr: result?.stderr, lambdaId, roomId, entryPath })
+    return JSON.stringify({ ...result, runUrl: `https://staging.indivi.ai/run-room-lambda/${resolvedRoomId}/${lambdaId}` })
   })
 })
 
 Tool('uploadRoomApplet', {
-  description: 'Publish a react comp as a room applet (browser twin of uploadRoomLambda): bundle the comp closure to CDN, then write <roomId>/applets/<name>.json = {cmpId, urlsToLoad, appletV, entryCompFullId}. name = comp id. Entry URL: /room/<roomId>/applet/<name> (same for public & signed rooms).',
+  description: 'Publish a react comp as a room applet; roomId resolves to its canonical room wUrl.',
   params: [
-    {id: 'roomId', as: 'string', description: 'room id, e.g. demoRoom'},
+    {id: 'roomId', as: 'string', description: 'room id or full room wUrl', mandatory: true},
     {id: 'entryPath', as: 'string', description: 'module path that defines the comp, e.g. @solution/...'},
     {id: 'entryCompFullId', as: 'string', description: 'full comp id, e.g. react-comp<react>cubeApplet. name + cmpId derived from the comp.'},
     {id: 'ogTitle', as: 'string', description: 'optional link-preview title for this applet (og:title). Else falls back to room admin/branding.json then wonder default.'},
@@ -399,35 +488,35 @@ Tool('uploadRoomApplet', {
     {id: 'ogImageLocalPath', as: 'string', description: 'optional local image to upload under the public room applet dir; overrides ogImage.'}
   ],
   impl: mcpTool(async (ctx, {}, {roomId, entryPath, entryCompFullId, ogTitle, ogDescription, ogImage, ogImageLocalPath}) => {
-    // CLI (host realm): bundle the comp source closure to CDN + import entryPath so the comp resolves, then write the public def.
+    const roomWUrl = await jb.wonderUtils.resolveWUrl(roomId, ctx)
+    const resolvedRoomId = roomWUrl.split('://')[1]
     const script = `
 import { uploadCompDependencies } from '@wonder/studio/mcp-tools/wonder-mcp-tools.js'
-import { coreUtils } from '@jb6/core'
+import { jb, coreUtils } from '@jb6/core'
+import '@wonder/db/db-drivers.js'
 import ${JSON.stringify(entryPath)}
 try {
   const cmpId = coreUtils.compByFullId(${JSON.stringify(entryCompFullId)}).id
-  const { Storage } = await import('@google-cloud/storage')
-  const path = await import('path'), fsp = await import('fs/promises')
-  const bucket = new Storage().bucket('indiviai-wonder'), localImage = ${JSON.stringify(ogImageLocalPath)}, imageName = localImage && path.basename(localImage)
-  const imageUrl = imageName && encodeURI(\`https://storage.googleapis.com/indiviai-wonder/${roomId}/applets/\${cmpId}/\${imageName}\`)
+  const path = await import('path')
+  const roomWUrl = ${JSON.stringify(roomWUrl)}, dbCtx = new coreUtils.Ctx()
+  const localImage = ${JSON.stringify(ogImageLocalPath)}, imageName = localImage && path.basename(localImage)
+  const imageUrl = imageName && \`${roomWUrl}/applets/\${cmpId}/\${imageName}\`
   const og = Object.fromEntries(Object.entries({ ogTitle: ${JSON.stringify(ogTitle)}, ogDescription: ${JSON.stringify(ogDescription)},
     ogImage: imageUrl || ${JSON.stringify(ogImage)} }).filter(([, v]) => v))
-  const imageType = imageName && \`image/\${path.extname(imageName).slice(1).replace('jpg', 'jpeg').replace('svg', 'svg+xml')}\`
-  const imageUpload = imageName && fsp.readFile(localImage)
-    .then(body => bucket.file(\`${roomId}/applets/\${cmpId}/\${imageName}\`).save(body, { contentType: imageType }))
-  // def-write runs in parallel with the file uploads (it only needs appletV, already known)
-  const writeDef = ({ appletV }) => Promise.all([imageUpload, bucket.file(\`${roomId}/applets/\${cmpId}.json\`)
-    .save(JSON.stringify({ cmpId, urlsToLoad: ${JSON.stringify(entryPath)}, appletV,
-      entryCompFullId: ${JSON.stringify(entryCompFullId)}, ...(Object.keys(og).length && { og }) }), { contentType: 'application/json' })])
+  const imageUpload = imageName && jb.wonderUtils.wfetch2(imageUrl, {
+    method: 'PUT', body: localImage, headers: { 'x-wonder-body': 'localFile' } }, dbCtx)
+  const writeDef = ({ appletV }) => Promise.all([imageUpload, jb.wonderUtils.wfetch2(\`${roomWUrl}/applets/\${cmpId}.json\`, {
+    method: 'PUT', body: { cmpId, urlsToLoad: ${JSON.stringify(entryPath)}, appletV, roomWUrl,
+      entryCompFullId: ${JSON.stringify(entryCompFullId)}, ...(Object.keys(og).length && { og }) } }, dbCtx)])
   const { appletV, fileCount, uploadMs, timeline } = await uploadCompDependencies(${JSON.stringify(entryPath)}, writeDef)
   await coreUtils.writeServiceResult({ appletV, cmpId, fileCount, uploadMs, timeline, imageUrl,
-    defPath: \`room://${roomId}/applets/\${cmpId}.json\` })
+    defPath: \`${roomWUrl}/applets/\${cmpId}.json\` })
 } catch (e) { await coreUtils.writeServiceResult({ error: e.stack || String(e) }) }`
     await coreUtils.calcJb6RepoRootAndImportMapsInCli()
     const cliCtx = coreUtils.ensureLoggers(['cliLogger', 'cliLineLogger'])   // over-the-wire: child stderr lines -> these loggers
     const { result, error } = await coreUtils.runCliInContext(script, { ctx: cliCtx, importMapsInCli: jb.coreRegistry.importMapsInCli })
     if (error || result?.error) return JSON.stringify({ error: result?.error || error, cliLog: coreUtils.harvestLogs(cliCtx, ['cliLineLogger']).cliLineLogger })
-    return JSON.stringify({ ...result, entryUrl: `https://staging.indivi.ai/room/${roomId}/applet/${result.cmpId}` })
+    return JSON.stringify({ ...result, entryUrl: `https://staging.indivi.ai/room/${resolvedRoomId}/applet/${result.cmpId}` })
   })
 })
 
@@ -447,25 +536,31 @@ export async function lambdaEntryPath(lambdaV) {
 }
 
 Tool('updateLambdasAndApplets', {
-  description: "Refresh every lambda + applet in a room to the current source. Per lambda: recover its entryPath from the published tar's index.js, rebuild (git-sha reused if clean) → repoint lambdas/<name>.json. Per applet: rebundle its urlsToLoad → repoint applets/<name>.json.",
+  description: 'Refresh every lambda and applet manifest in a room wUrl from its current source.',
   params: [
-    {id: 'roomId', as: 'string', mandatory: true, description: 'room id, e.g. demoRoom'}
+    {id: 'roomId', as: 'string', mandatory: true, description: 'room id or full room wUrl'}
   ],
   impl: mcpTool(async (ctx, {}, {roomId}) => {
+    const roomWUrl = await jb.wonderUtils.resolveWUrl(roomId, ctx)
+    const resolvedRoomId = roomWUrl.split('://')[1]
     const script = `
 import { uploadLambdaCompDependencies, uploadCompDependencies, lambdaEntryPath } from '@wonder/studio/mcp-tools/wonder-mcp-tools.js'
-import { coreUtils } from '@jb6/core'
+import { jb, coreUtils } from '@jb6/core'
+import '@wonder/db/db-drivers.js'
 try {
-const { Storage } = await import('@google-cloud/storage')
-const bucket = new Storage().bucket('indiviai-wonder')
+const roomWUrl = ${JSON.stringify(roomWUrl)}, dbCtx = new coreUtils.Ctx()
 const defsIn = async dir => {
-  const [files] = await bucket.getFiles({ prefix: \`${roomId}/\${dir}/\` })
-  return Promise.all(files.filter(f => f.name.endsWith('.json')).map(async f => ({ name: f.name.split('/').pop().replace('.json',''), file: f, def: JSON.parse((await f.download())[0].toString()) })))
+  const dirUrl = \`${roomWUrl}/\${dir}/\`
+  const files = await (await jb.wonderUtils.wfetch2(dirUrl, { method: 'GET' }, dbCtx)).json()
+  return Promise.all(files.filter(f => f.name.endsWith('.json')).map(async f => {
+    const name = f.name.split('/').pop().replace('.json',''), url = \`${dirUrl}\${name}.json\`
+    return { name, url, def: await (await jb.wonderUtils.wfetch2(url, { method: 'GET' }, dbCtx)).json() }
+  }))
 }
-const save = (f, obj) => f.save(JSON.stringify(obj), { contentType: 'application/json' })
+const save = (url, obj) => jb.wonderUtils.wfetch2(url, { method: 'PUT', body: obj }, dbCtx)
 
 const lambdas = await defsIn('lambdas')
-const lambdaResults = await Promise.all(lambdas.map(async ({ name, file, def }) => {
+const lambdaResults = await Promise.all(lambdas.map(async ({ name, url, def }) => {
   const from = def.lambdaV || def.fullAdHocV
   try {
     const entryPath = await lambdaEntryPath(from)
@@ -473,24 +568,28 @@ const lambdaResults = await Promise.all(lambdas.map(async ({ name, file, def }) 
     await import(entryPath)   // register the comp so getCompField resolves permissionByPath
     const { lambdaV, reused } = await uploadLambdaCompDependencies(entryPath)
     const [dir] = coreUtils.getCompField(def.entryCompFullId, 'permissionByPath')
-    await save(file, { lambdaV, entryCompFullId: def.entryCompFullId, dir })
-    return { name, entryPath, dir, from, to: lambdaV, changed: from !== lambdaV, reused: !!reused, runUrl: \`https://staging.indivi.ai/run-room-lambda/${roomId}/\${name}\` }
-  } catch (e) { coreUtils.logException(e, 'updateLambdasAndApplets lambda', { roomId: '${roomId}', name, from }); return { name, from, error: e.stack || String(e) } }
+    await save(url, { lambdaV, entryCompFullId: def.entryCompFullId, dir, roomWUrl })
+    return { name, entryPath, dir, from, to: lambdaV, changed: from !== lambdaV, reused: !!reused,
+      runUrl: \`https://staging.indivi.ai/run-room-lambda/${resolvedRoomId}/\${name}\` }
+  } catch (e) { coreUtils.logException(e, 'updateLambdasAndApplets lambda',
+    { roomId: '${resolvedRoomId}', name, from }); return { name, from, error: e.stack || String(e) } }
 }))
 
 const applets = await defsIn('applets')
-const appletResults = await Promise.all(applets.map(async ({ name, file, def }) => {
+const appletResults = await Promise.all(applets.map(async ({ name, url, def }) => {
   const from = def.appletV
   try {
     await import(def.urlsToLoad)   // register the comp
     const { appletV, fileCount } = await uploadCompDependencies(def.urlsToLoad)
-    await save(file, { ...def, appletV })
-    return { name, entryPath: def.urlsToLoad, fileCount, from, to: appletV, changed: from !== appletV, entryUrl: \`https://staging.indivi.ai/room/${roomId}/applet/\${name}\` }
-  } catch (e) { coreUtils.logException(e, 'updateLambdasAndApplets applet', { roomId: '${roomId}', name, from }); return { name, from, error: e.stack || String(e) } }
+    await save(url, { ...def, appletV, roomWUrl })
+    return { name, entryPath: def.urlsToLoad, fileCount, from, to: appletV, changed: from !== appletV,
+      entryUrl: \`https://staging.indivi.ai/room/${resolvedRoomId}/applet/\${name}\` }
+  } catch (e) { coreUtils.logException(e, 'updateLambdasAndApplets applet',
+    { roomId: '${resolvedRoomId}', name, from }); return { name, from, error: e.stack || String(e) } }
 }))
 
 const tally = (xs, changedKey) => ({ total: xs.length, changed: xs.filter(x => x[changedKey]).length, failed: xs.filter(x => x.error).length })
-await coreUtils.writeServiceResult({ roomId: ${JSON.stringify(roomId)},
+await coreUtils.writeServiceResult({ roomId: ${JSON.stringify(resolvedRoomId)},
   summary: { lambdas: tally(lambdaResults, 'changed'), applets: tally(appletResults, 'changed') },
   lambdas: lambdaResults, applets: appletResults })
 } catch (e) { await coreUtils.writeServiceResult({ error: e.stack || String(e) }) }`

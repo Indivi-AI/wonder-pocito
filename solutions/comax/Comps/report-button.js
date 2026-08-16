@@ -16,8 +16,8 @@ const strip = s => String(s || '').replace(/[#*_`>]/g, '').trim()
 const firstLine = (...xs) => strip(xs.find(x => strip(x)) || '').split('\n').map(strip).find(Boolean) || ''
 const id = () => `comax-report-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
 const answerObj = a => ({ ...(a?.runRes && typeof a.runRes == 'object' && !Array.isArray(a.runRes) ? a.runRes : {}), ...(a || {}) })
-const reportBaseUrl = roomUrl => {
-  const u = (roomUrl || 'signedRoom://comaxDemo/usersRW').replace(/\/$/, '')
+const reportBaseUrl = roomWUrl => {
+  const u = (roomWUrl || 'signedRoom://comaxDemo/usersRW').replace(/\/$/, '')
   return u.startsWith('signedRoom://') && u.split('/').length == 3 ? `${u}/usersRW` : u
 }
 const mcpPost = async (method, params, ctx) => {
@@ -54,15 +54,15 @@ export const comaxReportAssistantMessage = ({ url, report }) => ({
   content: `הדוח מוכן: ${url}`, text: `הדוח מוכן: ${url}`
 })
 
-const roomIdOf = roomUrl => reportBaseUrl(roomUrl).replace(/^\w+:\/\//, '').split('/')[0]
+const roomIdOf = roomWUrl => reportBaseUrl(roomWUrl).replace(/^\w+:\/\//, '').split('/')[0]
 
 // Reports are a single stable room applet (comaxAnalyticsReport); each report is the same applet URL with its own ?ctx-reportUrl=.
-export async function createComaxAnalyticsReport(ctx, answer, { roomUrl = ctx.vars.roomUrl, preferLocal = false, rowLimit } = {}) {
-  const report = comaxReportFromAnswer(answer, { rowLimit }), baseUrl = reportBaseUrl(roomUrl), reportUrl = `${baseUrl}/reports/${report.id}.json`
+export async function createComaxAnalyticsReport(ctx, answer, { roomWUrl = ctx.vars.roomWUrl, preferLocal = false, rowLimit } = {}) {
+  const report = comaxReportFromAnswer(answer, { rowLimit }), baseUrl = reportBaseUrl(roomWUrl), reportUrl = `${baseUrl}/reports/${report.id}.json`
   const put = await wfetch2(reportUrl, { method: 'PUT', body: report }, ctx)
   if (!put?.ok) throw new Error(`report payload upload failed: ${put?.status || ''} ${put?.statusText || ''}`.trim())
   const uploaded = await callToolJson(ctx, 'uploadRoomApplet', {
-    roomId: roomIdOf(roomUrl), entryPath: '@solution/comax/Comps/report-index.js', entryCompFullId: 'react-comp<react>comaxAnalyticsReport'
+    roomId: roomIdOf(roomWUrl), entryPath: '@solution/comax/Comps/report-index.js', entryCompFullId: 'react-comp<react>comaxAnalyticsReport'
   })
   if (uploaded.error) throw new Error(uploaded.error.stack || uploaded.error)
   const base = preferLocal
@@ -129,12 +129,12 @@ ReactComp('comaxAnalyticsReport', {
 
 ReactComp('AnalyticsReportButton', {
   impl: comp({
-    hFunc: (ctx, { react: { h, useState } }) => ({ answer, onReport, roomUrl }) => {
+    hFunc: (ctx, { react: { h, useState } }) => ({ answer, onReport, roomWUrl }) => {
       const [state, setState] = useState({})
       const produce = async () => {
         setState({ busy: true })
         try {
-          const res = await createComaxAnalyticsReport(ctx, answer, { roomUrl, preferLocal: globalThis.location?.hostname == 'localhost' })
+          const res = await createComaxAnalyticsReport(ctx, answer, { roomWUrl, preferLocal: globalThis.location?.hostname == 'localhost' })
           onReport?.(res.assistantMessage, res)
           setState({ url: res.url })
         } catch (error) {

@@ -1,5 +1,5 @@
 // comax-cube-tests.js — verify the fresh comax report<bi> catalog over the local db:'fs' mirror of
-// signedRoom://comax2/usersRO/parquet/OEM_BI_4466 (files/rooms/comax2/...). Baseline: 30d net sales ≈ 25.5M.
+// protected://comax2/usersRO/parquet/OEM_BI_4466 (files/rooms/comax2/...). Baseline: 30d net sales ≈ 25.5M.
 import { dsls } from '@jb6/core'
 import '@jb6/testing'
 import './comax-cube.js'
@@ -37,11 +37,11 @@ Test('comaxCube.baselineNetSales30d', {
 })
 
 // the same baseline query as comaxNetSales30d, but run as a published room lambda: invokeSnippetInContext POSTs the call
-// to the comax signed room, the server runs setupComax (prefetch signed URLs) + cubeQuery AS THE USER, rows ride back.
+// to the protected comax room; the server runs setupComax + cubeQuery and rows ride back.
 Test('comaxCube.lambda.ping', {
   HeavyTest: true,
   impl: dataTest({
-    setup: setVars(asIs({ lambdaHost: 'https://staging.indivi.ai', roomUrl: 'signedRoom://comax2' })),
+    setup: setVars(asIs({ lambdaHost: 'https://staging.indivi.ai', roomWUrl: 'protected://comax2' })),
     calculate: invokeSnippetInContext(comaxPing()),
     expectedResult: equals(true, '%pong%'),
     timeout: 20000,
@@ -52,7 +52,7 @@ Test('comaxCube.lambda.ping', {
 Test('comaxCube.lambda.netSales30d', {
   HeavyTest: true,
   impl: dataTest({
-    setup: setVars(asIs({ lambdaHost: 'https://staging.indivi.ai', roomUrl: 'signedRoom://comax2' })),
+    setup: setVars(asIs({ lambdaHost: 'https://staging.indivi.ai', roomWUrl: 'protected://comax2' })),
     calculate: invokeSnippetInContext(comaxNetSales30d()),
     expectedResult: and('%0/sales% > 25000000', '%0/sales% < 26000000'),
     timeout: 60000,
@@ -60,14 +60,14 @@ Test('comaxCube.lambda.netSales30d', {
   })
 })
 
-// The same raw latest-month MQY query through the published signed-room lambda.
+// The same raw latest-month MQY query through the published protected-room lambda.
 // PRECONDITION (future LLM): like every *lambda* HeavyTest, this invokes comaxLatestMonthRaw BY NAME on staging — it must be
 // PUBLISHED first or the server answers 500 "no lambda comaxLatestMonthRaw in comax2". Publish via the uploadRoomLambda MCP
-// tool: { roomId: 'comax2', entryPath: '@wonder-admin/comax2/comax-lambdas.js', lambdaId: 'comaxLatestMonthRaw' }.
+// tool: { roomId: 'comax2', entryPath: '@solution/comax2/comax-lambdas.js', lambdaId: 'comaxLatestMonthRaw' }.
 Test('comaxCube.lambda.latestMonthRaw', {
   HeavyTest: true,
   impl: dataTest({
-    setup: setVars(asIs({ lambdaHost: 'https://staging.indivi.ai', roomUrl: 'signedRoom://comax2' })),
+    setup: setVars(asIs({ lambdaHost: 'https://staging.indivi.ai', roomWUrl: 'protected://comax2' })),
     calculate: invokeSnippetInContext(comaxLatestMonthRaw()),
     expectedResult: '%0/lines% > 0',
     timeout: 60000,

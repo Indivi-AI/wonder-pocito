@@ -197,11 +197,11 @@ ReactComp('reportsWorkspace', {
           working ? reportPane() : !sel && h('div:flex-1 p-8 text-sm text-slate-400', {}, 'Pick a report to view, test and edit its verified queries.')))
     },
     enrichCtx: async ctx => {
-      const roomId = ctx.vars.roomUrl?.match(/^\w+:\/\/([^/]+)/)?.[1] || ctx.vars.roomId || 'comaxDemo'
+      const roomId = ctx.vars.roomWUrl?.match(/^\w+:\/\/([^/]+)/)?.[1] || ctx.vars.roomId || 'comaxDemo'
       const catalog = await fetchJson(`${gcsBase(roomId)}/assets.json`) || []
       const verifiedVariants = catalog.filter(v => v.assetType == 'verifiedQueries')
       ctx.vars.uiLogger?.info?.({ t: 'workspaceLoad', roomId, variants: verifiedVariants.length }, {}, { ctx })
-      return ctx.setVars({ roomId, verifiedVariants, roomUrl: ctx.vars.roomUrl || `room://${roomId}` })
+      return ctx.setVars({ roomId, verifiedVariants, roomWUrl: ctx.vars.roomWUrl || `room://${roomId}` })
     },
     metadata: applet({ title: 'Reports workspace', icon: 'FlaskConical', showMessageInput: false })
   })

@@ -56,7 +56,7 @@ Test('biBenchmark.localFs', {
 Test('biBenchmark.cloud', {
   HeavyTest: true,
   impl: dataTest({
-    vars: [Var('roomUrl', 'room://testPublicRoom'), Var('lambdaHost', 'https://staging.indivi.ai')],
+    vars: [Var('roomWUrl', 'room://testPublicRoom'), Var('lambdaHost', 'https://staging.indivi.ai')],
     calculate: compareBenchmarks(dsls.bi['query-case']['biBench.taxi'](), [cloud()]),
     expectedResult: and(
       equals('cloud', '%0/environment%'),
@@ -72,7 +72,7 @@ Test('biBenchmark.cloud', {
 Test('biBenchmark.localFsAndCloud', {
   HeavyTest: true,
   impl: dataTest({
-    vars: [Var('roomUrl', 'room://testPublicRoom'), Var('lambdaHost', 'https://staging.indivi.ai')],
+    vars: [Var('roomWUrl', 'room://testPublicRoom'), Var('lambdaHost', 'https://staging.indivi.ai')],
     calculate: compareBenchmarks(dsls.bi['query-case']['biBench.taxi'](), [localFs(), cloud()]),
     expectedResult: and(equals(2, '%length%'), equals(true, '%0/valid%'), equals(true, '%1/valid%')),
     timeout: 120000,

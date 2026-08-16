@@ -76,7 +76,7 @@ Test('biTest.parquetSourceBuildSkipped', {
 Test('biTest.productBuild', {
   HeavyTest: true,
   impl: dataTest(materializeCubePeriod(productCube(), '%$priceDay%'), equals(2, '%objs%'), {
-    setup: setVars(asIs({db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomUrl: 'room://testPublicRoom'})),
+    setup: setVars(asIs({db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomWUrl: 'room://testPublicRoom'})),
     timeout: 10000,
     logger: 'biLogger'
   })
@@ -111,7 +111,7 @@ Test('biTest.perCapitaMap', {
       equals('Boston', '%0/city%'), equals(675647, '%0/population%'),
       equals('New York', '%1/city%'), equals(8804190, '%1/population%'),
       equals('Seattle', '%2/city%'), equals(737015, '%2/population%')),
-    vars: setVars(asIs({ db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomUrl: 'room://testPublicRoom' })),
+    vars: setVars(asIs({ db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomWUrl: 'room://testPublicRoom' })),
     timeout: 10000,
     logger: 'biLogger,dbLogger'
   })
@@ -128,7 +128,7 @@ Test('biTest.perCapitaMetric', {
       equals('Boston', '%0/city%'), equals(120, '%0/revenue%'), equals(675647, '%0/population%'),
       equals('New York', '%1/city%'), equals(500, '%1/revenue%'), equals(8804190, '%1/population%'),
       equals('Seattle', '%2/city%'), equals(300, '%2/revenue%'), equals(737015, '%2/population%')),
-    vars: setVars(asIs({ db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomUrl: 'room://testPublicRoom' })),
+    vars: setVars(asIs({ db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomWUrl: 'room://testPublicRoom' })),
     timeout: 10000,
     logger: 'biLogger,dbLogger'
   })
@@ -142,7 +142,7 @@ Test('biTest.bucketUrlSourceRead', {
   impl: dataTest({
     calculate: readEventSource(bucketUrlSourceJsonEvents('roomLogs://testPublicRoom/prices/${period}/${productId}-${counter}.json'), '%$priceDay%', 'productId'),
     expectedResult: and(equals(4, '%count%'), equals('%contiguous%', true)),
-    setup: setVars(asIs({db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomUrl: 'room://testPublicRoom'})),
+    setup: setVars(asIs({db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomWUrl: 'room://testPublicRoom'})),
     timeout: 10000,
     logger: 'biLogger'
   })
@@ -167,7 +167,7 @@ Test('biTest.apiCubeBuild', {
     ]) }),
     materializeCubePeriod(apiPriceCube(), '%$priceDay%')
   ), equals(2, '%objs%'), {
-    setup: setVars(asIs({db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomUrl: 'room://testPublicRoom'})),
+    setup: setVars(asIs({db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomWUrl: 'room://testPublicRoom'})),
     timeout: 15000,
     logger: 'biLogger,dbLogger'
   })
@@ -375,7 +375,7 @@ Test('biTest.materializedViewBuilds', {
     setup: materializedView('rentalView', 'room://testPublicRoom/usersRO/views/rentalView.parquet', '%$rentalSeries%', { freshness: never() }),
     calculate: metricDrift('%$rentalView%', { key: 'sub1', validation: aboveBaseline(0.5) }),
     expectedResult: equals(asIs([{ sub1: 'c1', drift_day: '2026-01-05', baseline: 4.2 }, { sub1: 'c2', drift_day: null, baseline: 3.1 }])),
-    vars: setVars(asIs({ db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomUrl: 'room://testPublicRoom' })),
+    vars: setVars(asIs({ db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomWUrl: 'room://testPublicRoom' })),
     timeout: 15000,
     logger: 'biLogger'
   })
@@ -388,7 +388,7 @@ Test('biTest.materializedViewReuses', {
     setup: materializedView('rentalView', 'room://testPublicRoom/usersRO/views/rentalView.parquet', asIs([]), { freshness: ttl({ maxAgeMs: 86400000 }) }),
     calculate: metricDrift('%$rentalView%', { key: 'sub1', validation: aboveBaseline(0.5) }),
     expectedResult: equals(asIs([{ sub1: 'c1', drift_day: '2026-01-05', baseline: 4.2 }, { sub1: 'c2', drift_day: null, baseline: 3.1 }])),
-    vars: setVars(asIs({ db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomUrl: 'room://testPublicRoom' })),
+    vars: setVars(asIs({ db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomWUrl: 'room://testPublicRoom' })),
     timeout: 15000,
     logger: 'biLogger'
   })
@@ -472,7 +472,7 @@ Test('biTest.parquetSourceMeta', {
   impl: dataTest({
     calculate: cubeToolInfoForQuery(parquetCube(), '%$priceDay%'),
     expectedResult: equals('productsRO', '%cube%'),
-    setup: setVars(asIs({ db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomUrl: 'room://testPublicRoom' })),
+    setup: setVars(asIs({ db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomWUrl: 'room://testPublicRoom' })),
     timeout: 10000,
     logger: 'biLogger'
   })

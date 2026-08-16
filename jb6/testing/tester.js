@@ -6,8 +6,7 @@ jb.testingUtils = {runTest, runTests, runTestVm, runTestInVm}
 jb.testingRepository = {}
 
 const {
-  tgp: {TgpType, Component},
-  test: { Logger, logger: { domainLogger } }
+  tgp: {TgpType, Component}
 } = dsls
 
 const Test = TgpType('test', 'test', { isCircuit: true })
@@ -28,12 +27,9 @@ Component('dataTest', {
   impl: async (ctx,{}, { calculate,expectedResult,runBefore,setup,timeout,allowError,cleanUp,expectedCounters, logger }) => {
         logger = ctx.vars.overrideTestLoggers ?? logger   // ambient override (e.g. from runTest mcp) wins over the profile's logger param, without editing the test
         const loggerNames = [...new Set(['errorLogger', ...(logger || '').split(',').map(s => s.trim()).filter(Boolean)])]   // errorLogger always-on + always harvested
-        const loggerObj = Object.fromEntries(
-          loggerNames.map(n => [n, (dsls.test.logger[n]
-            || Logger(n, {impl: domainLogger(n.replace(/Logger$/, ''))})).$runWithCtx(ctx)])
-        )
         const testID = ctx.vars.testID || (ctx.jbCtx.lexicalStack.slice(-1)[0]||'').split('~')[0]
-		let ctxToUse = ctx.setVars({testID, isTest: true, testSessionId: `test-${Date.now()}`, testLoggers: logger, ...loggerObj})
+		let ctxToUse = coreUtils.ensureLoggers(loggerNames, {ctx}).setVars({testID, isTest: true,
+		  testSessionId: `test-${Date.now()}`, testLoggers: logger})
 		if (!isNode) globalThis.jbLoggers = ctxToUse.vars
 		if (setup.profile || typeof setup === 'function') ctxToUse = await setup(ctxToUse) || ctxToUse
 		const {singleTest}  = ctxToUse.vars

@@ -49,7 +49,7 @@ const reportsTestEnv = setVars(ctx => ({ db: 'local', dbHost: 'node', reportsReg
   workflowLogger: dsls.test.logger.workflowLoggerProfile.$runWithCtx(ctx) }))
 const studioEdit = (userMessage, more = {}) => async ctx => editReportStudioDraft.$runWithCtx(ctx, {
   userMessage, currentReport: verifiedReportsRegistry.$runWithCtx(ctx).find(r => r.id == 'promotions'), reportsRoot: LOCAL_ROOT,
-  roomUrl: 'room://comax-report-studio-test/usersRW', selectedSlotKey: 'coverage.summary', saveDraft: false, ...more
+  roomWUrl: 'room://comax-report-studio-test/usersRW', selectedSlotKey: 'coverage.summary', saveDraft: false, ...more
 })
 
 Test('comaxReports.catalogIntegrity', {
@@ -487,7 +487,7 @@ Test('reportStudioEdit.followUpReapplyUsesChatHistory', {
     setup: reportsTestEnv,
     calculate: async ctx => {
       const base = verifiedReportsRegistry.$runWithCtx(ctx).find(r => r.id == 'promotions')
-      const args = { reportsRoot: LOCAL_ROOT, roomUrl: 'room://comax-report-studio-test/usersRW',
+      const args = { reportsRoot: LOCAL_ROOT, roomWUrl: 'room://comax-report-studio-test/usersRW',
         selectedSlotKey: 'coverage.summary', saveDraft: false }
       const firstMsg = 'תוריד את השדה של מבצעים בפדיון נמוך'
       const first = await editReportStudioDraft.$runWithCtx(ctx, {...args, userMessage: firstMsg, currentReport: base})
@@ -1034,12 +1034,12 @@ Test('reportStudio.uiRunPromotions', {
 
 Test('comaxReports.loadToRoomAsAssets', {
   doNotRunInTests: true,
-  params: [{id: 'roomUrl', as: 'string', defaultValue: 'signedRoom://comaxDemo'}, {id: 'db', as: 'string', defaultValue: 'gcs'}],
+  params: [{id: 'roomWUrl', as: 'string', defaultValue: 'signedRoom://comaxDemo'}, {id: 'db', as: 'string', defaultValue: 'gcs'}],
   impl: dataTest({
     logger: 'assetLogger,dbLogger',
-    calculate: async (ctx, {}, {roomUrl, db}) => {
-      const dbCtx = ctx.setVars({ roomUrl, onLiveRepo: true, db })
-      await wfetch2(`${roomUrl}/assets.json`, { method: 'PUT', body: [] }, dbCtx)
+    calculate: async (ctx, {}, {roomWUrl, db}) => {
+      const dbCtx = ctx.setVars({ roomWUrl, onLiveRepo: true, db })
+      await wfetch2(`${roomWUrl}/assets.json`, { method: 'PUT', body: [] }, dbCtx)
       const am = dsls.asset['asset-model'].assetModel.$runWithCtx(dbCtx)
       const ids = await loadVerifiedReportsAsAssets.$runWithCtx(dbCtx.setVars({ assetModel: am }))
       return { published: ids.length, catalog: am.catalog.length }

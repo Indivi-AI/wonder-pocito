@@ -3,7 +3,6 @@ import '@jb6/common'
 import '@wonder/bi/bi-common.js'
 import '@wonder/bi/report-catalog.js'
 import '@wonder/db/db-drivers.js'
-const { prefetchSignedUrls } = jb.wonderUtils
 
 const { biUtils } = jb
 const { parseSqlAst } = biUtils
@@ -52,7 +51,7 @@ Cube('comaxSalesCube', {
     { id: 'headersPath', as: 'string', defaultValue: 'KupaDoc_Header-mqy.parquet' }
   ],
   impl: cube({
-    wUrlBase: 'signedRoom://comax2/usersRO/parquet/OEM_BI_4466',
+    wUrlBase: 'protected://comax2/usersRO/parquet/OEM_BI_4466',
     source: parquetSource('%$linesPath%', 'salesLines', { keyField: 'C' }),
     dimensions: [
       dimension('year', { guidance: 'calendar year' }),
@@ -153,7 +152,7 @@ Cube('comaxSalesCube', {
 
 Cube('comaxInventoryCube', {
   impl: cube({
-    wUrlBase: 'signedRoom://comax2/usersRO/parquet/OEM_BI_4466',
+    wUrlBase: 'protected://comax2/usersRO/parquet/OEM_BI_4466',
     source: parquetSource('Prt_ItrotStore_Yomi.parquet', 'inventory'),
     dimensions: [
       dimension('item', { guidance: 'product-store-day grain' }),
@@ -252,9 +251,5 @@ Component('setupComax', {
     {id: 'cube', type: 'cube<bi>', mandatory: true},
     {id: 'args', as: 'single', defaultValue: {}}
   ],
-  impl: async (ctx, {}, { cube, args }) => {
-    const roomId = cube.wUrlBase.split('//')[1].split('/')[0]
-    await prefetchSignedUrls(ctx.setVars({ roomId }))
-    return cube.querySetup(ctx.setVars({ comaxArgs: args }), args.period || '30')
-  }
+  impl: (ctx, {}, { cube, args }) => cube.querySetup(ctx.setVars({ comaxArgs: args }), args.period || '30')
 })

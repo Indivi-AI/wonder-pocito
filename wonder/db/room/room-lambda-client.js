@@ -79,7 +79,7 @@ const roomLambda = LambdaPackaging('roomLambda', {
       const serverTimeout = timeout && timeout * timeoutRatio
       const t0 = Date.now()
       const TIMED_OUT = Symbol('timedOut')
-      const fetching = wfetch2(`${ctx.vars.roomUrl}/lambda/${name}`,
+      const fetching = wfetch2(`${ctx.vars.roomWUrl}/lambda/${name}`,
         { method: 'post', body: { profile, packedCtx, stream: !!streamProgress, serverTimeout } }, ctx)
       const deadline = serverTimeout && new Promise(ok => setTimeout(() => ok(TIMED_OUT), serverTimeout))
       const res = await Promise.race([fetching, deadline].filter(Boolean))
@@ -90,7 +90,7 @@ const roomLambda = LambdaPackaging('roomLambda', {
           strategy: 'roomLambda', version: name }, { lambdaMs }, { ctx })
         return { error: 'timeout' }
       }
-      log?.info?.({ event: 'roomLambda done', strategy: 'roomLambda', version: name }, { roomUrl: ctx.vars.roomUrl, lambdaMs, uptimeMs, ok: res.ok }, { ctx })
+      log?.info?.({ event: 'roomLambda done', strategy: 'roomLambda', version: name }, { roomWUrl: ctx.vars.roomWUrl, lambdaMs, uptimeMs, ok: res.ok }, { ctx })
       const body = await res.json()
       return res.ok ? body : { error: body.error || res.status }
     }
@@ -120,9 +120,9 @@ DbDriverInterceptor('roomLambda', {
       const authHeaders = { 'Content-Type': 'application/json', ...(idToken && { 'x-user-authorization': `Bearer ${idToken}` }) }
       // forward the caller's room + the active logger names (revived server-side, kept OUT of packedCtx)
       const requestAtEpoch = Date.now()
-      const body = JSON.stringify({ ...(opts.body || {}), roomUrl: ctx.vars.roomUrl, logger: activeLoggers(ctx),
+      const body = JSON.stringify({ ...(opts.body || {}), roomWUrl: ctx.vars.roomWUrl, logger: activeLoggers(ctx),
         requestAtEpoch, ...(ctx.vars.noAuth && { noAuth: true }) })
-      roomLogger?.info?.({ t: 'roomLambda invoke', roomId, name, roomUrl: ctx.vars.roomUrl,
+      roomLogger?.info?.({ t: 'roomLambda invoke', roomId, name, roomWUrl: ctx.vars.roomWUrl,
         stream: !!opts.body?.stream, noAuth: !!ctx.vars.noAuth, authMs }, {}, { ctx })
       // route result shape is { result: { result, error, logs } }. Merge the lambda's per-logger logs INTO the caller's
       // same-named logger instances (so a test's `logger:` harvest picks them up natively), then unwrap the value.

@@ -24,10 +24,10 @@ const resolveWurls = async (sql, ctx) => {
   return wurls.reduce(async (accP, u) => (await accP).split(u).join(await wresolve(u, ctx)), Promise.resolve(sql))
 }
 
-// browser → room lambda: ship a profile to <roomUrl>/lambda/<name> (the roomLambda db-driver-interceptor carries auth + transport).
+// browser → room lambda: ship a profile to <roomWUrl>/lambda/<name> (the roomLambda db-driver-interceptor carries auth + transport).
 // 5xx = transport/infra (cold container, 503) → one retry; comp-level errors ride status 200 and pass through untouched
 export const runViaRoomLambda = async (ctx, name, profile, retry = 1) => {
-  const res = await wfetch2(`${ctx.vars.roomUrl}/lambda/${name}`, { method: 'post', body: { profile, serverTimeout: 180000 } }, ctx).catch(() => null)
+  const res = await wfetch2(`${ctx.vars.roomWUrl}/lambda/${name}`, { method: 'post', body: { profile, serverTimeout: 180000 } }, ctx).catch(() => null)
   if ((!res || res.status >= 500) && retry) return runViaRoomLambda(ctx, name, profile, retry - 1)
   const out = res && await res.json()
   return out ?? { error: `lambda ${name} failed: ${res?.status}` }

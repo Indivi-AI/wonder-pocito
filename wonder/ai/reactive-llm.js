@@ -442,7 +442,7 @@ export async function fetchLLMProxy(targetUrl, options = {}, ctx) {
   const proxyBase = ctx.vars.wonderServiceBase || globalThis.location?.origin
     || globalThis.process?.env?.WONDER_SERVICE_URL || 'https://wonder-lambda-me-west1.indivi.ai'
   const url = ctx.vars.llmProxyUrl || `${proxyBase}/llmProxy`
-  const roomId = ctx.vars.roomId || ctx.vars.roomUrl?.split('://')[1]?.split('/')[0]
+  const roomId = ctx.vars.roomId || ctx.vars.roomWUrl?.split('://')[1]?.split('/')[0]
   const bodyForProxy = JSON.stringify({ targetUrl, headers, originalBody: body || null, roomId })
   const curlCmd = ['curl', '-X', 'POST', ...Object.entries(headers || {}).flatMap(([k, v]) => ['-H', `'${k}: ${v}'`]),
   '-d', `'${bodyForProxy.replace(/'/g, "'\\''")}'`, `'${url}'` ].join(' ') // for debug

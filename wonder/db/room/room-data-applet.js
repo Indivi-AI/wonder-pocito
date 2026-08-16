@@ -7,7 +7,7 @@ const { wfetch2 } = jb.wonderUtils
 
 ReactComp('roomDataVerification', {
   impl: comp({
-    enrichCtx: async ctx => ctx.setData(await (await wfetch2(`${ctx.vars.roomUrl}/data.json`, {}, ctx)).json()),
+    enrichCtx: async ctx => ctx.setData(await (await wfetch2(`${ctx.vars.roomWUrl}/data.json`, {}, ctx)).json()),
     hFunc: (ctx, { react: { h } }) => () => {
       const { title, message, storage, records } = ctx.data
       return h('main', { style: { fontFamily: 'system-ui', maxWidth: 720, margin: '48px auto', padding: 24 } },

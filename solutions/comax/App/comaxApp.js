@@ -4,7 +4,7 @@ import '@wonder/ui/ui-utils.js'
 const { createShortUrl, formatTimeWithRandom, shareHandler, wAppend, wGet, wPut } = jb.wonderUtils
 <<<<<<< HEAD
 import '@wonder/ui/applet.js'
-import '@wonder/db/room/room-lambda-client.js'   // roomLambda db-driver-interceptor - routes the <roomUrl>/lambda/<name> POSTs of the remote duckDbSql hook
+import '@wonder/db/room/room-lambda-client.js'   // roomLambda db-driver-interceptor - routes the <roomWUrl>/lambda/<name> POSTs of the remote duckDbSql hook
 import '../Agents/analytics-agent.js'   // registers the basicAnalytics workflow (run in-browser; its duckDbSql offloads duckdb to /run-bash)
 import { PROMOTION_ACTION_QUESTION } from '../Agents/reports-template-agent.js'
 import '../Agents/fast-report-agent.js'   // registers fast-report (quick report widgets + delayed LLM summary)
@@ -12,7 +12,7 @@ import '../Agents/agents-repo.js'   // Data('comaxAnalyticsAgents') — the sele
 import '@wonder/bi/viz/viz-index.js'   // VizWidget + all inline chart widgets the assistant can emit
 =======
 import '@wonder/applets/applet.js'
-import '@wonder/db/room/room-lambda-client.js'   // roomLambda db-driver-interceptor - routes the <roomUrl>/lambda/<name> POSTs of the remote duckDbSql hook
+import '@wonder/db/room/room-lambda-client.js'   // roomLambda db-driver-interceptor - routes the <roomWUrl>/lambda/<name> POSTs of the remote duckDbSql hook
 import '../comax-v2-agent.js'
 import '../Agents/agents-repo.js'   // Data('comaxAnalyticsAgents') — the selectable-agents repo
 import '@wonder/ui/viz/viz-index.js'   // VizWidget + all inline chart widgets the assistant can emit
@@ -809,7 +809,7 @@ ReactComp('unverifiedAgentApplet', {
       // maximum-scale=1 blocks the iOS focus-zoom on sub-16px inputs (leaves the page panned = horizontal scroll); pinch zoom stays enabled
       const viewportMeta = document.querySelector('meta[name=viewport]') || document.head.appendChild(Object.assign(document.createElement('meta'), { name: 'viewport' }))
       viewportMeta.content = 'width=device-width, initial-scale=1, maximum-scale=1'
-      roomId ||= ctx.vars.roomUrl?.split('://')[1] || 'comaxDemo'   // published: the room serving the applet (comaxDemo); localhost dev: comax
+      roomId ||= ctx.vars.roomWUrl?.split('://')[1] || 'comaxDemo'   // published: the room serving the applet (comaxDemo); localhost dev: comax
       const p = new URLSearchParams(location.hash.replace(/^#/, '?'))
       const existingInstanceId = p.get('instanceId')
       const instanceId = existingInstanceId || formatTimeWithRandom()

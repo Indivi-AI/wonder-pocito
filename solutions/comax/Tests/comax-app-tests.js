@@ -435,7 +435,7 @@ const dashboardTestUrl = id => `room:fs//comaxDemo/dashboards/tests/${id}.js`
 const readLocalJs = async (url, ctx) => (await import('fs')).readFileSync((await wresolve(url, ctx)).replace(/\?.*/, ''), 'utf8')
 const runDashboardEdit = async (ctx, message, id) => {
   const url = dashboardTestUrl(id), reports = jb.dashboardUtils.sortDashboardReports(verifiedReportsRegistry.$runWithCtx(ctx))
-  const vars = ctx.setVars({ db: 'local', roomUrl: 'room:fs//comaxDemo', roomId: 'comaxDemo', dashboardUrl: url,
+  const vars = ctx.setVars({ db: 'local', roomWUrl: 'room:fs//comaxDemo', roomId: 'comaxDemo', dashboardUrl: url,
     reportsRoot: 'signedRoom://comaxDemo/usersRO/parquet/OEM_BI_4466', reportsRegistry: reports,
     currentReportId: 'promotions', userMessage: message, widgetId: 'dashboards.reportCanvas', duckdbMemoryLimit: '2GB',
     duckdbThreads: 4, duckDbSqlCache: false, doNotWriteLogs: true })

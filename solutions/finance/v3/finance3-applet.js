@@ -224,9 +224,9 @@ const field = (name, type, meaning, usage, profile) => ({ name, type, meaning, u
 const customerPortfolioCompiledSql = `WITH base AS (
   SELECT t.*, p.product_category, p.brand, p.unit_cost,
     m.payment_channel, m.payment_provider, m.fee_bps
-  FROM cols_cache(['room:gcs//finance3/usersRO/silver/transactions-18m-hist.parquet']) t
-  LEFT JOIN cols_cache(['room:gcs//finance3/usersRO/silver/products.parquet']) p USING (product)
-  LEFT JOIN cols_cache(['room:gcs//finance3/usersRO/silver/payments.parquet']) m USING (payment_method)
+  FROM cols_cache(['protected://finance3/usersRO/silver/transactions-18m-hist.parquet']) t
+  LEFT JOIN cols_cache(['protected://finance3/usersRO/silver/products.parquet']) p USING (product)
+  LEFT JOIN cols_cache(['protected://finance3/usersRO/silver/payments.parquet']) m USING (payment_method)
 )
 SELECT customer_type, customer_country, loyalty_tier,
   count(DISTINCT customer_id) AS customers,
@@ -599,7 +599,7 @@ ReactComp('finance3Applet', {
         }, [])
         useEffect(() => {
           let active = true
-          wfetch2('room://finance3/usersRO/silver/customer-portfolio.json', {}, ctx)
+          wfetch2('protected://finance3/usersRO/silver/customer-portfolio.json', {}, ctx)
             .then(res => res.json()).then(rows => active && setPortfolio({ rows }))
           return () => { active = false }
         }, [])

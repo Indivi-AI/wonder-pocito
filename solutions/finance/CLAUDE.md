@@ -25,7 +25,7 @@ Runner: `node --experimental-vm-modules --import ./public/core/nodejs-importmap.
 - Lambda vars must use `db:'gcs'` — `db:'local'` (browser-LIVE only) resolves `room://` to nonexistent `files/rooms/` paths → every Ask-AI query dies.
 - **workflowUtils replace-vs-merge**: `workflow-core.js` does `jb.workflowUtils = {…}` which, in the lambda closure's module order, wipes llm-flow's `waitForHumanFeedbackVars` → duckDbSql crash. The fix (`Object.assign(jb.workflowUtils ||= {}, …)` in all 3 writers: workflow-core, llm-flow-core, llm-summary-step) is applied in-tree and pinned by the `financeCube.askAiWorkflowUtilsIntact` test — run it before any lambda republish.
 - Restart localhost:3000 after `gcloud auth application-default login` — the server process caches stale ADC.
-- Staging's lambda gate rejects the dev HMAC token ("No pem found for HS256") — test the published closure via the LOCAL gate: `invokeSnippetInContext` with `lambdaHost:'http://localhost:3000'`, `roomUrl:'room://finance-demo'`.
+- Staging's lambda gate rejects the dev HMAC token ("No pem found for HS256") — test the published closure via the LOCAL gate: `invokeSnippetInContext` with `lambdaHost:'http://localhost:3000'`, `roomWUrl:'room://finance-demo'`.
 - Verified-report `sql` is cube-vocabulary — runnable only through cubeQuery, not plain duckDbSql. Metric aliases survive compile (`money_in as "value"`).
 - anon-user widget test artifacts exist in storage (visible only with `?noAuth`; trash icon removes).
 

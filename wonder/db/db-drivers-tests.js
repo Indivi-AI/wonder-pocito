@@ -1,7 +1,7 @@
 import { dsls, coreUtils, jb } from '@jb6/core'
 import './db-drivers.js'
 
-const { wfetch2, wresolve, wcachePopulate, getDBDriver } = jb.wonderUtils
+const { wfetch2, wresolve, resolveWUrl, wcachePopulate, getDBDriver } = jb.wonderUtils
 import '@jb6/testing'
 import '@jb6/common'
 import '@jb6/jq'
@@ -42,6 +42,35 @@ Test('dbDriverTests.minio.driverSelection', {
       ...coreUtils.harvestLogs(ctx) }),
     expectedResult: equals('%result%', 'bucket.minio'),
     logger: 'dbLogger'
+  })
+})
+
+Test('dbDriverTests.amazon.protected.putGet', {
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: async (ctx, { testSessionId }) => {
+      const url = `protected://aTeam/admin/tests/${testSessionId}.json`, content = { value: 42 }
+      const put = await wfetch2(url, { method: 'PUT', body: content }, ctx)
+      const get = await wfetch2(url, { method: 'GET' }, ctx)
+      const resolved = await wresolve(url, ctx)
+      return { result: { driver: (await getDBDriver(url, ctx))?.id, put: put.status, get: get.status, content: await get.json(),
+        resolved: resolved === `https://s3.il-central-1.amazonaws.com/wonder-rooms-585008076838/aTeam/admin/tests/${testSessionId}.json` },
+        ...coreUtils.harvestLogs(ctx) }
+    },
+    expectedResult: equals('%result%', asIs({driver: 'bucket.amazon', put: 200, get: 200, content: {value: 42}, resolved: true})),
+    logger: 'dbLogger',
+    timeout: 10000
+  })
+})
+
+Test('dbDriverTests.amazon.protected.resolveWUrl', {
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: async ctx => ({ result: [await resolveWUrl('protected://comax2', ctx), await resolveWUrl('comax2', ctx)],
+      ...coreUtils.harvestLogs(ctx) }),
+    expectedResult: equals('%result%', ['protected://comax2', 'protected://comax2']),
+    logger: 'dbLogger',
+    timeout: 10000
   })
 })
 

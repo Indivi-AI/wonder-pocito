@@ -50,19 +50,24 @@ Data('wResolve', {
   impl: (ctx, {}, { url, method }) => wresolve(url(ctx), ctx, method)
 })
 
-const Scope = TgpType('scope', 'wonder', { typescript: '{ bucket, folderInBucket, path: [] }' })
+const Scope = TgpType('scope', 'wonder', { typescript: '{ db, bucket, folderInBucket, path: [] }' })
 const scope = Scope('scope', {
   params: [
-    { id: 'bucket', as: 'string', defaultValue: 'indiviai-wonder' },
-    { id: 'folderInBucket', as: 'string', defaultValue: '', byName: true },
-    { id: 'path', as: 'array' },
-    { id: 'fetchPath', as: 'array' }
+    {id: 'db', as: 'string'},
+    {id: 'bucket', as: 'string', defaultValue: 'indiviai-wonder'},
+    {id: 'folderInBucket', as: 'string', defaultValue: '', byName: true},
+    {id: 'path', as: 'array'},
+    {id: 'fetchPath', as: 'array'}
   ],
   impl: (ctx, { }, args) => ({ ...args, id: ctx.jbCtx.profile?.$?.id })
 })
 
 Scope('room', {
   impl: scope({ path: ['roomId', 'fileName'] })
+})
+
+Scope('protected', {
+  impl: scope('amazon', 'wonder-rooms-585008076838', { path: ['roomId','fileName'] })
 })
 
 Scope('userGlobal', {
@@ -150,9 +155,13 @@ DbBackend('gcs', {
 })
 
 DbBackend('amazon', {
-  impl: dbBackend({ categories: ['bucket', 's3', 'amazon'], enrichCtx: [
-    Var('bucketEndpoint', 'https://s3.amazonaws.com'), Var('bucketRegion', 'us-east-1')
-  ] })
+  impl: dbBackend({
+    categories: ['bucket','s3','amazon'],
+    enrichCtx: [
+      Var('bucketEndpoint', 'https://s3.il-central-1.amazonaws.com'),
+      Var('bucketRegion', 'il-central-1')
+    ]
+  })
 })
 
 DbBackend('minio', {
@@ -186,10 +195,13 @@ AuthToken('authToken.gcpAccessToken', {
 })
 
 AuthToken('authToken.awsCredentials', {
-  impl: ctx => {
+  impl: async ctx => {
+    if (!coreUtils.isNode) return { value: null, expired: () => false }
     const { bucketAccessKeyId: accessKeyId, bucketSecretAccessKey: secretAccessKey,
       bucketSessionToken: sessionToken, bucketCredentialsExpiresAt: expiresAt } = ctx.vars
-    return { value: { accessKeyId, secretAccessKey, sessionToken }, expired: () => !!expiresAt && Date.now() >= new Date(expiresAt).getTime() }
+    const value = accessKeyId ? { accessKeyId, secretAccessKey, sessionToken, expiration: expiresAt }
+      : await (await import('@aws-sdk/credential-provider-node')).defaultProvider({ profile: ctx.vars.awsProfile })()
+    return { value, expired: () => !!value.expiration && Date.now() >= new Date(value.expiration).getTime() }
   }
 })
 
@@ -212,6 +224,7 @@ AuthMethod('authMethod.bearer', {
 AuthMethod('authMethod.awsSigV4', {
   impl: () => ({
     enrichRequest: async (fetchReq, authToken, ctx) => {
+      if (!authToken.value) return fetchReq
       const { accessKeyId, secretAccessKey, sessionToken } = authToken.value
       const url = new URL(fetchReq.url), encoder = new TextEncoder(), subtle = globalThis.crypto.subtle
       const encode = value => encodeURIComponent(value).replace(/[!'()*]/g, ch => `%${ch.charCodeAt(0).toString(16).toUpperCase()}`)

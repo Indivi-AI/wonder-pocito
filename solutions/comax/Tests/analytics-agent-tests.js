@@ -73,7 +73,7 @@ Test('finalAnswer.unverifiedWarning', {
 
 // --- duckdb over the comax room parquets: the applet's exact data path ---
 
-Test('comaxDuckDb.roomUrl.customerCounts', {
+Test('comaxDuckDb.roomWUrl.customerCounts', {
   impl: dataTest({
     setup: localRoom,
     calculate: duckDbSql(customerCountsSql(COMAX)),
@@ -199,7 +199,7 @@ Test('comaxEntityCandidates.escape', {
 
 // --- the booklet must carry the query rules the LLM depends on ---
 
-Test('comaxDuckDb.booklet.roomUrlGuidance', {
+Test('comaxDuckDb.booklet.roomWUrlGuidance', {
   impl: dataTest({
     calculate: ctx => jb.workflowUtils.bookletContent('comaxAnalytics', ctx.setVars({categories: {analytics: true, local: true}})).then(x => x.nested),
     expectedResult: contains({text: ['signedRoom://comaxDemo/usersRO/parquet', 'OEM_BI_4466', 'Idx.parquet', 'KupaDoc_Header.parquet'], anyOrder: true})

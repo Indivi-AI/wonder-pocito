@@ -31,7 +31,7 @@ const root = () =>
   globalThis.process?.versions?.node
     ? new URL('../../files/rooms/comaxDemo/usersRO/parquet/OEM_BI_4466', import.meta.url).pathname
     : 'files/rooms/comaxDemo/usersRO/parquet/OEM_BI_4466'
-const roomFile = (roomUrl, file) => `${String(roomUrl || ROOM).replace(/\/$/, '')}/report-studio/${file}`
+const roomFile = (roomWUrl, file) => `${String(roomWUrl || ROOM).replace(/\/$/, '')}/report-studio/${file}`
 const loadJson = async (url, ctx) => {
   const r = await wfetch2(url, { method: 'GET' }, ctx.setVars({ db: 'gcs', ...(!coreUtils.isNode && { dbHost: 'browser' }) })).catch(() => null)
   return r?.ok ? r.json() : null
@@ -140,7 +140,7 @@ const clusterQuestions = (reports, qs) => {
 ReactComp('comaxReportsStudioDemo', {
   impl: comp({
     hFunc:
-      (ctx, { initialPatch, initialReport, initialRun, reportsRoot, roomUrl, react: { h, hh, useEffect, useMemo, useState } }) =>
+      (ctx, { initialPatch, initialReport, initialRun, reportsRoot, roomWUrl, react: { h, hh, useEffect, useMemo, useState } }) =>
       () => {
         const reports = ctx.vars.initialReports || [initialReport]
         const [report, setReport] = useState(initialReport),
@@ -195,8 +195,8 @@ ReactComp('comaxReportsStudioDemo', {
           const base = reports.find((r) => r.id == id) || report
           setBusy(true)
           setStatus('מריץ דוח...')
-          const active = (await loadJson(roomFile(roomUrl, `${id}.json`), ctx)) || base,
-            savedPatch = await loadJson(roomFile(roomUrl, `${id}-draft-patch.json`), ctx)
+          const active = (await loadJson(roomFile(roomWUrl, `${id}.json`), ctx)) || base,
+            savedPatch = await loadJson(roomFile(roomWUrl, `${id}-draft-patch.json`), ctx)
           const nextPatch = savedPatch?.ops?.length ? savedPatch : null,
             nextReport = nextPatch ? applyReportPatch(active, nextPatch) : active
           setReport(nextReport)
@@ -228,7 +228,7 @@ ReactComp('comaxReportsStudioDemo', {
               currentPatch: patch,
               reportId: report.id,
               reportsRoot,
-              roomUrl,
+              roomWUrl,
               selectedSlotKey: selected?.key || key,
               db: 'local',
               dbHost: 'node',
@@ -264,10 +264,10 @@ ReactComp('comaxReportsStudioDemo', {
         const save = async () => {
           setBusy(true)
           setStatus('שומר דוח פעיל...')
-          const r = await publishReportStudioDraft.$runWithCtx(ctx.setVars({ currentReport: report, roomUrl, db: 'gcs', dbHost: coreUtils.isNode ? 'node' : 'browser' }), {
+          const r = await publishReportStudioDraft.$runWithCtx(ctx.setVars({ currentReport: report, roomWUrl, db: 'gcs', dbHost: coreUtils.isNode ? 'node' : 'browser' }), {
             report,
             reportId: report.id,
-            roomUrl,
+            roomWUrl,
           })
           r?.ok && setPatch({ reportId: report.id, ops: [] })
           say('assistant', r?.ok ? 'השינוי נשמר כדוח פעיל.' : 'השמירה נכשלה.')
@@ -612,12 +612,12 @@ ReactComp('comaxReportsStudioDemo', {
       },
     enrichCtx: async (ctx) => {
       const reportsRoot = ctx.vars.reportsRoot || root(),
-        roomUrl = ctx.vars.reportRoomUrl || ROOM,
+        roomWUrl = ctx.vars.reportRoomUrl || ROOM,
         reports = verifiedReportsRegistry.$runWithCtx(ctx),
         activeBase = reports.find((r) => r.id == (ctx.vars.reportId || DEFAULT_REPORT)) || reports[0]
-      ctx = ctx.setVars({ db: 'local', dbHost: 'node', reportsRoot, roomUrl })
-      const active = (await loadJson(roomFile(roomUrl, `${activeBase.id}.json`), ctx)) || activeBase,
-        savedPatch = await loadJson(roomFile(roomUrl, `${activeBase.id}-draft-patch.json`), ctx)
+      ctx = ctx.setVars({ db: 'local', dbHost: 'node', reportsRoot, roomWUrl })
+      const active = (await loadJson(roomFile(roomWUrl, `${activeBase.id}.json`), ctx)) || activeBase,
+        savedPatch = await loadJson(roomFile(roomWUrl, `${activeBase.id}-draft-patch.json`), ctx)
       const patch = savedPatch?.ops?.length ? savedPatch : null,
         report = patch ? applyReportPatch(active, patch) : active
       ctx = ctx.setVars({ reportsRegistry: [report] })
@@ -626,7 +626,7 @@ ReactComp('comaxReportsStudioDemo', {
         initialReport: report,
         initialReports: reports,
         reportsRoot,
-        roomUrl,
+        roomWUrl,
         initialRun: await runSelectedReport(ctx, report, reportsRoot),
       })
     },

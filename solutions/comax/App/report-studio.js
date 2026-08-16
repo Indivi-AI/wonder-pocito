@@ -17,11 +17,11 @@ const REPORT_ID = 'promotions', RC_ID = 'promotionReportPanel'
 const DEPTHS = ['executiveSummary', 'summary', 'inDepth'], URLS = '@solution/comax/Reports/index.js'
 const defaultRoot = () => globalThis.process?.versions?.node ? new URL('../Data/parquet/OEM_BI_4466', import.meta.url).pathname
   : new URL('../../../../files/rooms/comaxDemo/usersRO/parquet/OEM_BI_4466', import.meta.url).pathname
-const clone = x => structuredClone(x), roomFile = (roomUrl, file) => `${roomUrl}/report-studio/${file}`
+const clone = x => structuredClone(x), roomFile = (roomWUrl, file) => `${roomWUrl}/report-studio/${file}`
 const loadJson = async (url, ctx) => { const r = await wfetch2(url, { method: 'GET' }, ctx).catch(() => null); return r?.ok ? r.json() : null }
-const loadSavedReport = async (roomUrl, ctx) => {
-  const assets = await loadJson(`${roomUrl}/assets.json`, ctx), v = Array.isArray(assets) && assets.find(x => x.variantId == `${REPORT_ID}.reportStudio.latest`)
-  return v && loadJson(v.url || roomFile(roomUrl, `${REPORT_ID}.json`), ctx)
+const loadSavedReport = async (roomWUrl, ctx) => {
+  const assets = await loadJson(`${roomWUrl}/assets.json`, ctx), v = Array.isArray(assets) && assets.find(x => x.variantId == `${REPORT_ID}.reportStudio.latest`)
+  return v && loadJson(v.url || roomFile(roomWUrl, `${REPORT_ID}.json`), ctx)
 }
 const slotsOf = r => [
   ...['executiveSummary', 'summary'].map(depth => ({ key: `report.${depth}`, label: `report / ${depth}`, depth, slot: r[depth] })),
@@ -35,14 +35,14 @@ const sectionProfile = s => ({ $: 'report-section<verified-queries>section', id:
 const reportProfile = r => ({ $: 'verified-report<verified-queries>verifiedReport', title: r.title, description: r.description, whenToUse: r.whenToUse,
   routePhrases: r.routePhrases, questionsCovered: r.questionsCovered, caveats: r.caveats, reactComp: r.reactComp,
   executiveSummary: slotProfile(r.executiveSummary), summary: slotProfile(r.summary), sections: (r.sections || []).map(sectionProfile) })
-const saveStudio = async (ctx, roomUrl, report) => {
-  const createdAt = Date.now(), reportUrl = roomFile(roomUrl, `${REPORT_ID}.json`), tgpUrl = roomFile(roomUrl, `${REPORT_ID}.tgp.json`), compUrl = roomFile(roomUrl, `${RC_ID}.reactComp.json`)
+const saveStudio = async (ctx, roomWUrl, report) => {
+  const createdAt = Date.now(), reportUrl = roomFile(roomWUrl, `${REPORT_ID}.json`), tgpUrl = roomFile(roomWUrl, `${REPORT_ID}.tgp.json`), compUrl = roomFile(roomWUrl, `${RC_ID}.reactComp.json`)
   await Promise.all([
     wfetch2(reportUrl, { method: 'PUT', body: report }, ctx),
     wfetch2(tgpUrl, { method: 'PUT', body: reportProfile(report) }, ctx),
     wfetch2(compUrl, { method: 'PUT', body: { cmpId: RC_ID, urlsToLoad: URLS, reportId: REPORT_ID, savedAt: createdAt } }, ctx)
   ])
-  const assetsUrl = `${roomUrl}/assets.json`, oldAssets = await loadJson(assetsUrl, ctx), assets = Array.isArray(oldAssets) ? oldAssets : [], ids = new Set([`${REPORT_ID}.reportStudio.latest`, `${RC_ID}.reportStudio.latest`])
+  const assetsUrl = `${roomWUrl}/assets.json`, oldAssets = await loadJson(assetsUrl, ctx), assets = Array.isArray(oldAssets) ? oldAssets : [], ids = new Set([`${REPORT_ID}.reportStudio.latest`, `${RC_ID}.reportStudio.latest`])
   await wfetch2(assetsUrl, { method: 'PUT', body: [
     ...assets.filter(v => !ids.has(v.variantId)),
     { variantId: `${REPORT_ID}.reportStudio.latest`, assetType: 'verifiedQueries', format: 'json', assetId: REPORT_ID, categories: ['reportStudio', 'latest'], url: reportUrl, tgpUrl, createdAt, sectionCount: (report.sections || []).length, questionCount: (report.questionsCovered || []).length },
@@ -67,14 +67,14 @@ const runSelected = async (ctx, report, sel, root) => {
 
 ReactComp('reportStudio', {
   impl: comp({
-    hFunc: (ctx, { initialReport, roomUrl, reportsRoot, react: { h, hh, useMemo, useState } }) => () => {
+    hFunc: (ctx, { initialReport, roomWUrl, reportsRoot, react: { h, hh, useMemo, useState } }) => () => {
       const [report, setReport] = useState(initialReport), [key, setKey] = useState(slotsOf(initialReport)[0]?.key), [run, setRun] = useState(null)
       const [view, setView] = useState('react'), [busy, setBusy] = useState(''), [draft, setDraft] = useState(''), [msgs, setMsgs] = useState([{ role: 'assistant', text: 'Tell me edits as set sql:, set goal:, set title:, or paste a fenced sql block.' }])
       const slots = useMemo(() => slotsOf(report), [report]), sel = slots.find(s => s.key == key) || slots[0], rows = run?.rows || [], cols = Object.keys(rows[0] || {}), Preview = dsls.react['react-comp'][run?.reactComp?.cmpId]
       const setSlot = (field, val) => setReport(r => withSlot(r, sel.key, slot => { slot[field] = val }))
       const send = text => { if (!text.trim()) return; const r = chatEdit(text, sel.key, report); setReport(r.report); setMsgs(m => [...m, { role: 'user', text }, { role: 'assistant', text: r.reply }]); setDraft('') }
       const doRun = async () => { setBusy('run'); setRun(await runSelected(ctx, report, sel, reportsRoot)); setView('react'); setBusy('') }
-      const doSave = async () => { setBusy('save'); await saveStudio(ctx, roomUrl, report); setMsgs(m => [...m, { role: 'assistant', text: 'Saved report profile and ReactComp binding to the room.' }]); setBusy('') }
+      const doSave = async () => { setBusy('save'); await saveStudio(ctx, roomWUrl, report); setMsgs(m => [...m, { role: 'assistant', text: 'Saved report profile and ReactComp binding to the room.' }]); setBusy('') }
       const btn = (txt, onClick, active) => h(`button:px-3 py-1.5 rounded-md text-sm font-medium ${active ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'} disabled:opacity-40`, { disabled: !!busy, onClick }, txt)
       const area = (label, value, onInput, rows, mono) => h('label:block text-xs text-slate-500 min-w-0', {}, label, h(`textarea:mt-1 w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm resize-y ${mono ? 'font-mono whitespace-pre' : ''}`, { value: value || '', rows, dir: mono ? 'ltr' : 'auto', spellCheck: false, onInput: e => onInput(e.target.value) }))
       const chatPane = h('aside:w-[320px] shrink-0 border-r border-slate-200 bg-white flex flex-col min-w-0', {},
@@ -102,17 +102,17 @@ ReactComp('reportStudio', {
         chatPane,
         h('main:flex-1 min-w-0 min-h-0 flex flex-col', {},
           h('header:h-14 shrink-0 bg-white border-b border-slate-200 px-4 flex items-center justify-between gap-3', {},
-            h('div:min-w-0', {}, h('div:font-bold truncate', {}, 'Report studio'), h('div:text-xs text-slate-500 truncate', {}, `${roomUrl} / ${sel?.label || ''}`)),
+            h('div:min-w-0', {}, h('div:font-bold truncate', {}, 'Report studio'), h('div:text-xs text-slate-500 truncate', {}, `${roomWUrl} / ${sel?.label || ''}`)),
             h('div:flex gap-2 shrink-0', {}, btn(busy == 'run' ? 'Running...' : 'Run', doRun, true), btn(busy == 'save' ? 'Saving...' : 'Save', doSave))),
           h('div:flex-1 min-h-0 grid grid-cols-2 overflow-hidden', {}, editorPane, resultPane)))
     },
     enrichCtx: async ctx => {
-      const roomUrl = ctx.vars.roomUrl || 'signedRoom://comaxDemo', root = ctx.vars.reportsRoot || defaultRoot()
+      const roomWUrl = ctx.vars.roomWUrl || 'signedRoom://comaxDemo', root = ctx.vars.reportsRoot || defaultRoot()
       ctx = !globalThis.process?.versions?.node ? ctx.setVars({ categories: { ...ctx.vars.categories, gcshttpblockedbycors: true } }) : ctx
       const base = verifiedReportsRegistry.$runWithCtx(ctx).find(r => r.id == REPORT_ID)
-      return ctx.setVars({ initialReport: await loadSavedReport(roomUrl, ctx) || clone(base), roomUrl, reportsRoot: root })
+      return ctx.setVars({ initialReport: await loadSavedReport(roomWUrl, ctx) || clone(base), roomWUrl, reportsRoot: root })
     },
-    sampleCtxData: () => ({ vars: { roomUrl: 'signedRoom://comaxDemo', roomId: 'comaxDemo', userId: 'ScreenshotService' } }),
+    sampleCtxData: () => ({ vars: { roomWUrl: 'signedRoom://comaxDemo', roomId: 'comaxDemo', userId: 'ScreenshotService' } }),
     metadata: applet({ title: 'Report studio', icon: 'FlaskConical', showMessageInput: false })
   })
 })

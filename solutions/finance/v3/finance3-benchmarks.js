@@ -79,7 +79,7 @@ Data('finance3RawSseFetch', {
       coreUtils.tgpProfileToJson(dsls.bi['query-case']['finance3Bench.customerPortfolio']()), true))
     const body = JSON.stringify({
       profile, packedCtx: coreUtils.stripCtx({ profileJson: profile, ctx }), stream: true,
-      roomUrl: 'room://finance3', logger, noAuth: true
+      roomWUrl: 'protected://finance3', logger, noAuth: true
     })
     const url = `${host}/run-room-lambda-sse-progress/finance3/biBenchmarkRunner`
     benchmarkLog(ctx, { t: 'finance3 SSE request', url, bytes: body.length, body })
@@ -107,17 +107,17 @@ Data('finance3RawSseFetch', {
 })
 Data('finance3CloudBenchmarkResult', {
   params: [
-    { id: 'roomUrl', as: 'string', defaultValue: 'room://finance3' },
+    { id: 'roomWUrl', as: 'string', defaultValue: 'protected://finance3' },
     { id: 'lambdaHost', as: 'string', defaultValue: 'https://staging.indivi.ai' },
     { id: 'noAuth', as: 'boolean', defaultValue: true }
   ],
-  impl: async (ctx, {}, { roomUrl, lambdaHost, noAuth }) => {
+  impl: async (ctx, {}, { roomWUrl, lambdaHost, noAuth }) => {
     benchmarkLog(ctx, {
-      t: 'finance3 cloud benchmark request', endpoint: benchmarkEndpoint, roomUrl, lambdaHost, noAuth,
+      t: 'finance3 cloud benchmark request', endpoint: benchmarkEndpoint, roomWUrl, lambdaHost, noAuth,
       queryCase: 'query-case<bi>finance3Bench.customerPortfolio', warmRuns: 0
     })
     try {
-      const [result] = await compareBenchmarks.$runWithCtx(ctx.setVars({ roomUrl, lambdaHost, noAuth }), {
+      const [result] = await compareBenchmarks.$runWithCtx(ctx.setVars({ roomWUrl, lambdaHost, noAuth }), {
         queryCase: dsls.bi['query-case']['finance3Bench.customerPortfolio'](), environments: [cloud()], warmRuns: 0
       })
       if (!result?.cold?.queryMs) {

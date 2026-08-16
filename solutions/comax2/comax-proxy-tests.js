@@ -1,7 +1,7 @@
 import { dsls, coreUtils, jb } from '@jb6/core'
 import '@jb6/testing'
 import '@wonder/db/db-drivers.js'
-import { Pool } from 'undici'
+//import { Pool } from 'undici'
 
 const { wresolve } = jb.wonderUtils
 const {
@@ -11,12 +11,12 @@ const {
 } = dsls
 
 Const('comaxWUrls', [
-  'signedRoom://comax2/usersRO/parquet/OEM_BI_4466/DailyPriceCost.parquet',
-  'signedRoom://comax2/usersRO/parquet/OEM_BI_4466/DailyPriceCost_Zakyan.parquet',
-  'signedRoom://comax2/usersRO/parquet/OEM_BI_4466/KupaDoc_Header-mqy.parquet',
-  'signedRoom://comax2/usersRO/parquet/OEM_BI_4466/KupaDoc_Lines-mqy.parquet',
-  'signedRoom://comax2/usersRO/parquet/OEM_BI_4466/Prt.parquet',
-  'signedRoom://comax2/usersRO/parquet/OEM_BI_4466/Store.parquet'
+  'protected://comax2/usersRO/parquet/OEM_BI_4466/DailyPriceCost.parquet',
+  'protected://comax2/usersRO/parquet/OEM_BI_4466/DailyPriceCost_Zakyan.parquet',
+  'protected://comax2/usersRO/parquet/OEM_BI_4466/KupaDoc_Header-mqy.parquet',
+  'protected://comax2/usersRO/parquet/OEM_BI_4466/KupaDoc_Lines-mqy.parquet',
+  'protected://comax2/usersRO/parquet/OEM_BI_4466/Prt.parquet',
+  'protected://comax2/usersRO/parquet/OEM_BI_4466/Store.parquet'
 ])
 
 Const('comaxKpiRanges', {

@@ -1,5 +1,5 @@
-// comax-lambdas.js — comax cube queries published as room lambdas over signedRoom://comax2.
-// The lambda's setupComax enricher plants comaxArgs, prefetches signed URLs and folds the star sqlModifiers,
+// comax-lambdas.js — comax cube queries published as room lambdas over protected://comax2.
+// The lambda's setupComax enricher plants comaxArgs and folds the star sqlModifiers,
 // then the cubeQuery runs `select … from base` against the header-first star. period rides as a param resolved server-side.
 import { dsls } from '@jb6/core'
 import './comax-cube.js'

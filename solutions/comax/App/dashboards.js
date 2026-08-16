@@ -52,7 +52,7 @@ export const dashboardFromReport = (res = {}, report = {}) => ({
   error: res.error,
 })
 const sectionsOf = (r) => arr(r.sections).map((s) => s.id)
-const roomPath = (roomUrl, path) => `${(roomUrl || DEFAULT_ROOM).replace(/\/$/, '')}/${path}`
+const roomPath = (roomWUrl, path) => `${(roomWUrl || DEFAULT_ROOM).replace(/\/$/, '')}/${path}`
 const io = (ctx) => ctx.setVars(ctx.vars.sqlLambda ? {} : { db: 'local' }) // dashboard files: localhost → files/rooms, cloud (sqlLambda set) → signed GCS
 const readText = async (url, ctx) => {
   const r = await wfetch2(url, { method: 'GET' }, ctx)
@@ -127,17 +127,17 @@ ReactComp('dashboards.reportCanvas', {
 export const defaultDashboardJs = `import { dsls } from '@jb6/core'\nimport '@jb6/react'\n${DASHBOARD_WIDGET_BODY}`
 let registered
 const registerDashboardComps = () => (registered ||= (new Function('dsls', DASHBOARD_WIDGET_BODY)(dsls), true))
-const saveManifest = (ctx, roomUrl, dashboardUrl) =>
+const saveManifest = (ctx, roomWUrl, dashboardUrl) =>
   wfetch2(
-    roomPath(roomUrl, 'dashboards/dashboard'),
+    roomPath(roomWUrl, 'dashboards/dashboard'),
     { method: 'PUT', body: { title: 'Dashboards', dashboardUrl, widgets: ['dashboards.reportCanvas', 'dashboards.reportPanel', 'dashboards.vizWidget'], updatedAt: Date.now() } },
     ctx,
   )
-const ensureDashboardModule = async (_ctx, roomUrl) => {
+const ensureDashboardModule = async (_ctx, roomWUrl) => {
   const ctx = io(_ctx),
-    url = roomPath(roomUrl, DASHBOARD_FILE),
+    url = roomPath(roomWUrl, DASHBOARD_FILE),
     code = await readText(url, ctx)
-  if (!code.includes('dashboard-widget:start')) (await wfetch2(url, { method: 'PUT', body: defaultDashboardJs }, ctx), await saveManifest(ctx, roomUrl, url))
+  if (!code.includes('dashboard-widget:start')) (await wfetch2(url, { method: 'PUT', body: defaultDashboardJs }, ctx), await saveManifest(ctx, roomWUrl, url))
   await importDashboardModule(url, ctx)
   return url
 }
@@ -197,7 +197,7 @@ ReactComp('Dashboards', {
         {
           reports = SAMPLE_REPORTS,
           reportsRoot = REPORTS_ROOT,
-          roomUrl = DEFAULT_ROOM,
+          roomWUrl = DEFAULT_ROOM,
           dashboardUrl,
           initialDashboard,
           react: { h, hh, hhStrongRefresh, useEffect, useRef, useState },
@@ -257,7 +257,7 @@ ReactComp('Dashboards', {
         const applyDraft = async () => {
           if (!draftEdit?.code) return
           await wfetch2(dashboardUrl, { method: 'PUT', body: draftEdit.code }, io(ctx))
-          await saveManifest(io(ctx), roomUrl, dashboardUrl)
+          await saveManifest(io(ctx), roomWUrl, dashboardUrl)
           await cancelDraft()
           setMsgs((xs) => [...xs, { role: 'ai', text: 'שמרתי את הטיוטה כדשבורד הפעיל.' }])
         }
@@ -276,7 +276,7 @@ ReactComp('Dashboards', {
                 dashboardUrl,
                 widgetId: selectedWidgetId,
                 roomId: 'comaxDemo',
-                roomUrl,
+                roomWUrl,
                 currentReportId: reportId,
                 currentDashboard: dashboard,
                 reportsRegistry: reports,
@@ -471,15 +471,15 @@ ReactComp('Dashboards', {
       },
     enrichCtx: async (
       ctx,
-      { roomUrl = ctx.vars.roomUrl || DEFAULT_ROOM, reportsRoot = ctx.vars.reportsRoot || REPORTS_ROOT, reports = ctx.vars.reports, initialDashboard = ctx.vars.initialDashboard },
+      { roomWUrl = ctx.vars.roomWUrl || DEFAULT_ROOM, reportsRoot = ctx.vars.reportsRoot || REPORTS_ROOT, reports = ctx.vars.reports, initialDashboard = ctx.vars.initialDashboard },
     ) => {
       registerDashboardComps()
       const preview = ctx.vars.skipDashboardRoom && !initialDashboard,
         catalog = sortDashboardReports(reports || (preview ? SAMPLE_REPORTS : verifiedReportsRegistry.$runWithCtx(ctx))),
-        dashboardUrl = ctx.vars.dashboardUrl || (ctx.vars.skipDashboardRoom ? roomPath(roomUrl, DASHBOARD_FILE) : await ensureDashboardModule(ctx, roomUrl))
+        dashboardUrl = ctx.vars.dashboardUrl || (ctx.vars.skipDashboardRoom ? roomPath(roomWUrl, DASHBOARD_FILE) : await ensureDashboardModule(ctx, roomWUrl))
       return ctx.setVars({
         reports: catalog,
-        roomUrl,
+        roomWUrl,
         reportsRoot,
         dashboardUrl,
         initialDashboard: initialDashboard || (preview && SAMPLE_DASHBOARD),
@@ -493,7 +493,7 @@ ReactComp('Dashboards', {
         initialDashboard: SAMPLE_DASHBOARD,
         reports: SAMPLE_REPORTS,
         dashboardUrl: roomPath(DEFAULT_ROOM, DASHBOARD_FILE),
-        roomUrl: DEFAULT_ROOM,
+        roomWUrl: DEFAULT_ROOM,
         reportsRoot: REPORTS_ROOT,
       },
     }),

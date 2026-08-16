@@ -66,9 +66,9 @@ ReactComp('salesPage', {
 // server: cloud-services/express-server/lib/room-lambda-and-applet.js
 const summaryAppletTest = Component('summaryAppletTest', {
   type: 'test<test>',
-  params: [{ id: 'roomUrl', as: 'string', mandatory: true }, { id: 'onLiveRepo', as: 'boolean', defaultValue: true }, { id: 'lambdaHost', as: 'string' }],
+  params: [{ id: 'roomWUrl', as: 'string', mandatory: true }, { id: 'onLiveRepo', as: 'boolean', defaultValue: true }, { id: 'lambdaHost', as: 'string' }],
   impl: reactTest({
-  testedComp: (c, { react: { hh } }, { roomUrl, onLiveRepo, lambdaHost }) => () => hh(c.setVars({ roomUrl, onLiveRepo, ...(lambdaHost && { lambdaHost }) }), summaryApplet),
+  testedComp: (c, { react: { hh } }, { roomWUrl, onLiveRepo, lambdaHost }) => () => hh(c.setVars({ roomWUrl, onLiveRepo, ...(lambdaHost && { lambdaHost }) }), summaryApplet),
     expectedResult: contains('Room Summary'),
     userActions: waitForText('categories'),
     timeout: 12000,
@@ -79,5 +79,5 @@ const summaryAppletTest = Component('summaryAppletTest', {
 Test('roomAppletTest.summaryApplet', { impl: summaryAppletTest('room://testPublicRoom') })
 Test('roomAppletTest.signedSummaryApplet', { impl: summaryAppletTest('signedRoom://testSignedRoom') })
 Test('roomAppletTest.signedSummaryApplet.cloud', {
-  impl: summaryAppletTest({ roomUrl: 'signedRoom://testSignedRoom', onLiveRepo: false, lambdaHost: 'https://staging.indivi.ai' })
+  impl: summaryAppletTest({ roomWUrl: 'signedRoom://testSignedRoom', onLiveRepo: false, lambdaHost: 'https://staging.indivi.ai' })
 })

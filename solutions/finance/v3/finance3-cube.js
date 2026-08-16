@@ -45,7 +45,7 @@ Cube('finance3Cube', {
         numericStat('fee_bps')
       ]
     }),
-    wUrlBase: 'room://finance3/usersRO',
+    wUrlBase: 'protected://finance3/usersRO',
     cacheStrategy: 'colsCache',
     dimensions: [
       dimension('date', temporalStat(), { type: 'timestamp' }),

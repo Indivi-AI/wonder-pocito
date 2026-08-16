@@ -7,11 +7,11 @@
 //  - POST /run-room-lambda[-sse-progress]/:roomId/:name → room member; run the room's lambda AS THE USER.
 //  - GET  /room/:roomId/applet/:name → serve the applet host page INLINE (no 302). Same URL for public & signed rooms; policy picks the teeth.
 import express from 'express'
-import { coreUtils } from '@jb6/core/index.js'
+import { jb, coreUtils } from '@jb6/core/index.js'
 import '@jb6/core/misc/jb-remote-via-cli.js'   // runStrippedCli (stripCtx-aware server↔child run)
 import { caller, roomPolicy, roleOf, canAccess } from './auth-utils.js'
 import '@wonder/db/auth.js'
-import { readJson } from './signed-url.js'
+import '@wonder/db/db-drivers.js'
 import { storage } from '@wonder/db/storage.js'
 import { promises as fsp, existsSync } from 'fs'
 import { spawn } from 'child_process'
@@ -50,10 +50,10 @@ import { coreUtils } from '@jb6/core'
 import { ensureLogin } from '@wonder/db/oauth2.js'
 const appletSpec = _APPLET_SPEC_
 reactUtils.loadLucid05()
-const { urlsToLoad, roomUrl } = appletSpec
+const { urlsToLoad, roomWUrl } = appletSpec
 const cmpId = new URLSearchParams(location.search).get('cmpId') || appletSpec.cmpId   // multi-comp applets navigate by ?cmpId=; def cmpId is the default
 // ?noAuth on a PUBLIC room (room://) skips the login gate — data is public, so run anonymously (server SA) with no OAuth spin. Signed rooms ignore it.
-const noAuth = new URLSearchParams(location.search).has('noAuth') && roomUrl?.startsWith('room://')
+const noAuth = new URLSearchParams(location.search).has('noAuth') && roomWUrl?.startsWith('room://')
 const root = document.getElementById('root')
 if (appletSpec.liveRepo) await import('@wonder/db/room/room-lambda-live-repo.js')
 const runAutomation = async mCtx => {
@@ -63,12 +63,12 @@ const runAutomation = async mCtx => {
     await reactUtils.startAutomation(mCtx, window)
   }
 }
-// extendCtxWithUrl seeds ctx-* query params (e.g. ?ctx-reportUrl=…) + loggers from the URL; then add react + the applet's roomUrl.
-const ctx = reactUtils.extendCtxWithUrl().setVars({ react: reactUtils, ...(roomUrl && { roomUrl }), ...(noAuth && { noAuth: true }) })
+// extendCtxWithUrl seeds ctx-* query params (e.g. ?ctx-reportUrl=…) + loggers from the URL; then add react + the applet's roomWUrl.
+const ctx = reactUtils.extendCtxWithUrl().setVars({ react: reactUtils, ...(roomWUrl && { roomWUrl }), ...(noAuth && { noAuth: true }) })
 const uiSource = appletSpec.liveRepo
   ? 'live-repo (localhost /jb6_packages, /wonder, /solution, /indiviai)'
   : 'appletV snapshot ' + appletSpec.appletV + ' (GCS share, NOT live-repo) - edit-to-live needs uploadRoomApplet'
-ctx.vars.roomLogger?.info?.({ t: 'serve applet page', roomUrl, cmpId, urlsToLoad, appletV: appletSpec.appletV, uiSource }, {}, { ctx })
+ctx.vars.roomLogger?.info?.({ t: 'serve applet page', roomWUrl, cmpId, urlsToLoad, appletV: appletSpec.appletV, uiSource }, {}, { ctx })
 document.getElementById('loading')?.remove()
 // the lambda runner is gated per-user (runs AS the caller) ⇒ an anonymous applet silently gets no data. force login first (into #root).
 // ensureLogin also completes the OAuth redirect (GOT_CODE) and returns true, so the host page renders the applet.
@@ -95,7 +95,7 @@ const ogTags = b => [
   ['og:image:width', '1200'], ['og:image:height', '630'], ['twitter:card', 'summary_large_image']
 ].filter(([, c]) => c).map(([p, c]) => `<meta property="${p}" content="${c}">`).join('')
 
-// serveAppletPage: turn an appletSpec ({cmpId, urlsToLoad, roomUrl, appletV, og}) into the inline page. appletV = the share
+// serveAppletPage: turn an appletSpec ({cmpId, urlsToLoad, roomWUrl, appletV, og}) into the inline page. appletV = the share
 // snapshot id. jb6 + wonder SOURCE comes from the share; versioned React runtime files use the additive CDN directory.
 // localImports = dev live-repo importmap (no upload).
 export async function serveAppletPage(spec, res, localImports) {
@@ -125,10 +125,9 @@ export async function serveAppletPage(spec, res, localImports) {
 // def (lambdas/applets/<name>.json) lives in the PUBLIC room bucket for public rooms; fall back to the protected
 // bucket for signed rooms. Public rooms thus need nothing in the protected bucket — fully public end to end.
 export async function readDef(roomId, path) {
-  const bucket = (await storage(null, { native: true })).bucket('indiviai-wonder')
-  const d = await bucket.file(`${roomId}/${path}`).download().then(([x]) => JSON.parse(x), () => null)
-  if (d) return d.content ?? d
-  return readJson(`${roomId}/${path}`)   // protected fallback
+  const ctx = new coreUtils.Ctx(), roomWUrl = await jb.wonderUtils.resolveWUrl(roomId, ctx)
+  const res = await jb.wonderUtils.wfetch2(`${roomWUrl}/${path}`, { method: 'GET' }, ctx).catch(() => null)
+  return res?.ok ? res.json() : null
 }
 
 // authorize a caller against a room: authenticate → load policy (null ⇒ public) → role. Returns { who, policy, role }.
@@ -221,7 +220,7 @@ export function setupRoomLambdaAndApplet(app) {
     const effRole = anon ? 'authenticated' : role, email = who?.email || 'anonymous'
     const denied = lambda.dir && !canAccess(policy, lambda.dir, 'r', effRole)
     if (denied) { res.status(403).json({ error: `forbidden: ${lambda.dir} for role ${effRole} for user ${email}` }); return null }
-    // roomUrl tells signedRoom:// reads which protected room policy applies.
+    // roomWUrl tells signedRoom:// reads which protected room policy applies.
     const isLocalHost = req.hostname === 'localhost'
     return { lambdaV: lambda.lambdaV, source: {                                         // 3. run AS THE USER (or anon SA)
       // profile = the call; packedCtx = the caller's ctx slice (stripCtx, logger-free).
@@ -231,7 +230,7 @@ export function setupRoomLambdaAndApplet(app) {
       gateLogs: gateLogs(),
       profile: req.body?.profile || { $: lambda.entryCompFullId }, packedCtx: req.body?.packedCtx, logger: req.body?.logger,
       userVars: {
-        roomId, roomUrl: req.body?.roomUrl, ...(who && { idToken: who.token }), userEmail: email,
+        roomId, roomWUrl: req.body?.roomWUrl, ...(who && { idToken: who.token }), userEmail: email,
         hasGcpIdentity: true, isLocalHost, isStaging: !isLocalHost && req.hostname?.includes('staging')
       }
     } }
@@ -249,10 +248,9 @@ export function setupRoomLambdaAndApplet(app) {
       const { roomId, name } = req.params
       const applet = await readDef(roomId, `applets/${name}.json`)
       if (!applet) return res.status(404).json({ error: `no applet ${name} in ${roomId}` })
-      const scheme = await roomPolicy(roomId) ? 'signedRoom' : 'room'
       const ogUrl = `${req.hostname === 'localhost' ? 'http' : 'https'}://${req.get('host')}${req.path}`
       const og = [await readDef(roomId, 'admin/branding.json'), applet.og, { ogUrl }]
-      const spec = { cmpId: applet.cmpId, urlsToLoad: applet.urlsToLoad, roomUrl: `${scheme}://${roomId}`,
+      const spec = { cmpId: applet.cmpId, urlsToLoad: applet.urlsToLoad, roomWUrl: applet.roomWUrl,
         appletV: applet.appletV, og }
       await serveAppletPage(spec, res)
     } catch (e) { console.error('[room-applet] error', e); res.status(500).json({ error: e.stack }) }
@@ -304,7 +302,7 @@ async function extractLambda(lambdaV, dir, root, fetchTar) {
 // caller's loggers (the `logger` field, kept OUT of packedCtx) are both returned (logs) and streamed live (→ eventEmitter → SSE route).
 async function runProfile(imports, { profile, packedCtx = { vars: {}, args: {} }, userVars, logger = '' }, ctx) {
   if (packedCtx.vars?.lambdaLoggers != null) throw new Error('packedCtx must be logger-free - loggers travel via the `logger` field')
-  Object.assign(packedCtx.vars ||= {}, { db: 'gcs', ...userVars })   // TRUSTED, server-authoritative
+  Object.assign(packedCtx.vars ||= {}, userVars)
   const loggers = logger
   // live-stream only loggers this server actually instantiated (its generic bundle lacks most lambda-DSL logger
   // defs ⇒ ensureLoggers skipped them ⇒ dispatchChildLine can't route them → "dispatch missing"). all still ride back in {logs}.

@@ -76,7 +76,7 @@ ReactComp('biBenchmarkPerformance', {
         })
       })
     },
-    hFunc: (_ctx, { roomUrl, react: { h, useEffect, useRef, useState },
+    hFunc: (_ctx, { roomWUrl, react: { h, useEffect, useRef, useState },
       cases, environmentProfiles, envs, selectedEnvs, selectResults }, { title, warmRuns, selectedRun, clearBeforeRun, onResult }) => () => {
       const [progress, setProgress] = useState({}), [downloads, setDownloads] = useState({}),
         [results, setResults] = useState([]), [error, setError] = useState(), started = useRef(), saved = useRef(),

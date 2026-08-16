@@ -1,6 +1,8 @@
 import { OAuth2Client } from 'google-auth-library'
 import { createHash, createHmac } from 'node:crypto'
 import { getRole, readJson } from './signed-url.js'
+import { jb, coreUtils } from '@jb6/core'
+import '@wonder/db/db-drivers.js'
 
 export const WONDER_ADMINS = ['shaiby@artwaresoft.com', 'yiftach@indivi.ai', 'roee@indivi.ai']
 
@@ -20,7 +22,10 @@ export const PUBLIC_DEFAULT = {
 export const roomPolicy = async roomId => {
   const cached = policyCache.get(roomId)
   if (cached?.at > Date.now() - 30000) return cached.policy
-  const policy = await readJson(`${roomId}/admin/users.json`)
+  const signed = await readJson(`${roomId}/admin/users.json`)
+  const res = signed || await jb.wonderUtils.wfetch2(`protected://${roomId}/admin/users.json`,
+    { method: 'GET' }, new coreUtils.Ctx()).catch(() => null)
+  const policy = signed || res?.ok && await res.json()
   policyCache.set(roomId, { policy, at: Date.now() })
   return policy
 }

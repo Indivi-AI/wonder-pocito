@@ -70,8 +70,8 @@ async function setupLiveRepo(app) {
     try {
       const { roomId, name } = req.params, applet = await readDef(roomId, `applets/${name}.json`)
       if (!applet) return next()
-      const roomUrl = `${await roomPolicy(roomId) ? 'signedRoom' : 'room'}://${roomId}`
-      await serveAppletPage({ ...applet, roomUrl, og: [await readDef(roomId, 'admin/branding.json'), applet.og] }, res, importMap.imports)
+      await serveAppletPage({ ...applet,
+        og: [await readDef(roomId, 'admin/branding.json'), applet.og] }, res, importMap.imports)
     } catch { next() }
   })
   for (const { urlPath, diskPath } of staticMappings) {

@@ -33,7 +33,7 @@ const biCacheLocalTest = Component('biCacheLocalTest', {
     { id: 'expectedVia', as: 'string', mandatory: true, description: 'the resolveSilvers `via` label this strategy must log' }
   ],
   impl: dataTest({
-    setup: setVars(({},{},{db}) => ({ db, hasGcpIdentity: db === 'gcs', onLiveRepo: true, roomUrl: 'signedRoom://testSignedRoom' })),
+    setup: setVars(({},{},{db}) => ({ db, hasGcpIdentity: db === 'gcs', onLiveRepo: true, roomWUrl: 'signedRoom://testSignedRoom' })),
     calculate: invokeSnippetInContext(cacheStoresReport({ cacheStrategy: '%$cacheStrategy%' })),
     expectedResult: and(equals(28, '%0/storeCount%'),
       contains('%$expectedVia%', { allText: join(',', { items: '%$biLogger.biLog.via%' }) })),
@@ -51,7 +51,7 @@ const biCacheCloudTest = Component('biCacheCloudTest', {
     { id: 'expectedVia', as: 'string', mandatory: true, description: 'the server-side resolveSilvers `via` label merged back over the wire' }
   ],
   impl: dataTest({
-    setup: setVars(asIs({ lambdaHost: 'https://staging.indivi.ai', roomUrl: 'signedRoom://testSignedRoom', onLiveRepo: false })),
+    setup: setVars(asIs({ lambdaHost: 'https://staging.indivi.ai', roomWUrl: 'signedRoom://testSignedRoom', onLiveRepo: false })),
     calculate: invokeSnippetInContext(cacheStoresReport({ cacheStrategy: '%$cacheStrategy%' })),
     expectedResult: and(equals(28, '%0/storeCount%'),
       contains('%$expectedVia%', { allText: join(',', { items: '%$biLogger.biLog.via%' }) }),
@@ -80,7 +80,7 @@ const cacheTaxiReport = Lambda('cacheTaxiReport', {
 const biTaxiColsCacheLocalTest = Component('biTaxiColsCacheLocalTest', {
   type: 'test<test>',
   impl: dataTest({
-    setup: setVars(({},{},{}) => ({ db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomUrl: 'signedRoom://testSignedRoom' })),
+    setup: setVars(({},{},{}) => ({ db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomWUrl: 'signedRoom://testSignedRoom' })),
     calculate: invokeSnippetInContext(cacheTaxiReport({ cacheStrategy: 'colsCache' })),
     expectedResult: and(equals(3066766, '%0/trips%'), equals(56327502, '%0/totalFare%'),
       contains('colsCache extension', { allText: join(',', { items: '%$biLogger.biLog.via%' }) }),
@@ -95,7 +95,7 @@ const biTaxiColsCacheLocalTest = Component('biTaxiColsCacheLocalTest', {
 const biTaxiColsCacheCloudTest = Component('biTaxiColsCacheCloudTest', {
   type: 'test<test>',
   impl: dataTest({
-    setup: setVars(asIs({ lambdaHost: 'https://staging.indivi.ai', roomUrl: 'signedRoom://testSignedRoom', onLiveRepo: false })),
+    setup: setVars(asIs({ lambdaHost: 'https://staging.indivi.ai', roomWUrl: 'signedRoom://testSignedRoom', onLiveRepo: false })),
     calculate: invokeSnippetInContext(cacheTaxiReport({ cacheStrategy: 'colsCache' })),
     expectedResult: and(equals(3066766, '%0/trips%'), equals(56327502, '%0/totalFare%'),
       contains('colsCache extension', { allText: join(',', { items: '%$biLogger.biLog.via%' }) }),

@@ -460,7 +460,7 @@ ReactComp('FinanceDemoDesktop', {
                   .catch((err) => ({ error: String(err?.message || err) })),
               ),
             )
-          } else res = await invokeSnippetInContext.$runWithCtx(ctx.setVars({ roomUrl: ctx.vars.roomUrl || `room://${FINANCE_ROOM}` }), runFinanceReportBatch({ entries }))
+          } else res = await invokeSnippetInContext.$runWithCtx(ctx.setVars({ roomWUrl: ctx.vars.roomWUrl || `room://${FINANCE_ROOM}` }), runFinanceReportBatch({ entries }))
           console.debug(`finance.batch ${WASM ? 'wasm' : 'lambda'} ${entries.length} entries ${Math.round(performance.now() - t0)}ms`)
           const error = res?.error || (Array.isArray(res) && res.find((r) => r?.error)?.error)
           return error ? queryError(error) : Array.isArray(res) ? res : []
@@ -765,7 +765,7 @@ ReactComp('FinanceDemoDesktop', {
           try {
             const wfres = WASM
               ? await dsls.workflow.workflow.financeAnalytics.$run().calcWorkflow(await Promise.resolve(wasmCtx(ctx.setVars(wfVars)).run(setupCube(demoFinanacialCubeV2()))))
-              : await ctx.setVars({ roomUrl: ctx.vars.roomUrl || `room://${FINANCE_ROOM}` }).run(invokeSnippetInContext(runFinanceAnalytics({ userMessage })))
+              : await ctx.setVars({ roomWUrl: ctx.vars.roomWUrl || `room://${FINANCE_ROOM}` }).run(invokeSnippetInContext(runFinanceAnalytics({ userMessage })))
             setMessages((m) => [...m, { role: 'assistant', ...askPayload(wfres, depth) }])
           } catch (e) {
             setMessages((m) => [...m, { role: 'assistant', text: 'Something went wrong: ' + String(e?.message || e) }])

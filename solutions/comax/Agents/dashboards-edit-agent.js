@@ -32,7 +32,7 @@ const readJs = async (url, ctx) => {
   return ''
 }
 const draftUrlOf = url => String(url).replace(/\.js(?:\?.*)?$/, '-draft.js')
-const manifestUrl = roomUrl => `${(roomUrl || 'signedRoom://comaxDemo').replace(/\/$/, '')}/dashboards/dashboard-draft`
+const manifestUrl = roomWUrl => `${(roomWUrl || 'signedRoom://comaxDemo').replace(/\/$/, '')}/dashboards/dashboard-draft`
 const uniqReports = xs => [...new Map(arr(xs).filter(r => r?.id).map(r => [r.id, r])).values()]
 const reportsOf = ctx => uniqReports(ctx.vars.reportsRegistry || data.verifiedReportsRegistry.$runWithCtx(ctx))
 const catalog = rs => reportsOf({ vars: { reportsRegistry: rs } }).map(r => ({ id: r.id, title: r.title, sections: arr(r.sections).map(s => ({ id: s.id, title: s.title, columns: s.fullData?.columns })) }))
@@ -113,7 +113,7 @@ export const createDashboardDraft = async (ctx, { id = 'dashboards.reportCanvas'
   const put = await wfetch2(draftUrl, { method: 'PUT', body: nextCode }, ctx)
   const res = put?.ok ? { text: `יצרתי טיוטה עם "${widget.title}". אפשר לשמור או לבטל.`, id, dashboardUrl, draftUrl, editedCode, code: nextCode, draftDashboard, widget, sql: planRows.sql, rowsCount: planRows.rowsCount, reportId: planRows.reportId }
     : { error: `failed saving dashboard draft: ${put?.status || ''} ${put?.statusText || ''}`.trim(), id, dashboardUrl }
-  if (!res.error) await wfetch2(manifestUrl(ctx.vars.roomUrl), { method: 'PUT', body: { title: 'Dashboards draft', dashboardUrl, draftUrl, widgetId: widget.id, updatedAt: Date.now() } }, ctx)
+  if (!res.error) await wfetch2(manifestUrl(ctx.vars.roomWUrl), { method: 'PUT', body: { title: 'Dashboards draft', dashboardUrl, draftUrl, widgetId: widget.id, updatedAt: Date.now() } }, ctx)
   workflowLogger?.workflowTrace?.push({ flowIndex, output: { ...res, code: undefined, editedCode: res.editedCode?.slice(0, 500) } })
   return res
 }
@@ -154,7 +154,7 @@ Workflow('dashboards-edit', {
   } })
 })
 
-Doclet('dashboardsEditAgent', { impl: `Dashboards edit agent. It receives userMessage, currentDashboard, currentReportId, reportsRegistry, reportsRoot, dashboardUrl and roomUrl. It plans a small dashboard edit with raw JSON-object planner output only, validates the SQL with duckDbSql against signedRoom://comaxDemo/usersRO/parquet/OEM_BI_4466, edits only one marked ReactComp block by id through editDashboardWIdget, and saves the result to a -draft.js file. The UI previews the draft; only the user's save action replaces dashboardUrl.` })
+Doclet('dashboardsEditAgent', { impl: `Dashboards edit agent. It receives userMessage, currentDashboard, currentReportId, reportsRegistry, reportsRoot, dashboardUrl and roomWUrl. It plans a small dashboard edit with raw JSON-object planner output only, validates the SQL with duckDbSql against signedRoom://comaxDemo/usersRO/parquet/OEM_BI_4466, edits only one marked ReactComp block by id through editDashboardWIdget, and saves the result to a -draft.js file. The UI previews the draft; only the user's save action replaces dashboardUrl.` })
 Doclet('comaxDashboardDataStructure', { impl: `Comax parquet root: signedRoom://comaxDemo/usersRO/parquet/OEM_BI_4466. Promotion master is Mivza.parquet with C, Nm, FromDate, ToDate, MivzaTypeNm, Cmt, Scm, K_AczDis, K_ScmDis, MinCmt. KupaDoc_Lines.MivzaNo joins Mivza.C. Mivza_Prt is only the promo-item bridge: MivzaC and PrtC. For raw promotion list widgets, query Mivza.parquet directly; for validated BI report slices, use runReport/queryReportFullData over the Reports catalog.` })
 Doclet('dashboardReactCompMicroEdits', { impl: `Dashboard JS files are self-contained modules with marked blocks: // dashboard-widget:start <id> ... // dashboard-widget:end <id>. editDashboardWIdget must return/edit only the marked ReactComp block for the passed id, never a whole dashboard module. For appended widgets, edit dashboards.reportCanvas and append generated VizWidget specs to dashboard.widgets. The draft file keeps code, widget spec and SQL together so the preview works without separate state.` })
 

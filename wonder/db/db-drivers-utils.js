@@ -16,13 +16,27 @@ const formatTimeWithRandom = () => {
 
 async function wresolve(url, _ctx, method = 'GET') {
   const dbLogger = _ctx.vars.dbLogger
-  const ctx = _ctx.setVars({ url, method, dbLogger, localhostServer: localhostServer(_ctx) })
-  const extracted = extractFromUrl(url, ctx)
+  let ctx = _ctx.setVars({ url, method, dbLogger, localhostServer: localhostServer(_ctx) })
+  const extracted = extractFromUrl(url, ctx), db = extracted.db || ctx.vars.db || 'gcs'
+  const backend = dsls.wonder['db-backend'][db.replace(/-/g, '')]?.$runWithCtx(ctx)
+  if (backend?.enrichCtx) ctx = await backend.enrichCtx(ctx)
   const { fileName } = extracted
   const ext = (url.endsWith('/') || fileName?.includes('.')) ? '' : '.json'
   const path = await calcPath(ctx, extracted) + ext
   const driver = await jb.wonderUtils.getDBDriver(url, ctx)
   return driver?.filePathUrl(ctx.setVars({ ...extracted, path }))
+}
+
+async function resolveWUrl(roomId, ctx) {
+  if (/^\w+:(?:[^/]*)\/\//.test(roomId)) return roomId.replace(/\/$/, '')
+  const exists = async url => {
+    const res = await jb.wonderUtils.wfetch2(url, { method: 'HEAD' }, ctx)
+    if (res.status === 404) return false
+    if (!res.ok) throw new Error(`resolveWUrl failed: ${res.status} ${url}`)
+    return true
+  }
+  return await exists(`protected://${roomId}/admin/room-iam-policy.json`) ? `protected://${roomId}`
+    : await exists(`signedRoom://${roomId}/admin/users.json`) ? `signedRoom://${roomId}` : `room://${roomId}`
 }
 
 async function wresolveInfo(url, _ctx, method = 'GET') {
@@ -71,8 +85,8 @@ const { wcachePopulate } = jb.wonderUtils
 }
 
 async function saveRoomBigLog2(ctx, id = formatTimeWithRandom()) {
-  if (!ctx.vars.roomBigLogLogger2 || !ctx.vars.roomUrl) return
-  const wUrl = `${ctx.vars.roomUrl}/admin/bigLogs/${id}.json`
+  if (!ctx.vars.roomBigLogLogger2 || !ctx.vars.roomWUrl) return
+  const wUrl = `${ctx.vars.roomWUrl}/admin/bigLogs/${id}.json`
   const res = await jb.wonderUtils.wfetch2(wUrl, { method: 'PUT', body: coreUtils.harvestBigLog(ctx) }, ctx)
   return res.ok && wUrl
 }
@@ -108,7 +122,7 @@ async function calcPath(ctx, { scope, roomId, userId, fileName, db }) {
   const userPrivatePath = isLocal ? userId : (myRooms?.private || userId)
 
   const ctxForPath = ctx.setVars({ userPrivatePath, userId, roomId, fileName })
-  const roomsPrefix = isLocal && (scope.id == 'room' || scope.id == 'signedRoom') ? 'rooms' : ''
+  const roomsPrefix = isLocal && ['room', 'signedRoom', 'protected'].includes(scope.id) ? 'rooms' : ''
   const fetchPath = scope.fetchPath.length > 0 ? scope.fetchPath : scope.path
   const path = [roomsPrefix, scope.folderInBucket, ...fetchPath.map(v => ctxForPath.vars[v])].filter(x => x).join('/')
   return path
@@ -121,7 +135,6 @@ function extractFromUrl(url, ctx) {
     return dbLogger?.error?.({ t: 'extractFromUrl invalid url' }, { url }, { ctx })
 
   const dbMatch = /^([^/]+)\/\/(.+)/.exec(rest)
-  const db = dbMatch ? dbMatch[1] : ctx.vars.db
   const pathAndQuery = dbMatch ? dbMatch[2] : rest.replace(/^\/\//, '')
   const parsed = new URL(`http://dummy/${pathAndQuery}`)
   const pathParts = parsed.pathname.slice(1).split('/')
@@ -131,6 +144,7 @@ function extractFromUrl(url, ctx) {
   if (!scope)
     return dbLogger?.error?.({ t: `extractFromUrl invalid scope ${scopeId}` }, { url }, { ctx })
   scope.id = scopeId
+  const db = dbMatch ? dbMatch[1] : ctx.vars.db || scope.db
 
   const args = {}
   const path = scope.path
@@ -285,7 +299,7 @@ const rawFileUtils = (text, binary) => {
 const wcachePath = (bucketName, path) => `${wcacheRoot()}/${bucketName}/${path}`
 
 Object.assign(jb.wonderUtils, { formatDay, formatTimeWithRandom, wresolve, wresolveInfo, wcachePopulate,
-  saveRoomBigLog2, prefetchSignedUrls, getIdToken, getAccessToken,
+  saveRoomBigLog2, prefetchSignedUrls, resolveWUrl, getIdToken, getAccessToken,
   storagePrefix, wonderBucketName, successResult, errorResultByException, notFoundResult,
   calcPath, extractFromUrl, wonderRepoRoot, bustCdnCache, paginateGcsList, gcsStorage,
   getCachedSignedUrl, isLocalFile, rawFileUtils, wcachePath })

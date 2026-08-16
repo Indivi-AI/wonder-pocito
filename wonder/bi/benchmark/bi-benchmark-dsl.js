@@ -159,18 +159,18 @@ QueryEnvironment('localFs', {
 
 QueryEnvironment('cloud', {
   params: [
-    { id: 'roomUrl', as: 'string', defaultValue: '%$roomUrl%' },
+    { id: 'roomWUrl', as: 'string', defaultValue: '%$roomWUrl%' },
     { id: 'lambdaHost', as: 'string', defaultValue: '%$lambdaHost%' }
   ],
   impl: QueryEnvironment.queryEnvironment({
     prepare: async (ctx, { queryCase }) => {
-      const roomUrl = ctx.exp('%$roomUrl%'), lambdaHost = ctx.exp('%$lambdaHost%') || 'https://staging.indivi.ai'
+      const roomWUrl = ctx.exp('%$roomWUrl%'), lambdaHost = ctx.exp('%$lambdaHost%') || 'https://staging.indivi.ai'
       const queryCaseProfile = coreUtils.tgpProfileToJson(queryCase.profile)
       let cold
       return {
         clearCache: () => { cold = true },
         async run() {
-          const result = await invokeSnippetInContext.$runWithCtx(ctx.setVars({ roomUrl, lambdaHost }),
+          const result = await invokeSnippetInContext.$runWithCtx(ctx.setVars({ roomWUrl, lambdaHost }),
             biBenchmarkRunner(queryCaseProfile, cold), { pack: roomLambda() })
           cold = false
           if (!result || result.error) return { error: result?.error || 'cloud benchmark request failed' }
