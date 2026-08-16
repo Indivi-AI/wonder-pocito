@@ -156,10 +156,15 @@ DbBackend('amazon', {
 })
 
 DbBackend('minio', {
-  impl: dbBackend({ categories: ['bucket', 's3', 'minio'], enrichCtx: [
-    Var('bucketEndpoint', 'http://127.0.0.1:9000'), Var('bucketRegion', 'us-east-1'),
-    Var('bucketAccessKeyId', 'wonder'), Var('bucketSecretAccessKey', 'wonder-minio-local')
-  ] })
+  impl: dbBackend({
+    categories: ['bucket','s3','minio'],
+    enrichCtx: [
+      Var('bucketEndpoint', 'http://127.0.0.1:9000'),
+      Var('bucketRegion', 'us-east-1'),
+      Var('bucketAccessKeyId', 'wonder'),
+      Var('bucketSecretAccessKey', 'wonder-minio-local')
+    ]
+  })
 })
 
 DbBackend('fs', { impl: dbBackend({ categories: ['fs'] }) })
@@ -851,6 +856,7 @@ DbDriver('bucket.google.public', {
     authMethod: authMethod.none(),
     get: wget.viaBucketApi(),
     put: wput.viaBucketApi(),
+    append: wappend.getAndPut(),
     head: whead.viaBucketApi(),
     list: wlist.viaGoogleBucketApi(),
     filePathUrl: '%$bucketEndpoint%/%$bucketName%/%$path%'
