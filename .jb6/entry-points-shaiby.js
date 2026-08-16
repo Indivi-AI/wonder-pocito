@@ -1,5 +1,6 @@
 import '@wonder/ai/category-dsl-tests.js'
 import '@wonder/ai/verified-report-tests.js'
+import '@wonder/bi/tests/bi-tests.js'
 import '@wonder/db/db-drivers-tests.js'
 import '@wonder/db/signed-room-db-driver-tests.js'
 import '@wonder/db/etl/etl-tests.js'

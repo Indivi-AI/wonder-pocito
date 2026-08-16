@@ -188,13 +188,15 @@ export async function uploadLambdaCompDependencies(entryPath) {
 
   const baseDir = await coreUtils.calcRepoRoot()
   const dbCtx = new coreUtils.Ctx().setVars({ db: 'gcs' })
-  // Version identity = the git sha. Clean tree → deterministic `<gitSha>` (same sha ⇒ same tar ⇒ reuse).
+  // Version identity = git sha + entry path. Clean tree → deterministic reuse per package entry.
   // Dirty tree → `MMDD-HHMM-<gitSha>-<rand>` so every uncommitted change rebuilds. Computed first to allow early reuse.
   const gitSha = execSync('git rev-parse --short HEAD', { encoding: 'utf8', cwd: baseDir }).trim()
+  const entryHash = (await import('crypto')).createHash('sha1').update(entryPath).digest('hex').slice(0, 6)
   const isDirty = execSync('git status --porcelain', { encoding: 'utf8', cwd: baseDir }).trim().length > 0
   const d = new Date()
   const datePart = `${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`
-  const lambdaV = isDirty ? `${datePart}-${gitSha}-${Math.random().toString(36).slice(2, 8)}` : gitSha
+  const dirtySuffix = Math.random().toString(36).slice(2, 8)
+  const lambdaV = isDirty ? `${datePart}-${gitSha}-${entryHash}-${dirtySuffix}` : `${gitSha}-${entryHash}`
   const runtimeBase = `/tmp/code/${lambdaV}`
   if (!isDirty) {   // rebuild-on-change: clean sha already uploaded ⇒ skip esbuild/stage/tar/PUT
     const head = await wfetch2(`codePackages://lambdas/${lambdaV}.tar.gz`, { method: 'HEAD' }, dbCtx).catch(() => null)
