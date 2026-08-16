@@ -11,10 +11,14 @@
   <script type="module">
     const query = name => new URLSearchParams(location.search).get(name)
     const { coreUtils } = await import('@jb6/core')
+    await import('@jb6/lang-service')
     const { runTests } = await import('@jb6/testing')
     const { browserSpy } = await import('@jb6/core/utils/browser-spy.js')
 
-    await import(query('modulePath') || '/tests/all-tests.js')
+    const { staticMappings } = JSON.parse(document.querySelector('[type="importmap"]').textContent)
+    const developerEntryPoint = await coreUtils.resolveDeveloperEntryPoint()
+    const mapping = staticMappings.find(({ diskPath }) => developerEntryPoint.startsWith(diskPath))
+    await import(query('modulePath') || developerEntryPoint.replace(mapping.diskPath, mapping.urlPath))
     browserSpy.initSpyByUrl()
     const automation = query('automation')
     await runTests({

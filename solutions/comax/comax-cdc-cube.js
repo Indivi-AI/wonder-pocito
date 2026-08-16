@@ -1,7 +1,7 @@
 import { dsls, jb } from '@jb6/core'
 import '@jb6/common'
-import '@wonder-admin/bi/bi-common.js'
-import '@wonder-admin/bi/materialization.js'
+import '@wonder/bi/bi-common.js'
+import '@wonder/bi/materialization.js'
 
 const {
   tgp: { TgpType },

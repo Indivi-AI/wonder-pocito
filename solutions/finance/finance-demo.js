@@ -40,7 +40,7 @@ Object.assign(jb.coreRegistry.urlReservedParams, { logo: true })
 // room-aware: served as /room/<id>/applet/FinanceDemo the data+lambdas resolve in that room, so the demo can be published into any room that holds copies (e.g. the deck room)
 const FINANCE_ROOM = globalThis.location?.pathname?.match(/\/room\/([^/]+)/)?.[1] || 'finance3'
 const WASM = new URLSearchParams(globalThis.location?.search || '').get('engine') != 'lambda'
-const wasmCtx = (ctx) => ctx.setVars({ dbCategories: { ...(ctx.vars.dbCategories || {}), gcshttpblockedbycors: true } })
+const wasmCtx = ctx => ctx.setVars({ categories: { ...ctx.vars.categories, gcshttpblockedbycors: true } })
 
 // Brand accents for the shared viz kit: orange leads (money-in), slate for money-out.
 Object.assign(jb.vizTheme, { palette: ['#FF4800', '#334155', '#1FA971', '#E8A317', '#7C3AED', '#0891B2'], accent: '#FF4800', fontFamily: "'Inter', system-ui, sans-serif" })

@@ -114,9 +114,9 @@ DbDriver('FS.browser', {
     whenAndWhyToUse: `in general we prefer our local file system db (saved in git) to be used when we develop.
       it allows us to manage the db content in an easier way and allow the llm to look at the db content`,
     designConcerns: 'The local express server supports GCS compatible GET and PUT methods to write under {REPO_ROOT}/files/',
-    get: wget.viaGcsHttpApi(),
-    put: wput.viaGcsHttpApi(),
-    append: wappend.getAndPutNoCheck({ get: wget.viaGcsHttpApi(), put: wput.viaGcsHttpApi() }),
+    get: wget.viaBucketApi(),
+    put: wput.viaBucketApi(),
+    append: wappend.getAndPutNoCheck({ get: wget.viaBucketApi(), put: wput.viaBucketApi() }),
     filePathUrl: '%$localhostServer%/files/%$path%'
   })
 })
@@ -134,12 +134,12 @@ DbDriver('FS.node', {
 
 DbDriver('GCS.browser.liveRepo', {
   impl: dbDriver({
-    whenAndWhyToUse: 'in general we prefer our local file system db (saved in git) to be used when we develop. however, sometimes we want to see our users data and use GCS as the DB',
+    whenAndWhyToUse: 'Use GCS user data during development instead of the preferred local git-backed files.',
     designConcerns: 'security issues. our developers needs to know the roomId',
-    get: wget.viaGcsHttpApi(),
-    put: wput.viaGcsHttpApi(),
-    list: wlist.viaGcsHttpApi(),
-    append: wappend.getAndPutNoCheck({ get: wget.viaGcsHttpApi(), put: wput.viaGcsHttpApi() }),
+    get: wget.viaBucketApi(),
+    put: wput.viaBucketApi(),
+    append: wappend.getAndPutNoCheck({ get: wget.viaBucketApi(), put: wput.viaBucketApi() }),
+    list: wlist.viaGoogleBucketApi(),
     filePathUrl: (ctx,{path, bucketName}) => `${storagePrefix}/${bucketName}/${path}`
   })
 })
@@ -148,10 +148,10 @@ DbDriver('GCS.node.gcpIdentity.liveRepo', {
   impl: dbDriver({
     whenAndWhyToUse: 'faster than GCS SDK when testing from local machine outside GCP. uses HTTP for GET/PUT, SDK for POST/PATCH generation locking',
     designConcerns: 'SDK is slow outside GCP for simple operations (933ms vs 183ms HTTP). Use HTTP for GET/PUT, SDK for POST/PATCH atomic operations',
-    get: wget.viaGcsHttpApi(),
-    put: wput.viaGcsHttpApi(),
+    get: wget.viaBucketApi(),
+    put: wput.viaBucketApi(),
     append: wappend.GcsJSApiWithGenerationCheck(),
-    head: whead.viaGcsHttpApi(),
+    head: whead.viaBucketApi(),
     storageApi: true,
     filePathUrl: (ctx,{path, bucketName}) => `${storagePrefix}/${bucketName}/${path}`
   })
@@ -161,9 +161,9 @@ DbDriver('fsmem.browser.liveRepo', {
   impl: dbDriver({
     whenAndWhyToUse: 'when running tests, we do not want the test to write to the file system db, but we do want to allow it to read from it',
     designConcerns: 'in test run, any writes should be written to memory (under ctx.vars.testSessionId) and when read later should be served from there. no mix between tests',
-    get: wget.wrapWithMem(wget.viaGcsHttpApi()),
+    get: wget.wrapWithMem(wget.viaBucketApi()),
     put: wput.intoMem(),
-    append: wappend.getAndPutNoCheck({ get: wget.wrapWithMem(wget.viaGcsHttpApi()), put: wput.intoMem() }),
+    append: wappend.getAndPutNoCheck({ get: wget.wrapWithMem(wget.viaBucketApi()), put: wput.intoMem() }),
     filePathUrl: '%$localhostServer%/files/%$path%'
   })
 })
@@ -260,7 +260,7 @@ DbDriver('GCS.browser.liveRepo.logs', {
     whenAndWhyToUse: 'For accessing logs bucket using gsutil CLI tool, ideal for server environments with gsutil installed',
     designConcerns: 'Uses gsutil cat command for direct access to logs bucket, handles both JSON and raw text files',
     get: wget.viaGsUtil(),
-    put: wput.viaGcsHttpApi(),
+    put: wput.viaBucketApi(),
     append: wappend.GcsJSApiWithGenerationCheck(),
     list: wlist.viaRunBash(),
     filePathUrl: (ctx, { path, bucketName }) => `${storagePrefix}/${bucketName}/${path}`

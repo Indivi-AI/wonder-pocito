@@ -9,7 +9,7 @@ const encode = (text) => {
 }
 
 const isIOSWebView = navigator.userAgent === "wonder-ios"
-const isLocalHost = ['localhost', '127.0.0.1', '::1'].includes(location.hostname) || location.hostname.startsWith('192.168')
+const isLocalHost = location.hostname === 'localhost' || location.hostname.startsWith('192.168')
 const lambdaServerBase = location.origin
 
 const authConfig = 
@@ -18,7 +18,7 @@ const authConfig =
       redirectUri: 'com.googleusercontent.apps.365199207445-n99rrv6nma73vpk4t1vvv3t9otauq98s:/oauth2redirect' // iOS custom URL scheme
   } : isLocalHost ? {
       clientId: '365199207445-q87kjft2o40ird0hv5r0r9vs8l7bvund.apps.googleusercontent.com',
-      redirectUri: `${location.origin}/oauth2redirect`
+      redirectUri: 'http://localhost:3000/wonder.html'
   } : {
       clientId: '365199207445-f9hqa8n0u6s7dpssq86n4ncqm3ef676v.apps.googleusercontent.com',
       redirectUri: window.location.origin

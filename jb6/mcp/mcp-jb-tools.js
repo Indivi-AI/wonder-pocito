@@ -38,7 +38,7 @@ its comps and tests. details: files|comps|all-comps-with-params|full`,
   ],
   impl: mcpTool(async (ctx, {}, {dsl, details}) => {
     await import('@jb6/lang-service')
-    return coreUtils.scanDsl({dsl, details, ctx})
+    return coreUtils.scanDsl({dsl, details, entryPointPaths: await coreUtils.resolveDeveloperEntryPoint(ctx), ctx})
   })
 })
 
@@ -51,7 +51,7 @@ Tool('sourceCodeOfComp', {
     await import('@jb6/lang-service')
     const repoRoot = await coreUtils.calcRepoRoot()
     const { staticMappings } = await coreUtils.calcImportData({forRepo: repoRoot})
-    const tgpModel = await coreUtils.calcTgpModelData({forRepo: repoRoot})
+    const tgpModel = await coreUtils.calcTgpModelData({entryPointPaths: await coreUtils.resolveDeveloperEntryPoint(ctx)})
     const loc = coreUtils.compByFullId(cmpFullId, tgpModel)?.$location
     if (!loc) return `comp not found: ${cmpFullId}`
     const src = await coreUtils.fetchByEnv(loc.path, staticMappings)
@@ -73,7 +73,7 @@ Tool('formatAndValidateTgpComp', {
     try {
       await import('@jb6/lang-service')
       const repoRoot = await coreUtils.calcRepoRoot()
-      const tgpModel = await coreUtils.calcTgpModelData({forRepo: repoRoot}, logCtx)
+      const tgpModel = await coreUtils.calcTgpModelData({entryPointPaths: await coreUtils.resolveDeveloperEntryPoint(logCtx)}, logCtx)
       const comp = coreUtils.compByFullId(fullCompId, tgpModel)
       if (!comp?.$location) throw new Error(`fullCompId '${fullCompId}' not found`)
       const {readFile, writeFile} = await import('fs/promises')
@@ -109,7 +109,8 @@ Tool('safeEditTgpComp', {
   impl: mcpTool(async (ctx, {}, {compText, fullCompId, location, existingCompText}) => {
     try {
       await import('@jb6/lang-service')
-      const repoRoot = await coreUtils.calcRepoRoot(), tgpModel = await coreUtils.calcTgpModelData({forRepo: repoRoot}, ctx)
+      const repoRoot = await coreUtils.calcRepoRoot()
+      const tgpModel = await coreUtils.calcTgpModelData({entryPointPaths: await coreUtils.resolveDeveloperEntryPoint(ctx)}, ctx)
       const newLocation = location && {path: location}, current = fullCompId && coreUtils.compByFullId(fullCompId, tgpModel)
       const {comp, compId, compDef, error} = jb.langServiceUtils.calcProfileActionMap(compText, {tgpModel, filePath: newLocation?.path, ctx})
       if (!comp || error || comp.syntaxError) throw new Error(error?.syntaxError || error || comp?.syntaxError || 'Invalid TGP component')
@@ -145,7 +146,7 @@ Use tgpModel tool to discover available components.`,
       try {
         await import('@jb6/lang-service')
         const forDsls = macroText.match(/^[^<]+<([^>]+)>/)?.[1] || 'common'
-        const tgpModel = await coreUtils.calcTgpModelData({forRepo: await coreUtils.calcRepoRoot(), forDsls })
+        const tgpModel = await coreUtils.calcTgpModelData({entryPointPaths: await coreUtils.resolveDeveloperEntryPoint(ctx), forDsls })
         if (tgpModel.error) return `Error: ${tgpModel.error}`
         const result = coreUtils.macroToJson(macroText, tgpModel)
         return result.error ? `Error: ${result.error}` : JSON.stringify(result, null, 2)

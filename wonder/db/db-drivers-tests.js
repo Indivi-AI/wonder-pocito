@@ -9,12 +9,10 @@ import './db-drivers-testers.js'
 
 const {
   common: { 
-    boolean: { equals }
+    boolean: { equals }, data: { asIs }
   },
   test: { Test,
-    test: { dataTest, dbDriverAppendTest, dbDriverPatchTest, dbDriverPutGetTest, publicRoomCountTest,
-      signedRoomPutGetTest, signedRoomAppendTest, signedRoomPermissionsTest, signedRoomGooglePermissionsTest,
-      signedRoomUsersRWTest, signedRoomMediaPutGetTest, signedRoomSigningTest, signedRoomListTest, signedRoomTrailingSlashGetTest }
+    test: { dataTest, dbDriverAppendTest, dbDriverPatchTest, dbDriverPutGetTest, publicRoomCountTest }
   }
 } = dsls
 
@@ -35,6 +33,85 @@ Test('dbDriverTests.gcs.node.localhost.putGet', {
 
 Test('dbDriverTests.gcs.browser.localhost.putGet', {
   impl: dbDriverPutGetTest('room:gcs//buyPhone/items?user=Buyer', 'browser-localhost')
+})
+
+Test('dbDriverTests.minio.driverSelection', {
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: async ctx => ({ result: (await getDBDriver('room:minio//testRoom/item.json', ctx))?.id,
+      ...coreUtils.harvestLogs(ctx) }),
+    expectedResult: equals('%result%', 'bucket.minio'),
+    logger: 'dbLogger'
+  })
+})
+
+Test('dbDriverTests.minio.putGet', {
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: async (ctx, { testSessionId }) => {
+      const url = `room:minio//testRoom/tests/${testSessionId}/put-get.json`, content = { value: 42 }
+      await wfetch2(url, { method: 'PUT', body: content }, ctx)
+      return { result: await (await wfetch2(url, { method: 'GET' }, ctx)).json(), ...coreUtils.harvestLogs(ctx) }
+    },
+    expectedResult: equals('%result%', asIs({ value: 42 })),
+    logger: 'dbLogger'
+  })
+})
+
+Test('dbDriverTests.minio.append', {
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: async (ctx, { testSessionId }) => {
+      const url = `room:minio//testRoom/tests/${testSessionId}/append.json`
+      await wfetch2(url, { method: 'PUT', body: [{ id: 1 }] }, ctx)
+      await wfetch2(url, { method: 'POST', body: [{ id: 2 }] }, ctx)
+      return { result: await (await wfetch2(url, { method: 'GET' }, ctx)).json(), ...coreUtils.harvestLogs(ctx) }
+    },
+    expectedResult: equals('%result%', [{id: 1}, {id: 2}]),
+    logger: 'dbLogger'
+  })
+})
+
+Test('dbDriverTests.minio.patch', {
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: async (ctx, { testSessionId }) => {
+      const url = `room:minio//testRoom/tests/${testSessionId}/patch.json`
+      await wfetch2(url, { method: 'PUT', body: { a: 1 } }, ctx)
+      await wfetch2(url, { method: 'PATCH', body: { b: 2 } }, ctx)
+      return { result: await (await wfetch2(url, { method: 'GET' }, ctx)).json(), ...coreUtils.harvestLogs(ctx) }
+    },
+    expectedResult: equals('%result%', asIs({ a: 1, b: 2 })),
+    logger: 'dbLogger'
+  })
+})
+
+Test('dbDriverTests.minio.head', {
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: async (ctx, { testSessionId }) => {
+      const url = `room:minio//testRoom/tests/${testSessionId}/head.json`
+      await wfetch2(url, { method: 'PUT', body: { value: 42 } }, ctx)
+      const res = await wfetch2(url, { method: 'HEAD' }, ctx)
+      return { result: { status: res.status, size: Number(res.headers.get('content-length')) > 0 }, ...coreUtils.harvestLogs(ctx) }
+    },
+    expectedResult: equals('%result%', asIs({ status: 200, size: true })),
+    logger: 'dbLogger'
+  })
+})
+
+Test('dbDriverTests.minio.list', {
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: async (ctx, { testSessionId }) => {
+      const dir = `room:minio//testRoom/tests/${testSessionId}/list/`
+      await Promise.all(['a', 'b'].map(name => wfetch2(`${dir}${name}.json`, { method: 'PUT', body: { name } }, ctx)))
+      const items = await (await wfetch2(dir, { method: 'GET' }, ctx)).json()
+      return { result: items.map(item => item.name.split('/').at(-1)).sort(), ...coreUtils.harvestLogs(ctx) }
+    },
+    expectedResult: equals('%result%', ['a.json','b.json']),
+    logger: 'dbLogger'
+  })
 })
 
 // fs-mem: in-memory (no disk write), fast, per-test isolated — kept for quick round-trip coverage
@@ -131,16 +208,6 @@ Test('dbDriverTests.jqPath', {
     timeout: 10000
   })
 })
-
-Test('dbDriverTests.signedRoom.liveRepo.mediaPutGet', { nodeOnly: true, impl: signedRoomMediaPutGetTest('staging') })
-Test('dbDriverTests.signedRoom.liveRepo.signing', { nodeOnly: true, impl: signedRoomSigningTest() })
-Test('dbDriverTests.signedRoom.liveRepo.permissions', { nodeOnly: true, impl: signedRoomPermissionsTest('staging') })
-Test('dbDriverTests.signedRoom.liveRepo.googlePermissions', { nodeOnly: true, impl: signedRoomGooglePermissionsTest('staging') })
-Test('dbDriverTests.signedRoom.liveRepo.putGet', { nodeOnly: true, impl: signedRoomPutGetTest('staging') })
-Test('dbDriverTests.signedRoom.liveRepo.append', { nodeOnly: true, impl: signedRoomAppendTest('staging') })
-Test('dbDriverTests.signedRoom.liveRepo.usersRW', { nodeOnly: true, impl: signedRoomUsersRWTest('staging') })
-Test('dbDriverTests.signedRoom.liveRepo.list', { nodeOnly: true, impl: signedRoomListTest('staging') })
-Test('dbDriverTests.signedRoom.liveRepo.trailingSlashGet', { nodeOnly: true, impl: signedRoomTrailingSlashGetTest('staging') })
 
 Test('dbDriverTests.gcs.node.noIdentity.publicRead', {
   nodeOnly: true,
@@ -299,21 +366,19 @@ Test('dbDriverTests.driverSelection', {
     calculate: async (ctx) => {
 
       const scenarios = [
-        { name: 'browser-prod-gcs', vars: {dbHost: 'browser', forceGCS: true}, url: 'room:gcs//buyPhone/items?user=Buyer', expected: 'GCS.browser' },
+        { name: 'browser-prod-gcs', vars: {dbHost: 'browser', forceGCS: true}, url: 'room:gcs//buyPhone/items?user=Buyer', expected: 'bucket.google.public' },
         { name: 'browser-liveRepo-fs', vars: {dbHost: 'browser', onLiveRepo: true}, url: 'room:fs//buyPhone/items?user=Buyer', expected: 'FS.browser' },
-        { name: 'browser-liveRepo-gcs', vars: {dbHost: 'browser', onLiveRepo: true}, url: 'room:gcs//buyPhone/items?user=Buyer', expected: 'GCS.browser.liveRepo' },
+        { name: 'browser-liveRepo-gcs', vars: {dbHost: 'browser', onLiveRepo: true}, url: 'room:gcs//buyPhone/items?user=Buyer', expected: 'bucket.google.public' },
         { name: 'browser-gcsHTTPBlockedByCORS-liveRepo', vars: {dbHost: 'browser', onLiveRepo: true,
-          dbCategories: {gcshttpblockedbycors: true}}, url: 'room:gcs//buyPhone/items?user=Buyer', expected: 'GCS.browser.gcsHTTPBlockedByCORS' },
+          categories: {gcshttpblockedbycors: true}}, url: 'room:gcs//buyPhone/items?user=Buyer', expected: 'GCS.browser.gcsHTTPBlockedByCORS' },
         { name: 'browser-gcsHTTPBlockedByCORS-prod', vars: {dbHost: 'browser', forceGCS: true,
-          dbCategories: {gcshttpblockedbycors: true}}, url: 'room:gcs//buyPhone/items?user=Buyer', expected: 'GCS.browser.gcsHTTPBlockedByCORS' },
+          categories: {gcshttpblockedbycors: true}}, url: 'room:gcs//buyPhone/items?user=Buyer', expected: 'GCS.browser.gcsHTTPBlockedByCORS' },
         { name: 'browser-liveRepo-fsmem', vars: {dbHost: 'browser', onLiveRepo: true, db: 'fs-mem'},
           url: 'room:fs-mem//buyPhone/items?user=Buyer', expected: 'fsmem.browser.liveRepo' },
         { name: 'browser-forceGCS-overrides-fsmem', vars: {dbHost: 'browser', forceGCS: true, db: 'fs-mem'},
-          url: 'room:fs-mem//buyPhone/items?user=Buyer', expected: 'GCS.browser' },
+          url: 'room:fs-mem//buyPhone/items?user=Buyer', expected: 'bucket.google.public' },
         { name: 'db-wcache-bypasses-scoring', vars: {dbHost: 'node', onLiveRepo: true, db: 'wcache'}, url: 'room://buyPhone/items', expected: 'wcache' },
         { name: 'browser-liveRepo-logs', vars: {dbHost: 'browser', onLiveRepo: true}, url: 'logs:gcs//wfLog/log1', expected: 'GCS.browser.liveRepo.logs' },
-        { name: 'browser-liveRepo-signedRoom', vars: {dbHost: 'browser', onLiveRepo: true}, url: 'signedRoom://testRoom/usersRW/test', expected: 'signedRoom' },
-        { name: 'browser-prod-signedRoom', vars: {dbHost: 'browser', forceGCS: true}, url: 'signedRoom://testRoom/usersRW/test', expected: 'signedRoom' },
         { name: 'node-prod-noIdentity-public', vars: {dbHost: 'node', forceGCS: true, hasGcpIdentity: false}, url: 'room:gcs//x/y?user=u', expected: 'GCS.node.publicGCS' },
         { name: 'node-prod-noIdentity-logs', vars: {dbHost: 'node', forceGCS: true, hasGcpIdentity: false}, url: 'logs:gcs//x/y', expected: null },
         { name: 'node-prod-noIdentity-analytics', vars: {dbHost: 'node', forceGCS: true, hasGcpIdentity: false}, url: 'analytics:gcs//x/y', expected: null },

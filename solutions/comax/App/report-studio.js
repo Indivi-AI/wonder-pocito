@@ -14,7 +14,7 @@ const {
 } = dsls
 
 const REPORT_ID = 'promotions', RC_ID = 'promotionReportPanel'
-const DEPTHS = ['executiveSummary', 'summary', 'inDepth'], URLS = '@wonder-admin/comax/demo/Reports/index.js'
+const DEPTHS = ['executiveSummary', 'summary', 'inDepth'], URLS = '@solution/comax/Reports/index.js'
 const defaultRoot = () => globalThis.process?.versions?.node ? new URL('../Data/parquet/OEM_BI_4466', import.meta.url).pathname
   : new URL('../../../../files/rooms/comaxDemo/usersRO/parquet/OEM_BI_4466', import.meta.url).pathname
 const clone = x => structuredClone(x), roomFile = (roomUrl, file) => `${roomUrl}/report-studio/${file}`
@@ -108,7 +108,7 @@ ReactComp('reportStudio', {
     },
     enrichCtx: async ctx => {
       const roomUrl = ctx.vars.roomUrl || 'signedRoom://comaxDemo', root = ctx.vars.reportsRoot || defaultRoot()
-      ctx = !globalThis.process?.versions?.node ? ctx.setVars({ dbCategories: { ...(ctx.vars.dbCategories || {}), gcshttpblockedbycors: true } }) : ctx
+      ctx = !globalThis.process?.versions?.node ? ctx.setVars({ categories: { ...ctx.vars.categories, gcshttpblockedbycors: true } }) : ctx
       const base = verifiedReportsRegistry.$runWithCtx(ctx).find(r => r.id == REPORT_ID)
       return ctx.setVars({ initialReport: await loadSavedReport(roomUrl, ctx) || clone(base), roomUrl, reportsRoot: root })
     },

@@ -589,11 +589,12 @@ function collectImported(file, importGraph, imported, visited) {
   }
 }
 
-async function scanDsl({dsl, details = 'comps', repoRoot, ctx}) {
+async function scanDsl({dsl, details = 'comps', repoRoot, entryPointPaths, ctx}) {
   repoRoot = repoRoot || await calcRepoRoot()
   const short = p => p.replace(repoRoot + '/', '')
   const wanted = new Set((Array.isArray(dsl) ? dsl : (dsl||'').split(',')).map(d => d.trim()).filter(Boolean))
-  const tgpModel = await calcTgpModelData({forRepo: repoRoot})
+  const modelResources = entryPointPaths ? {entryPointPaths} : {forRepo: repoRoot}
+  const tgpModel = await calcTgpModelData(modelResources)
   if (tgpModel.error) return tgpModel.error
 
   // moreTypes registers a comp in extra type buckets, so scans show it without a synthetic type.
@@ -623,7 +624,7 @@ async function scanDsl({dsl, details = 'comps', repoRoot, ctx}) {
     const full = dt.includes('<') ? dt : `${dt}<${c.dsl}>`
     ;(usedBy[full] ||= []).push(`${c.type}<${c.dsl}>${c.id}~params~${p.id}`)
   }))
-  const { staticMappings, importMap } = await calcImportData({forRepo: repoRoot})
+  const { staticMappings, importMap } = await calcImportData(modelResources)
   const locRank = dt => { const l = typeLoc[dt]; return l ? `${l.path}:${String(l.line).padStart(6,'0')}` : '~' }
   const orderedTypes = unique(tgpTypes).sort((a, b) => locRank(a) < locRank(b) ? -1 : 1)   // TgpType/modifier source-file order
   ctx?.vars?.langServiceLogger?.info?.({ t: 'scanDsl', dsl, details,

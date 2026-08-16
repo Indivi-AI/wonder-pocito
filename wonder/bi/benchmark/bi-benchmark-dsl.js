@@ -103,7 +103,7 @@ QueryEnvironment('wasm', {
   impl: QueryEnvironment.queryEnvironment({
     cores: 4,
     prepare: async (ctx, { queryCase }) => {
-      const wasmCtx = ctx.setVars({ dbCategories: { ...ctx.vars.dbCategories, gcshttpblockedbycors: true } })
+      const wasmCtx = ctx.setVars({ categories: { ...ctx.vars.categories, gcshttpblockedbycors: true } })
       let cold
       return {
         clearCache: () => { cold = true },

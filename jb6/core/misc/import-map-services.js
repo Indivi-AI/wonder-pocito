@@ -188,8 +188,9 @@ try {
   const importMapData = await getStaticConfig(repoRoot, pkgJson, {})
   if (importMapData.error) return createErrorResult(importMapData.error, validEntryPoints, pkgJson)
 
-  const projectPkgJson = await packageJson(projectDir || repoRoot)
-  const discoveredFiles = await discoverFiles(importMapData.staticMappings, projectPkgJson, {projectDir: projectDir || repoRoot, maxDepth: 10})
+  const discoveredFiles = forRepo
+    ? await discoverFiles(importMapData.staticMappings, await packageJson(projectDir || repoRoot), {projectDir: projectDir || repoRoot})
+    : {testFiles: [], llmGuideFiles: []}
   
   return jb.importMapCache.fileContext[cacheKey] = { repoRoot, projectDir, ...importMapData, ...discoveredFiles, entryFiles: validEntryPoints, 
     repoRootName: pkgJson.name }
@@ -260,7 +261,7 @@ async function getStaticConfig(repoRoot, pkgJson) {
 }
 
 async function normalizeToValidEntryPoints({entryPointPaths, forDsls}) {
-  const dslEntryPoints = forDsls ? await discoverDslEntryPoints(forDsls) : []
+  const dslEntryPoints = !entryPointPaths && forDsls ? await discoverDslEntryPoints(forDsls) : []
   const entryPoints = [...asArray(entryPointPaths),...dslEntryPoints]
 
   const { stat } = await import('fs/promises')

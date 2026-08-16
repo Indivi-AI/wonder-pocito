@@ -187,7 +187,7 @@ const runStages = async (addStage, log) => {
     sql: q, ccUrls: { [BIG]: BIG }, cacheId: `${runId}-s4`, cleanupUrls: [BIG]
   }, r => !r.faults && r.hits > 0, addStage, log)
   const W = 'room://testPublicRoom/usersRO/stores.parquet'
-  const gcs = await wresolve(W, new coreUtils.Ctx().setVars({ dbCategories: { gcshttpblockedbycors: true } }))
+  const gcs = await wresolve(W, new coreUtils.Ctx().setVars({ categories: { gcshttpblockedbycors: true } }))
   await stage('5 — stream from GCS', {
     sql: `select count(*) storeCount from cols_cache(['${W}'])`, ccUrls: { [W]: gcs },
     cacheId: `${runId}-s5`, cleanupUrls: [W]

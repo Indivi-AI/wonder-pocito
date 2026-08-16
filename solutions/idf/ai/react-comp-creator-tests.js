@@ -1,6 +1,6 @@
 import { jb, dsls } from '@jb6/core'
 import '@jb6/testing'
-import '@wonder-admin/agents/app/chat-ui.js'
+import '@solution/idf/chat-ui.js'
 import '@wonder-admin/agents/react-comp-creator/react-comp-creator.js'
 
 const {

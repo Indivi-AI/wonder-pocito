@@ -1,7 +1,7 @@
 import { dsls, coreUtils, jb } from '@jb6/core'
 import '@wonder/db/db-drivers.js'
 
-const { wfetch2, wresolve, getAccessToken, storage } = jb.wonderUtils
+const { wfetch2, wresolve, getAccessToken } = jb.wonderUtils
 import '@jb6/common'
 import '@jb6/mcp'
 import '@jb6/react'
@@ -27,11 +27,9 @@ export const exportedTools = ['runWorkflow', 'biglogContent', 'listBiglogs', 'Bi
 Tool('wFetch', {
   description: 'read db-driver.js . wUrl = <scheme>://<roomId>/<dir>/<file>?user=<id>; room:// public, signedRoom:// protected (dirs admin/ usersRO/ usersRW/)',
   params: [
-    {id: 'url', as: 'string', asIs: true, mandatory: true,
-      description: 'e.g. room://aTeam/assets.json · signedRoom://schematics/usersRW/cube.json?user=me · room://aTeam/ (list) · append ?jq=<enc> to slice json'},
+    {id: 'url', as: 'string', asIs: true, mandatory: true, description: 'e.g. room://aTeam/assets.json · signedRoom://schematics/usersRW/cube.json?user=me · room://aTeam/ (list) · append ?jq=<enc> to slice json'},
     {id: 'method', as: 'string', defaultValue: 'GET', options: 'GET,PUT,POST,PATCH,HEAD'},
-    {id: 'body', asIs: true, description: 'JSON object/array. PUT replaces file, POST appends, PATCH merges. '
-      + 'With header x-wonder-body:localFile, body is instead a server file path to stream.'},
+    {id: 'body', asIs: true, description: 'JSON object/array. PUT replaces file, POST appends, PATCH merges. With header x-wonder-body:localFile, body is instead a server file path to stream.'},
     {id: 'headers', asIs: true, description: 'JSON object of extra headers. {"x-wonder-body":"localFile"} streams the file at `body` path (for binary: parquet/jpg/mp4).'},
     {id: 'logger', as: 'string', defaultValue: 'dbLogger', description: 'comma-separated loggers to harvest; result returns {result, ...logs}'},
   ],
@@ -42,12 +40,8 @@ Tool('wFetch', {
         const asObj = (v, name) => {
           if (v == null || typeof v === 'object') return v
           if (typeof v !== 'string') throw new Error(`wFetch '${name}' must be a JSON object or JSON string, got ${typeof v}. Read the '${name}' param description.`)
-          if (v.includes('[object Object]')) throw new Error(`wFetch '${name}' got the string "[object Object]": an object was stringified upstream. `
-            + `FIX: pass '${name}' as a JSON object, e.g. {"x-wonder-body":"localFile"}. Read the '${name}' param description.`)
-          try { return JSON.parse(v) } catch {
-            throw new Error(`wFetch '${name}' is not valid JSON: ${v.slice(0,80)}. `
-              + `FIX: pass a JSON object or a valid JSON string. Read the '${name}' param description.`)
-          }
+          if (v.includes('[object Object]')) throw new Error(`wFetch '${name}' got the string "[object Object]": an object was stringified upstream. FIX: pass '${name}' as a JSON object, e.g. {"x-wonder-body":"localFile"}. Read the '${name}' param description.`)
+          try { return JSON.parse(v) } catch { throw new Error(`wFetch '${name}' is not valid JSON: ${v.slice(0,80)}. FIX: pass a JSON object or a valid JSON string. Read the '${name}' param description.`) }
         }
         const hdrs = asObj(headers, 'headers')
         const rawBody = hdrs?.['x-wonder-body'] === 'localFile' ? body : asObj(body, 'body')
@@ -108,6 +102,7 @@ export async function uploadCompDependencies(urlsToLoad, onVersion) {
   const path = await import('path')
   const fsp = await import('fs/promises')
   const esbuild = await import('esbuild')
+  const { Pool } = await import('undici')
   timer.phase('imports')
 
   const baseDir = await coreUtils.calcRepoRoot()
@@ -151,40 +146,28 @@ export async function uploadCompDependencies(urlsToLoad, onVersion) {
   timer.phase('esbuildGraph')
 
   const inputs = [...new Set([...Object.keys(result.metafile.inputs), ...assets])]
-    // React lib is already mapped to jb6-cdn; other relative-imported lib files must travel.
-    .filter(f => !f.includes('node_modules') && f !== '<stdin>' && !/(^|\/)jb6\/react\/lib\//.test(f))
+    .filter(f => !f.includes('node_modules') && f !== '<stdin>' && !/(^|\/)jb6\/react\/lib\//.test(f))   // React lib is already mapped to jb6-cdn; other relative-imported lib files must travel
   // Repository paths already match the browser snapshot layout.
   const relForUpload = f => f
 
   const d = new Date()
-  // Share snapshot id; UI library assets resolve through the server's CDN import map.
-  const appletV = `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}-${Math.random().toString(36).slice(2,6)}`
+  const appletV = `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}-${Math.random().toString(36).slice(2,6)}`   // share snapshot id; UI library assets resolve through the server's CDN import map
   timer.phase('versions')
+  const resolved = await wresolve(`codePackages://shared/${appletV}/${relForUpload(inputs[0])}`, dbCtx, 'PUT')
+  const [, bucket, prefix] = resolved.match(/storage\.googleapis\.com\/([^/]+)\/(.*)$/)   // prefix = shared/<appletV>/<rel[0]>
+  const gcsPrefix = prefix.slice(0, prefix.length - relForUpload(inputs[0]).length)        // strip rel[0] → shared/<appletV>/
+  const token = await getAccessToken(dbCtx, { method: 'PUT' })
+  const auth = { authorization: `Bearer ${token}` }
   const ctypeOf = f => /\.mjs$|\.js$/.test(f) ? 'text/javascript' : /\.wasm$/.test(f) ? 'application/wasm'
     : /\.css$/.test(f) ? 'text/css' : /\.json$/.test(f) ? 'application/json' : 'application/octet-stream'
   const bodies = await Promise.all(inputs.map(f => fsp.readFile(path.resolve(baseDir, f))))
-  if (process.env.STORAGE_PROVIDER === 'minio') {
-    const bucket = (await storage(dbCtx)).bucket(CDN_BUCKET)
-    await Promise.all([onVersion?.({ appletV, dbCtx }), ...inputs.map((f, i) => bucket.file(`shared/${appletV}/${relForUpload(f)}`)
-      .save(bodies[i], { contentType: ctypeOf(f) }))])
-  } else {
-    const resolved = await wresolve(`codePackages://shared/${appletV}/${relForUpload(inputs[0])}`, dbCtx, 'PUT')
-    const [, bucket, prefix] = resolved.match(/storage\.googleapis\.com\/([^/]+)\/(.*)$/)
-    const gcsPrefix = prefix.slice(0, prefix.length - relForUpload(inputs[0]).length)
-    const token = await getAccessToken(dbCtx, { method: 'PUT' })
-    const { Pool } = await import('undici')
-    const pool = new Pool('https://storage.googleapis.com', {
-      connections: inputs.length + 1, pipelining: 1, keepAliveTimeout: 60000
-    })
-    const put = async (f, body) => {
-      const r = await pool.request({ method: 'PUT', path: `/${bucket}/${encodeURI(gcsPrefix + relForUpload(f))}`,
-        headers: { authorization: `Bearer ${token}`, 'content-type': ctypeOf(f) }, body })
-      await r.body.dump()
-      if (r.statusCode >= 400) throw new Error(`PUT ${relForUpload(f)} → ${r.statusCode}`)
-    }
-    try { await Promise.all([onVersion?.({ appletV, dbCtx }), ...inputs.map((f, i) => put(f, bodies[i]))]) }
-    finally { await pool.close() }
+  const pool = new Pool('https://storage.googleapis.com', { connections: inputs.length + 1, pipelining: 1, keepAliveTimeout: 60000 })
+  const put = async (f, body) => {
+    const r = await pool.request({ method: 'PUT', path: `/${bucket}/${encodeURI(gcsPrefix + relForUpload(f))}`, headers: { ...auth, 'content-type': ctypeOf(f) }, body })
+    await r.body.dump()
+    if (r.statusCode >= 400) throw new Error(`PUT ${relForUpload(f)} → ${r.statusCode}`)
   }
+  try { await Promise.all([onVersion?.({ appletV, dbCtx }), ...inputs.map((f, i) => put(f, bodies[i]))]) } finally { await pool.close() }
   timer.phase('upload')
 
   return { appletV, fileCount: inputs.length, uploadMs: timer.totalMs, timeline: timer.timeline }
@@ -199,6 +182,7 @@ export async function uploadLambdaCompDependencies(entryPath) {
   const fsp = await import('fs/promises')
   const esbuild = await import('esbuild')
   const { execSync } = await import('child_process')
+  const { Pool } = await import('undici')
   const tar = await import('tar')
   timer.phase('imports')
 
@@ -209,20 +193,17 @@ export async function uploadLambdaCompDependencies(entryPath) {
   const gitSha = execSync('git rev-parse --short HEAD', { encoding: 'utf8', cwd: baseDir }).trim()
   const isDirty = execSync('git status --porcelain', { encoding: 'utf8', cwd: baseDir }).trim().length > 0
   const d = new Date()
-  const datePart = `${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`
-    + `-${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`
+  const datePart = `${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`
   const lambdaV = isDirty ? `${datePart}-${gitSha}-${Math.random().toString(36).slice(2, 8)}` : gitSha
   const runtimeBase = `/tmp/code/${lambdaV}`
   if (!isDirty) {   // rebuild-on-change: clean sha already uploaded ⇒ skip esbuild/stage/tar/PUT
     const head = await wfetch2(`codePackages://lambdas/${lambdaV}.tar.gz`, { method: 'HEAD' }, dbCtx).catch(() => null)
     timer.phase('reuseCheck')
-    if (head?.ok) return { lambdaV, reused: true, gitSha, isDirty, runtimeBase, uploadMs: timer.totalMs, timeline: timer.timeline,
-      description: `version ${gitSha} built ${head.headers?.get('last-modified') || 'unknown date'}` }
+    if (head?.ok) return { lambdaV, reused: true, gitSha, isDirty, runtimeBase, uploadMs: timer.totalMs, timeline: timer.timeline, description: `version ${gitSha} built ${head.headers?.get('last-modified') || 'unknown date'}` }
   }
 
   const pkg = JSON.parse(await fsp.readFile(path.join(baseDir, 'package.json'), 'utf8'))
-  const nodeBuiltins = ['fs', 'fs/promises', 'path', 'url', 'util', 'crypto', 'child_process', 'zlib', 'stream', 'events',
-    'http', 'https', 'net', 'os', 'tls', 'querystring', 'buffer', 'v8']
+  const nodeBuiltins = ['fs', 'fs/promises', 'path', 'url', 'util', 'crypto', 'child_process', 'zlib', 'stream', 'events', 'http', 'https', 'net', 'os', 'tls', 'querystring', 'buffer', 'v8']
   const externals = [...Object.keys(pkg.dependencies || {}), ...Object.keys(pkg.devDependencies || {}),
     ...nodeBuiltins, ...nodeBuiltins.map(n => 'node:' + n)]
 
@@ -235,8 +216,7 @@ export async function uploadLambdaCompDependencies(entryPath) {
     stdin: { contents: `import '${absEntry}'\nimport '@jb6/core/misc/jb-remote.js'`, resolveDir: baseDir },
     bundle: true, write: false, metafile: true, format: 'esm', platform: 'node',
     external: externals,
-    // Graph-discovery only: node_modules are runtime deps. Avoid bundler-only CJS/ESM interop failures.
-    packages: 'external',
+    packages: 'external',   // graph-discovery only: never resolve INTO node_modules (they're runtime deps, filtered out below). avoids bundler-only CJS/ESM interop fails (e.g. @tailwindcss/node → enhanced-resolve)
     alias: Object.fromEntries(Object.entries(repoScopes).map(([scope, dir]) => [scope, path.join(baseDir, dir)])),
     logLevel: 'silent',
     plugins: [{
@@ -335,21 +315,16 @@ register('./loader.mjs', import.meta.url)
   })
   timer.phase('tarGzip')
 
-  if (process.env.STORAGE_PROVIDER === 'minio')
-    await (await storage(dbCtx)).bucket(CDN_BUCKET).file(`lambdas/${lambdaV}.tar.gz`).save(tarBuffer, { contentType: 'application/gzip' })
-  else {
-    const resolved = await wresolve(`codePackages://lambdas/${lambdaV}.tar.gz`, dbCtx, 'PUT')
-    const [, bucket, key] = resolved.match(/storage\.googleapis\.com\/([^/]+)\/(.*)$/)
-    const token = await getAccessToken(dbCtx, { method: 'PUT' })
-    const { Pool } = await import('undici')
-    const pool = new Pool('https://storage.googleapis.com', { keepAliveTimeout: 60000 })
-    try {
-      const r = await pool.request({ method: 'PUT', path: `/${bucket}/${encodeURI(key)}`,
-        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/gzip' }, body: tarBuffer })
-      await r.body.dump()
-      if (r.statusCode >= 400) throw new Error(`PUT ${lambdaV}.tar.gz → ${r.statusCode}`)
-    } finally { await pool.close() }
-  }
+  // direct-to-GCS PUT of the tar (same fast path as the applet upload) — resolve bucket/key, mint write token, one keep-alive Pool.
+  const resolved = await wresolve(`codePackages://lambdas/${lambdaV}.tar.gz`, dbCtx, 'PUT')
+  const [, bucket, key] = resolved.match(/storage\.googleapis\.com\/([^/]+)\/(.*)$/)
+  const token = await getAccessToken(dbCtx, { method: 'PUT' })
+  const pool = new Pool('https://storage.googleapis.com', { keepAliveTimeout: 60000 })
+  try {
+    const r = await pool.request({ method: 'PUT', path: `/${bucket}/${encodeURI(key)}`, headers: { authorization: `Bearer ${token}`, 'content-type': 'application/gzip' }, body: tarBuffer })
+    await r.body.dump()
+    if (r.statusCode >= 400) throw new Error(`PUT ${lambdaV}.tar.gz → ${r.statusCode}`)
+  } finally { await pool.close() }
   await fsp.rm(stageRoot, { recursive: true, force: true })
   timer.phase('upload')
 
@@ -382,9 +357,7 @@ await coreUtils.writeServiceResult(await uploadLambdaCompDependencies(${JSON.str
 })
 
 Tool('uploadRoomLambda', {
-  description: 'Publish a registered comp as a room lambda: upload its node closure, then write '
-    + '<roomId>/lambdas/<name>.json = {lambdaV, entryCompFullId}. name = comp id. '
-    + 'The runner builds {$:entryCompFullId, ...userVars} at call time. Invoke via POST /run-room-lambda/<roomId>/<name>.',
+  description: 'Publish a registered comp as a room lambda: upload its node closure, then write <roomId>/lambdas/<name>.json = {lambdaV, entryCompFullId}. name = comp id. The runner builds {$:entryCompFullId, ...userVars} at call time. Invoke via POST /run-room-lambda/<roomId>/<name>.',
   params: [
     {id: 'lambdaId', as: 'string' },
     {id: 'roomId', as: 'string', description: 'protected room id, e.g. schematics'},
@@ -400,13 +373,11 @@ try {
 const { lambdaV, fileCount, tarBytes, importGraph, uploadMs, timeline } = await uploadLambdaCompDependencies(${JSON.stringify(entryPath)})
 const [dir] = coreUtils.getCompField('data<common>${lambdaId}', 'permissionByPath')   // the dir the lambda reads
 const def = { lambdaV, entryCompFullId: 'data<common>${lambdaId}', dir }   // the lambdas/<lambdaId>.json the gate reads
-const { storage } = await import('@wonder/db/storage.js')
-await (await storage(null, { native: true })).bucket('indiviai-wonder').file(\`${roomId}/lambdas/${lambdaId}.json\`)
-  .save(JSON.stringify(def), { contentType: 'application/json' })
+const { Storage } = await import('@google-cloud/storage')
+await new Storage().bucket('indiviai-wonder').file(\`${roomId}/lambdas/${lambdaId}.json\`).save(JSON.stringify(def), { contentType: 'application/json' })
 await coreUtils.writeServiceResult({ lambdaId: ${JSON.stringify(lambdaId)}, defPath: \`room://${roomId}/lambdas/${lambdaId}.json\`, def,
   fileCount, tarBytes, importGraph, uploadMs, timeline })
-} catch (e) { await coreUtils.writeServiceResult({ error: e.stack || String(e), lambdaId: ${JSON.stringify(lambdaId)},
-  roomId: ${JSON.stringify(roomId)}, entryPath: ${JSON.stringify(entryPath)} }) }`
+} catch (e) { await coreUtils.writeServiceResult({ error: e.stack || String(e), lambdaId: ${JSON.stringify(lambdaId)}, roomId: ${JSON.stringify(roomId)}, entryPath: ${JSON.stringify(entryPath)} }) }`
     await coreUtils.calcJb6RepoRootAndImportMapsInCli()
     const { result, error } = await coreUtils.runCliInContext(script, { importMapsInCli: jb.coreRegistry.importMapsInCli })
     if (error || result?.error) return JSON.stringify({ error: result?.error || error, stderr: result?.stderr, textToParse: result?.textToParse, lambdaId, roomId, entryPath })
@@ -415,9 +386,7 @@ await coreUtils.writeServiceResult({ lambdaId: ${JSON.stringify(lambdaId)}, defP
 })
 
 Tool('uploadRoomApplet', {
-  description: 'Publish a react comp as a room applet (browser twin of uploadRoomLambda): bundle the comp closure to CDN, then write '
-    + '<roomId>/applets/<name>.json = {cmpId, urlsToLoad, appletV, entryCompFullId}. name = comp id. '
-    + 'Entry URL: /room/<roomId>/applet/<name> (same for public & signed rooms).',
+  description: 'Publish a react comp as a room applet (browser twin of uploadRoomLambda): bundle the comp closure to CDN, then write <roomId>/applets/<name>.json = {cmpId, urlsToLoad, appletV, entryCompFullId}. name = comp id. Entry URL: /room/<roomId>/applet/<name> (same for public & signed rooms).',
   params: [
     {id: 'roomId', as: 'string', description: 'room id, e.g. demoRoom'},
     {id: 'entryPath', as: 'string', description: 'module path that defines the comp, e.g. @solution/...'},
@@ -435,20 +404,19 @@ import { coreUtils } from '@jb6/core'
 import ${JSON.stringify(entryPath)}
 try {
   const cmpId = coreUtils.compByFullId(${JSON.stringify(entryCompFullId)}).id
-  const { storage } = await import('@wonder/db/storage.js')
+  const { Storage } = await import('@google-cloud/storage')
   const path = await import('path'), fsp = await import('fs/promises')
-  const bucket = (await storage(null, { native: true })).bucket('indiviai-wonder')
-  const localImage = ${JSON.stringify(ogImageLocalPath)}, imageName = localImage && path.basename(localImage)
-  const imageUrl = imageName && encodeURI(\`\${process.env.MINIO_PUBLIC_ENDPOINT || 'https://storage.googleapis.com'}/indiviai-wonder/${roomId}/applets/\${cmpId}/\${imageName}\`)
+  const bucket = new Storage().bucket('indiviai-wonder'), localImage = ${JSON.stringify(ogImageLocalPath)}, imageName = localImage && path.basename(localImage)
+  const imageUrl = imageName && encodeURI(\`https://storage.googleapis.com/indiviai-wonder/${roomId}/applets/\${cmpId}/\${imageName}\`)
   const og = Object.fromEntries(Object.entries({ ogTitle: ${JSON.stringify(ogTitle)}, ogDescription: ${JSON.stringify(ogDescription)},
     ogImage: imageUrl || ${JSON.stringify(ogImage)} }).filter(([, v]) => v))
   const imageType = imageName && \`image/\${path.extname(imageName).slice(1).replace('jpg', 'jpeg').replace('svg', 'svg+xml')}\`
   const imageUpload = imageName && fsp.readFile(localImage)
-    .then(body => bucket.file(\`${roomId}/applets/\${cmpId}/\${imageName}\`).save(body, { contentType: imageType, resumable: false }))
+    .then(body => bucket.file(\`${roomId}/applets/\${cmpId}/\${imageName}\`).save(body, { contentType: imageType }))
   // def-write runs in parallel with the file uploads (it only needs appletV, already known)
   const writeDef = ({ appletV }) => Promise.all([imageUpload, bucket.file(\`${roomId}/applets/\${cmpId}.json\`)
     .save(JSON.stringify({ cmpId, urlsToLoad: ${JSON.stringify(entryPath)}, appletV,
-      entryCompFullId: ${JSON.stringify(entryCompFullId)}, ...(Object.keys(og).length && { og }) }), { contentType: 'application/json', resumable: false })])
+      entryCompFullId: ${JSON.stringify(entryCompFullId)}, ...(Object.keys(og).length && { og }) }), { contentType: 'application/json' })])
   const { appletV, fileCount, uploadMs, timeline } = await uploadCompDependencies(${JSON.stringify(entryPath)}, writeDef)
   await coreUtils.writeServiceResult({ appletV, cmpId, fileCount, uploadMs, timeline, imageUrl,
     defPath: \`room://${roomId}/applets/\${cmpId}.json\` })
@@ -464,15 +432,9 @@ try {
 // recover a lambda's entryPath from its published tar: parse the root index.js (`import '<entryPath>'`).
 export async function lambdaEntryPath(lambdaV) {
   const zlib = await import('zlib')
-  let tarBuffer
-  if (process.env.STORAGE_PROVIDER === 'minio')
-    tarBuffer = (await (await storage(null)).bucket(CDN_BUCKET).file(`lambdas/${lambdaV}.tar.gz`).download())[0]
-  else {
-    const r = await fetch(`https://storage.googleapis.com/${CDN_BUCKET}/lambdas/${lambdaV}.tar.gz`)
-    if (!r.ok) throw new Error(`tar fetch ${lambdaV} → ${r.status}`)
-    tarBuffer = Buffer.from(await r.arrayBuffer())
-  }
-  const raw = zlib.gunzipSync(tarBuffer)
+  const r = await fetch(`https://storage.googleapis.com/${CDN_BUCKET}/lambdas/${lambdaV}.tar.gz`)
+  if (!r.ok) throw new Error(`tar fetch ${lambdaV} → ${r.status}`)
+  const raw = zlib.gunzipSync(Buffer.from(await r.arrayBuffer()))
   for (let off = 0; off + 512 <= raw.length; ) {
     const name = raw.toString('utf8', off, off + 100).replace(/\0.*/, '')
     if (!name) break
@@ -483,9 +445,7 @@ export async function lambdaEntryPath(lambdaV) {
 }
 
 Tool('updateLambdasAndApplets', {
-  description: "Refresh every lambda + applet in a room to the current source. Per lambda: recover its entryPath from the published tar's "
-    + 'index.js, rebuild (git-sha reused if clean) → repoint lambdas/<name>.json. '
-    + 'Per applet: rebundle its urlsToLoad → repoint applets/<name>.json.',
+  description: "Refresh every lambda + applet in a room to the current source. Per lambda: recover its entryPath from the published tar's index.js, rebuild (git-sha reused if clean) → repoint lambdas/<name>.json. Per applet: rebundle its urlsToLoad → repoint applets/<name>.json.",
   params: [
     {id: 'roomId', as: 'string', mandatory: true, description: 'room id, e.g. demoRoom'}
   ],
@@ -494,13 +454,11 @@ Tool('updateLambdasAndApplets', {
 import { uploadLambdaCompDependencies, uploadCompDependencies, lambdaEntryPath } from '@wonder/studio/mcp-tools/wonder-mcp-tools.js'
 import { coreUtils } from '@jb6/core'
 try {
-const { storage } = await import('@wonder/db/storage.js')
-const bucket = (await storage(null, { native: true })).bucket('indiviai-wonder')
+const { Storage } = await import('@google-cloud/storage')
+const bucket = new Storage().bucket('indiviai-wonder')
 const defsIn = async dir => {
   const [files] = await bucket.getFiles({ prefix: \`${roomId}/\${dir}/\` })
-  return Promise.all(files.filter(f => f.name.endsWith('.json')).map(async f => ({
-    name: f.name.split('/').pop().replace('.json',''), file: f, def: JSON.parse((await f.download())[0].toString())
-  })))
+  return Promise.all(files.filter(f => f.name.endsWith('.json')).map(async f => ({ name: f.name.split('/').pop().replace('.json',''), file: f, def: JSON.parse((await f.download())[0].toString()) })))
 }
 const save = (f, obj) => f.save(JSON.stringify(obj), { contentType: 'application/json' })
 

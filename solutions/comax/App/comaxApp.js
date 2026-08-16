@@ -12,7 +12,7 @@ import '../Agents/agents-repo.js'   // Data('comaxAnalyticsAgents') — the sele
 import '@wonder/bi/viz/viz-index.js'   // VizWidget + all inline chart widgets the assistant can emit
 =======
 import '@wonder/applets/applet.js'
-import '@wonder-admin/room/room-lambda-client.js'   // roomLambda db-driver-interceptor - routes the <roomUrl>/lambda/<name> POSTs of the remote duckDbSql hook
+import '@wonder/db/room/room-lambda-client.js'   // roomLambda db-driver-interceptor - routes the <roomUrl>/lambda/<name> POSTs of the remote duckDbSql hook
 import '../comax-v2-agent.js'
 import '../Agents/agents-repo.js'   // Data('comaxAnalyticsAgents') — the selectable-agents repo
 import '@wonder/ui/viz/viz-index.js'   // VizWidget + all inline chart widgets the assistant can emit

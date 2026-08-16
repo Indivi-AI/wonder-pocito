@@ -1,6 +1,6 @@
 import { jb, dsls } from '@jb6/core'
 import '@jb6/testing'
-import '@wonder-admin/idf/idf-deck-host.js'
+import '@solution/idf/idf-deck-host.js'
 
 const {
   tgp: { Component, 'ctx-enricher': { Var } },

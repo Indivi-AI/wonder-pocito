@@ -4,9 +4,9 @@
 import { dsls, jb } from '@jb6/core'
 import '@wonder/ai/llm-flow-main-workflow.js'
 import '@jb6/llm-guide'
-import '@wonder-admin/comax2/comax-cube.js'   // comaxSalesCube semantic layer + setupComax binding
+import '@solution/comax2/comax-cube.js'   // comaxSalesCube semantic layer + setupComax binding
 import '../Doclets/viz-doclets.js'            // the vizWidgets booklet — reused as-is
-import '@wonder-admin/room/room-lambda-client.js'   // runner deps + permissionByPath field, must be in the lambda closure
+import '@wonder/db/room/room-lambda-client.js'   // runner deps + permissionByPath field, must be in the lambda closure
 
 const {
   tgp: { Component, 'ctx-enricher': { setupCube, setupComax } },
