@@ -79,7 +79,7 @@ In impl code, loggers are accessed via `ctx.vars`. Usage example, `assetLogger?.
 When running a test, always set relevant loggers, and check the log results. checking success status is not enough.
 When debugging with runTest/runTgpSnippet, set loggers, you can add xxLogger?.info and run in cycles.
 Common loggers: dbLogger, uiLogger, roomLogger. most dsls suggest their own logger.
-Your test must be imported via public/tests/all-tests.js
+Your test must be imported via .jb6/entry-points-{name}.js
 if you crash, add try catch and logException
 if you want to have bigLogs in a separate file use `roomBigLogLogger2` just as another logger. you will get the saved bigLog wUrl/path in the result, just make sure
 
@@ -99,12 +99,12 @@ db/db-drivers.js
 read admin/room/room-tests.js
 use mcp wFetch(wUrl) to work directly with the data
 aTeam crm example:
-wFetch({ url: 'room://r49btbgtzw/contacts.json?jq=[.[] | {company: .Company, contact: .["Main Contact"], funnel: .Funnel, chance: (.["Chance 1-10"] | tonumber)}] | sort_by(-.chance) | .[0:5]' })
+wFetch({ wUrl: 'room://r49btbgtzw/contacts.json?jq=[.[] | {company: .Company, contact: .["Main Contact"], funnel: .Funnel, chance: (.["Chance 1-10"] | tonumber)}] | sort_by(-.chance) | .[0:5]' })
 
 ### applets - ui of the room
 - `/room/:roomId/applet/:appletName` —  same URL for locahost, public rooms & signed rooms
 localhost:3000/room/:roomId/applet/:appletId
-https://staging.indivi.ai/room/:roomId/applet/:appletId
+https://w-staging.indivi.ai/room/:roomId/applet/:appletId
 
 room-applet-tests.js
 
