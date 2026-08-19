@@ -29,12 +29,13 @@ async function wresolve(url, _ctx, method = 'GET') {
 
 async function wresolveInfo(url, _ctx, method = 'GET') {
   if (!/^\w+:\/\//.test(url))
-    return { url, db: null, fullyResolvedUrl: url, resolved: url, isWUrl: false, isLocal: true }   // bare disk path (csv/parquet) — not a wUrl, read as-is
-  const db = extractFromUrl(url, _ctx)?.db ?? _ctx.vars.db ?? 'bucket'
+    return { url, db: null, fullyResolvedWUrl: url, rangeUrl: url, resolved: url, isWUrl: false, isLocal: true }   // bare disk path (csv/parquet) — not a wUrl, read as-is
+  const db = extractFromUrl(url, _ctx)?.db ?? _ctx.vars.db ?? 'gcs'
   const resolved = await wresolve(url, _ctx, method)
-  const fullyResolvedUrl = url.replace(/^(\w+):[^/]*\/\//, `$1:${db}//`)
+  const fullyResolvedWUrl = url.replace(/^(\w+):[^/]*\/\//, `$1:${db}//`)
   const isLocal = resolved != null && !/^https?:\/\//.test(resolved)   // wresolve returns a directly-readable path (fs or repo-relative mirror) for local; an https url for remote
-  return { url, db, fullyResolvedUrl, resolved, isWUrl: resolved != null, isLocal, needsWcache: resolved != null && !isLocal }
+  return { url, db, fullyResolvedWUrl, rangeUrl: coreUtils.isNode ? resolved : fullyResolvedWUrl,
+    resolved, isWUrl: resolved != null, isLocal, needsWcache: resolved != null && !isLocal }
 }
 
 async function wcachePopulate(wUrl, _ctx, { validate = false } = {}) {

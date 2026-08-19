@@ -261,12 +261,12 @@ const browserRangeUrl = url => {
   const parsed = !coreUtils.isNode && url.startsWith('https://storage.googleapis.com/') && new URL(url)
   return parsed ? `${location.origin}/gcs-proxy/${parsed.pathname.slice(1)}${parsed.search}` : url
 }
-// C++ uses fullyResolvedUrl; browser hooks map it to a browser-fetchable URL.
+// Browser hooks map the canonical range URL to a browser-fetchable URL.
 function colsCacheFrom(infos, table = 'cols_cache') {
   const arr = Array.isArray(infos) ? infos : [infos]
   const urls = biUtils.colsCacheUrls ||= {}
-  arr.forEach(i => { if (i.resolved && /^https?:\/\//.test(i.resolved)) urls[i.fullyResolvedUrl] = browserRangeUrl(i.resolved) })
-  return `${table}([${arr.map(i => quoteLiteral(i.fullyResolvedUrl)).join(',')}])`
+  arr.forEach(i => { if (i.resolved && /^https?:\/\//.test(i.resolved)) urls[i.fullyResolvedWUrl] = browserRangeUrl(i.resolved) })
+  return `${table}([${arr.map(i => quoteLiteral(i.rangeUrl)).join(',')}])`
 }
 
 async function runDuckdb(sql, ctx) { return runDuckdbSqlByHost(sql, ctx, { as: 'rows' }) }

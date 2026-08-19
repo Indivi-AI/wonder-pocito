@@ -22,8 +22,8 @@ function createLoggerStreamAdapter({ctx, bindLoggers}) {
     let envelope
     try { envelope = JSON.parse(line) } catch {}
     if (envelope?.kind !== 'log') return ctx?.vars?.cliLineLogger?.info?.({t: 'cli line', stream, line}, {}, {ctx})
-    const channel = ctx?.vars?.[envelope.logger]?.[envelope.channel]
-    if (typeof channel === 'function') channel(envelope.event, {}, {ctx})
+    const logger = ctx?.vars?.[envelope.logger], channel = logger?.[envelope.channel]
+    if (typeof channel === 'function') channel.call(logger, envelope.event, {}, {ctx})
   }
   const accept = ({stream, text}) => {
     if (!text) return

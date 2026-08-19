@@ -18,7 +18,7 @@ import '@wonder/db/db-drivers.js'
 const { wresolve } = jb.wonderUtils
 const { ensureLoggers } = coreUtils
 
-const ctx = ensureLoggers(process.argv[2] || 'colsCacheLogger', { wrapToStderr: true })   // cpp passes the active-logger list as argv → ctx.vars.<name>Logger, wrapped to stderr
+const ctx = ensureLoggers(process.argv[2] || 'colsCacheLogger')
 const emit = o => process.stdout.write(JSON.stringify(o) + '\n')
 const httpsUrl = new Map() // wUrl -> resolved public https url (resolved once)
 
@@ -92,7 +92,9 @@ process.stdin.on('data', d => {
     const line = buf.slice(0, nl); buf = buf.slice(nl + 1)
     if (!line.trim()) continue
     const req = JSON.parse(line)
-    ;(req.cmd === 'tail' ? onTail(req) : onFetch(req)).catch(e =>
-      emit({ id: req.id, ok: false, error: e.stack || String(e) }))
+    ;(req.cmd === 'tail' ? onTail(req) : onFetch(req)).catch(e => {
+      ctx.vars.colsCacheLogger.error({ t: 'range request failed', cmd: req.cmd, wUrl: req.wUrl }, {}, { ctx, error: e })
+      emit({ id: req.id, ok: false, error: e.stack || String(e) })
+    })
   }
 })

@@ -154,10 +154,10 @@ Test('roomLambdaTest.remoteCall.byValue', {
   impl: dataTest({
     calculate: invokeSnippetInContext(accountSummary('%$accountDetails%')),
     expectedResult: and(equals(30, '%%'), '%$roomLogger.roomLog.packedBytes% > 300'),
-    setup: setVars(asIs({
-        lambdaHost: 'https://w-staging.indivi.ai',
-        roomWUrl: 'room://testPublicRoom',
-        accountDetails: {$: 'Array.from'}
+    setup: setVars(() => ({
+      lambdaHost: 'https://w-staging.indivi.ai',
+      roomWUrl: 'room://testPublicRoom',
+      accountDetails: Array.from({ length: 30 }, (_, i) => ({ amount: i }))
     })),
     timeout: 12000,
     logger: 'roomLogger'
@@ -329,7 +329,7 @@ Test('roomLambdaTest.cubeQuery.signedParquet', {
   impl: dataTest(invokeSnippetInContext(storeCount()), equals(28, '%0/storeCount%'), {
     setup: enrichCtx(
       testUser(),
-      setVars(asIs({lambdaHost: 'http://localhost:3000', roomWUrl: 'signedRoom://testSignedRoom', onLiveRepo: true}))
+      setVars(asIs({lambdaHost: 'https://w-staging.indivi.ai', roomWUrl: 'signedRoom://testSignedRoom'}))
     ),
     timeout: 5000,
     logger: 'roomLogger,biLogger,colsCacheLogger'

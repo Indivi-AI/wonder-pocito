@@ -16,7 +16,7 @@ const duckdbAggFuncs = new Set('any_value,approx_count_distinct,approx_quantile,
 const span = coreUtils.biSpan = Symbol.for('bi-span')
 
 // joinBase: a relative wUrl (no scheme://) joins under wUrlBase; a full scheme://… wUrl wins as-is. concat only —
-// db-stamping is wresolveInfo's job (its fullyResolvedUrl makes the scheme self-describing for the ctx-free range-host).
+// db-stamping is wresolveInfo's job (its fullyResolvedWUrl makes the scheme self-describing for the ctx-free range-host).
 const joinBase = (wUrl, wUrlBase = '') => /^\w+:\/\//.test(wUrl) || !wUrlBase ? wUrl : `${wUrlBase.replace(/\/$/, '')}/${wUrl}`
 
 const CubeTool = TgpTypeModifier('CubeTool', { cubeTool: true, dsl: 'common', type: 'data' })
@@ -318,7 +318,7 @@ CacheStrategy('colsCache', {
     buildSourceReader: async (wUrls, ctx) => {
       const infos = await Promise.all(wUrls.map(u => wresolveInfo(u, ctx)))
       return { sql: biUtils.colsCacheFrom(infos), via: 'colsCache extension (byte-range, no download)',
-        resolvedWUrls: infos.map(x => x.fullyResolvedUrl) }
+        resolvedWUrls: infos.map(x => x.fullyResolvedWUrl) }
     },
     initQueryLookups: ctx => ctx.setVars({ colsCacheEnsureCols: ctx.vars.ensureCols || [] }),
     modifiers: () => [preFetchColsModifier(),
