@@ -99,6 +99,7 @@ const lambdaTestEntry = /\/(tests?\/|[^/]*-tests?\.js$)/
 
 const repoScopes = { '@wonder': 'wonder', '@jb6': 'jb6', '@indiviai': 'indiviai', '@solution': 'solutions' }
 const toAbsolute = (u, baseDir, path) => {
+  if (path.isAbsolute(u)) return u
   const prefix = Object.keys(repoScopes).find(p => u === p || u.startsWith(`${p}/`))
   return prefix ? path.join(baseDir, repoScopes[prefix], u.slice(prefix.length + 1)) : path.join(baseDir, u.replace(/^\//, ''))
 }
@@ -374,35 +375,66 @@ await coreUtils.writeServiceResult(await uploadLambdaCompDependencies(${JSON.str
 })
 
 Tool('uploadRoomLambda', {
-  description: 'Publish a registered comp as a room lambda; roomId resolves to its canonical room wUrl.',
+  description: 'Publish a registered comp as a room lambda.',
   params: [
-    {id: 'lambdaId', as: 'string' },
-    {id: 'roomId', as: 'string', description: 'room id or full room wUrl', mandatory: true},
-    {id: 'entryPath', as: 'string', description: 'module path that defines the comp, e.g. @solution/...'},
+    {id: 'compFullId', as: 'string', mandatory: true, description: 'full TGP id of the lambda component'},
+    {id: 'roomWUrl', as: 'string', mandatory: true, description: 'full room wUrl'}
   ],
-  impl: mcpTool(async (ctx, {}, {lambdaId, roomId, entryPath}) => {
-    const roomWUrl = await jb.wonderUtils.resolveWUrl(roomId, ctx)
-    const resolvedRoomId = roomWUrl.split('://')[1]
-    const script = `
+  impl: mcpTool({
+    vars: [testAdminUser()],
+    text: async (ctx, {}, {compFullId, roomWUrl}) => {
+      const timer = phaseTimer()
+      try {
+        const entryPath = await coreUtils.resolveDeveloperEntryPoint(ctx)
+        timer.phase('entryPath')
+        let comp = coreUtils.compByFullId(compFullId)
+        if (!comp) {
+          await import(entryPath)
+          timer.phase('entryImport')
+          comp = coreUtils.compByFullId(compFullId)
+        }
+        if (!comp) return JSON.stringify({error: `component '${compFullId}' is not registered; import its defining file in ${entryPath}`})
+        const lambdaId = comp.id, compPath = comp.$location.path
+        const {roomId} = jb.wonderUtils.extractFromUrl(roomWUrl, ctx)
+        ctx.vars.mcpLogger?.info?.({t: 'upload room lambda', compFullId, roomWUrl, entryPath, compPath, userEmail: ctx.vars.userEmail}, {}, {ctx})
+        const script = `
 import { uploadLambdaCompDependencies } from '@wonder/studio/mcp-tools/wonder-mcp-tools.js'
-import { jb, coreUtils } from '@jb6/core'
-import '@wonder/db/db-drivers.js'
-import ${JSON.stringify(entryPath)}
+import { coreUtils } from '@jb6/core'
+import ${JSON.stringify(compPath)}
 try {
-const { lambdaV, fileCount, tarBytes, importGraph, uploadMs, timeline } = await uploadLambdaCompDependencies(${JSON.stringify(entryPath)})
-const [dir] = coreUtils.getCompField('data<common>${lambdaId}', 'permissionByPath')   // the dir the lambda reads
-const roomWUrl = ${JSON.stringify(roomWUrl)}
-const def = { lambdaV, entryCompFullId: 'data<common>${lambdaId}', dir, roomWUrl }
-await jb.wonderUtils.wfetch2(\`${roomWUrl}/lambdas/${lambdaId}.json\`, { method: 'PUT', body: def }, new coreUtils.Ctx())
-await coreUtils.writeServiceResult({ lambdaId: ${JSON.stringify(lambdaId)}, defPath: \`${roomWUrl}/lambdas/${lambdaId}.json\`, def,
-  fileCount, tarBytes, importGraph, uploadMs, timeline })
-} catch (e) { await coreUtils.writeServiceResult({ error: e.stack || String(e), lambdaId: ${JSON.stringify(lambdaId)},
-  roomId: ${JSON.stringify(roomId)}, entryPath: ${JSON.stringify(entryPath)} }) }`
-    await coreUtils.calcJb6RepoRootAndImportMapsInCli()
-    const { result, error } = await coreUtils.runCliInContext(script, { importMapsInCli: jb.coreRegistry.importMapsInCli })
-    if (error || result?.error)
-      return JSON.stringify({ error: result?.error || error, stderr: result?.stderr, lambdaId, roomId, entryPath })
-    return JSON.stringify({ ...result, runUrl: `https://w-staging.indivi.ai/run-room-lambda/${resolvedRoomId}/${lambdaId}` })
+const packageInfo = await uploadLambdaCompDependencies(${JSON.stringify(compPath)})
+const [dir] = coreUtils.getCompField(${JSON.stringify(compFullId)}, 'permissionByPath')
+await coreUtils.writeServiceResult({ ...packageInfo, dir })
+} catch (e) { await coreUtils.writeServiceResult({ error: e.stack || String(e) }) }`
+        await coreUtils.calcJb6RepoRootAndImportMapsInCli()
+        const {result, error, stderr, textToParse} = await coreUtils.runCliInContext(script, {
+          ctx, importMapsInCli: jb.coreRegistry.importMapsInCli
+        })
+        timer.phase('packageCli')
+        const failure = result?.error || error
+        if (failure) {
+          ctx.vars.mcpLogger?.error?.({t: 'upload room lambda failed', compFullId, entryPath, compPath,
+            error: String(failure), stderr, textToParse, mcpMs: timer.totalMs, mcpTimeline: timer.timeline}, {}, {ctx})
+          return JSON.stringify({error: String(failure), stderr, textToParse, compFullId, roomWUrl, entryPath, compPath,
+            mcpMs: timer.totalMs, mcpTimeline: timer.timeline})
+        }
+        const def = {lambdaV: result.lambdaV, entryCompFullId: compFullId, dir: result.dir, roomWUrl}
+        const defPath = `${roomWUrl}/lambdas/${lambdaId}.json`
+        await wfetch2(defPath, {method: 'PUT', body: def}, ctx)
+        timer.phase('writeManifest')
+        ctx.vars.mcpLogger?.info?.({t: 'upload room lambda done', compFullId, entryPath, compPath,
+          userEmail: ctx.vars.userEmail, tarBytes: result.tarBytes, uploadMs: result.uploadMs,
+          mcpMs: timer.totalMs, mcpTimeline: timer.timeline}, {}, {ctx})
+        return JSON.stringify({...result, lambdaId, defPath, def,
+          runUrl: `https://w-staging.indivi.ai/run-room-lambda/${roomId}/${lambdaId}`,
+          mcpMs: timer.totalMs, mcpTimeline: timer.timeline})
+      } catch (error) {
+        coreUtils.logException(error, 'uploadRoomLambda', {ctx, compFullId, roomWUrl,
+          mcpMs: timer.totalMs, mcpTimeline: timer.timeline})
+        return JSON.stringify({error: error.stack || String(error), compFullId, roomWUrl,
+          mcpMs: timer.totalMs, mcpTimeline: timer.timeline})
+      }
+    }
   })
 })
 

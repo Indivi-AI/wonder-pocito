@@ -66,8 +66,9 @@ function run(profile, ctx = new Ctx(), settings = {}) {
 }
 
 function applyCtxEnrichers(enrichers, ctx, settings) {
-    const { path, parentParam, profile } = ctx.jbCtx   // caller's lexical position - enrichers only add vars/data, not a new lexical frame
-    const restore = c => c.setJbCtx(new JBCtx({...c.jbCtx, path, parentParam, profile}))
+    const callerJbCtx = ctx.jbCtx   // enrichers only add vars/data, not a new lexical frame
+    const { path } = callerJbCtx
+    const restore = c => c.setJbCtx(callerJbCtx)
     const enriched = asArray(enrichers).reduce((ctx, e, i) =>
         isPromise(ctx)
             ? ctx.then(c => run(e, c.setJbCtx(new JBCtx({...c.jbCtx, path: `${path}~vars~${i}`})), settings))
