@@ -41,7 +41,7 @@ coreUtils.runUnPackagedInLiveRepo = async (ctx, compToRun) => {
     strategy: 'unPackagedInLiveRepo', files: imp?.topLevelImports?.length, compsWalked: fast?.compsWalked }, { imp }, { ctx })
   if (!imp || imp.error) { log?.error?.({ event: 'discover failed → skip', strategy: 'unPackagedInLiveRepo', error: imp?.error }, { imp }, { ctx }); return null }
   const packedCtx = coreUtils.stripCtx({ profileJson: profile, ctx: compToRun.lexicalCtx })
-  packedCtx.vars.db = 'bucket'
+  packedCtx.vars.db = 'gcs'
   const loggers = coreUtils.activeLoggers(ctx)
   log?.info?.({ event: 'spawning child CLI to run packed profile', strategy: 'unPackagedInLiveRepo', loggers,
     ctxVars: Object.keys(packedCtx.vars || {}) }, {}, { ctx })

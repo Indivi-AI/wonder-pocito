@@ -35,7 +35,7 @@ const {
 //   §1 product cube · §2 event sources · §3 session cube · §4 signed-room lambda · §5 metric algebra · §6 stats · §7 drift & views
 
 
-// §1 PRODUCT CUBE
+// ═══ §1 PRODUCT CUBE ═══════════════════════════════════════════════════════════════════════════════════════════════
 Const('priceDay','2026-01-01')
 Const('priceEvents',[
   { productId: 'A', price: 90 }, { productId: 'A', price: 100 },
@@ -74,8 +74,7 @@ Test('biTest.parquetSourceBuildSkipped', {
 Test('biTest.productBuild', {
   HeavyTest: true,
   impl: dataTest(materializeCubePeriod(productCube(), '%$priceDay%'), equals(2, '%objs%'), {
-    setup: setVars(asIs({db: 'bucket', bucketProvider: 'gcs', hasGcpIdentity: true, onLiveRepo: true,
-      roomWUrl: 'room://testPublicRoom'})),
+    setup: setVars(asIs({db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomWUrl: 'room://testPublicRoom'})),
     timeout: 10000,
     logger: 'biLogger'
   })
@@ -110,8 +109,7 @@ Test('biTest.perCapitaMap', {
       equals('Boston', '%0/city%'), equals(675647, '%0/population%'),
       equals('New York', '%1/city%'), equals(8804190, '%1/population%'),
       equals('Seattle', '%2/city%'), equals(737015, '%2/population%')),
-    vars: setVars(asIs({ db: 'bucket', bucketProvider: 'gcs', hasGcpIdentity: true, onLiveRepo: true,
-      roomWUrl: 'room://testPublicRoom' })),
+    vars: setVars(asIs({ db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomWUrl: 'room://testPublicRoom' })),
     timeout: 10000,
     logger: 'biLogger,dbLogger'
   })
@@ -128,23 +126,21 @@ Test('biTest.perCapitaMetric', {
       equals('Boston', '%0/city%'), equals(120, '%0/revenue%'), equals(675647, '%0/population%'),
       equals('New York', '%1/city%'), equals(500, '%1/revenue%'), equals(8804190, '%1/population%'),
       equals('Seattle', '%2/city%'), equals(300, '%2/revenue%'), equals(737015, '%2/population%')),
-    vars: setVars(asIs({ db: 'bucket', bucketProvider: 'gcs', hasGcpIdentity: true, onLiveRepo: true,
-      roomWUrl: 'room://testPublicRoom' })),
+    vars: setVars(asIs({ db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomWUrl: 'room://testPublicRoom' })),
     timeout: 10000,
     logger: 'biLogger,dbLogger'
   })
 })
 
 
-// §2 EVENT SOURCES
+// ═══ §2 EVENT SOURCES ══════════════════════════════════════════════════════════════════════════════════════════════
 // readEventSource drives the source alone (no reduce/parquet) and asserts contiguous: the events arrive keyField-grouped.
 Test('biTest.bucketUrlSourceRead', {
   HeavyTest: true,
   impl: dataTest({
     calculate: readEventSource(bucketUrlSourceJsonEvents('roomLogs://testPublicRoom/prices/${period}/${productId}-${counter}.json'), '%$priceDay%', 'productId'),
     expectedResult: and(equals(4, '%count%'), equals('%contiguous%', true)),
-    setup: setVars(asIs({db: 'bucket', bucketProvider: 'gcs', hasGcpIdentity: true, onLiveRepo: true,
-      roomWUrl: 'room://testPublicRoom'})),
+    setup: setVars(asIs({db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomWUrl: 'room://testPublicRoom'})),
     timeout: 10000,
     logger: 'biLogger'
   })
@@ -169,15 +165,14 @@ Test('biTest.apiCubeBuild', {
     ]) }),
     materializeCubePeriod(apiPriceCube(), '%$priceDay%')
   ), equals(2, '%objs%'), {
-    setup: setVars(asIs({db: 'bucket', bucketProvider: 'gcs', hasGcpIdentity: true, onLiveRepo: true,
-      roomWUrl: 'room://testPublicRoom'})),
+    setup: setVars(asIs({db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomWUrl: 'room://testPublicRoom'})),
     timeout: 15000,
     logger: 'biLogger,dbLogger'
   })
 })
 
 
-// §3 SESSION CUBE
+// ═══ §3 SESSION CUBE ═══════════════════════════════════════════════════════════════════════════════════════════════
 // s2 is a bot → the notBot validation flags it; the cardClick picks dedup by uniqueBy before count/sum/exists.
 Const('sessionClickstream', [
   { t: 'pageLoad', sessionId: 's1', variant: 'V11', timestamp: 1000, device: 'desktop', url: '/p', urlParams: { sub1: 'a1' }, clientIP: '1.1.1.1' },
@@ -276,7 +271,7 @@ Test('biTest.cubeInfoForQuery', {
   })
 })
 
-// §5 METRIC ALGEBRA
+// ═══ §5 METRIC ALGEBRA ═════════════════════════════════════════════════════════════════════════════════════════════
 const allMetricsEvents = SilverBuilder('allMetricsEvents', { impl: materializeFromEvents({
   eventSource: 'room://x/${period}/x.json', keyField: 'sessionId',
   fields: [pick('variant, userId, revenue, cardClicks')]
@@ -319,7 +314,7 @@ Test('biTest.metricKindsTailClauses', {
 })
 
 
-// §6 STATS
+// ═══ §6 STATS ══════════════════════════════════════════════════════════════════════════════════════════════════════
 Test('biTest.statFitMetricsNormal', {
   impl: dataTest(statFitMetrics(normalStat(), 'price'),
     equals(asIs([
@@ -353,7 +348,7 @@ Test('biTest.statFitCompiles', {
 })
 
 
-// §7 DRIFT & VIEWS
+// ═══ §7 DRIFT & VIEWS ══════════════════════════════════════════════════════════════════════════════════════════════
 // c1 fatigues: roas ~4 then collapses to 1.5 on day 5 (< 0.5·baseline → drift_day); c2 stays flat (no drift).
 Const('rentalSeries', [
   { sub1: 'c1', day: '2026-01-01', val: 4.0 }, { sub1: 'c1', day: '2026-01-02', val: 4.2 }, { sub1: 'c1', day: '2026-01-03', val: 3.8 },
@@ -378,8 +373,7 @@ Test('biTest.materializedViewBuilds', {
     setup: materializedView('rentalView', 'room://testPublicRoom/usersRO/views/rentalView.parquet', '%$rentalSeries%', { maxAgeMs: 0 }),
     calculate: metricDrift('%$rentalView%', { key: 'sub1', validation: aboveBaseline(0.5) }),
     expectedResult: equals(asIs([{ sub1: 'c1', drift_day: '2026-01-05', baseline: 4.2 }, { sub1: 'c2', drift_day: null, baseline: 3.1 }])),
-    vars: setVars(asIs({ db: 'bucket', bucketProvider: 'gcs', hasGcpIdentity: true, onLiveRepo: true,
-      roomWUrl: 'room://testPublicRoom' })),
+    vars: setVars(asIs({ db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomWUrl: 'room://testPublicRoom' })),
     timeout: 15000,
     logger: 'biLogger'
   })
@@ -392,15 +386,14 @@ Test('biTest.materializedViewReuses', {
     setup: materializedView('rentalView', 'room://testPublicRoom/usersRO/views/rentalView.parquet', asIs([]), { maxAgeMs: 86400000 }),
     calculate: metricDrift('%$rentalView%', { key: 'sub1', validation: aboveBaseline(0.5) }),
     expectedResult: equals(asIs([{ sub1: 'c1', drift_day: '2026-01-05', baseline: 4.2 }, { sub1: 'c2', drift_day: null, baseline: 3.1 }])),
-    vars: setVars(asIs({ db: 'bucket', bucketProvider: 'gcs', hasGcpIdentity: true, onLiveRepo: true,
-      roomWUrl: 'room://testPublicRoom' })),
+    vars: setVars(asIs({ db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomWUrl: 'room://testPublicRoom' })),
     timeout: 15000,
     logger: 'biLogger'
   })
 })
 
 
-// §8 REDUCER ALGEBRA
+// ═══ §8 REDUCER ALGEBRA ════════════════════════════════════════════════════════════════════════════════════════════
 // each pick strategy over the SAME price column. ticks 90,100,90 → first/min/max/peak/modal/distinct/all. modal is a STRING (keyed by String(v)).
 const pickStrategyEvents = SilverBuilder('pickStrategyEvents', { impl: materializeFromEvents({
   eventSource: 'room://x/${period}/x.json', keyField: 'productId',
@@ -464,7 +457,7 @@ Test('biTest.enrichFallback', {
 })
 
 
-// §9 NO-BUILD SILVER SOURCES
+// ═══ §9 NO-BUILD SILVER SOURCES ════════════════════════════════════════════════════════════════════════════════════
 // parquet: the silver pre-exists — point a cube at the products parquet §1 productBuild wrote, no reduce/build.
 const parquetCube = Cube('parquetCube', { impl: cube({
   source: parquetSource('room://testPublicRoom/usersRO/silver/products-${period}.parquet', { name: 'productsRO' }),
@@ -477,8 +470,7 @@ Test('biTest.parquetSourceMeta', {
   impl: dataTest({
     calculate: cubeToolInfoForQuery(parquetCube(), '%$priceDay%'),
     expectedResult: equals('productsRO', '%cube%'),
-    setup: setVars(asIs({ db: 'bucket', bucketProvider: 'gcs', hasGcpIdentity: true, onLiveRepo: true,
-      roomWUrl: 'room://testPublicRoom' })),
+    setup: setVars(asIs({ db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomWUrl: 'room://testPublicRoom' })),
     timeout: 10000,
     logger: 'biLogger'
   })
@@ -510,7 +502,7 @@ Test('biTest.parquetSignedRoomFs', {
 })
 Test('biTest.parquetSignedRoomGcs', {
   impl: dataTest({
-    vars: setVars(asIs({ db: 'bucket', bucketProvider: 'gcs', hasGcpIdentity: true, onLiveRepo: true })),
+    vars: setVars(asIs({ db: 'gcs', hasGcpIdentity: true, onLiveRepo: true })),
     calculate: cubeQuery({ sql: 'select storeCount', cube: storesCube() }),
     expectedResult: equals(28, '%0/storeCount%'),
     timeout: 15000,

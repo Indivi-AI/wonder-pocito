@@ -4,10 +4,7 @@ import './product-cube-ui.js'   // productDrill + productBrush + the generic bru
 
 const {
   tgp: { CtxEnricher, 'ctx-enricher': { productDrill, enrichCtx, setVars, setData, setupCube } },
-  common: {
-    data: { asIs, squeezeAndHighlight, pipe, filter, firstSucceeding, join, spanCell, cubeQuery, resolveKeySpan, spanView, invokeSnippetInContext },
-    boolean: { and, contains, gt, equals }
-  },
+  common: { data: { asIs, squeezeAndHighlight, pipe, filter, firstSucceeding, join, spanCell, cubeQuery, resolveKeySpan, spanView, invokeSnippetInContext }, boolean: { and, contains, gt, equals } },
   bi: { 'code-locator': { sqlLocator }, cube: { productCube, cube }, 'silver-builder': { parquetSource }, metric: { metric } },
   react: { ReactComp, 'react-comp': { comp, productBrush, brushResultFirst, brushPanes, brushInline },
     'ui-action': { actions, click, waitForText } },
@@ -18,8 +15,7 @@ const {
 // liveSetup — the test-side enricher that plants the LIVE vars on the comp ctx so its enrichCtx (the drill) ships to node.
 // NO setupCube: productDrill rebuilds the cube node-side from productCube() in productSpanCell, reading queryPeriod.
 const liveSetup = CtxEnricher('liveSetup', {
-  impl: enrichCtx(setVars(asIs({ db: 'bucket', bucketProvider: 'gcs', hasGcpIdentity: true, onLiveRepo: true,
-    roomWUrl: 'room://testPublicRoom', queryPeriod: '2026-01-01' })))
+  impl: enrichCtx(setVars(asIs({ db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomWUrl: 'room://testPublicRoom', queryPeriod: '2026-01-01' })))
 })
 
 // test template: shared live setup + timeout/loggers; each test supplies only the comp + assertions.
@@ -45,8 +41,7 @@ const brushTest = Test('brushTest', {
 // locally; the browser ships THIS profile over the live repo (localhost) or lambda (remote). spanCell lives in bi-brush-utils.
 const spanDrillA = CtxEnricher('spanDrillA', {
   impl: enrichCtx(
-    setVars(asIs({ db: 'bucket', bucketProvider: 'gcs', hasGcpIdentity: true, onLiveRepo: true,
-      roomWUrl: 'room://testPublicRoom', queryPeriod: '2026-01-01' })),
+    setVars(asIs({ db: 'gcs', hasGcpIdentity: true, onLiveRepo: true, roomWUrl: 'room://testPublicRoom', queryPeriod: '2026-01-01' })),
     setData(invokeSnippetInContext(spanCell({
       gold: spanView(cubeQuery({ sql: 'select avg_price', cube: productCube() })),
       silverOf: spanView(resolveKeySpan(productCube(), '%$key%')),

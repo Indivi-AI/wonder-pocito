@@ -311,7 +311,7 @@ Test('roomLambdaTest.probe.duckdbPerf', {
 })
 
 // §8 — CUBE QUERY OVER PARQUET, on the signed room. A cubeQuery lambda: the cube compiles `storeCount` → count_star()
-// over stores.parquet, run AS THE USER, reading the protected parquet via signed-url byte-ranges (db:'bucket' server-side).
+// over stores.parquet, run AS THE USER, reading the protected parquet via signed-url byte-ranges (db:'gcs' server-side).
 Test('roomLambdaTest.cubeQuery.signedParquet', {
   impl: dataTest(invokeSnippetInContext(storeCount()), equals(28, '%0/storeCount%'), {
     setup: enrichCtx(

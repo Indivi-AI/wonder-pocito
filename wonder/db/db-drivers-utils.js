@@ -17,7 +17,7 @@ const formatTimeWithRandom = () => {
 async function wresolve(url, _ctx, method = 'GET') {
   const dbLogger = _ctx.vars.dbLogger
   let ctx = _ctx.setVars({ url, method, dbLogger, localhostServer: localhostServer(_ctx) })
-  const extracted = extractFromUrl(url, ctx), db = extracted.db || ctx.vars.db || 'bucket'
+  const extracted = extractFromUrl(url, ctx), db = extracted.db || ctx.vars.db || 'gcs'
   const backend = dsls.wonder['db-backend'][db.replace(/-/g, '')]?.$runWithCtx(ctx)
   if (backend?.enrichCtx) ctx = await backend.enrichCtx(ctx)
   const { fileName } = extracted
@@ -49,7 +49,7 @@ const { wcachePopulate } = jb.wonderUtils
 } catch (e) { await coreUtils.writeServiceResult({ error: e.stack || String(e) }) } })()`
     return (await coreUtils.runCliInContext(script, { ctx: _ctx, bindLoggers: 'dbLogger' })).result
   }
-  const ctx = _ctx.setVars({ db: 'bucket' })
+  const ctx = _ctx.setVars({ db: 'gcs' })
   try {
     const t0 = Date.now(), cachePath = await wresolve(wUrl, ctx.setVars({ db: 'wcache' })), fs = await import('fs/promises')
     if (validate) {
@@ -81,7 +81,7 @@ async function saveRoomBigLog2(ctx, id = formatTimeWithRandom()) {
 }
 
 async function prefetchSignedUrls(ctx) {
-  if (ctx.vars.db && !['bucket', 'gcs'].includes(ctx.vars.db)) return
+  if (ctx.vars.db && ctx.vars.db !== 'gcs') return
   const { roomId } = ctx.vars
   const t0 = Date.now()
   const idToken = await auth.wonderIdToken(ctx)
