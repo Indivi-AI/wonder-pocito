@@ -117,7 +117,7 @@ export async function uploadCompDependencies(urlsToLoad, onVersion) {
 
   const sourceFiles = urlsToLoad.split(',').map(f => f.trim()).filter(Boolean)
   if (!sourceFiles.length) throw new Error('no source files')
-  const entries = [...sourceFiles, '@jb6/react/tests/react-testers.js', '@wonder/db/oauth2.js']
+  const entries = [...sourceFiles, '@wonder/db/oauth2.js']
 
   const sourceScopes = Object.keys(repoScopes)
   const assets = new Set()
@@ -178,7 +178,8 @@ export async function uploadCompDependencies(urlsToLoad, onVersion) {
   try { await Promise.all([onVersion?.({ appletV, dbCtx }), ...inputs.map((f, i) => put(f, bodies[i]))]) } finally { await pool.close() }
   timer.phase('upload')
 
-  return { appletV, fileCount: inputs.length, uploadMs: timer.totalMs, timeline: timer.timeline }
+  return { appletV, fileCount: inputs.length, totalBytes: bodies.reduce((sum, body) => sum + body.length, 0),
+    uploadMs: timer.totalMs, timeline: timer.timeline }
 }
 
 // Primitive: bundle entry (node flavor) → full source closure (admin + public + jb6 sources, no /lib/),
@@ -442,44 +443,45 @@ Tool('uploadRoomApplet', {
   description: 'Publish a react comp as a public applet by default; signedRoom:// must be explicit.',
   params: [
     {id: 'roomId', as: 'string', description: 'room id or full room wUrl', mandatory: true},
-    {id: 'entryPath', as: 'string', description: 'module path that defines the comp, e.g. @solution/...'},
     {id: 'entryCompFullId', as: 'string', description: 'full comp id, e.g. react-comp<react>cubeApplet. name + cmpId derived from the comp.'},
     {id: 'ogTitle', as: 'string', description: 'optional link-preview title for this applet (og:title). Else falls back to room admin/branding.json then wonder default.'},
     {id: 'ogDescription', as: 'string', description: 'optional link-preview description (og:description).'},
     {id: 'ogImage', as: 'string', description: 'optional link-preview image url, ideally 1200x630 (og:image).'},
     {id: 'ogImageLocalPath', as: 'string', description: 'optional local image to upload under the public room applet dir; overrides ogImage.'}
   ],
-  impl: mcpTool(async (ctx, {}, {roomId, entryPath, entryCompFullId, ogTitle, ogDescription, ogImage, ogImageLocalPath}) => {
-    const roomWUrl = roomId.includes('://') ? roomId : `room://${roomId}`
-    const resolvedRoomId = roomWUrl.split('://')[1], route = roomWUrl.startsWith('signedRoom://') ? 'signed-room' : 'room'
-    const script = `
+  impl: mcpTool({
+    vars: [testAdminUser()],
+    text: async (ctx, {}, {roomId, entryCompFullId, ogTitle, ogDescription, ogImage, ogImageLocalPath}) => {
+      const roomWUrl = roomId.includes('://') ? roomId : `room://${roomId}`
+      const resolvedRoomId = roomWUrl.split('://')[1], route = roomWUrl.startsWith('signedRoom://') ? 'signed-room' : 'room'
+      const comp = coreUtils.compByFullId(entryCompFullId)
+      if (!comp) return JSON.stringify({error: `component '${entryCompFullId}' is not registered`})
+      const entryPath = comp.$location.path.replace(/^.*\/wonder\//, '@wonder/').replace(/^.*\/solutions\//, '@solution/')
+      const script = `
 import { uploadCompDependencies } from '@wonder/studio/mcp-tools/wonder-mcp-tools.js'
-import { jb, coreUtils } from '@jb6/core'
-import '@wonder/db/db-drivers.js'
+import { coreUtils } from '@jb6/core'
 import ${JSON.stringify(entryPath)}
 try {
   const cmpId = coreUtils.compByFullId(${JSON.stringify(entryCompFullId)}).id
-  const path = await import('path')
-  const roomWUrl = ${JSON.stringify(roomWUrl)}, dbCtx = new coreUtils.Ctx()
-  const localImage = ${JSON.stringify(ogImageLocalPath)}, imageName = localImage && path.basename(localImage)
-  const imageUrl = imageName && \`${roomWUrl}/applets/\${cmpId}/\${imageName}\`
-  const og = Object.fromEntries(Object.entries({ ogTitle: ${JSON.stringify(ogTitle)}, ogDescription: ${JSON.stringify(ogDescription)},
-    ogImage: imageUrl || ${JSON.stringify(ogImage)} }).filter(([, v]) => v))
-  const imageUpload = imageName && jb.wonderUtils.wfetch2(imageUrl, {
-    method: 'PUT', body: localImage, headers: { 'x-wonder-body': 'localFile' } }, dbCtx)
-  const writeDef = ({ appletV }) => Promise.all([imageUpload, jb.wonderUtils.wfetch2(\`${roomWUrl}/applets/\${cmpId}.json\`, {
-    method: 'PUT', headers: { 'x-wonder-json': 'as-is' }, body: { cmpId, urlsToLoad: ${JSON.stringify(entryPath)}, appletV, roomWUrl,
-      entryCompFullId: ${JSON.stringify(entryCompFullId)}, ...(Object.keys(og).length && { og }) } }, dbCtx)])
-  const { appletV, fileCount, uploadMs, timeline } = await uploadCompDependencies(${JSON.stringify(entryPath)}, writeDef)
-  await coreUtils.writeServiceResult({ appletV, cmpId, fileCount, uploadMs, timeline, imageUrl,
-    defPath: \`${roomWUrl}/applets/\${cmpId}.json\` })
+  await coreUtils.writeServiceResult({ ...await uploadCompDependencies(${JSON.stringify(entryPath)}), cmpId })
 } catch (e) { await coreUtils.writeServiceResult({ error: e.stack || String(e) }) }`
     await coreUtils.calcJb6RepoRootAndImportMapsInCli()
-    const cliCtx = coreUtils.ensureLoggers(['cliLogger', 'cliLineLogger'])   // over-the-wire: child stderr lines -> these loggers
+    const cliCtx = coreUtils.ensureLoggers(['cliLogger', 'cliLineLogger'], {ctx})
     const { result, error } = await coreUtils.runCliInContext(script, { ctx: cliCtx, importMapsInCli: jb.coreRegistry.importMapsInCli })
     if (error || result?.error) return JSON.stringify({ error: result?.error || error, cliLog: coreUtils.harvestLogs(cliCtx, ['cliLineLogger']).cliLineLogger })
-    return JSON.stringify({ ...result, entryUrl: `https://w-staging.indivi.ai/${route}/${resolvedRoomId}/applet/${result.cmpId}` })
-  })
+    const {appletV, cmpId} = result, imageName = ogImageLocalPath?.split('/').pop()
+    const imageUrl = imageName && `${roomWUrl}/applets/${cmpId}/${imageName}`
+    const og = Object.fromEntries(Object.entries({ogTitle, ogDescription, ogImage: imageUrl || ogImage}).filter(([, v]) => v))
+    await Promise.all([
+      imageName && wfetch2(imageUrl, {method: 'PUT', body: ogImageLocalPath, headers: {'x-wonder-body': 'localFile'}}, ctx),
+      wfetch2(`${roomWUrl}/applets/${cmpId}.json`, {method: 'PUT', headers: {'x-wonder-json': 'as-is'},
+        body: {cmpId, urlsToLoad: entryPath, appletV, roomWUrl, entryCompFullId, ...(Object.keys(og).length && {og})}}, ctx)
+    ])
+    ctx.vars.mcpLogger?.info?.({t: 'upload room applet done', roomWUrl, cmpId, appletV,
+      fileCount: result.fileCount, totalBytes: result.totalBytes, uploadMs: result.uploadMs, timeline: result.timeline}, {}, {ctx})
+    return JSON.stringify({...result, imageUrl, defPath: `${roomWUrl}/applets/${cmpId}.json`,
+      entryUrl: `https://w-staging.indivi.ai/${route}/${resolvedRoomId}/applet/${cmpId}`})
+  }})
 })
 
 Tool('updateLambdasAndApplets', {

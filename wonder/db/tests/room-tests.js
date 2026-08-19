@@ -4,32 +4,19 @@ import '@jb6/llm-guide/essentials.js'
 import '@wonder/db/room-lambda-client.js'         // permissionByPath comp-field + roomLambda interceptor + lambdaLogger/roomLogger
 import './minimal-ping-lambda.js'
 import './bi-lambdas-for-tests.js'
-import '@wonder/db/etl/file-query.js'  // fileQuery, cachedWonderUrl, duckdb
+import './room-test-lambdas.js'
 import '@wonder/db/tests/gmail-test-users.js'
 
 const {
   tgp: { Component, 'ctx-enricher': { setVars, Var, enrichCtx, testAdminUser, testUser } },
   common: { Data, Lambda,
     boolean: { equals, notEmpty, contains, and },
-    data: { asIs, count, join, pipe, fileQuery, wFetch, invokeSnippetInContext, ping, storeCount, storeCountPublic }
+    data: { asIs, count, join, pipe, wFetch, invokeSnippetInContext, ping, storeCount, salesByCategory }
   },
   lambda: { 'lambda-packaging': { roomLambda } },
-  etl: { 'cli-extract': { cachedWonderUrl }, 'cli-transform': { duckdb } },
   test: { Test, test: { dataTest } },
   'llm-guide': { Doclet }
 } = dsls
-
-const salesByCategory = Lambda('salesByCategory', {
-  permissionByPath: 'usersRO',
-  params: [{ id: 'category', as: 'string', defaultValue: 'electronics', description: 'one category to summarize; empty = all categories' }],
-  impl: fileQuery(cachedWonderUrl('{%$roomWUrl%}/usersRO/sales-large.json'), {
-    query: duckdb({
-      sql: `SELECT category, count(*) AS count, sum(amount) AS total FROM read_json_auto('{%$inputFile%}')
-          WHERE '{%$category%}' = '' OR category = '{%$category%}' GROUP BY category ORDER BY total DESC`,
-      format: 'JSON, ARRAY'
-    })
-  })
-})
 
 const whoAmI = Lambda('whoAmI', { permissionByPath: 'usersRO', impl: '%$userEmail%' })
 
@@ -331,17 +318,6 @@ Test('roomLambdaTest.cubeQuery.signedParquet', {
       testUser(),
       setVars(asIs({lambdaHost: 'https://w-staging.indivi.ai', roomWUrl: 'signedRoom://testSignedRoom'}))
     ),
-    timeout: 5000,
-    logger: 'roomLogger,biLogger,colsCacheLogger'
-  })
-})
-
-// wasm twin: same cube over the PUBLIC-room parquet (plain gcs url, no signing) — the browser has no auth token.
-Test('roomLambdaTest.cubeQuery.wasm', {
-  impl: dataTest({
-    setup: setVars(asIs({ roomWUrl: 'room://testPublicRoom', onLiveRepo: true })),
-    calculate: invokeSnippetInContext(storeCountPublic()),
-    expectedResult: equals(28, '%0/storeCount%'),
     timeout: 5000,
     logger: 'roomLogger,biLogger,colsCacheLogger'
   })

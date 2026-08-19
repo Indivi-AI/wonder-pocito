@@ -1,13 +1,8 @@
 import { dsls } from '@jb6/core'
-import '@jb6/testing'
-import '@jb6/react'
-import '@jb6/react/progress-indicators.js'
 import '@jb6/react/tests/react-testers.js'
+import '@jb6/mcp/mcp-jb-tools.js'
 import '@wonder/db/oauth2.js'
-import './room-tests.js'
-import '@wonder/db/db-drivers.js'
-import '@wonder/db/etl/file-query.js'
-import '@wonder/db/tests/gmail-test-users.js'
+import './room-test-applets.js'
 
 // How to run the test via mcp:
 // 1) fast nodejs, default: runTest({testId:'roomAppletTest.summaryApplet', logger:'dbLogger,roomLogger'}).
@@ -17,75 +12,38 @@ import '@wonder/db/tests/gmail-test-users.js'
 //   To save time, look at the logs, do not trust green tests
 
 const {
-  tgp: { Component, 'ctx-enricher': { setData, testUser } },
-  common: { Data, boolean: { contains }, data: { invokeSnippetInContext, salesByCategory, fileQuery } },
-  lambda: { 'lambda-packaging': { roomLambda } },
-  test: { Test, test: { reactTest } },
-  react: { ReactComp, 'react-comp': { comp }, 'progress-indicator': { stepper, dots }, 'ui-action': { waitForText } },
-  etl: { 'cli-extract': { cachedWonderUrl }, 'cli-transform': { duckdb } }
+  common: { boolean: { and, contains, equals }, data: { join, playwrightHarvest } },
+  test: { Test, test: { dataTest, reactTest } },
+  react: { 'react-comp': { storeCountApplet }, 'ui-action': { click, waitForText } }
 } = dsls
-
-const summaryApplet = ReactComp('summaryApplet', {
-  impl: comp({
-    enrichCtx: setData(invokeSnippetInContext(salesByCategory(), { pack: roomLambda({ streamProgress: true }) })),
-    progressIndicator: stepper({ title: 'Summarizing', steps: 'load,process', labels: 'Loading file,Aggregating' }),
-    hFunc: (ctx, { react: { h } }) => () => {
-      const rows = Array.isArray(ctx.data) ? ctx.data : []
-      return h('div:p-4 font-sans', {},
-        h('h1:text-lg font-bold', {}, 'Room Summary'),
-        h('p', {}, `${rows.length} categories`),
-        h('ul', {}, ...rows.map(r => h('li', {}, `${r.category}: ${r.total}`))))
-    }
+Test('roomAppletTest.cubeQuery.wasm', {
+  impl: reactTest(storeCountApplet(), contains('storeCount":28'), {
+    userActions: waitForText('storeCount'),
+    logger: 'roomLogger,biLogger,colsCacheLogger',
+    timeout: 12000
   })
 })
 
-const dailySales = Data('dailySales', {
-  permissionByPath: 'usersRO',
-  params: [{ id: 'date', as: 'string' }],
-  impl: fileQuery({
-    from: cachedWonderUrl('room://aTeam/usersRO/sales-large.json'),
-    query: duckdb(`SELECT category, sum(amount) AS total FROM read_json_auto({%$inputFile%})
-      WHERE day = '{%$date%}' GROUP BY category ORDER BY total DESC`, { format: 'JSON, ARRAY' })
-  })
-})
-
-const dailySalesReport = ReactComp('dailySalesReport', {
-  params: [{ id: 'date', as: 'string' }],
-  impl: comp({
-    enrichCtx: setData(invokeSnippetInContext(dailySales('%$date%'), { pack: roomLambda({ streamProgress: true }) })),   // streamProgress ⇒ live dots
-    progressIndicator: dots({ title: 'loading %$date% data' }),
-    hFunc: (ctx, { react: { h } }) => () => h('pre', {}, JSON.stringify(ctx.data))
-  })
-})
-
-ReactComp('salesPage', {
-  impl: comp({
-    hFunc: (ctx, { react: { h, hh } }) => () => h('div', {}, hh(ctx, dailySalesReport('2026-06-01')))
-  })
-})
-
-// server: cloud-services/express-server/lib/room-lambda-and-applet.js
-const summaryAppletTest = Component('summaryAppletTest', {
-  type: 'test<test>',
-  params: [{ id: 'roomWUrl', as: 'string', mandatory: true }, { id: 'onLiveRepo', as: 'boolean', defaultValue: true }, { id: 'lambdaHost', as: 'string' }],
-  impl: reactTest({
-  testedComp: (c, { react: { hh } }, { roomWUrl, onLiveRepo, lambdaHost }) => () => hh(c.setVars({ roomWUrl, onLiveRepo, ...(lambdaHost && { lambdaHost }) }), summaryApplet),
-    expectedResult: contains('Room Summary'),
-    userActions: waitForText('categories'),
-    timeout: 12000,
-    logger: 'dbLogger,roomLogger'
-  })
-})
-
-Test('roomAppletTest.summaryApplet', { impl: summaryAppletTest('room://testPublicRoom') })
-Test('roomAppletTest.signedSummaryApplet', {
-  impl: summaryAppletTest({ vars: [testUser()], roomWUrl: 'signedRoom://testSignedRoom' })
-})
 Test('roomAppletTest.signedSummaryApplet.cloud', {
-  impl: summaryAppletTest({
-    vars: [testUser()],
-    roomWUrl: 'signedRoom://testSignedRoom',
-    onLiveRepo: false,
-    lambdaHost: 'https://w-staging.indivi.ai'
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: playwrightHarvest({
+      url: 'https://w-staging.indivi.ai/signed-room/testSignedRoom/applet/summaryApplet?logger=roomLogger,dbLogger',
+      automation: waitForText('categories'),
+      timeout: 10000,
+      domSelector: '#root',
+      seedLocalStorage: 'mintWonderAuth2'
+    }),
+    expectedResult: and(
+      equals(true, '%done%'),
+      equals(0, '%errors/length%'),
+      contains('1 categories', { allText: '%html%' }),
+      contains('serve applet page', { allText: join(',', { items: '%logs/roomLogger/roomLog/t%' }) }),
+      contains('roomLambda invoke', { allText: join(',', { items: '%logs/roomLogger/roomLog/t%' }) }),
+      contains('roomLambda done', {
+        allText: join(',', { items: '%logs/roomLogger/roomLog/event%' })
+      })
+    ),
+    timeout: 12000
   })
 })
