@@ -131,7 +131,7 @@ async function runDuckdbSqlByHost(sql, ctx, { as = 'rows', parseOnly = false, du
   const memLimit = ctx?.vars?.duckMemLimit || (coreUtils.isNode ? '500MB' : '300MB')
   const prelude = parseOnly ? `SET lambda_syntax='ENABLE_SINGLE_ARROW';\n`
     : `SET memory_limit='${memLimit}';\n${coreUtils.isNode ? `SET temp_directory='/tmp';\n` : ''}SET lambda_syntax='ENABLE_SINGLE_ARROW';\n`   // no /tmp in the wasm (FILESYSTEM=0)
-  const route = coreUtils.makeChildOutputRouter({
+  const route = coreUtils.createLoggerStreamAdapter({
     ctx, bindLoggers: coreUtils.activeLoggers(ctx) || 'colsCacheLogger'
   })
   const onLine = line => route?.({ stream: 'stderr', text: line + '\n' })

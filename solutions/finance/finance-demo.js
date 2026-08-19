@@ -5,7 +5,7 @@ import '@wonder/ui/applet.js'
 import '@wonder/ai/duckdb-sql-step.js'
 import '@wonder/bi/viz/viz-index.js'
 import './finance-analytics.js' // registers the financeAnalytics workflow (Ask AI) + the runFinanceAnalytics/runFinanceReport* lambdas
-import '@wonder/db/room/room-lambda-client.js' // invokeSnippetInContext + roomLambda interceptor (?engine=lambda fallback)
+import '@wonder/db/room-lambda-client.js' // invokeSnippetInContext + roomLambda interceptor (?engine=lambda fallback)
 import '@wonder/db/db-drivers-utils.js'
 const { wGet, wPut } = jb.wonderUtils
 import { q, cap, sentence, fmtBucket, cubeWidgets } from '@wonder/bi/cube-widget-builder.js'

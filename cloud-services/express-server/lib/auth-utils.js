@@ -1,8 +1,6 @@
 import { OAuth2Client } from 'google-auth-library'
 import { createHash, createHmac } from 'node:crypto'
 import { getRole, readJson } from './signed-url.js'
-import { jb, coreUtils } from '@jb6/core'
-import '@wonder/db/db-drivers.js'
 
 export const WONDER_ADMINS = ['shaiby@artwaresoft.com', 'yiftach@indivi.ai', 'roee@indivi.ai']
 
@@ -22,10 +20,7 @@ export const PUBLIC_DEFAULT = {
 export const roomPolicy = async roomId => {
   const cached = policyCache.get(roomId)
   if (cached?.at > Date.now() - 30000) return cached.policy
-  const signed = await readJson(`${roomId}/admin/users.json`)
-  const res = signed || await jb.wonderUtils.wfetch2(`protected://${roomId}/admin/users.json`,
-    { method: 'GET' }, new coreUtils.Ctx()).catch(() => null)
-  const policy = signed || res?.ok && await res.json()
+  const policy = await readJson(`${roomId}/admin/users.json`)
   policyCache.set(roomId, { policy, at: Date.now() })
   return policy
 }
@@ -49,7 +44,8 @@ export async function verifyToken(token) {
   const key = createHash('sha256').update(token).digest('base64url'), cached = tokenCache.get(key)
   if (cached?.until > Date.now()) return cached.payload
   const wonder = secret() && verifyWonderToken(token)
-  const payload = wonder ? { email: wonder.phone, exp: wonder.exp } : (await oauthClient.verifyIdToken({ idToken: token })).getPayload()
+  const payload = wonder ? { email: wonder.phone, exp: wonder.exp }
+    : (await oauthClient.verifyIdToken({ idToken: token, audience: clientIds })).getPayload()
   tokenCache.set(key, { payload, until: Math.min(payload.exp * 1000 || Infinity, Date.now() + 600000) })
   return payload
 }

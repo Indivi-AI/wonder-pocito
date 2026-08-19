@@ -51,7 +51,7 @@ Cube('comaxSalesCube', {
     { id: 'headersPath', as: 'string', defaultValue: 'KupaDoc_Header-mqy.parquet' }
   ],
   impl: cube({
-    wUrlBase: 'protected://comax2/usersRO/parquet/OEM_BI_4466',
+    wUrlBase: 'signedRoom://comax2/usersRO/parquet/OEM_BI_4466',
     source: parquetSource('%$linesPath%', 'salesLines', { keyField: 'C' }),
     dimensions: [
       dimension('year', { guidance: 'calendar year' }),
@@ -152,7 +152,7 @@ Cube('comaxSalesCube', {
 
 Cube('comaxInventoryCube', {
   impl: cube({
-    wUrlBase: 'protected://comax2/usersRO/parquet/OEM_BI_4466',
+    wUrlBase: 'signedRoom://comax2/usersRO/parquet/OEM_BI_4466',
     source: parquetSource('Prt_ItrotStore_Yomi.parquet', 'inventory'),
     dimensions: [
       dimension('item', { guidance: 'product-store-day grain' }),

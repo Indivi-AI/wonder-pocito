@@ -77,7 +77,7 @@ Test('finance3.rawLocalSse', {
 })
 Test('finance3.rawStagingSse', {
   impl: dataTest({
-    calculate: finance3RawSseFetch({ host: 'https://staging.indivi.ai' }),
+    calculate: finance3RawSseFetch({ host: 'https://w-staging.indivi.ai' }),
     expectedResult: and('%status%==200', '%contentType%^=text/event-stream', '%done%', '%rows%==45', '%requests%>0'),
     timeout: 60000,
     logger: 'roomBigLogLogger2,benchmarkLogger,roomLogger,dbLogger,errorLogger,duckDBProfilingLogger'

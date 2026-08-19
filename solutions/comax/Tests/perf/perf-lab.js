@@ -3,7 +3,7 @@ import { fetchItemsFromLLMReactiveP, warmLLMCache } from '@wonder/ai/reactive-ll
 import '@wonder/ai/llm-flow-main-workflow.js'
 import '@wonder/ai/report-step.js'
 import '@wonder/db/db-drivers-live-repo.js'
-import '@wonder/db/room/room-lambda-client.js'
+import '@wonder/db/room-lambda-client.js'
 import '../../nostalgy/reports-based-agent.js'
 import '../../Reports/comax-reports.js'
 import '../../Doclets/perf/perf-instructions-small.js'

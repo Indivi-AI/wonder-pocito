@@ -148,7 +148,7 @@ Component('finance3SilverBuilder', {
   ],
   impl: (_, {}, { sourceWUrl, additionalStats }) => ({
     sourceType: 'full', name: 'transactions', keyField: 'source_row', periodPattern: 'YYYY-MM-DD',
-    parquetFiles: [{ name: 'transactions', wUrlPattern: 'protected://finance3/usersRO/silver/transactions-18m-hist.parquet', version: 1 }],
+    parquetFiles: [{ name: 'transactions', wUrlPattern: 'signedRoom://finance3/usersRO/silver/transactions-18m-hist.parquet', version: 1 }],
     plan: async (ctx, { dimensionStatsBuilders = [] }) => ({ source: await wresolve(sourceWUrl, ctx),
       statBuilders: [...dimensionStatsBuilders, ...additionalStats] }),
     build: (ctx, plan) => dsls.etl.etl.finance3Build.$runWithCtx(ctx, plan)

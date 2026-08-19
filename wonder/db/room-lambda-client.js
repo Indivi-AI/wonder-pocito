@@ -1,7 +1,7 @@
 import { jb, coreUtils, dsls } from '@jb6/core'
 import '@jb6/llm-guide/essentials.js'
 import '@wonder/db/db-drivers.js'
-import './room-lambda-dsl.js'
+import '@wonder/db/room-lambda-def.js'
 const { getIdToken, wfetch2 } = jb.wonderUtils
 import '@jb6/core/misc/jb-remote.js'                // stripCtx — roomLambda ships the call + ctx slice
 
@@ -113,7 +113,7 @@ DbDriverInterceptor('roomLambda', {
       const name = fileName.slice('lambda/'.length)
       try {
       // lambdaHost: explicit override; else browser uses page origin and node uses staging.
-      const base = ctx.vars.lambdaHost || globalThis.window?.location?.origin || 'https://staging.indivi.ai'
+      const base = ctx.vars.lambdaHost || globalThis.window?.location?.origin || 'https://w-staging.indivi.ai'
       const authAt = performance.now()
       const idToken = ctx.vars.noAuth ? null : await getIdToken(ctx)
       const authMs = performance.now() - authAt

@@ -526,12 +526,13 @@ Component('materializedView', {
     {id: 'name', as: 'string', mandatory: true},
     {id: 'wUrl', as: 'string', mandatory: true, description: 'durable parquet location, e.g. room://x/views/${name}.parquet'},
     {id: 'rows', dynamic: true, mandatory: true, description: 'a cubeQuery (or any data) yielding the rows to materialize'},
-    {id: 'freshness', type: 'freshness-policy<managed-data-ctx>', defaultValue: { $: 'freshness-policy<managed-data-ctx>ttl', maxAgeMs: 3600000 }}
+    {id: 'maxAgeMs', as: 'number', defaultValue: 3600000, description: 'reuse the parquet within this age; 0 always rebuilds'}
   ],
-  impl: async (ctx, {}, { name, wUrl, rows, freshness }) => {
+  impl: async (ctx, {}, { name, wUrl, rows, maxAgeMs }) => {
     const log = ctx?.vars?.biLogger
     const head = await wfetch2(wUrl, { method: 'HEAD' }, ctx).catch(() => null)
-    const state = freshness.check(head?.ok ? head.headers?.get?.('last-modified') : null)
+    const lastModified = head?.ok && head.headers?.get?.('last-modified')
+    const state = !lastModified ? 'missing' : maxAgeMs === 0 || Date.now() - new Date(lastModified).getTime() > maxAgeMs ? 'stale' : 'fresh'
     log?.info?.({ event: 'materializedView freshness', name, wUrl, state }, {}, { ctx })
     let path = state === 'fresh' && await wcachePopulate(wUrl, ctx, { validate: true })
     if (!path) {

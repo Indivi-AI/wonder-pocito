@@ -4,8 +4,7 @@
 
 A room is a **cloud directory** (a tree in cloud storage) that bundles everything a small team needs to collaborate:
 
-- **users + protections** — membership and an ACL (`room://` = public, `signedRoom://` = GCS-protected,
-  `protected://` = private bucket storage).
+- **users + permissions** — membership and an ACL (`room://` = public, `signedRoom://` = signed GCS access).
 - **files** — read/written via `wfetch2` / the db drivers, scoped by the protection dirs.
 - **lambdas** — server-side code the room can run, gated as the user.
 - **applets** — UI (react-comps) the room can serve, room-gated.
@@ -17,8 +16,7 @@ A room is a **cloud directory** (a tree in cloud storage) that bundles everythin
 All room types use the **same directory structure**. The scheme changes storage and authorization, never the room layout:
 
 - `room://<roomId>/...` uses the public GCS bucket.
-- `signedRoom://<roomId>/...` uses protected GCS objects and Wonder-issued signed URLs.
-- `protected://<roomId>/...` uses the private Amazon S3 bucket through its HTTP API and AWS SigV4.
+- `signedRoom://<roomId>/...` uses private GCS objects through Wonder-issued signed URLs.
 
 The directory conventions are identical for every room type:
 
@@ -26,8 +24,6 @@ The directory conventions are identical for every room type:
 - `usersRO/` — admins write *for* users; users read-only.
 - `usersRW/` — users read/write.
 
-## Protected rooms on Amazon S3
-add `admin/room-iam-policy.json` + optional `admin/room-public-policy.json` compatible to `admin/users.json`
 ## Room lambdas - invokeSnippetInContext
 
 Run a tgp snippet **on the remote, gated AS THE USER, within tgp context**, via the `wFetch` comp:
@@ -65,7 +61,6 @@ trailing-slash GET and `dbLogger`, rather than trusting this list.
 | roomId | scheme | purpose | example wUrl |
 |---|---|---|---|
 | `aTeam` | `room://` | default public room for assets (`uploadReactComp` etc.) | `room://aTeam/assets.json` |
-| `aTeam` | `protected://` | private S3 prefix used by protected DB-driver tests | `protected://aTeam/admin/tests/example.json` |
 | `demo` | `room://` | generic MCP example room id (placeholder, not a fixed room) | `room://demo/...` |
 | `demoTestRoom-<sid>` | — | per-session `demoRoom`-typed rooms from the whatsapp demo bp | created by `demo-bp.js` |
 
@@ -76,7 +71,6 @@ Test rooms (in the db-driver test suite, `public/core/db-drivers-tests.js`):
 | `testSignedRoom` | `signedRoom://` | wcache/media/permissions over signed bucket (`usersRO/`,`usersRW/`) |
 | `testPublicRoom` | `room://` | same data as testSignedRoom over the public path |
 | `buyPhone` | `room:gcs`/`room:fs` | put/get/append/patch driver tests (`items`) |
-| `aTeam` | `protected://` | Amazon S3 SigV4 put/get and URL resolution |
 
 ## Uploading resources via MCP
 

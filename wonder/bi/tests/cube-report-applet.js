@@ -3,7 +3,7 @@
 import { dsls } from '@jb6/core'
 import '@jb6/react'
 import '@jb6/react/progress-indicators.js'
-import '@wonder/db/room/room-lambda-client.js'   // invokeSnippetInContext + roomLambda interceptor
+import '@wonder/db/room-lambda-client.js'   // invokeSnippetInContext + roomLambda interceptor
 
 const {
   tgp: { Component, 'ctx-enricher': { setData } },

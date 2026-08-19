@@ -1,10 +1,11 @@
 import { dsls } from '@jb6/core'
 import '@jb6/testing'
 import '../bi-common.js'
-import '@wonder/db/room/room-lambda-client.js'
+import '@wonder/db/room-lambda-client.js'
+import '@wonder/db/tests/gmail-test-users.js'
 
 const {
-  tgp: { Component, 'ctx-enricher': { setVars } },
+  tgp: { Component, 'ctx-enricher': { enrichCtx, setVars, testUser } },
   common: { Lambda, data: { asIs, cubeQuery, invokeSnippetInContext, join },
     boolean: { equals, and, contains } },
   bi: { Cube, cube: { cube }, 'silver-builder': { parquetSource }, metric: { metric } },
@@ -52,7 +53,7 @@ const biCacheCloudTest = Component('biCacheCloudTest', {
     { id: 'expectedVia', as: 'string', mandatory: true, description: 'the server-side resolveSilvers `via` label merged back over the wire' }
   ],
   impl: dataTest({
-    setup: setVars(asIs({ lambdaHost: 'https://staging.indivi.ai', roomWUrl: 'signedRoom://testSignedRoom', onLiveRepo: false })),
+    setup: setVars(asIs({ lambdaHost: 'https://w-staging.indivi.ai', roomWUrl: 'signedRoom://testSignedRoom', onLiveRepo: false })),
     calculate: invokeSnippetInContext(cacheStoresReport({ cacheStrategy: '%$cacheStrategy%' })),
     expectedResult: and(equals(28, '%0/storeCount%'),
       contains('%$expectedVia%', { allText: join(',', { items: '%$biLogger.biLog.via%' }) }),
@@ -97,7 +98,7 @@ const biTaxiColsCacheLocalTest = Component('biTaxiColsCacheLocalTest', {
 const biTaxiColsCacheCloudTest = Component('biTaxiColsCacheCloudTest', {
   type: 'test<test>',
   impl: dataTest({
-    setup: setVars(asIs({ lambdaHost: 'https://staging.indivi.ai', roomWUrl: 'signedRoom://testSignedRoom', onLiveRepo: false })),
+    setup: setVars(asIs({ lambdaHost: 'https://w-staging.indivi.ai', roomWUrl: 'signedRoom://testSignedRoom', onLiveRepo: false })),
     calculate: invokeSnippetInContext(cacheTaxiReport({ cacheStrategy: 'colsCache' })),
     expectedResult: and(equals(3066766, '%0/trips%'), equals(56327502, '%0/totalFare%'),
       contains('colsCache extension', { allText: join(',', { items: '%$biLogger.biLog.via%' }) }),

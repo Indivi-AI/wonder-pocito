@@ -36,8 +36,7 @@ async function resolveWUrl(roomId, ctx) {
     if (!res.ok) throw new Error(`resolveWUrl failed: ${res.status} ${url}`)
     return true
   }
-  return await exists(`protected://${roomId}/admin/room-iam-policy.json`) ? `protected://${roomId}`
-    : await exists(`signedRoom://${roomId}/admin/users.json`) ? `signedRoom://${roomId}` : `room://${roomId}`
+  return await exists(`signedRoom://${roomId}/admin/users.json`) ? `signedRoom://${roomId}` : `room://${roomId}`
 }
 
 async function wresolveInfo(url, _ctx, method = 'GET') {
@@ -112,7 +111,7 @@ async function prefetchSignedUrls(ctx) {
 const getIdToken = auth.wonderIdToken
 const getAccessToken = auth.gcpAccessToken
 
-// protected - db-drivers.js
+// bucket paths shared by db drivers
 const storagePrefix = 'https://storage.googleapis.com'
 const wonderBucketName = 'indiviai-wonder'
 
@@ -123,7 +122,7 @@ async function calcPath(ctx, { scope, roomId, userId, fileName, db }) {
   const userPrivatePath = isLocal ? userId : (myRooms?.private || userId)
 
   const ctxForPath = ctx.setVars({ userPrivatePath, userId, roomId, fileName })
-  const roomsPrefix = isLocal && ['room', 'signedRoom', 'protected'].includes(scope.id) ? 'rooms' : ''
+  const roomsPrefix = isLocal && ['room', 'signedRoom'].includes(scope.id) ? 'rooms' : ''
   const fetchPath = scope.fetchPath.length > 0 ? scope.fetchPath : scope.path
   const path = [roomsPrefix, scope.folderInBucket, ...fetchPath.map(v => ctxForPath.vars[v])].filter(x => x).join('/')
   return path
@@ -271,7 +270,7 @@ async function checkPermissionDenial(ctx, room, file, method) {
   if (!ctx.vars.authLogger || !coreUtils.isNode || process.env.K_SERVICE || !/^[\w.-]+$/.test(room)) return
   const {execFile} = await import('node:child_process'), {promisify} = await import('node:util')
   const {stdout} = await promisify(execFile)('gsutil', ['cat', `gs://indiviai-wonder-protected/${room}/admin/users.json`])
-  const users = JSON.parse(stdout), username = ctx.vars.userEmail || await auth.devEmail(ctx)
+  const parsed = JSON.parse(stdout), users = parsed.content || parsed, username = ctx.vars.userEmail || await auth.devEmail(ctx)
   const role = users.admins.includes(username) ? 'admin'
     : users.users.includes(username) || users.users.includes('authenticated') ? 'user' : null
   const [accessLevel, pathUserId] = file.split('/'), permissions = users.accessLevels[accessLevel]?.[role] || ''
@@ -309,7 +308,7 @@ Object.assign(jb.wonderUtils, { formatDay, formatTimeWithRandom, wresolve, wreso
 let rawFileExts
 const localhostServer = ctx => ctx.vars.localhostServer || globalThis.process?.env?.WONDER_LOCAL_SERVER || 'http://localhost:3000'
 const signedUrlServerOf = ctx => ctx.vars.signedUrlServer
-  || 'https://wonder-server-staging-365199207445.me-west1.run.app/signed-url'
+  || 'https://w-staging.indivi.ai/signed-url'
 const methodToAction = method => method === 'GET' || method === 'HEAD' ? 'read' : 'write'
 const sigsStorageKey = roomId => `sigs_${roomId}_${auth.currentPrincipal()}`
 const loadedRooms = new Set()

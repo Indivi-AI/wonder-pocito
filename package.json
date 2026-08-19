@@ -4,13 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "local": "node --import ./nodejs-importmap.js cloud-services/express-server/local-server.js",
     "start-min-io": "env MINIO_ROOT_USER=wonder MINIO_ROOT_PASSWORD=wonder-minio-local $HOME/.local/bin/minio server $HOME/.minio-data --console-address :9001",
+    "local": "node --import ./nodejs-importmap.js cloud-services/express-server/local-server.js",
     "build-wonder-base": "bash cloud-services/build-wonder-base.sh",
     "build-wonder": "bash cloud-services/build-wonder-image.sh",
     "deploy-wonder": "bash cloud-services/deploy-cloud-run-staging.sh",
     "deploy-wonder-all": "bash cloud-services/deploy-cloud-run-staging.sh --all",
-    "deploy-wonder-amz": "bash cloud-services/deploy-wonder-amz.sh",
     "deploy-react-lib-and-images-to-cdn": "bash cloud-services/deploy-react-lib-and-images-to-cdn.sh",
     "airgapped-export": "bash cloud-services/on-prem/export-airgap.sh",
     "server-secrets:pull:dev": "node scripts/secrets.js pull dev",
@@ -21,9 +20,6 @@
     "bgn": "bash scripts/zip-wonder.sh"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1109.0",
-    "@aws-sdk/credential-provider-node": "^3.972.79",
-    "@aws-sdk/s3-request-presigner": "^3.1109.0",
     "@google-cloud/secret-manager": "^5.6.0",
     "@google-cloud/storage": "^7.15.2",
     "@modelcontextprotocol/sdk": "^1.13.2",

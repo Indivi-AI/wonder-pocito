@@ -1,6 +1,6 @@
 import cors from 'cors'
 
-const origins = ['https://wonder.indivi.ai', 'https://staging.indivi.ai', 'http://localhost:3000',
+const origins = ['https://wonder.indivi.ai', 'https://w-staging.indivi.ai', 'http://localhost:3000',
   /^https:\/\/[\w-]+-365199207445\.me-west1\.run\.app$/]
 const localOrigin = /^https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/
 

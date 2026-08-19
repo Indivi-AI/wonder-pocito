@@ -20,7 +20,7 @@ Data('wFetch', {
     'or GET a trailing-"/" url to list. Wraps wfetch2 — same wUrl scheme, scopes and drivers.'].join(' '),
   params: [
     { id: 'url', as: 'string', dynamic: true, mandatory: true,
-      description: 'wUrl: <scheme>://<roomId>/<dir>/<file>?user=<id>. room:// is public; signedRoom:// is protected' },
+      description: 'wUrl: <scheme>://<roomId>/<dir>/<file>?user=<id>. room:// is public; signedRoom:// is signed' },
     { id: 'method', as: 'string', defaultValue: 'GET',
       description: 'GET (read/list) | PUT (overwrite) | POST (append array) | PATCH (merge object) | HEAD' },
     { id: 'body', dynamic: true, description: 'content to write: whole value, append items, or merge object' },
@@ -64,10 +64,6 @@ const scope = Scope('scope', {
 
 Scope('room', {
   impl: scope({ path: ['roomId', 'fileName'] })
-})
-
-Scope('protected', {
-  impl: scope({ db: 'amazon', bucket: 'wonder-rooms-585008076838', path: ['roomId','fileName'] })
 })
 
 Scope('userGlobal', {
@@ -151,36 +147,7 @@ const dbBackend = DbBackend('dbBackend', {
 
 DbBackend('gcs', {
   impl: dbBackend({ categories: ['bucket', 'google', 'gcs'],
-    enrichCtx: Var('bucketEndpoint', () => globalThis.WONDER_STORAGE_URL || globalThis.process?.env?.WONDER_STORAGE_URL
-      || 'https://storage.googleapis.com') })
-})
-
-DbBackend('amazon', {
-  impl: dbBackend({
-    categories: ['bucket','s3','amazon'],
-    enrichCtx: [
-      Var('bucketEndpoint', 'https://s3.il-central-1.amazonaws.com'),
-      Var('bucketRegion', 'il-central-1')
-    ]
-  })
-})
-
-DbBackend('minio', {
-  impl: dbBackend({
-    categories: ['bucket','s3','minio'],
-    enrichCtx: [
-      Var('bucketEndpoint', () => coreUtils.isNode ? globalThis.process?.env?.MINIO_ENDPOINT || 'http://127.0.0.1:9000'
-        : globalThis.WONDER_STORAGE_URL || globalThis.process?.env?.MINIO_PUBLIC_ENDPOINT || 'http://127.0.0.1:9000'),
-      Var('bucketRegion', () => globalThis.process?.env?.MINIO_REGION || 'us-east-1'),
-      Var('bucketAccessKeyId', () => globalThis.process?.env?.MINIO_ACCESS_KEY),
-      Var('bucketSecretAccessKey', () => globalThis.process?.env?.MINIO_SECRET_KEY)
-    ]
-  })
-})
-
-DbBackend('bucket', {
-  impl: ctx => dsls.wonder['db-backend'][ctx.vars.bucketProvider || globalThis.WONDER_BUCKET_PROVIDER
-    || globalThis.process?.env?.STORAGE_PROVIDER || (globalThis.process?.env?.MINIO_ENDPOINT ? 'minio' : 'gcs')].$runWithCtx(ctx)
+    enrichCtx: Var('bucketEndpoint', 'https://storage.googleapis.com') })
 })
 
 DbBackend('fs', { impl: dbBackend({ categories: ['fs'] }) })
@@ -201,17 +168,6 @@ AuthToken('authToken.gcpAccessToken', {
   }
 })
 
-AuthToken('authToken.awsCredentials', {
-  impl: async ctx => {
-    if (!coreUtils.isNode) return { value: null, expired: () => false }
-    const { bucketAccessKeyId: accessKeyId, bucketSecretAccessKey: secretAccessKey,
-      bucketSessionToken: sessionToken, bucketCredentialsExpiresAt: expiresAt } = ctx.vars
-    const value = accessKeyId ? { accessKeyId, secretAccessKey, sessionToken, expiration: expiresAt }
-      : await (await import('@aws-sdk/credential-provider-node')).defaultProvider({ profile: ctx.vars.awsProfile })()
-    return { value, expired: () => !!value.expiration && Date.now() >= new Date(value.expiration).getTime() }
-  }
-})
-
 AuthMethod('authMethod.none', {
   impl: () => ({ enrichRequest: fetchReq => fetchReq })
 })
@@ -223,42 +179,6 @@ AuthMethod('authMethod.bearer', {
       headers.set('authorization', `Bearer ${authToken.value}`)
       ctx.vars.dbLogger?.info?.({ t: 'bucket request authenticated', authMethod: 'bearer',
         method: fetchReq.method, host: new URL(fetchReq.url).host }, {}, { ctx })
-      return new Request(fetchReq, { headers })
-    }
-  })
-})
-
-AuthMethod('authMethod.awsSigV4', {
-  impl: () => ({
-    enrichRequest: async (fetchReq, authToken, ctx) => {
-      if (!authToken.value) return fetchReq
-      const { accessKeyId, secretAccessKey, sessionToken } = authToken.value
-      const url = new URL(fetchReq.url), encoder = new TextEncoder(), subtle = globalThis.crypto.subtle
-      const encode = value => encodeURIComponent(value).replace(/[!'()*]/g, ch => `%${ch.charCodeAt(0).toString(16).toUpperCase()}`)
-      const hash = async value => new Uint8Array(await subtle.digest('SHA-256', typeof value === 'string' ? encoder.encode(value) : value))
-      const hmac = async (key, value) => new Uint8Array(await subtle.sign('HMAC',
-        await subtle.importKey('raw', typeof key === 'string' ? encoder.encode(key) : key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']),
-        encoder.encode(value)))
-      const hex = bytes => [...bytes].map(byte => byte.toString(16).padStart(2, '0')).join('')
-      const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, ''), date = amzDate.slice(0, 8)
-      const region = ctx.vars.bucketRegion || 'us-east-1', scope = `${date}/${region}/s3/aws4_request`
-      const headers = new Headers(fetchReq.headers), payloadHash = 'UNSIGNED-PAYLOAD'
-      headers.set('x-amz-content-sha256', payloadHash); headers.set('x-amz-date', amzDate)
-      if (sessionToken) headers.set('x-amz-security-token', sessionToken)
-      const signedHeaders = ['host', ...(sessionToken ? ['x-amz-security-token'] : []), 'x-amz-content-sha256', 'x-amz-date']
-      const canonicalHeaders = signedHeaders.map(name => `${name}:${name === 'host' ? url.host : headers.get(name).trim()}\n`).join('')
-      const canonicalQuery = [...url.searchParams].map(([key, value]) => [encode(key), encode(value)])
-        .sort(([aKey, aValue], [bKey, bValue]) => aKey.localeCompare(bKey) || aValue.localeCompare(bValue))
-        .map(pair => pair.join('=')).join('&')
-      const canonicalPath = url.pathname.split('/').map(part => encode(decodeURIComponent(part))).join('/')
-      const canonical = [fetchReq.method, canonicalPath, canonicalQuery, canonicalHeaders, signedHeaders.join(';'), payloadHash].join('\n')
-      const stringToSign = ['AWS4-HMAC-SHA256', amzDate, scope, hex(await hash(canonical))].join('\n')
-      const signingKey = await hmac(await hmac(await hmac(await hmac(`AWS4${secretAccessKey}`, date), region), 's3'), 'aws4_request')
-      const authorization = `AWS4-HMAC-SHA256 Credential=${accessKeyId}/${scope}, SignedHeaders=${signedHeaders.join(';')},`
-        + ` Signature=${hex(await hmac(signingKey, stringToSign))}`
-      headers.set('authorization', authorization)
-      ctx.vars.dbLogger?.info?.({ t: 'bucket request authenticated', authMethod: 'awsSigV4',
-        method: fetchReq.method, host: url.host, region, signedHeaders, hasSessionToken: !!sessionToken }, {}, { ctx })
       return new Request(fetchReq, { headers })
     }
   })
@@ -303,9 +223,9 @@ async function getDBDriver(url, ctx) {
   const hasGcp = ctx.vars.hasGcpIdentity ?? await auth.hasGcpIdentity(ctx)
   const extracted = url ? extractFromUrl(url, ctx) : {}
   const isPublicBucket = extracted?.scope?.bucket === wonderBucketName
-  // Public bucket reads are anonymous: no token mint or SDK startup.
+  // public-bucket READS go anonymous-HTTPS (GCS.node.publicGCS) — no token mint, no SDK ctor → 0 init (key on cloud).
   const isPublicRead = isPublicBucket && methodToAction((ctx.vars.opts?.method || ctx.vars.method || 'GET').toUpperCase()) === 'read'
-  const db = extracted.db || ctx.vars.db || (isPublicBucket ? 'bucket' : dbFromCtx) || 'bucket'
+  const db = extracted.db || ctx.vars.db || (isPublicBucket ? 'gcs' : dbFromCtx) || 'gcs'
   const dbNormalized = forceGCS ? 'gcs' : db === 'local' ? 'fs' : db.replace(/-/g, '')
   const scopeId = extracted?.scope?.id
   const backend = dsls.wonder['db-backend'][dbNormalized]?.$runWithCtx(ctx)
@@ -318,7 +238,7 @@ async function getDBDriver(url, ctx) {
     ...Object.fromEntries((backend?.categories || []).map(category => [category.toLowerCase(), true])),
     ...(onLiveRepo && {liverepo: true}),
     ...(hasGcp && {gcpidentity: true}),
-    ...(isPublicRead && {publicgcs: true, public: true}),
+    ...(isPublicBucket && {publicgcs: true, public: true}),
     ...(hasGcp && {identity: true}),
     ...(scopeId === 'signedRoom' && {signedroom: true}),
     ...((scopeId === 'logs' || scopeId === 'roomLogs') && {logs: true}),
@@ -385,7 +305,7 @@ async function wfetch2(_url, opts, _ctx) {
 
   const extracted = extractFromUrl(url, ctx)
   const explicitDb = /^\w+:[^/]+\/\//.test(url), runtimeDbValue = runtimeDb(ctx)
-  const rawDb = extracted.db || runtimeDbValue || 'bucket'
+  const rawDb = extracted.db || runtimeDbValue || 'gcs'
   const db = ctx.vars.forceGCS ? 'gcs' : rawDb === 'local' ? 'fs' : rawDb.replace(/-/g, '')
   const backend = dsls.wonder['db-backend'][db]?.$runWithCtx(ctx)
   const backendCtx = backend?.enrichCtx ? await backend.enrichCtx(ctx) : ctx
@@ -538,7 +458,8 @@ GetMethod('wget.GcsJSApi', {
       return {
         ok: true, status: 200, text: async () => txt, json: async () => {
           try {
-            return JSON.parse(txt).content
+            const data = JSON.parse(txt)
+            return data.content ?? data
           } catch (error) {
             coreUtils.logException(error, 'GCS GET json parse failed', { ctx, txt })
             return errorResultByException(error)
@@ -569,17 +490,14 @@ GetMethod('wget.viaBucketApi', {
         { url }, { ctx, response })
       else
         dbLogger?.error?.({ t: 'viaBucketApi GET failure' }, { url }, { ctx, response })
-
       return response
     }
-
     let data
     try { data = await response.json() } catch(e) {
       coreUtils.logException(e, 'viaBucketApi GET json parse failed', { ctx, status: response.status, url })
       return { ok: false, status: 500, text: async () => null, json: async () => null }
     }
-
-    const content = data.content
+    const content = data.content ?? data
     dbLogger?.info?.({ t: 'viaBucketApi GET parsed', contentKind: Array.isArray(content) ? 'array' : typeof content,
       items: Array.isArray(content) ? content.length : content && typeof content === 'object' ? Object.keys(content).length : null },
     { url }, { ctx })
@@ -596,9 +514,9 @@ GetMethod('wget.viaGcsProxy', {
       else dbLogger?.error?.({ t: 'viaGcsProxy GET failure' }, { url }, { ctx, response })
       return response
     }
-    const data = await response.json()
+    const data = await response.json(), content = data.content ?? data
     dbLogger?.info?.({ t: 'viaGcsProxy GET', bytes: JSON.stringify(data).length }, { url, data }, { ctx })
-    return { ok: true, status: 200, text: async () => JSON.stringify(data.content), json: async () => data.content }
+    return { ok: true, status: 200, text: async () => JSON.stringify(content), json: async () => content }
   }
 })
 
@@ -779,36 +697,6 @@ ListMethod('wlist.viaGoogleBucketApi', {
   }
 })
 
-ListMethod('wlist.viaS3BucketApi', {
-  impl: async (ctx, { dbLogger, bucketName, path, authToken, authMethod }) => {
-    const t0 = Date.now()
-    const endpoint = (ctx.vars.bucketEndpoint || 'https://s3.amazonaws.com').replace(/\/$/, '')
-    const decodeXml = text => text.replace(/&(?:amp|lt|gt|quot|apos);/g,
-      entity => ({ '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&apos;': "'" })[entity])
-    const valueOf = (xml, tag) => decodeXml(xml.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`))?.[1] || '')
-    const result = []
-    let continuationToken, pages = 0, status = 200
-    do {
-      const query = new URLSearchParams({ 'list-type': '2', delimiter: '/', prefix: path })
-      if (continuationToken) query.set('continuation-token', continuationToken)
-      const fetchReq = new Request(`${endpoint}/${bucketName}?${query}`)
-      const res = await fetch(await authMethod.enrichRequest(fetchReq, authToken, ctx))
-      status = res.status
-      const xml = res.ok ? await res.text() : ''
-      for (const match of xml.matchAll(/<CommonPrefixes>([\s\S]*?)<\/CommonPrefixes>/g))
-        result.push({ name: valueOf(match[1], 'Prefix'), isDir: true })
-      for (const match of xml.matchAll(/<Contents>([\s\S]*?)<\/Contents>/g))
-        result.push({ name: valueOf(match[1], 'Key'), updated: valueOf(match[1], 'LastModified'),
-          size: Number(valueOf(match[1], 'Size')) || 0 })
-      continuationToken = valueOf(xml, 'NextContinuationToken') || null
-      pages++
-    } while (continuationToken)
-    dbLogger?.info?.({ t: 'wlist.viaS3BucketApi', prefix: path, items: result.length, pages,
-      ms: Date.now() - t0, status }, {}, { ctx })
-    return result
-  }
-})
-
 // Same as viaGoogleBucketApi but routes through /gcs-proxy on the same origin to bypass CORS in browser iframes.
 ListMethod('wlist.viaGcsProxy', {
   impl: async (ctx, { dbLogger, bucketName, path }) => {
@@ -893,47 +781,6 @@ DbDriver('bucket.google.identity', {
     append: wappend.getAndPut(),
     head: whead.viaBucketApi(),
     list: wlist.viaGoogleBucketApi(),
-    filePathUrl: '%$bucketEndpoint%/%$bucketName%/%$path%'
-  })
-})
-
-DbDriver('bucket.amazon', {
-  impl: dbDriver({
-    whenAndWhyToUse: 'Amazon S3 HTTP access with AWS Signature Version 4.',
-    authToken: authToken.awsCredentials(),
-    authMethod: authMethod.awsSigV4(),
-    get: wget.viaBucketApi(),
-    put: wput.viaBucketApi(),
-    append: wappend.getAndPut(),
-    head: whead.viaBucketApi(),
-    list: wlist.viaS3BucketApi(),
-    filePathUrl: '%$bucketEndpoint%/%$bucketName%/%$path%'
-  })
-})
-
-DbDriver('bucket.minio', {
-  impl: dbDriver({
-    whenAndWhyToUse: 'S3-compatible bucket inside an air-gapped environment.',
-    authToken: authToken.awsCredentials(),
-    authMethod: authMethod.awsSigV4(),
-    get: wget.viaBucketApi(),
-    put: wput.viaBucketApi(),
-    append: wappend.getAndPut(),
-    head: whead.viaBucketApi(),
-    list: wlist.viaS3BucketApi(),
-    filePathUrl: '%$bucketEndpoint%/%$bucketName%/%$path%'
-  })
-})
-
-DbDriver('bucket.minio.public', {
-  impl: dbDriver({
-    whenAndWhyToUse: 'Anonymous object access to a public MinIO bucket; listing is intentionally unavailable.',
-    authToken: authToken.anonymous(),
-    authMethod: authMethod.none(),
-    get: wget.viaBucketApi(),
-    put: wput.viaBucketApi(),
-    append: wappend.getAndPut(),
-    head: whead.viaBucketApi(),
     filePathUrl: '%$bucketEndpoint%/%$bucketName%/%$path%'
   })
 })

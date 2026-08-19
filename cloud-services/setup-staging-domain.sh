@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SERVICE="wonder-server-staging"
-DOMAIN="staging.indivi.ai"
+DOMAIN="w-staging.indivi.ai"
 REGION="me-west1"
 NEG="${SERVICE}-neg"
 BACKEND="${SERVICE}-backend"

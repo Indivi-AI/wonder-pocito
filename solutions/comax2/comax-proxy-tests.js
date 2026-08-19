@@ -10,12 +10,12 @@ const {
 } = dsls
 
 Const('comaxWUrls', [
-  'protected://comax2/usersRO/parquet/OEM_BI_4466/DailyPriceCost.parquet',
-  'protected://comax2/usersRO/parquet/OEM_BI_4466/DailyPriceCost_Zakyan.parquet',
-  'protected://comax2/usersRO/parquet/OEM_BI_4466/KupaDoc_Header-mqy.parquet',
-  'protected://comax2/usersRO/parquet/OEM_BI_4466/KupaDoc_Lines-mqy.parquet',
-  'protected://comax2/usersRO/parquet/OEM_BI_4466/Prt.parquet',
-  'protected://comax2/usersRO/parquet/OEM_BI_4466/Store.parquet'
+  'signedRoom://comax2/usersRO/parquet/OEM_BI_4466/DailyPriceCost.parquet',
+  'signedRoom://comax2/usersRO/parquet/OEM_BI_4466/DailyPriceCost_Zakyan.parquet',
+  'signedRoom://comax2/usersRO/parquet/OEM_BI_4466/KupaDoc_Header-mqy.parquet',
+  'signedRoom://comax2/usersRO/parquet/OEM_BI_4466/KupaDoc_Lines-mqy.parquet',
+  'signedRoom://comax2/usersRO/parquet/OEM_BI_4466/Prt.parquet',
+  'signedRoom://comax2/usersRO/parquet/OEM_BI_4466/Store.parquet'
 ])
 
 Const('comaxKpiRanges', {

@@ -7,16 +7,17 @@ import '@wonder/db/oauth2.js'
 import './room-tests.js'
 import '@wonder/db/db-drivers.js'
 import '@wonder/db/etl/file-query.js'
+import '@wonder/db/tests/gmail-test-users.js'
 
 // How to run the test via mcp:
 // 1) fast nodejs, default: runTest({testId:'roomAppletTest.summaryApplet', logger:'dbLogger,roomLogger'}).
 // 2) in browser via playwrightHarvest({url, automation})
 //    http://localhost:3000/room/<room>/applet/summaryApplet?logger=roomLogger,dbLogger is using liveRepo, no need to upload applet
-//    https://staging.indivi.ai, after working on localhost and loading applet via mcp
+//    https://w-staging.indivi.ai, after working on localhost and loading applet via mcp
 //   To save time, look at the logs, do not trust green tests
 
 const {
-  tgp: { Component, 'ctx-enricher': { setData } },
+  tgp: { Component, 'ctx-enricher': { setData, testUser } },
   common: { Data, boolean: { contains }, data: { invokeSnippetInContext, salesByCategory, fileQuery } },
   lambda: { 'lambda-packaging': { roomLambda } },
   test: { Test, test: { reactTest } },
@@ -79,5 +80,5 @@ const summaryAppletTest = Component('summaryAppletTest', {
 Test('roomAppletTest.summaryApplet', { impl: summaryAppletTest('room://testPublicRoom') })
 Test('roomAppletTest.signedSummaryApplet', { impl: summaryAppletTest('signedRoom://testSignedRoom') })
 Test('roomAppletTest.signedSummaryApplet.cloud', {
-  impl: summaryAppletTest({ roomWUrl: 'signedRoom://testSignedRoom', onLiveRepo: false, lambdaHost: 'https://staging.indivi.ai' })
+  impl: summaryAppletTest({ roomWUrl: 'signedRoom://testSignedRoom', onLiveRepo: false, lambdaHost: 'https://w-staging.indivi.ai' })
 })

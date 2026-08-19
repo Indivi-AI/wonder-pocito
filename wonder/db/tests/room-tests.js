@@ -1,13 +1,14 @@
 import { dsls, coreUtils } from '@jb6/core'
 import '@jb6/testing'
 import '@jb6/llm-guide/essentials.js'
-import './room-lambda-client.js'         // permissionByPath comp-field + roomLambda interceptor + lambdaLogger/roomLogger
-import './ping-lambda.js'
-import './room-bi-lambdas.js'
+import '@wonder/db/room-lambda-client.js'         // permissionByPath comp-field + roomLambda interceptor + lambdaLogger/roomLogger
+import './minimal-ping-lambda.js'
+import './bi-lambdas-for-tests.js'
 import '@wonder/db/etl/file-query.js'  // fileQuery, cachedWonderUrl, duckdb
+import '@wonder/db/tests/gmail-test-users.js'
 
 const {
-  tgp: { Component, 'ctx-enricher': { setVars, Var, enrichCtx } },
+  tgp: { Component, 'ctx-enricher': { setVars, Var, enrichCtx, testAdminUser, testUser } },
   common: { Data, Lambda,
     boolean: { equals, notEmpty, contains, and },
     data: { asIs, count, join, pipe, fileQuery, wFetch, invokeSnippetInContext, ping, storeCount, storeCountPublic }
@@ -74,7 +75,7 @@ Test('roomLambdaTest.devMachine.lambdaViaCli', {
 Test('roomLambdaTest.deployOnTheCloud', {
   HeavyTest: true,
   impl: dataTest({
-    setup: setVars(asIs({ lambdaHost: 'https://staging.indivi.ai', roomWUrl: 'room://testPublicRoom' })),
+    setup: setVars(asIs({ lambdaHost: 'https://w-staging.indivi.ai', roomWUrl: 'room://testPublicRoom' })),
     calculate: invokeSnippetInContext(salesByCategory('sports')),
     expectedResult: and(equals('sports', '%0/category%'), contains('roomLambda done', { allText: join(',', { items: '%$roomLogger.roomLog.event%' }) })),
     timeout: 12000,
@@ -129,7 +130,7 @@ Test('roomLambdaTest.remoteCall.argDefault', {
 Test('roomLambdaTest.remoteCall.arg', {
   HeavyTest: true,
   impl: dataTest({
-    setup: setVars(asIs({ lambdaHost: 'https://staging.indivi.ai', roomWUrl: 'room://testPublicRoom' })),
+    setup: setVars(asIs({ lambdaHost: 'https://w-staging.indivi.ai', roomWUrl: 'room://testPublicRoom' })),
     calculate: invokeSnippetInContext(salesByCategory({ category: 'sports' })),
     expectedResult: equals('sports', '%0/category%'),
     timeout: 12000,
@@ -140,10 +141,9 @@ Test('roomLambdaTest.remoteCall.arg', {
 Test('roomLambdaTest.remoteCall.byFetch', {
   HeavyTest: true,
   impl: dataTest({
-    setup: setVars(asIs({ lambdaHost: 'https://staging.indivi.ai', roomWUrl: 'room://testPublicRoom' })),
     calculate: invokeSnippetInContext(accountSummary(wFetch('{%$roomWUrl%}/usersRO/accounts/acme.json'))),
-    expectedResult: and(equals(5, '%%'),                                          // ROUND-TRIP: the lambda read acme.json server-side & counted its 5 rows
-                        '%$roomLogger.roomLog.packedBytes% < 200'),                // SMALL: only the url's token crossed, NOT the rows
+    expectedResult: and(equals(5, '%%'), '%$roomLogger.roomLog.packedBytes% < 200'),
+    setup: setVars(asIs({lambdaHost: 'https://w-staging.indivi.ai', roomWUrl: 'room://testPublicRoom'})),
     timeout: 12000,
     logger: 'roomLogger'
   })
@@ -152,10 +152,13 @@ Test('roomLambdaTest.remoteCall.byFetch', {
 Test('roomLambdaTest.remoteCall.byValue', {
   HeavyTest: true,
   impl: dataTest({
-    setup: setVars(asIs({ lambdaHost: 'https://staging.indivi.ai', roomWUrl: 'room://testPublicRoom', accountDetails: Array.from({ length: 30 }, (_, i) => ({ amount: i })) })),
     calculate: invokeSnippetInContext(accountSummary('%$accountDetails%')),
-    expectedResult: and(equals(30, '%%'),                                         // ROUND-TRIP: the 30 rows themselves crossed & were counted server-side
-                        '%$roomLogger.roomLog.packedBytes% > 300'),                // LARGE: the rows crossed in packedCtx.vars (vs byFetch's ~120)
+    expectedResult: and(equals(30, '%%'), '%$roomLogger.roomLog.packedBytes% > 300'),
+    setup: setVars(asIs({
+        lambdaHost: 'https://w-staging.indivi.ai',
+        roomWUrl: 'room://testPublicRoom',
+        accountDetails: {$: 'Array.from'}
+    })),
     timeout: 12000,
     logger: 'roomLogger'
   })
@@ -182,7 +185,7 @@ const accessGranted = Component('accessGranted', {
     { id: 'invoke', type: 'data<common>', dynamic: true, mandatory: true, description: 'invokeSnippetInContext(pingX()) — the gated call' }
   ],
   impl: dataTest({
-    setup: setVars( ({},{},{room}) => ({ lambdaHost: 'https://staging.indivi.ai', roomWUrl: `signedRoom://${room}` })),
+    setup: setVars( ({},{},{room}) => ({ lambdaHost: 'https://w-staging.indivi.ai', roomWUrl: `signedRoom://${room}` })),
     calculate: '%$invoke()%',
     expectedResult: equals(true, '%pong%'),
     timeout: 12000, logger: 'roomLogger'
@@ -197,7 +200,7 @@ const accessDenied = Component('accessDenied', {
     { id: 'reason', as: 'string', mandatory: true, description: 'the serverError substring the 403 must carry' }
   ],
   impl: dataTest({
-    setup: setVars( ({},{},{room}) => ({ lambdaHost: 'https://staging.indivi.ai', roomWUrl: `signedRoom://${room}` })),
+    setup: setVars( ({},{},{room}) => ({ lambdaHost: 'https://w-staging.indivi.ai', roomWUrl: `signedRoom://${room}` })),
     calculate: '%$invoke()%',
     allowError: true,
     expectedResult: and(contains('403', { allText: join(',', { items: '%$roomLogger.roomErrors.status%' }) }),
@@ -207,17 +210,48 @@ const accessDenied = Component('accessDenied', {
 })
 
 // ALLOW: admin grants every dir; user grants the dirs it has r on.
-Test('roomLambdaTest.accessControl.admin.usersRO', { HeavyTest: true, impl: accessGranted('testSignedRoom', invokeSnippetInContext(ping())) })
-Test('roomLambdaTest.accessControl.admin.adminDir', { HeavyTest: true, impl: accessGranted('testSignedRoom', invokeSnippetInContext(pingAdmin())) })
-Test('roomLambdaTest.accessControl.user.usersRW', { HeavyTest: true, impl: accessGranted('testUserRoom', invokeSnippetInContext(pingRW())) })
+Test('roomLambdaTest.accessControl.admin.usersRO', {
+  HeavyTest: true,
+  impl: accessGranted({
+    vars: [testAdminUser()],
+    room: 'testSignedRoom',
+    invoke: invokeSnippetInContext(ping())
+  })
+})
+Test('roomLambdaTest.accessControl.admin.adminDir', {
+  HeavyTest: true,
+  impl: accessGranted({
+    vars: [testAdminUser()],
+    room: 'testSignedRoom',
+    invoke: invokeSnippetInContext(pingAdmin())
+  })
+})
+Test('roomLambdaTest.accessControl.user.usersRW', {
+  HeavyTest: true,
+  impl: accessGranted({
+    vars: [testUser()],
+    room: 'testUserRoom',
+    invoke: invokeSnippetInContext(pingRW())
+  })
+})
 // DENY G2: user on the admin dir (no perm). DENY G1: stranger (role null) on any dir.
 Test('roomLambdaTest.accessControl.deny.userOnAdminDir', {
   HeavyTest: true,
-  impl: accessDenied('testUserRoom', invokeSnippetInContext(pingAdmin()), 'forbidden: admin for role user for user')
+  impl: accessDenied({
+    vars: [testUser()],
+    room: 'testUserRoom',
+    invoke: invokeSnippetInContext(pingAdmin()),
+    reason: 'forbidden: admin for role user for user'
+  })
 })
 Test('roomLambdaTest.accessControl.deny.stranger', {
   HeavyTest: true,
-  impl: accessDenied('testStrangerRoom', invokeSnippetInContext(ping()), 'forbidden: usersRO for role null for user')
+  impl: accessDenied({
+    vars: [testUser()],
+    room: 'testStrangerRoom',
+    invoke: invokeSnippetInContext(ping()),
+    reason: 'forbidden: usersRO for role null for user'
+  })
 })
 
 Test('roomLambdaTest.accessControl.signed', {
@@ -229,7 +263,10 @@ Test('roomLambdaTest.accessControl.signed', {
       contains('signedRoom', { allText: join(',', { items: '%$dbLogger.dbLog.driverId%' }) }),
       contains('signedUrl ready', { allText: join(',', { items: '%$dbLogger.dbLog.t%' }) })
     ),
-    setup: setVars(asIs({lambdaHost: 'https://staging.indivi.ai', roomWUrl: 'signedRoom://testSignedRoom'})),
+    setup: enrichCtx(
+      testUser(),
+      setVars(asIs({lambdaHost: 'https://w-staging.indivi.ai', roomWUrl: 'signedRoom://testSignedRoom'}))
+    ),
     timeout: 12000,
     logger: 'dbLogger,roomLogger,etlLogger'
   })
@@ -263,10 +300,11 @@ Test('roomLambdaTest.progress.stream', {
 
 Test('roomLambdaTest.singedRoom.ping', {
   HeavyTest: true,
-  impl: dataTest({
-    setup: setVars(asIs({ lambdaHost: 'https://staging.indivi.ai', roomWUrl: 'signedRoom://testSignedRoom' })),
-    calculate: invokeSnippetInContext(ping()),
-    expectedResult: equals(true, '%pong%'),   // signed-room wire pongs; the signed-URL guarantee (X-Goog-Signature) is proven by perm.signed, which actually reads a file
+  impl: dataTest(invokeSnippetInContext(ping()), equals(true, '%pong%'), {
+    setup: enrichCtx(
+      testUser(),
+      setVars(asIs({lambdaHost: 'https://w-staging.indivi.ai', roomWUrl: 'signedRoom://testSignedRoom'}))
+    ),
     timeout: 12000,
     logger: 'dbLogger,roomLogger'
   })
@@ -288,10 +326,11 @@ Test('roomLambdaTest.probe.duckdbPerf', {
 // §8 — CUBE QUERY OVER PARQUET, on the signed room. A cubeQuery lambda: the cube compiles `storeCount` → count_star()
 // over stores.parquet, run AS THE USER, reading the protected parquet via signed-url byte-ranges (db:'bucket' server-side).
 Test('roomLambdaTest.cubeQuery.signedParquet', {
-  impl: dataTest({
-    setup: setVars(asIs({ lambdaHost: 'http://localhost:3000', roomWUrl: 'signedRoom://testSignedRoom', onLiveRepo: true })),
-    calculate: invokeSnippetInContext(storeCount()),
-    expectedResult: equals(28, '%0/storeCount%'),
+  impl: dataTest(invokeSnippetInContext(storeCount()), equals(28, '%0/storeCount%'), {
+    setup: enrichCtx(
+      testUser(),
+      setVars(asIs({lambdaHost: 'http://localhost:3000', roomWUrl: 'signedRoom://testSignedRoom', onLiveRepo: true}))
+    ),
     timeout: 5000,
     logger: 'roomLogger,biLogger,colsCacheLogger'
   })

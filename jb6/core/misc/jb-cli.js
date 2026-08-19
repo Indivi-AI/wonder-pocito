@@ -12,7 +12,31 @@ const {
   common: { Data }
 } = jb.dsls
 const { logException, logError, isNode } = coreUtils
-Object.assign(coreUtils, {runNodeCli, runNodeCliViaJbWebServer, runCliInContext, runBashScript, runNodeCliStreamViaJbWebServer, runBashScriptStreamViaJbWebServer, buildNodeCliCmd})
+Object.assign(coreUtils, {runNodeCli, runNodeCliViaJbWebServer, runCliInContext, runBashScript,
+  runNodeCliStreamViaJbWebServer, runBashScriptStreamViaJbWebServer, buildNodeCliCmd, createLoggerStreamAdapter})
+
+function createLoggerStreamAdapter({ctx, bindLoggers}) {
+  if (!bindLoggers && !ctx?.vars?.cliLogger) return null
+  const buffers = { stdout: '', stderr: '' }
+  const dispatch = (line, stream) => {
+    let envelope
+    try { envelope = JSON.parse(line) } catch {}
+    if (envelope?.kind !== 'log') return ctx?.vars?.cliLineLogger?.info?.({t: 'cli line', stream, line}, {}, {ctx})
+    const channel = ctx?.vars?.[envelope.logger]?.[envelope.channel]
+    if (typeof channel === 'function') channel(envelope.event, {}, {ctx})
+  }
+  const accept = ({stream, text}) => {
+    if (!text) return
+    const lines = (buffers[stream] + text.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')).split('\n')
+    buffers[stream] = lines.pop()
+    lines.forEach(line => dispatch(line, stream))
+  }
+  accept.flush = () => Object.entries(buffers).forEach(([stream, line]) => {
+    if (line) dispatch(line, stream)
+    buffers[stream] = ''
+  })
+  return accept
+}
 
 function buildNodeCliCmd(script, options = {}) {
   options.importMapsInCli = options.importMapsInCli || jb.coreRegistry.importMapsInCli
@@ -32,7 +56,8 @@ async function runNodeCli(script, options = {}) {
   const {spawn} = await import('child_process')
   const { cmd, importParts } = buildNodeCliCmd(script, options)
   const cwd = options.projectDir
-  const childArgs = ['--experimental-vm-modules', '--expose-gc', '--input-type=module', ...importParts]   // real spawn args; the `cmd` string is display-only (its --inspect-brk is NOT used here)
+  // Real spawn args; `cmd` is display-only and its --inspect-brk is not used here.
+  const childArgs = ['--experimental-vm-modules', '--expose-gc', '--input-type=module', ...importParts]
   const scriptToRun = `console.log = () => {};\n${script}`
   const acceptProgressFromStderr = options.ctx?.vars?.loggersNeededForUiProgress ? progressFromStderr(options.ctx) : null
   const onChunk = options.onChunk

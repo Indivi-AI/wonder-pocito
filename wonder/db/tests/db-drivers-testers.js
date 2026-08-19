@@ -1,11 +1,13 @@
 import { dsls, coreUtils, jb } from '@jb6/core'
 import '@jb6/testing'
 import '@jb6/common'
-import './db-drivers.js'
-import './db-drivers-live-repo.js'
+import '@wonder/db/db-drivers.js'
+import '@wonder/db/db-drivers-live-repo.js'
+import '@wonder/db/tests/gmail-test-users.js'
 
-const { wfetch2, getIdToken } = jb.wonderUtils
+const { wfetch2 } = jb.wonderUtils
 const {
+  tgp: { 'ctx-enricher': { enrichCtx, testAdminUser, testUser } },
   test: { Test,
     test: { dataTest }
   },
@@ -15,9 +17,8 @@ const {
   }
 } = dsls
 
-const mintTestToken = phone => fetch(`http://localhost:3000/mint-wonder-token?email=${encodeURIComponent(phone)}`).then(r => r.text())
 const signedUrlServerForTests = env => env === 'staging'
-  ? 'https://staging.indivi.ai/signed-url'
+  ? 'https://w-staging.indivi.ai/signed-url'
   : 'http://localhost:3000/signed-url'
 
 Test('dbDriverPutGetTest', {
@@ -69,13 +70,14 @@ Test('dbDriverAppendTest', {
 
 function signedRoomCtx(ctx, env) {
   return ctx.setVars({ forceGCS: false, isStaging: env === 'staging',
-    ...(env === 'staging' && { signedUrlServer: 'https://staging.indivi.ai/signed-url' }) })
+    ...(env === 'staging' && { signedUrlServer: 'https://w-staging.indivi.ai/signed-url' }) })
 }
 
 Test('signedRoomPutGetTest', {
-  params: [{id: 'env', options: 'staging'}],
+  params: [
+    {id: 'env', options: 'staging'}
+  ],
   impl: dataTest({
-    logger: 'dbLogger',
     calculate: async (ctx, {}, {env}) => {
       const dbCtx = signedRoomCtx(ctx, env)
       const url = 'signedRoom://testSignedRoom/admin/adminStuff.json'
@@ -89,14 +91,17 @@ Test('signedRoomPutGetTest', {
       }
     },
     expectedResult: equals('%result.a%', 5),
-    timeout: 12000
+    setup: testAdminUser(),
+    timeout: 12000,
+    logger: 'dbLogger'
   })
 })
 
 Test('signedRoomAppendTest', {
-  params: [{id: 'env', options: 'staging'}],
+  params: [
+    {id: 'env', options: 'staging'}
+  ],
   impl: dataTest({
-    logger: 'dbLogger',
     calculate: async (ctx, {}, {env}) => {
       const dbCtx = signedRoomCtx(ctx, env)
       const url = 'signedRoom://testSignedRoom/admin/testAppend'
@@ -111,80 +116,92 @@ Test('signedRoomAppendTest', {
       }
     },
     expectedResult: equals('%result%', [{id: 0}, {id: 1}]),
-    timeout: 12000
+    setup: testAdminUser(),
+    timeout: 12000,
+    logger: 'dbLogger'
   })
 })
 
 Test('signedRoomPermissionsTest', {
-  params: [{id: 'env', options: 'staging'}],
+  params: [
+    {id: 'env', options: 'staging'},
+    {id: 'enrichUser', type: 'ctx-enricher<tgp>', dynamic: true, defaultValue: testUser()}
+  ],
   impl: dataTest({
-    logger: 'dbLogger',
-    calculate: async (ctx, {}, {env}) => {
+    calculate: async (ctx, {}, {env, enrichUser}) => {
       const dbCtx = signedRoomCtx(ctx, env)
       const signingUrl = signedUrlServerForTests(env)
-      const [adminToken, user1Token, user2Token, strangerToken] = await Promise.all(
-        ['+1000ADMIN', '+1000USER1', '+1000USER2', '+1000STRANGER'].map(mintTestToken))
-      const req = (token, path, method) => fetch(`${signingUrl}/${path}?method=${method}`, { headers: { Authorization: `Bearer ${token}` } })
-      const labels = ['admin-read-admin','admin-write-admin','user-read-admin','admin-read-usersRO','admin-write-usersRO',
-        'user-read-usersRO','user-write-usersRO','admin-read-userProtected','user-read-own','user-write-own','user-read-others','stranger-read','no-token']
+      const {idToken: adminToken, userEmail: adminEmail} = ctx.vars
+      const {idToken: userToken, userEmail} = (await enrichUser(ctx)).vars
+      const req = (token, path, method) => fetch(`${signingUrl}/${path}?method=${method}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const labels = ['admin-read-admin', 'admin-write-admin', 'user-read-admin', 'admin-read-usersRO',
+        'admin-write-usersRO', 'user-read-usersRO', 'user-write-usersRO', 'admin-read-user',
+        'user-read-own', 'user-write-own', 'user-read-others', 'no-token']
+      const userPath = `testSignedRoom/userProtected/${userEmail}/cart.json`
       const results = await Promise.all([
-        req(adminToken, 'testSignedRoom/admin/test.json', 'GET'),              // 1. admin read admin → 200
-        req(adminToken, 'testSignedRoom/admin/test.json', 'PUT'),              // 2. admin write admin → 200
-        req(user1Token, 'testSignedRoom/admin/test.json', 'GET'),              // 3. user read admin → 403
-        req(adminToken, 'testSignedRoom/usersRO/test.json', 'GET'),                // 4. admin read usersRO → 200
-        req(adminToken, 'testSignedRoom/usersRO/test.json', 'PUT'),                // 5. admin write usersRO → 200
-        req(user1Token, 'testSignedRoom/usersRO/test.json', 'GET'),                // 6. user read usersRO → 200
-        req(user1Token, 'testSignedRoom/usersRO/test.json', 'PUT'),                // 7. user write usersRO → 403
-        req(adminToken, 'testSignedRoom/userProtected/+1000USER1/cart.json', 'GET'), // 8. admin read any user → 200
-        req(user1Token, 'testSignedRoom/userProtected/+1000USER1/cart.json', 'GET'), // 9. user read own → 200
-        req(user1Token, 'testSignedRoom/userProtected/+1000USER1/cart.json', 'PUT'), // 10. user write own → 200
-        req(user2Token, 'testSignedRoom/userProtected/+1000USER1/cart.json', 'GET'), // 11. user read other's → 403
-        req(strangerToken, 'testSignedRoomSpecific/usersRO/test.json', 'GET'),     // 12. stranger (not member) → 403
-        fetch(`${signingUrl}/testSignedRoom/admin/test.json?method=GET`), // 13. no token → 401
+        req(adminToken, 'testSignedRoom/admin/test.json', 'GET'),
+        req(adminToken, 'testSignedRoom/admin/test.json', 'PUT'),
+        req(userToken, 'testSignedRoom/admin/test.json', 'GET'),
+        req(adminToken, 'testSignedRoom/usersRO/test.json', 'GET'),
+        req(adminToken, 'testSignedRoom/usersRO/test.json', 'PUT'),
+        req(userToken, 'testSignedRoom/usersRO/test.json', 'GET'),
+        req(userToken, 'testSignedRoom/usersRO/test.json', 'PUT'),
+        req(adminToken, userPath, 'GET'),
+        req(userToken, userPath, 'GET'),
+        req(userToken, userPath, 'PUT'),
+        req(userToken, `testSignedRoom/userProtected/${adminEmail}/cart.json`, 'GET'),
+        fetch(`${signingUrl}/testSignedRoom/admin/test.json?method=GET`)
       ])
-      const details = await Promise.all(results.map(async (r, i) => {
-        const body = r.status !== 200 ? await r.text().catch(() => '') : ''
-        return { label: labels[i], status: r.status, ...(body && { body }) }
+      const details = await Promise.all(results.map(async (res, i) => {
+        const body = res.status !== 200 ? await res.text().catch(() => '') : ''
+        return { label: labels[i], status: res.status, ...(body && { body }) }
       }))
       dbCtx.vars.dbLogger?.info?.({ t: 'permissions results', details }, {}, { ctx: dbCtx })
-      return { result: results.map(r => r.status).join(','), ...coreUtils.harvestLogs(dbCtx) }
+      return { result: results.map(res => res.status).join(','), ...coreUtils.harvestLogs(dbCtx) }
     },
-    expectedResult: equals('%result%', '200,200,403,200,200,200,403,200,200,200,403,403,401'),
-    timeout: 12000
+    expectedResult: equals('%result%', '200,200,403,200,200,200,403,200,200,200,403,401'),
+    setup: testAdminUser(),
+    timeout: 12000,
+    logger: 'dbLogger'
   })
 })
 
 Test('signedRoomGooglePermissionsTest', {
-  params: [{id: 'env', options: 'staging'}],
+  params: [
+    {id: 'env', options: 'staging'}
+  ],
   impl: dataTest({
-    logger: 'dbLogger',
     calculate: async (ctx, {}, {env}) => {
       const dbCtx = signedRoomCtx(ctx, env)
-      const idToken = await getIdToken(dbCtx)
       const signingUrl = signedUrlServerForTests(env)
-      const headers = { Authorization: `Bearer ${idToken}` }
-      const req = (path, method) => fetch(`${signingUrl}/${path}?method=${method}`, { headers })
+      const headers = { Authorization: `Bearer ${ctx.vars.idToken}` }
+      const req = path => fetch(`${signingUrl}/${path}?method=GET`, { headers })
       const results = await Promise.all([
-        req('testSignedRoom/admin/test.json', 'GET'),
-        req('testSignedRoom/usersRO/test.json', 'GET'),
-        fetch(`${signingUrl}/testSignedRoom/admin/test.json?method=GET`),
+        req('testSignedRoom/admin/test.json'),
+        req('testSignedRoom/usersRO/test.json'),
+        fetch(`${signingUrl}/testSignedRoom/admin/test.json?method=GET`)
       ])
-      const details = await Promise.all(results.map(async (r, i) => {
-        const body = r.status !== 200 ? await r.text().catch(() => '') : ''
-        return { status: r.status, ...(body && { body }) }
+      const details = await Promise.all(results.map(async res => {
+        const body = res.status !== 200 ? await res.text().catch(() => '') : ''
+        return { status: res.status, ...(body && { body }) }
       }))
       dbCtx.vars.dbLogger?.info?.({ t: 'google permissions results', details }, {}, { ctx: dbCtx })
-      return { result: results.map(r => r.status).join(','), ...coreUtils.harvestLogs(dbCtx) }
+      return { result: results.map(res => res.status).join(','), ...coreUtils.harvestLogs(dbCtx) }
     },
-    expectedResult: equals('%result%', '200,200,401'),
-    timeout: 12000
+    expectedResult: equals('%result%', '403,200,401'),
+    setup: testUser(),
+    timeout: 12000,
+    logger: 'dbLogger'
   })
 })
 
 Test('signedRoomUsersRWTest', {
-  params: [{id: 'env', options: 'staging'}],
+  params: [
+    {id: 'env', options: 'staging'}
+  ],
   impl: dataTest({
-    logger: 'dbLogger',
     calculate: async (ctx, {}, {env}) => {
       const dbCtx = signedRoomCtx(ctx, env)
       const url = 'signedRoom://testSignedRoom/usersRW/testUsersRW'
@@ -198,14 +215,17 @@ Test('signedRoomUsersRWTest', {
       }
     },
     expectedResult: equals('%result.a%', 42),
-    timeout: 12000
+    setup: testUser(),
+    timeout: 12000,
+    logger: 'dbLogger'
   })
 })
 
 Test('signedRoomListTest', {
-  params: [{id: 'env', options: 'staging'}],
+  params: [
+    {id: 'env', options: 'staging'}
+  ],
   impl: dataTest({
-    logger: 'dbLogger',
     calculate: async (ctx, {}, {env}) => {
       const dbCtx = signedRoomCtx(ctx, env)
       const dir = 'signedRoom://testSignedRoom/usersRW/listTest'
@@ -221,14 +241,17 @@ Test('signedRoomListTest', {
       }
     },
     expectedResult: equals('%result%', 2),
-    timeout: 20000
+    setup: testUser(),
+    timeout: 20000,
+    logger: 'dbLogger'
   })
 })
 
 Test('signedRoomTrailingSlashGetTest', {
-  params: [{id: 'env', options: 'staging'}],
+  params: [
+    {id: 'env', options: 'staging'}
+  ],
   impl: dataTest({
-    logger: 'dbLogger',
     calculate: async (ctx, {}, {env}) => {
       const dbCtx = signedRoomCtx(ctx, env)
       await wfetch2('signedRoom://testSignedRoom/usersRW/listTest/a.json', { body: { x: 1 }, method: 'PUT' }, dbCtx)
@@ -237,14 +260,17 @@ Test('signedRoomTrailingSlashGetTest', {
       return { result: (Array.isArray(list) ? list : []).some(e => /\/a\.json$/.test(e.name)), ...coreUtils.harvestLogs(dbCtx) }
     },
     expectedResult: equals('%result%', true),
-    timeout: 20000
+    setup: testUser(),
+    timeout: 20000,
+    logger: 'dbLogger'
   })
 })
 
 Test('signedRoomMediaPutGetTest', {
-  params: [{id: 'env', options: 'staging'}],
+  params: [
+    {id: 'env', options: 'staging'}
+  ],
   impl: dataTest({
-    logger: 'dbLogger,signedRoomLogger',
     calculate: async (ctx, {}, {env}) => {
       const dbCtx = signedRoomCtx(ctx, env)
       const url = 'signedRoom://testSignedRoom/usersRW/assets/test-media.png'
@@ -264,20 +290,23 @@ Test('signedRoomMediaPutGetTest', {
       }
     },
     expectedResult: equals('%result%', 'ok:true:signed:true:protected:true'),
-    timeout: 20000
+    setup: testUser(),
+    timeout: 20000,
+    logger: 'dbLogger,signedRoomLogger'
   })
 })
 
 Test('signedRoomSigningTest', {
   impl: dataTest({
-    logger: 'dbLogger',
     calculate: async ctx => {
       const dbCtx = signedRoomCtx(ctx, 'staging')
       const res = await wfetch2('signedRoom://testSignedRoom/usersRO/sales-large.json', { method: 'HEAD' }, dbCtx)
       return { result: res.status, statusText: res.statusText, body: !res.ok && await res.text(), ...coreUtils.harvestLogs(dbCtx) }
     },
     expectedResult: equals('%result%', 200),
-    timeout: 12000
+    setup: testUser(),
+    timeout: 12000,
+    logger: 'dbLogger'
   })
 })
 
@@ -326,7 +355,7 @@ export async function putGet(args, useNode, ctx) {
     if (!coreUtils.isNode && useNode) {
       const script = `
         import { coreUtils, jb } from '@jb6/core'
-        import {putGet} from '@wonder/db/db-drivers-testers.js'
+        import {putGet} from '@wonder/db/tests/db-drivers-testers.js'
         try {
           debugger
           const { testSessionId, forceGCS, db, onLiveRepo } = ${JSON.stringify(args)}
@@ -361,7 +390,7 @@ export async function putChangeGet(args, useNode, ctx) {
     if (!coreUtils.isNode && useNode) {
       const script = `
         import { coreUtils } from '@jb6/core'
-        import {putChangeGet} from '@wonder/db/db-drivers-testers.js'
+        import {putChangeGet} from '@wonder/db/tests/db-drivers-testers.js'
         try {
           const args = ${JSON.stringify(args)}
           const ctx = new coreUtils.Ctx().setVars(args)

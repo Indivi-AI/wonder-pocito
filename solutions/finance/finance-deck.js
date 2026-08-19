@@ -9,7 +9,7 @@ const ORANGE = '#FF4800', INK = '#1A1A1A', SUB = '#5A5A5A', MUTE = '#8A8A8A', LI
 // localhost: raw comp view over local source; published: the FinanceDemo copy that lives in this deck's own room (self-contained — data+lambdas copied into 4c7ef0)
 const DEMO_URL = globalThis.location?.hostname == 'localhost'
   ? '/jb6_packages/react/react-comp-view.html?cmpId=FinanceDemo&urlsToLoad=@solution/finance/finance-demo.js&logo=payoneer'
-  : 'https://staging.indivi.ai/room/4c7ef0/applet/FinanceDemo?logo=payoneer'
+  : 'https://w-staging.indivi.ai/room/4c7ef0/applet/FinanceDemo?logo=payoneer'
 const FONT_CSS = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 .reveal{font-family:'Inter',system-ui,sans-serif}
 .reveal h1,.reveal h2,.reveal h3{font-family:'Inter',sans-serif;font-weight:800;letter-spacing:-0.02em;text-transform:none}

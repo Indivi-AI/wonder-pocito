@@ -11,7 +11,7 @@ Scope('signedRoom', {
 
 DbDriver('signedRoom', {
   impl: dbDriver({
-    whenAndWhyToUse: 'Protected signedRoom:// content using short-lived signed URLs.',
+    whenAndWhyToUse: 'Private signedRoom:// content using short-lived signed URLs.',
     designConcerns: 'GET, PUT and HEAD use signed URLs. List uses authenticated GCS.',
     authToken: authToken.anonymous(),
     authMethod: authMethod.none(),

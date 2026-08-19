@@ -1,9 +1,8 @@
 import { dsls } from '@jb6/core'
 import '@jb6/testing'
-import '../bi-common.js'
-import '../materialization.js'
-import '../event-sources.js'
-import '@wonder/db/room/managed-ctx.js'
+import '@wonder/bi/bi-common.js'
+import '@wonder/bi/materialization.js'
+import '@wonder/bi/event-sources.js'
 
 const {
   tgp: { Const, 'ctx-enricher': { setupCube, setVar, setVars, tempView, materializedView } },
@@ -13,7 +12,6 @@ const {
     metricDrift, readEventSource, pipe, pipeline, resolveKeySpan, spanView, wFetch
   },
   boolean: { notNull, gt, notEquals, equals, and, or, contains } },
-  'managed-data-ctx': { 'freshness-policy': { never, ttl } },
   'bi': {
     Cube, SilverBuilder,
     cube:               { cube, cubeless },
@@ -377,7 +375,7 @@ Test('biTest.metricDriftDetects', {
 Test('biTest.materializedViewBuilds', {
   HeavyTest: true,
   impl: dataTest({
-    setup: materializedView('rentalView', 'room://testPublicRoom/usersRO/views/rentalView.parquet', '%$rentalSeries%', { freshness: never() }),
+    setup: materializedView('rentalView', 'room://testPublicRoom/usersRO/views/rentalView.parquet', '%$rentalSeries%', { maxAgeMs: 0 }),
     calculate: metricDrift('%$rentalView%', { key: 'sub1', validation: aboveBaseline(0.5) }),
     expectedResult: equals(asIs([{ sub1: 'c1', drift_day: '2026-01-05', baseline: 4.2 }, { sub1: 'c2', drift_day: null, baseline: 3.1 }])),
     vars: setVars(asIs({ db: 'bucket', bucketProvider: 'gcs', hasGcpIdentity: true, onLiveRepo: true,
@@ -391,7 +389,7 @@ Test('biTest.materializedViewBuilds', {
 Test('biTest.materializedViewReuses', {
   HeavyTest: true,
   impl: dataTest({
-    setup: materializedView('rentalView', 'room://testPublicRoom/usersRO/views/rentalView.parquet', asIs([]), { freshness: ttl({ maxAgeMs: 86400000 }) }),
+    setup: materializedView('rentalView', 'room://testPublicRoom/usersRO/views/rentalView.parquet', asIs([]), { maxAgeMs: 86400000 }),
     calculate: metricDrift('%$rentalView%', { key: 'sub1', validation: aboveBaseline(0.5) }),
     expectedResult: equals(asIs([{ sub1: 'c1', drift_day: '2026-01-05', baseline: 4.2 }, { sub1: 'c2', drift_day: null, baseline: 3.1 }])),
     vars: setVars(asIs({ db: 'bucket', bucketProvider: 'gcs', hasGcpIdentity: true, onLiveRepo: true,

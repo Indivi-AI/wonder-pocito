@@ -3,10 +3,10 @@ import '@jb6/react'
 import '@wonder/applets/applet.js'
 <<<<<<< HEAD
 import '@wonder/bi/viz/viz-index.js'
-import '@wonder/db/room/room-lambda-client.js'
+import '@wonder/db/room-lambda-client.js'
 =======
 import '@wonder/ui/viz/viz-index.js'
-import '@wonder/db/room/room-lambda-client.js'
+import '@wonder/db/room-lambda-client.js'
 import './reports-workspace-lambda.js'
 
 const {

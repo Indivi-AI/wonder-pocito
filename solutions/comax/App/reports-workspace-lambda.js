@@ -1,6 +1,6 @@
 import { dsls } from '@jb6/core'
 import '@wonder/ai/report-step.js'
-import '@wonder/db/room/room-lambda-client.js'
+import '@wonder/db/room-lambda-client.js'
 
 const { common: { Lambda, data: { runReport } } } = dsls
 

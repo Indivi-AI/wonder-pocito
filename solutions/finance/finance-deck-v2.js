@@ -41,7 +41,7 @@ Slide('timelineSlide', { params: [
 
 const DEMO_URL = globalThis.location?.hostname == 'localhost'
   ? '/jb6_packages/react/react-comp-view.html?cmpId=FinanceDemo&urlsToLoad=@solution/finance/finance-demo.js&logo=payoneer&logger=biDownloadLogger,colsCacheLogger'
-  : 'https://staging.indivi.ai/room/4c7ef0/applet/FinanceDemo?logo=payoneer&logger=biDownloadLogger,colsCacheLogger'
+  : 'https://w-staging.indivi.ai/room/4c7ef0/applet/FinanceDemo?logo=payoneer&logger=biDownloadLogger,colsCacheLogger'
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');

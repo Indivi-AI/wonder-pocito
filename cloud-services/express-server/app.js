@@ -98,7 +98,7 @@ const url = new URL(localStorage.getItem('post_auth_redirect_url') || '/', locat
 for (const [key, value] of new URLSearchParams(location.search)) url.searchParams.set(key, value)
 location.replace(url)
 </script>`))
-  if (mode === 'protected') setupSignedUrlForwarder(app)
+  if (mode === 'signed') setupSignedUrlForwarder(app)
   else {
     setupAuthRoutes(app)
     setupSignedUrlForwarder(app)

@@ -2,7 +2,7 @@ import { Readable } from 'node:stream'
 import { once } from 'node:events'
 import { fetch, Pool } from 'undici'
 
-const storageOrigin = (process.env.MINIO_ENDPOINT || 'https://storage.googleapis.com').replace(/\/$/, '')
+const storageOrigin = 'https://storage.googleapis.com'
 const gcsPool = new Pool(storageOrigin, {
     connections: 20, allowH2: storageOrigin.startsWith('https:'), maxConcurrentStreams: 80, connect: { preferH2: true }
 })

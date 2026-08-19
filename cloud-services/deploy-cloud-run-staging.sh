@@ -6,7 +6,7 @@ export REPOSITORY="cloud-run-source-deploy"
 export IMAGE_NAME="wonder"
 PUBLIC_SERVICE="wonder-server-staging"
 PUBLIC_SA="wonder-public-sa@${PROJECT_ID}.iam.gserviceaccount.com"
-PROTECTED_SA="wonder-protected-rooms-sa@${PROJECT_ID}.iam.gserviceaccount.com"
+SIGNED_SA="wonder-protected-rooms-sa@${PROJECT_ID}.iam.gserviceaccount.com"
 
 set -e
 REPO_ROOT="$(git rev-parse --show-toplevel)"
@@ -30,15 +30,15 @@ echo "--- ✅ Build, Push, and Cleanup Complete ---"
 echo "--- Starting Deployment to Cloud Run ---"
 
 if [ "$1" == "--all" ]; then
-  gcloud run deploy wonder-protected-rooms-staging --image ${IMAGE_TAG} --platform managed --region ${REGION} \
-    --no-allow-unauthenticated --memory 2Gi --service-account="${PROTECTED_SA}" --set-env-vars="WONDER_SERVICE=protected"
-  gcloud run services add-iam-policy-binding wonder-protected-rooms-staging --region="${REGION}" \
+  gcloud run deploy wonder-signed-rooms-staging --image ${IMAGE_TAG} --platform managed --region ${REGION} \
+    --no-allow-unauthenticated --memory 2Gi --service-account="${SIGNED_SA}" --set-env-vars="WONDER_SERVICE=signed"
+  gcloud run services add-iam-policy-binding wonder-signed-rooms-staging --region="${REGION}" \
     --member="serviceAccount:${PUBLIC_SA}" --role="roles/run.invoker"
 fi
 
-PROTECTED_URL=$(gcloud run services describe wonder-protected-rooms-staging --region="${REGION}" --format='value(status.url)')
-echo "--- Protected lambda URL: ${PROTECTED_URL} ---"
+SIGNED_URL=$(gcloud run services describe wonder-signed-rooms-staging --region="${REGION}" --format='value(status.url)')
+echo "--- Signed lambda URL: ${SIGNED_URL} ---"
 
 gcloud run deploy ${PUBLIC_SERVICE} --image ${IMAGE_TAG} --platform managed --region ${REGION} \
   --allow-unauthenticated --memory 2Gi --service-account="${PUBLIC_SA}" \
-  --set-env-vars="WONDER_SERVICE=public,PROTECTED_LAMBDA_URL=${PROTECTED_URL}"
+  --set-env-vars="WONDER_SERVICE=public,SIGNED_LAMBDA_URL=${SIGNED_URL}"

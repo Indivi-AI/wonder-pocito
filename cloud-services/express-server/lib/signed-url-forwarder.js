@@ -1,10 +1,11 @@
-// Reverse-proxies /signed-url/* to the private wonder-protected-rooms Cloud Run service.
-// Uses the runtime SA's metadata server to mint a Google ID token (audience = protected URL),
+// Reverse-proxies /signed-url/* to the private wonder-signed-rooms Cloud Run service.
+// Uses the runtime SA's metadata server to mint a Google ID token (audience = signed URL),
 // which lets the private service accept the call (it requires roles/run.invoker).
-// If PROTECTED_LAMBDA_URL is unset, falls back to handling the route locally — so the same image
-// can be deployed twice: public lambda forwards, protected lambda handles.
+// If SIGNED_LAMBDA_URL is unset, falls back to handling the route locally — so the same image
+// can be deployed twice: public lambda forwards, signed lambda handles.
 import { GoogleAuth } from 'google-auth-library'
 import { setupSignedUrlRoute } from './signed-url.js'
+import { verifyToken } from './auth-utils.js'
 import { authHttpLogger, safeError } from './auth-http-logger.js'
 
 const auth = new GoogleAuth({ clientOptions: { transporterOptions: { fetchImplementation: globalThis.fetch } } })
@@ -12,7 +13,7 @@ const clientByAudience = {}
 const idTokenClient = audience => clientByAudience[audience] ||= auth.getIdTokenClient(audience)
 
 export function setupSignedUrlForwarder(app) {
-    const target = process.env.PROTECTED_LAMBDA_URL
+    const target = process.env.SIGNED_LAMBDA_URL
     if (!target) return setupSignedUrlRoute(app)
 
     const forward = async (req, res) => {
@@ -22,24 +23,30 @@ export function setupSignedUrlForwarder(app) {
         try {
             log.info({t: 'forwarder received', method: req.method, requestUrl: req.originalUrl,
                 hasUserAuth: !!req.headers.authorization})
+            const userAuthorization = req.headers.authorization
+            if (!userAuthorization) return res.status(401).json(log.body({error: 'missing user token'}))
+            stage = 'verify user token'
+            const { email } = await verifyToken(userAuthorization.replace(/^Bearer\s+/i, '')).catch(() => ({}))
+            if (!email) return res.status(401).json(log.body({error: 'invalid user token'}))
+            log.info({t: 'forwarder user verified', email})
             stage = 'mint service token'
             const client = await idTokenClient(target)
             const authHeaders = await client.getRequestHeaders()
             const googleHeaders = authHeaders?.entries ? Object.fromEntries(authHeaders.entries()) : { ...authHeaders }
             const googleAuthorization = googleHeaders.authorization || googleHeaders.Authorization
             log.info({t: 'service token ready', hasServiceAuth: !!googleAuthorization})
-            stage = 'call protected signer'
-            const { host, authorization, ...incoming } = req.headers
+            stage = 'call signed signer'
+            const { host, authorization, 'x-user-authorization': userHeader, 'x-wonder-proxy-auth': proxyHeader, ...incoming } = req.headers
             const url = target.replace(/\/$/, '') + req.originalUrl
-            log.info({t: 'forwarder calling protected signer', target: url, hasUserAuth: !!authorization,
+            log.info({t: 'forwarder calling signed signer', target: url, hasUserAuth: !!authorization,
                 hasServiceAuth: !!googleAuthorization})
-            const init = { method: req.method, headers: { ...incoming, ...googleHeaders, ...(authorization ? { 'x-user-authorization': authorization } : {}) } }
+            const init = { method: req.method, headers: { ...incoming, ...googleHeaders, 'x-user-authorization': userAuthorization } }
             if (req.method !== 'GET' && req.method !== 'HEAD')
                 init.body = Buffer.isBuffer(req.body) ? req.body : JSON.stringify(req.body)
             const upstream = await fetch(url, init)
-            stage = 'read protected response'
+            stage = 'read signed response'
             const buf = Buffer.from(await upstream.arrayBuffer())
-            log[upstream.ok ? 'info' : 'error']({t: 'protected signer response', status: upstream.status, ms: Date.now() - t0})
+            log[upstream.ok ? 'info' : 'error']({t: 'signed signer response', status: upstream.status, ms: Date.now() - t0})
             if (req.query.logger === 'authLogger') {
                 let body
                 try { body = JSON.parse(buf.toString('utf8')) } catch { body = { error: buf.toString('utf8').slice(0, 500) } }

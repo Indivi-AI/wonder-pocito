@@ -1,7 +1,7 @@
 import { dsls, jb } from '@jb6/core'
 import '@wonder/ai/llm-flow-main-workflow.js'
 import '@wonder/db/db-drivers-live-repo.js'
-import '@wonder/db/room/room-lambda-client.js'
+import '@wonder/db/room-lambda-client.js'
 import '@wonder/bi/bi-repair-doclets.js'
 import '../Doclets/comax-repair-doclets.js'
 import '../Doclets/comax-analytics-doclets.js'

@@ -2,7 +2,7 @@ import { dsls, coreUtils, jb } from '@jb6/core'
 import '../duckdb-utils.js'
 import '../bi-dsl.js'
 import '../bi-manifest.js'
-import '@wonder/db/room/room-lambda-client.js'
+import '@wonder/db/room-lambda-client.js'
 import '@wonder/db/db-drivers-utils.js'
 
 const { formatTimeWithRandom } = jb.wonderUtils
@@ -164,7 +164,7 @@ QueryEnvironment('cloud', {
   ],
   impl: QueryEnvironment.queryEnvironment({
     prepare: async (ctx, { queryCase }) => {
-      const roomWUrl = ctx.exp('%$roomWUrl%'), lambdaHost = ctx.exp('%$lambdaHost%') || 'https://staging.indivi.ai'
+      const roomWUrl = ctx.exp('%$roomWUrl%'), lambdaHost = ctx.exp('%$lambdaHost%') || 'https://w-staging.indivi.ai'
       const queryCaseProfile = coreUtils.tgpProfileToJson(queryCase.profile)
       let cold
       return {

@@ -7,7 +7,7 @@ const {
   bi: { QueryCase, 'query-case': { queryCase }, 'query-environment': { cloud } }
 } = dsls
 const cube = dsls.bi.cube.finance3Cube()
-const benchmarkEndpoint = 'https://staging.indivi.ai/run-room-lambda-sse-progress/finance3/biBenchmarkRunner'
+const benchmarkEndpoint = 'https://w-staging.indivi.ai/run-room-lambda-sse-progress/finance3/biBenchmarkRunner'
 const benchmarkLog = (ctx, event) =>
   (ctx.vars.roomBigLogLogger2 || ctx.vars.benchmarkLogger)?.info?.(event, {}, { ctx })
 const benchmarkErrorLog = (ctx, event) =>
@@ -79,7 +79,7 @@ Data('finance3RawSseFetch', {
       coreUtils.tgpProfileToJson(dsls.bi['query-case']['finance3Bench.customerPortfolio']()), true))
     const body = JSON.stringify({
       profile, packedCtx: coreUtils.stripCtx({ profileJson: profile, ctx }), stream: true,
-      roomWUrl: 'protected://finance3', logger, noAuth: true
+      roomWUrl: 'signedRoom://finance3', logger, noAuth: true
     })
     const url = `${host}/run-room-lambda-sse-progress/finance3/biBenchmarkRunner`
     benchmarkLog(ctx, { t: 'finance3 SSE request', url, bytes: body.length, body })
@@ -107,8 +107,8 @@ Data('finance3RawSseFetch', {
 })
 Data('finance3CloudBenchmarkResult', {
   params: [
-    { id: 'roomWUrl', as: 'string', defaultValue: 'protected://finance3' },
-    { id: 'lambdaHost', as: 'string', defaultValue: 'https://staging.indivi.ai' },
+    { id: 'roomWUrl', as: 'string', defaultValue: 'signedRoom://finance3' },
+    { id: 'lambdaHost', as: 'string', defaultValue: 'https://w-staging.indivi.ai' },
     { id: 'noAuth', as: 'boolean', defaultValue: true }
   ],
   impl: async (ctx, {}, { roomWUrl, lambdaHost, noAuth }) => {

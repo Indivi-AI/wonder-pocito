@@ -6,7 +6,7 @@ import '@wonder/ai/llm-flow-main-workflow.js'
 import '@jb6/llm-guide'
 import '@solution/comax2/comax-cube.js'   // comaxSalesCube semantic layer + setupComax binding
 import '../Doclets/viz-doclets.js'            // the vizWidgets booklet — reused as-is
-import '@wonder/db/room/room-lambda-client.js'   // runner deps + permissionByPath field, must be in the lambda closure
+import '@wonder/db/room-lambda-client.js'   // runner deps + permissionByPath field, must be in the lambda closure
 
 const {
   tgp: { Component, 'ctx-enricher': { setupCube, setupComax } },

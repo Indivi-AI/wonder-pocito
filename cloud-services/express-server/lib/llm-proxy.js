@@ -1,10 +1,10 @@
 import http from 'node:http'
 import https from 'node:https'
 import { createHash } from 'node:crypto'
-import { storage } from '@wonder/db/storage.js'
+import { Storage } from '@google-cloud/storage'
 import { proxyRoomCaller } from './auth-utils.js'
 
-const quotaBucket = (await storage(null, { native: true })).bucket('indiviai-wonder-protected')
+const quotaBucket = new Storage().bucket('indiviai-wonder-protected')
 const dailyLimit = Number(process.env.LLM_DAILY_CALLS_PER_IP || 100)
 
 const providers = {

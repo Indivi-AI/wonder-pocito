@@ -1,7 +1,7 @@
 import { dsls } from '@jb6/core'
 import '@jb6/testing'
-import './db-drivers-testers.js'
-import './signed-room-db-driver.js'
+import '@wonder/db/tests/db-drivers-testers.js'
+import '@wonder/db/db-drivers-signed-room.js'
 
 const { Test, test: { signedRoomPutGetTest, signedRoomAppendTest, signedRoomPermissionsTest, signedRoomGooglePermissionsTest,
   signedRoomUsersRWTest, signedRoomMediaPutGetTest, signedRoomSigningTest, signedRoomListTest, signedRoomTrailingSlashGetTest } } = dsls.test

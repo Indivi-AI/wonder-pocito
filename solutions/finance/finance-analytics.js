@@ -4,7 +4,7 @@ import '@jb6/llm-guide'
 import '@wonder/ai/duckdb-sql-step.js'
 import '../comax/Doclets/viz-doclets.js'
 import './demo-financial-cube-v2.js'
-import '@wonder/db/room/room-lambda-client.js'
+import '@wonder/db/room-lambda-client.js'
 
 const {
   tgp: { Component, 'ctx-enricher': { setupCube } },

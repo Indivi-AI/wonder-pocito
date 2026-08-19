@@ -14,7 +14,7 @@ const {
 const finance3Cube17MB = Cube('finance3Cube17MB', {
   impl: cube({
     source: parquetSource('silver/transactions-17mb.parquet', { name: 'transactions17MB' }),
-    wUrlBase: 'protected://finance3/usersRO', cacheStrategy: 'colsCache',
+    wUrlBase: 'signedRoom://finance3/usersRO', cacheStrategy: 'colsCache',
     dimensions: [
       dimension('date', { type: 'timestamp' }), dimension('customer_id'), dimension('product'), dimension('payment_method'),
       dimension('status'), dimension('has_quality_issue', { type: 'boolean' })

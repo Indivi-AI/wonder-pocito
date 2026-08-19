@@ -12,20 +12,18 @@ import '@jb6/core/misc/jb-remote-via-cli.js'   // runStrippedCli (stripCtx-aware
 import { caller, roomPolicy, roleOf, canAccess } from './auth-utils.js'
 import '@wonder/db/auth.js'
 import '@wonder/db/db-drivers.js'
-import { storage } from '@wonder/db/storage.js'
 import { promises as fsp, existsSync } from 'fs'
 import { spawn } from 'child_process'
 
-const FRONTEND_URL = (process.env.WONDER_CDN_URL || 'https://jb6-cdn.pages.dev').replace(/\/$/, '')
-const STORAGE_URL = (process.env.WONDER_STORAGE_URL || process.env.MINIO_PUBLIC_ENDPOINT || 'https://storage.googleapis.com').replace(/\/$/, '')
-const BUCKET_PROVIDER = process.env.STORAGE_PROVIDER || (process.env.MINIO_ENDPOINT ? 'minio' : 'gcs')
+const FRONTEND_URL = 'https://jb6-cdn.pages.dev'
+const STORAGE_URL = 'https://storage.googleapis.com'
 const CODE_PACKAGES_URL = `${STORAGE_URL}/wonder-code-packages`
 const jb6Pkgs = ['core','common','react','rx','jq','llm-guide','mcp','testing','repo','lang-service','probe-studio']
 const json = express.json({ limit: '1mb' })
 const respond = (res, r) => res.status(r.error ? 500 : 200).json(r.error ? r : { result: r })
 const extractionPromises = new Map()
 
-// the applet host page
+// ─── the applet host page ──────────────────────────────────────────────────────────────────────────
 const APPLET_HOST_HTML = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wonder Workspace</title>
@@ -41,8 +39,7 @@ z-index:9999;font-family:system-ui;color:#666;font-size:14px}
 </style>
 </head><body>
 <div id="loading">Loading...</div>
-<script>Object.assign(globalThis, { WONDER_STORAGE_URL: ${JSON.stringify(STORAGE_URL)},
-  WONDER_BUCKET_PROVIDER: ${JSON.stringify(BUCKET_PROVIDER)} })</script>
+<script>globalThis.WONDER_STORAGE_URL = ${JSON.stringify(STORAGE_URL)}</script>
 <script type="importmap">_IMPORT_MAP_</script>
 <div id="root" style="height:100vh"></div>
 <script type="module">
@@ -55,9 +52,9 @@ reactUtils.loadLucid05()
 const { urlsToLoad, roomWUrl } = appletSpec
 const cmpId = new URLSearchParams(location.search).get('cmpId') || appletSpec.cmpId   // multi-comp applets navigate by ?cmpId=; def cmpId is the default
 // ?noAuth on a PUBLIC room (room://) skips the login gate — data is public, so run anonymously (server SA) with no OAuth spin. Signed rooms ignore it.
-const noAuth = (appletSpec.noAuth || new URLSearchParams(location.search).has('noAuth')) && roomWUrl?.startsWith('room://')
+const noAuth = new URLSearchParams(location.search).has('noAuth') && roomWUrl?.startsWith('room://')
 const root = document.getElementById('root')
-if (appletSpec.liveRepo) await import('@wonder/db/room/room-lambda-live-repo.js')
+if (appletSpec.liveRepo) await import('@wonder/db/room-lambda-live-repo.js')
 const runAutomation = async mCtx => {
   window.jbLoggers = mCtx.vars
   if (new URLSearchParams(location.search).has('automation')) {
@@ -66,11 +63,10 @@ const runAutomation = async mCtx => {
   }
 }
 // extendCtxWithUrl seeds ctx-* query params (e.g. ?ctx-reportUrl=…) + loggers from the URL; then add react + the applet's roomWUrl.
-const ctx = reactUtils.extendCtxWithUrl().setVars({ react: reactUtils, bucketProvider: globalThis.WONDER_BUCKET_PROVIDER,
-  ...(roomWUrl && { roomWUrl }), ...(noAuth && { noAuth: true }) })
+const ctx = reactUtils.extendCtxWithUrl().setVars({ react: reactUtils, ...(roomWUrl && { roomWUrl }), ...(noAuth && { noAuth: true }) })
 const uiSource = appletSpec.liveRepo
   ? 'live-repo (localhost /jb6_packages, /wonder, /solution, /indiviai)'
-  : 'appletV snapshot ' + appletSpec.appletV + ' (bucket share, NOT live-repo) - edit-to-live needs uploadRoomApplet'
+  : 'appletV snapshot ' + appletSpec.appletV + ' (GCS share, NOT live-repo) - edit-to-live needs uploadRoomApplet'
 ctx.vars.roomLogger?.info?.({ t: 'serve applet page', roomWUrl, cmpId, urlsToLoad, appletV: appletSpec.appletV, uiSource }, {}, { ctx })
 document.getElementById('loading')?.remove()
 // the lambda runner is gated per-user (runs AS the caller) ⇒ an anonymous applet silently gets no data. force login first (into #root).
@@ -111,7 +107,7 @@ export async function serveAppletPage(spec, res, localImports) {
   const imports = localImports ? localImports : shareId ? {
     ...Object.fromEntries(jb6Pkgs.flatMap(p => [
       [`@jb6/${p}`, `${shareBase}/jb6/${p}/index.js`], [`@jb6/${p}/`, `${shareBase}/jb6/${p}/`]])),
-    '@jb6/react/lib/': `${FRONTEND_URL}/`,
+    '@jb6/react/lib/': 'https://jb6-cdn.pages.dev/',
     '@wonder/': `${shareBase}/wonder/`, '@solution/': `${shareBase}/solutions/`, '@indiviai/': `${shareBase}/indiviai/`
   } : {}
   const { og = [], ...clientSpec } = spec   // og = raw branding sources (room, applet), server-only — not shipped to the client
@@ -125,8 +121,7 @@ export async function serveAppletPage(spec, res, localImports) {
 }
 
 // running code closures (lambda / admin snippet)
-// def (lambdas/applets/<name>.json) lives in the PUBLIC room bucket for public rooms; fall back to the protected
-// bucket for signed rooms. Public rooms thus need nothing in the protected bucket — fully public end to end.
+// Definitions live in the public bucket for public rooms and in the private bucket for signed rooms.
 export async function readDef(roomId, path) {
   const ctx = new coreUtils.Ctx(), roomWUrl = await jb.wonderUtils.resolveWUrl(roomId, ctx)
   const res = await jb.wonderUtils.wfetch2(`${roomWUrl}/${path}`, { method: 'GET' }, ctx).catch(() => null)
@@ -223,7 +218,7 @@ export function setupRoomLambdaAndApplet(app) {
     const effRole = anon ? 'authenticated' : role, email = who?.email || 'anonymous'
     const denied = lambda.dir && !canAccess(policy, lambda.dir, 'r', effRole)
     if (denied) { res.status(403).json({ error: `forbidden: ${lambda.dir} for role ${effRole} for user ${email}` }); return null }
-    // roomWUrl tells signedRoom:// reads which protected room policy applies.
+    // roomWUrl tells signedRoom:// reads which signed-room policy applies.
     const isLocalHost = req.hostname === 'localhost'
     return { lambdaV: lambda.lambdaV, source: {                                         // 3. run AS THE USER (or anon SA)
       // profile = the call; packedCtx = the caller's ctx slice (stripCtx, logger-free).
@@ -233,9 +228,8 @@ export function setupRoomLambdaAndApplet(app) {
       gateLogs: gateLogs(),
       profile: req.body?.profile || { $: lambda.entryCompFullId }, packedCtx: req.body?.packedCtx, logger: req.body?.logger,
       userVars: {
-        roomId, roomWUrl: req.body?.roomWUrl, bucketProvider: BUCKET_PROVIDER,
-        ...(who && { idToken: who.token }), userEmail: email,
-        hasGcpIdentity: BUCKET_PROVIDER !== 'minio', isLocalHost, isStaging: !isLocalHost && req.hostname?.includes('staging')
+        roomId, roomWUrl: req.body?.roomWUrl, ...(who && { idToken: who.token }), userEmail: email,
+        hasGcpIdentity: true, isLocalHost, isStaging: !isLocalHost && req.hostname?.includes('staging')
       }
     } }
   }
@@ -255,7 +249,7 @@ export function setupRoomLambdaAndApplet(app) {
       const ogUrl = `${req.hostname === 'localhost' ? 'http' : 'https'}://${req.get('host')}${req.path}`
       const og = [await readDef(roomId, 'admin/branding.json'), applet.og, { ogUrl }]
       const spec = { cmpId: applet.cmpId, urlsToLoad: applet.urlsToLoad, roomWUrl: applet.roomWUrl,
-        appletV: applet.appletV, noAuth: process.env.WONDER_AUTH_MODE === 'none' && applet.roomWUrl?.startsWith('room://'), og }
+        appletV: applet.appletV, og }
       await serveAppletPage(spec, res)
     } catch (e) { console.error('[room-applet] error', e); res.status(500).json({ error: e.stack }) }
   })
@@ -282,8 +276,9 @@ export async function ensureExtracted(lambdaV, { root = '/tmp/code', fetchTar = 
 }
 
 async function fetchLambdaTar(lambdaV) {
-  return (await (await storage(null, { native: true })).bucket('wonder-code-packages')
-    .file(`lambdas/${lambdaV}.tar.gz`).download())[0]
+  const res = await fetch(`${CODE_PACKAGES_URL}/lambdas/${lambdaV}.tar.gz`)
+  if (!res.ok) throw new Error(`lambda package ${lambdaV}: ${res.status}`)
+  return Buffer.from(await res.arrayBuffer())
 }
 
 async function extractLambda(lambdaV, dir, root, fetchTar) {

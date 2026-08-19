@@ -1,9 +1,9 @@
-import { storage } from '@wonder/db/storage.js'
+import { Storage } from '@google-cloud/storage'
 import { signWonderToken, verifyToken } from './auth-utils.js'
 import { authHttpLogger, safeError } from './auth-http-logger.js'
 export { signWonderToken }
 
-const bucket = (await storage(null, { native: true })).bucket('indiviai-wonder-protected')
+const bucket = new Storage().bucket('indiviai-wonder-protected')
 const SIGN_EXPIRY = 24 * 60 * 60 * 1000
 const REFRESH_THRESHOLD = 60 * 60 * 1000
 const MAX_ENTRIES = 1000
@@ -44,7 +44,6 @@ const signaturesPath = (roomId, role, pathUserId) => pathUserId
   : `${roomId}/admin/signatures-${role}.json`
 const sigKey = (fileName, action) => `${fileName}:${action}`
 const signIndividually = path => path.split('/').includes('logs')
-const tokenOf = req => (req.headers['x-user-authorization'] || req.headers.authorization)?.replace('Bearer ', '')
 
 function makeTiming() {
   const startTime = Date.now(), timing = [{label: 'start', at: 0}]
@@ -85,7 +84,7 @@ async function makeSignatures(sigs, filesToSign) {
 export function setupSignedUrlRoute(app) {
   app.get('/signed-url/*', async (req, res) => {
     const { timing, tick } = makeTiming()
-    const log = authHttpLogger(req, 'protected-signer')
+    const log = authHttpLogger(req, 'signed-room-signer')
     const reply = (status, body) => res.status(status).json(log.body(body))
     let stage = 'receive request'
     try {
@@ -105,7 +104,7 @@ export function setupSignedUrlRoute(app) {
 
       tick('getUsers')
       stage = 'read room policy'
-      const users = await readJson(`${roomId}/admin/users.json`)
+      const storedUsers = await readJson(`${roomId}/admin/users.json`), users = storedUsers?.content || storedUsers
       tick('checkAccess')
       const role = getRole(users, email)
       const permissions = users?.accessLevels?.[accessLevel]?.[role] || ''
@@ -143,7 +142,7 @@ export function setupSignedUrlRoute(app) {
 
   app.get('/signed-urls/:roomId', async (req, res) => {
     const { timing, tick } = makeTiming()
-    const log = authHttpLogger(req, 'protected-signer')
+    const log = authHttpLogger(req, 'signed-room-signer')
     const reply = (status, body) => res.status(status).json(log.body(body))
     let stage = 'receive request'
     try {
@@ -158,7 +157,7 @@ export function setupSignedUrlRoute(app) {
       tick('getUsers')
       stage = 'read room policy'
       const { roomId } = req.params
-      const users = await readJson(`${roomId}/admin/users.json`)
+      const storedUsers = await readJson(`${roomId}/admin/users.json`), users = storedUsers?.content || storedUsers
       const role = getRole(users, email)
       log[role ? 'info' : 'error']({t: role ? 'membership granted' : 'membership denied', email, role, roomId, allowed: !!role})
       if (!role) return reply(403, {error: `${email} is not a member of room ${roomId}`})

@@ -1,2 +1,2 @@
-import './db-drivers-core.js'
-import './signed-room-db-driver.js'
+import '@wonder/db/db-drivers-core.js'
+import '@wonder/db/db-drivers-signed-room.js'

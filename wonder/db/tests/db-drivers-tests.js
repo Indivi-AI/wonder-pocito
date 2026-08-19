@@ -1,13 +1,15 @@
 import { dsls, coreUtils, jb } from '@jb6/core'
-import './db-drivers.js'
+import '@wonder/db/db-drivers.js'
 
 const { wfetch2, wresolve, resolveWUrl, wcachePopulate, getDBDriver } = jb.wonderUtils
 import '@jb6/testing'
 import '@jb6/common'
 import '@jb6/jq'
-import './db-drivers-testers.js'
+import '@wonder/db/tests/db-drivers-testers.js'
+import '@wonder/db/tests/gmail-test-users.js'
 
 const {
+  tgp: { 'ctx-enricher': { testUser } },
   common: { 
     boolean: { equals }, data: { asIs }
   },
@@ -33,135 +35,6 @@ Test('dbDriverTests.gcs.node.localhost.putGet', {
 
 Test('dbDriverTests.gcs.browser.localhost.putGet', {
   impl: dbDriverPutGetTest('room:gcs//buyPhone/items?user=Buyer', 'browser-localhost')
-})
-
-Test('dbDriverTests.minio.driverSelection', {
-  nodeOnly: true,
-  impl: dataTest({
-    calculate: async ctx => {
-      const dbCtx = ctx.setVars({ hasGcpIdentity: false })
-      const read = await getDBDriver('room:minio//testRoom/item.json', dbCtx.setVars({ method: 'GET' }))
-      const write = await getDBDriver('room:minio//testRoom/item.json', dbCtx.setVars({ method: 'PUT' }))
-      return { result: { read: read?.id, write: write?.id, canList: !!read?.list.profile }, ...coreUtils.harvestLogs(ctx) }
-    },
-    expectedResult: equals('%result%', asIs({ read: 'bucket.minio.public', write: 'bucket.minio', canList: false })),
-    logger: 'dbLogger'
-  })
-})
-
-Test('dbDriverTests.bucket.providerSelection', {
-  nodeOnly: true,
-  impl: dataTest({
-    calculate: async ctx => {
-      const providerCtx = provider => ctx.setVars({ db: 'bucket', bucketProvider: provider, dbHost: 'node',
-        hasGcpIdentity: provider === 'gcs' })
-      const select = provider => getDBDriver('codePackages://shared/item.js', providerCtx(provider))
-      const minioUrl = await wresolve('codePackages://shared/item.js', providerCtx('minio'))
-      const endpoint = (process.env.MINIO_ENDPOINT || 'http://127.0.0.1:9000').replace(/\/$/, '')
-      return { result: { drivers: [(await select('minio'))?.id, (await select('gcs'))?.id], endpoint: minioUrl.startsWith(endpoint) },
-        ...coreUtils.harvestLogs(ctx) }
-    },
-    expectedResult: equals('%result%', asIs({ drivers: ['bucket.minio', 'GCS.node.gcpIdentity'], endpoint: true })),
-    logger: 'dbLogger'
-  })
-})
-
-Test('dbDriverTests.amazon.protected.putGet', {
-  nodeOnly: true,
-  impl: dataTest({
-    calculate: async (ctx, { testSessionId }) => {
-      const url = `protected://aTeam/admin/tests/${testSessionId}.json`, content = { value: 42 }
-      const put = await wfetch2(url, { method: 'PUT', body: content }, ctx)
-      const get = await wfetch2(url, { method: 'GET' }, ctx)
-      const resolved = await wresolve(url, ctx)
-      return { result: { driver: (await getDBDriver(url, ctx))?.id, put: put.status, get: get.status, content: await get.json(),
-        resolved: resolved === `https://s3.il-central-1.amazonaws.com/wonder-rooms-585008076838/aTeam/admin/tests/${testSessionId}.json` },
-        ...coreUtils.harvestLogs(ctx) }
-    },
-    expectedResult: equals('%result%', asIs({driver: 'bucket.amazon', put: 200, get: 200, content: {value: 42}, resolved: true})),
-    logger: 'dbLogger',
-    timeout: 10000
-  })
-})
-
-Test('dbDriverTests.amazon.protected.resolveWUrl', {
-  nodeOnly: true,
-  impl: dataTest({
-    calculate: async ctx => ({ result: [await resolveWUrl('protected://comax2', ctx), await resolveWUrl('comax2', ctx)],
-      ...coreUtils.harvestLogs(ctx) }),
-    expectedResult: equals('%result%', ['protected://comax2', 'protected://comax2']),
-    logger: 'dbLogger',
-    timeout: 10000
-  })
-})
-
-Test('dbDriverTests.minio.putGet', {
-  nodeOnly: true,
-  impl: dataTest({
-    calculate: async (ctx, { testSessionId }) => {
-      const url = `room:minio//testRoom/tests/${testSessionId}/put-get.json`, content = { value: 42 }
-      await wfetch2(url, { method: 'PUT', body: content }, ctx)
-      return { result: await (await wfetch2(url, { method: 'GET' }, ctx)).json(), ...coreUtils.harvestLogs(ctx) }
-    },
-    expectedResult: equals('%result%', asIs({ value: 42 })),
-    logger: 'dbLogger'
-  })
-})
-
-Test('dbDriverTests.minio.append', {
-  nodeOnly: true,
-  impl: dataTest({
-    calculate: async (ctx, { testSessionId }) => {
-      const url = `room:minio//testRoom/tests/${testSessionId}/append.json`
-      await wfetch2(url, { method: 'PUT', body: [{ id: 1 }] }, ctx)
-      await wfetch2(url, { method: 'POST', body: [{ id: 2 }] }, ctx)
-      return { result: await (await wfetch2(url, { method: 'GET' }, ctx)).json(), ...coreUtils.harvestLogs(ctx) }
-    },
-    expectedResult: equals('%result%', [{id: 1}, {id: 2}]),
-    logger: 'dbLogger'
-  })
-})
-
-Test('dbDriverTests.minio.patch', {
-  nodeOnly: true,
-  impl: dataTest({
-    calculate: async (ctx, { testSessionId }) => {
-      const url = `room:minio//testRoom/tests/${testSessionId}/patch.json`
-      await wfetch2(url, { method: 'PUT', body: { a: 1 } }, ctx)
-      await wfetch2(url, { method: 'PATCH', body: { b: 2 } }, ctx)
-      return { result: await (await wfetch2(url, { method: 'GET' }, ctx)).json(), ...coreUtils.harvestLogs(ctx) }
-    },
-    expectedResult: equals('%result%', asIs({ a: 1, b: 2 })),
-    logger: 'dbLogger'
-  })
-})
-
-Test('dbDriverTests.minio.head', {
-  nodeOnly: true,
-  impl: dataTest({
-    calculate: async (ctx, { testSessionId }) => {
-      const url = `room:minio//testRoom/tests/${testSessionId}/head.json`
-      await wfetch2(url, { method: 'PUT', body: { value: 42 } }, ctx)
-      const res = await wfetch2(url, { method: 'HEAD' }, ctx)
-      return { result: { status: res.status, size: Number(res.headers.get('content-length')) > 0 }, ...coreUtils.harvestLogs(ctx) }
-    },
-    expectedResult: equals('%result%', asIs({ status: 200, size: true })),
-    logger: 'dbLogger'
-  })
-})
-
-Test('dbDriverTests.minio.list', {
-  nodeOnly: true,
-  impl: dataTest({
-    calculate: async (ctx, { testSessionId }) => {
-      const dir = `codePackages:minio//tests/${testSessionId}/list/`
-      await Promise.all(['a', 'b'].map(name => wfetch2(`${dir}${name}.json`, { method: 'PUT', body: { name } }, ctx)))
-      const items = await (await wfetch2(dir, { method: 'GET' }, ctx)).json()
-      return { result: items.map(item => item.name.split('/').at(-1)).sort(), ...coreUtils.harvestLogs(ctx) }
-    },
-    expectedResult: equals('%result%', ['a.json','b.json']),
-    logger: 'dbLogger'
-  })
 })
 
 // fs-mem: in-memory (no disk write), fast, per-test isolated — kept for quick round-trip coverage
@@ -301,7 +174,7 @@ Test('dbDriverTests.resolveLocations', {
       const [nodeLocal, browserLocal, nodeMem, browserMem, cache, gcs] = await Promise.all([
         resolveWith({ db: 'local', dbHost: 'node' }), resolveWith({ db: 'local', dbHost: 'browser' }),
         resolveWith({ db: 'fs-mem', dbHost: 'node' }), resolveWith({ db: 'fs-mem', dbHost: 'browser' }),
-        resolveWith({ db: 'wcache', dbHost: 'node' }), resolveWith({ db: 'bucket', dbHost: 'node', forceGCS: true })
+        resolveWith({ db: 'wcache', dbHost: 'node' }), resolveWith({ db: 'gcs', dbHost: 'node', forceGCS: true })
       ])
       return { result: [nodeLocal.endsWith('/files/rooms/testPublicRoom/usersRO/stores.parquet'), browserLocal,
         nodeMem.endsWith('/files/testPublicRoom/usersRO/stores.parquet'), browserMem, cache, gcs], ...coreUtils.harvestLogs(ctx) }
@@ -320,18 +193,19 @@ Test('dbDriverTests.resolveLocations', {
 Test('dbDriverTests.wcachePopulate', {
   nodeOnly: true,
   impl: dataTest({
-    logger: 'dbLogger',
     calculate: async ctx => {
       const { promises: fsp } = await import('fs')
-      const dbCtx = ctx.setVars({ db: 'bucket', bucketProvider: 'gcs', forceGCS: false, onLiveRepo: true, hasGcpIdentity: true })
+      const dbCtx = ctx.setVars({ db: 'gcs', forceGCS: false, onLiveRepo: true, hasGcpIdentity: true })
       const at = async u => { const p = await wcachePopulate(u, dbCtx); return !!p && (await fsp.stat(p)).size > 0 }
       return { result: [
         await at('signedRoom://testSignedRoom/usersRO/sales-large.json'),
         await at('room://testPublicRoom/usersRO/sales-large.json')
       ], ...coreUtils.harvestLogs(dbCtx) }
     },
-    expectedResult: equals('%result%', [true, true]),
-    timeout: 20000
+    expectedResult: equals('%result%', [true,true]),
+    setup: testUser(),
+    timeout: 20000,
+    logger: 'authLogger,dbLogger'
   })
 })
 
@@ -340,9 +214,8 @@ Test('dbDriverTests.wcachePopulate', {
 Test('dbDriverTests.rawFileViaWfetch2', {
   nodeOnly: true,
   impl: dataTest({
-    logger: 'dbLogger',
     calculate: async ctx => {
-      const dbCtx = ctx.setVars({ db: 'bucket', bucketProvider: 'gcs', forceGCS: false, onLiveRepo: true, hasGcpIdentity: true })
+      const dbCtx = ctx.setVars({ db: 'gcs', forceGCS: false, onLiveRepo: true, hasGcpIdentity: true })
       const body = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64').toString('base64')
       const at = async url => {
         await wfetch2(url, { body, method: 'PUT' }, dbCtx)
@@ -356,8 +229,10 @@ Test('dbDriverTests.rawFileViaWfetch2', {
         await at('room://testPublicRoom/usersRW/assets/test-media.png')
       ], ...coreUtils.harvestLogs(dbCtx) }
     },
-    expectedResult: equals('%result%', [true, true]),
-    timeout: 20000
+    expectedResult: equals('%result%', [true,true]),
+    setup: testUser(),
+    timeout: 20000,
+    logger: 'dbLogger'
   })
 })
 
@@ -392,7 +267,7 @@ Test('dbDriverTests.wcachePopulate.rawCsvFs', {
     logger: 'dbLogger',
     calculate: async ctx => {
       const { promises: fsp } = await import('fs')
-      const dbCtx = ctx.setVars({ db: 'bucket', bucketProvider: 'gcs', forceGCS: false, onLiveRepo: true, hasGcpIdentity: true })
+      const dbCtx = ctx.setVars({ db: 'gcs', forceGCS: false, onLiveRepo: true, hasGcpIdentity: true })
       const url = `room://testPublicRoom/wcache-raw-${ctx.vars.testSessionId}.csv`
       const csv = 'campaign_name,revenue\ncamp_a,10\ncamp_b,5'
       await wfetch2(url, { body: csv, method: 'PUT' }, dbCtx)
@@ -458,7 +333,7 @@ Test('dbDriverTests.roomLogs.writeAndList', {
   impl: dataTest({
     logger: 'dbLogger',
     calculate: async (ctx) => {
-      const dbCtx = ctx.setVars({db: 'bucket', bucketProvider: 'gcs', dbHost: 'node', forceGCS: true, hasGcpIdentity: true})
+      const dbCtx = ctx.setVars({db: 'gcs', dbHost: 'node', forceGCS: true, hasGcpIdentity: true})
       const url = 'roomLogs:gcs//testRoom/2026-04-01/s1-p1-0.json'
       const body = JSON.stringify({date: '2026-04-01', sessionId: 's1', playerId: 'p1', counter: 0, ev: 'pageView'})
       const driver = await getDBDriver(url, dbCtx)
@@ -480,7 +355,7 @@ Test('dbDriverTests.roomLogs.listRoomRoot', {
   impl: dataTest({
     logger: 'dbLogger',
     calculate: async (ctx) => {
-      const dbCtx = ctx.setVars({db: 'bucket', bucketProvider: 'gcs', dbHost: 'node', forceGCS: true, hasGcpIdentity: true})
+      const dbCtx = ctx.setVars({db: 'gcs', dbHost: 'node', forceGCS: true, hasGcpIdentity: true})
       const url = 'roomLogs:gcs//testRoom/'
       const list = await wfetch2(url, { method: 'GET' }, dbCtx).then(r => r.json()).catch(e => ({error: String(e?.message || e)}))
       const arr = Array.isArray(list) ? list : []
@@ -493,5 +368,36 @@ Test('dbDriverTests.roomLogs.listRoomRoot', {
     },
     expectedResult: equals(true, true),
     timeout: 12000
+  })
+})
+Test('signedUrlSecurityTest.forwarderRequiresAuthenticatedUser', {
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: async () => {
+      const previousTarget = process.env.SIGNED_LAMBDA_URL
+      process.env.SIGNED_LAMBDA_URL = 'https://private.invalid'
+      try {
+        const { setupSignedUrlForwarder } = await import('../../../cloud-services/express-server/lib/signed-url-forwarder.js')
+        const routes = {}
+        setupSignedUrlForwarder({ all: (path, handler) => routes[path] = handler })
+        const request = headers => new Promise(resolve => routes['/signed-url/*']({
+          method: 'GET', originalUrl: '/signed-url/room/usersRO/file?method=GET', headers, query: {}
+        }, {
+          status(status) { this.statusCode = status; return this },
+          json(body) { resolve({ status: this.statusCode, body }) }
+        }))
+        return Promise.all([
+          request({}),
+          request({ 'x-user-authorization': 'Bearer attacker-controlled' })
+        ])
+      } finally {
+        previousTarget == null ? delete process.env.SIGNED_LAMBDA_URL : process.env.SIGNED_LAMBDA_URL = previousTarget
+      }
+    },
+    expectedResult: equals([
+      {status: 401, body: {error: 'missing user token'}},
+      {status: 401, body: {error: 'missing user token'}}
+    ]),
+    logger: 'authLogger'
   })
 })
