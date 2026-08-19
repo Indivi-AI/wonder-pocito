@@ -370,7 +370,7 @@ Test('dbDriverTests.roomLogs.listRoomRoot', {
     timeout: 12000
   })
 })
-Test('signedUrlSecurityTest.forwarderRequiresAuthenticatedUser', {
+Test('dbDriverTests.forwarderRequiresAuthenticatedUser', {
   nodeOnly: true,
   impl: dataTest({
     calculate: async () => {
@@ -398,6 +398,62 @@ Test('signedUrlSecurityTest.forwarderRequiresAuthenticatedUser', {
       {status: 401, body: {error: 'missing user token'}},
       {status: 401, body: {error: 'missing user token'}}
     ]),
+    logger: 'authLogger'
+  })
+})
+Test('dbDriverTests.signerSeparatesServiceIdentityAndChecksAudience', {
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: async () => {
+      const [{ OAuth2Client }, { setupSignedUrlRoute }, { verifyToken }] = await Promise.all([
+        import('google-auth-library'), import('../../../cloud-services/express-server/lib/signed-url.js'),
+        import('../../../cloud-services/express-server/lib/auth-utils.js')
+      ])
+      const routes = {}, original = OAuth2Client.prototype.verifyIdToken
+      setupSignedUrlRoute({ get: (path, handler) => routes[path] = handler })
+      const signerStatus = await new Promise(resolve => routes['/signed-url/*']({
+        originalUrl: '/signed-url/testSignedRoom/usersRO/file', headers: { authorization: 'Bearer service-token' }, params: { 0: 'testSignedRoom/usersRO/file' }, query: {}
+      }, { status(status) { this.statusCode = status; return this }, json() { resolve(this.statusCode) } }))
+      let audience
+      OAuth2Client.prototype.verifyIdToken = async opts => (audience = opts.audience, { getPayload: () => ({ email: 'user@example.com', exp: Date.now() / 1000 + 60 }) })
+      try {
+        await verifyToken(`audience-test-${Date.now()}`)
+        return [signerStatus, audience]
+      } finally {
+        OAuth2Client.prototype.verifyIdToken = original
+      }
+    },
+    expectedResult: equals({
+      item1: '%%',
+      item2: [
+        401,
+        ['365199207445-q87kjft2o40ird0hv5r0r9vs8l7bvund.apps.googleusercontent.com','365199207445-f9hqa8n0u6s7dpssq86n4ncqm3ef676v.apps.googleusercontent.com']
+      ]
+    })
+  })
+})
+Test('dbDriverTests.liveStagingPreservesUserIdentity', {
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: async (ctx, {idToken, userEmail}) => {
+      const url = 'https://w-staging.indivi.ai/signed-url/testSignedRoom/usersRO/sales-large.json?method=GET&logger=authLogger'
+      const call = async headers => {
+        const response = await fetch(url, { headers }), body = await response.json()
+        return { status: response.status, body }
+      }
+      const anonymous = await call({ 'x-user-authorization': 'Bearer attacker-controlled' })
+      const authenticated = await call({ Authorization: `Bearer ${idToken}` })
+      const logs = authenticated.body.logs?.authLogger?.authLog || []
+      ctx.vars.authLogger?.info?.({ t: 'live signed-url security results', anonymousStatus: anonymous.status,
+        authenticatedStatus: authenticated.status, identities: logs.filter(x => x.email).map(x => x.email) }, {}, { ctx })
+      return anonymous.status === 401 && !anonymous.body.signedUrl && !anonymous.body.signatures
+        && authenticated.status === 200 && logs.some(x => x.t === 'forwarder user verified' && x.email === userEmail)
+        && logs.some(x => x.t === 'user token verified' && x.email === userEmail)
+        && !logs.some(x => /compute@developer\.gserviceaccount\.com$/.test(x.email || ''))
+    },
+    expectedResult: equals('%%', true),
+    setup: testUser(),
+    timeout: 12000,
     logger: 'authLogger'
   })
 })

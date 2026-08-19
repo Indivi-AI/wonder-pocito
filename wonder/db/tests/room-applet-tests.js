@@ -78,7 +78,14 @@ const summaryAppletTest = Component('summaryAppletTest', {
 })
 
 Test('roomAppletTest.summaryApplet', { impl: summaryAppletTest('room://testPublicRoom') })
-Test('roomAppletTest.signedSummaryApplet', { impl: summaryAppletTest('signedRoom://testSignedRoom') })
+Test('roomAppletTest.signedSummaryApplet', {
+  impl: summaryAppletTest({ vars: [testUser()], roomWUrl: 'signedRoom://testSignedRoom' })
+})
 Test('roomAppletTest.signedSummaryApplet.cloud', {
-  impl: summaryAppletTest({ roomWUrl: 'signedRoom://testSignedRoom', onLiveRepo: false, lambdaHost: 'https://w-staging.indivi.ai' })
+  impl: summaryAppletTest({
+    vars: [testUser()],
+    roomWUrl: 'signedRoom://testSignedRoom',
+    onLiveRepo: false,
+    lambdaHost: 'https://w-staging.indivi.ai'
+  })
 })
