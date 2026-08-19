@@ -66,15 +66,18 @@ async function setupLiveRepo(app) {
   app.use('/studio', express.static(path.join(root, 'wonder/studio')))
   app.use('/tests', express.static(path.join(root, 'tests')))
   app.get('/mint-wonder-token', (req, res) => res.send(signWonderToken({ phone: req.query.email || 'devMachine' })))
-  app.get('/room/:roomId/applet/:name', async (req, res, next) => {
+  const appletRoute = signed => async (req, res, next) => {
     try {
-      const { roomId, name } = req.params, applet = await readDef(roomId, `applets/${name}.json`)
+      const { roomId, name } = req.params, roomWUrl = `${signed ? 'signedRoom' : 'room'}://${roomId}`
+      const applet = await readDef(roomWUrl, `applets/${name}.json`)
       if (!applet) return next()
-      await serveAppletPage({ ...applet,
-        noAuth: process.env.WONDER_AUTH_MODE === 'none' && applet.roomWUrl?.startsWith('room://'),
-        og: [await readDef(roomId, 'admin/branding.json'), applet.og] }, res, importMap.imports)
+      if (applet.roomWUrl && applet.roomWUrl !== roomWUrl) return res.status(409).json({ error: `applet room mismatch: ${applet.roomWUrl}` })
+      await serveAppletPage({ ...applet, roomWUrl, noAuth: process.env.WONDER_AUTH_MODE === 'none' && roomWUrl.startsWith('room://'),
+        og: [await readDef(roomWUrl, 'admin/branding.json'), applet.og] }, res, importMap.imports)
     } catch { next() }
-  })
+  }
+  app.get('/room/:roomId/applet/:name', appletRoute(false))
+  app.get('/signed-room/:roomId/applet/:name', appletRoute(true))
   for (const { urlPath, diskPath } of staticMappings) {
     app.use(urlPath, async (req, res, next) => {
       if (!req.path.endsWith('.html')) return next()

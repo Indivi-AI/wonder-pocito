@@ -523,7 +523,7 @@ GetMethod('wget.viaGcsProxy', {
 PutMethod('wput.viaGcsProxy', {
   impl: async (ctx, { dbLogger, bucketName, path, opts }) => {
     const url = `${gcsProxyBase(ctx)}/gcs-proxy/${bucketName}/${path}`
-    const jsonStr = JSON.stringify({ content: opts.body })
+    const jsonStr = JSON.stringify(opts.headers?.['x-wonder-json'] === 'as-is' ? opts.body : { content: opts.body })
     const response = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: jsonStr })
     if (!response.ok) { dbLogger?.error?.({ t: 'viaGcsProxy PUT failure' }, { url }, { ctx, response }); return response }
     dbLogger?.info?.({ t: 'viaGcsProxy PUT', bytes: jsonStr.length }, {}, { ctx })
@@ -535,7 +535,7 @@ PutMethod('wput.GcsJSApi', {
   impl: async (ctx, { dbLogger, opts, gcsFile, bucketName, path, etlLogger }) => {
     const etlStatus = t => etlLogger?.status?.(t)
     try {
-      const jsonStr = JSON.stringify({ content: opts.body })
+      const jsonStr = JSON.stringify(opts.headers?.['x-wonder-json'] === 'as-is' ? opts.body : { content: opts.body })
       const totalBytes = Buffer.byteLength(jsonStr)
       const mb = (totalBytes / 1e6).toFixed(1)
       dbLogger?.info?.({ t: 'wput.GcsJSApi start', bucketName, path, bytes: totalBytes }, {}, { ctx })
@@ -563,7 +563,7 @@ PutMethod('wput.GcsJSApi', {
 
 PutMethod('wput.viaBucketApi', {
   impl: async (ctx, { filePathUrl, dbLogger, opts, authToken, authMethod }) => {
-    const jsonStr = JSON.stringify({ content: opts.body })
+    const jsonStr = JSON.stringify(opts.headers?.['x-wonder-json'] === 'as-is' ? opts.body : { content: opts.body })
     const curl = `curl -X PUT -H "Content-Type: application/json" -d '${jsonStr}' "${filePathUrl}"`
     let response, jsonRes
     try {

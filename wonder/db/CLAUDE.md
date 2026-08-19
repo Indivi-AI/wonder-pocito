@@ -17,6 +17,7 @@ All room types use the **same directory structure**. The scheme changes storage 
 
 - `room://<roomId>/...` uses the public GCS bucket.
 - `signedRoom://<roomId>/...` uses private GCS objects through Wonder-issued signed URLs.
+- A bare `<roomId>` defaults deterministically to `room://<roomId>`; signed rooms must always be explicit. Never probe storage to infer a scheme.
 
 The directory conventions are identical for every room type:
 
@@ -37,15 +38,13 @@ For `playwrightHarvest`, pass `seedLocalStorage: 'mintWonderAuth2'`; manual appl
 
 ## Room applets
 
-The UI/browser twin of a lambda is a room-gated, published react-comp served at `/room/:roomId/applet/:name`. Publish it with
-`uploadRoomApplet`; the resulting `appletV` points the host import map at frozen jb6+wonder source.
+The UI/browser twin of a lambda is a room-gated, published react-comp served at `/room/:roomId/applet/:name` for public rooms and
+`/signed-room/:roomId/applet/:name` for signed rooms. Publish it with `uploadRoomApplet`; `appletV` selects frozen jb6+wonder source.
 
 The renderer is the **applet host page** `serveAppletPage`/`APPLET_HOST_HTML` in
 `cloud-services/express-server/lib/room-lambda-and-applet.js`. It is served inline and emits only the import map and `appletSpec`
 (`cmpId`, `urlsToLoad`, `roomWUrl`, `appletV`). It reads no room data, so protection remains in downstream per-file reads.
-The same `/room/:roomId/applet/:name` URL serves every room scheme.
-
-`setupRoomLambdaAndApplet` serves the applet page alongside `POST /run-room-lambda`. It is registered in `local-server.js`
+`setupRoomLambdaAndApplet` serves applets alongside public `POST /run-room-lambda` and signed `POST /run-signed-room-lambda`. It is registered in `local-server.js`
 for development and the production/staging servers. `APPLET_HOST_HTML` runs `extendCtxWithUrl` and seeds `roomWUrl` from the
 `appletSpec`; the bare `react-comp-view.html` harness instead needs `ctx-roomWUrl`.
 
@@ -76,8 +75,8 @@ Test rooms (in the db-driver test suite, `public/core/db-drivers-tests.js`):
 
 | Resource | MCP tool | Writes | Run / open |
 |---|---|---|---|
-| room lambda | `uploadRoomLambda({ lambdaId, roomId, entryPath })` | `lambdas/<lambdaId>.json` | `POST /run-room-lambda/<roomId>/<lambdaId>` |
-| room applet | `uploadRoomApplet({ roomId, entryPath, entryCompFullId })` | `applets/<name>.json` | `/room/<roomId>/applet/<name>` |
+| room lambda | `uploadRoomLambda({ compFullId, roomWUrl })` | `lambdas/<lambdaId>.json` | public `/run-room-lambda/...`; signed `/run-signed-room-lambda/...` |
+| room applet | `uploadRoomApplet({ roomId, entryPath, entryCompFullId })` | `applets/<name>.json` | public `/room/...`; signed `/signed-room/...` |
 | admin ad-hoc | `uploadLambdaComp({ entryPath })` | tar at `lambdas/<lambdaV>.tar.gz` | `POST /admin-run-snippet/<lambdaV>` |
 
 Applet runtime assets must use `new URL('./relative-file', import.meta.url)`. `uploadRoomApplet` recursively discovers JavaScript workers,

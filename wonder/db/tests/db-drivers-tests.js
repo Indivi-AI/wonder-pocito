@@ -1,7 +1,7 @@
 import { dsls, coreUtils, jb } from '@jb6/core'
 import '@wonder/db/db-drivers.js'
 
-const { wfetch2, wresolve, resolveWUrl, wcachePopulate, getDBDriver } = jb.wonderUtils
+const { wfetch2, wresolve, wcachePopulate, getDBDriver } = jb.wonderUtils
 import '@jb6/testing'
 import '@jb6/common'
 import '@jb6/jq'

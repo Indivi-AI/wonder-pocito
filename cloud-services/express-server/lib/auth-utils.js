@@ -20,7 +20,7 @@ export const PUBLIC_DEFAULT = {
 export const roomPolicy = async roomId => {
   const cached = policyCache.get(roomId)
   if (cached?.at > Date.now() - 30000) return cached.policy
-  const policy = await readJson(`${roomId}/admin/users.json`)
+  const storedPolicy = await readJson(`${roomId}/admin/users.json`), policy = storedPolicy?.content ?? storedPolicy
   policyCache.set(roomId, { policy, at: Date.now() })
   return policy
 }

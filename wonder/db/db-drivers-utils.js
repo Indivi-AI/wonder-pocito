@@ -27,18 +27,6 @@ async function wresolve(url, _ctx, method = 'GET') {
   return driver?.filePathUrl(ctx.setVars({ ...extracted, path }))
 }
 
-async function resolveWUrl(roomId, ctx) {
-  if (/^\w+:(?:[^/]*)\/\//.test(roomId)) return roomId.replace(/\/$/, '')
-  if (globalThis.process?.env?.WONDER_AUTH_MODE === 'none') return `room://${roomId}`
-  const exists = async url => {
-    const res = await jb.wonderUtils.wfetch2(url, { method: 'HEAD' }, ctx)
-    if (res.status === 404) return false
-    if (!res.ok) throw new Error(`resolveWUrl failed: ${res.status} ${url}`)
-    return true
-  }
-  return await exists(`signedRoom://${roomId}/admin/users.json`) ? `signedRoom://${roomId}` : `room://${roomId}`
-}
-
 async function wresolveInfo(url, _ctx, method = 'GET') {
   if (!/^\w+:\/\//.test(url))
     return { url, db: null, fullyResolvedUrl: url, resolved: url, isWUrl: false, isLocal: true }   // bare disk path (csv/parquet) — not a wUrl, read as-is
@@ -270,7 +258,7 @@ async function checkPermissionDenial(ctx, room, file, method) {
   if (!ctx.vars.authLogger || !coreUtils.isNode || process.env.K_SERVICE || !/^[\w.-]+$/.test(room)) return
   const {execFile} = await import('node:child_process'), {promisify} = await import('node:util')
   const {stdout} = await promisify(execFile)('gsutil', ['cat', `gs://indiviai-wonder-protected/${room}/admin/users.json`])
-  const parsed = JSON.parse(stdout), users = parsed.content || parsed, username = ctx.vars.userEmail || await auth.devEmail(ctx)
+  const parsed = JSON.parse(stdout), users = parsed?.content ?? parsed, username = ctx.vars.userEmail || await auth.devEmail(ctx)
   const role = users.admins.includes(username) ? 'admin'
     : users.users.includes(username) || users.users.includes('authenticated') ? 'user' : null
   const [accessLevel, pathUserId] = file.split('/'), permissions = users.accessLevels[accessLevel]?.[role] || ''
@@ -299,7 +287,7 @@ const rawFileUtils = (text, binary) => {
 const wcachePath = (bucketName, path) => `${wcacheRoot()}/${bucketName}/${path}`
 
 Object.assign(jb.wonderUtils, { formatDay, formatTimeWithRandom, wresolve, wresolveInfo, wcachePopulate,
-  saveRoomBigLog2, prefetchSignedUrls, resolveWUrl, getIdToken, getAccessToken,
+  saveRoomBigLog2, prefetchSignedUrls, getIdToken, getAccessToken,
   storagePrefix, wonderBucketName, successResult, errorResultByException, notFoundResult,
   calcPath, extractFromUrl, wonderRepoRoot, bustCdnCache, paginateGcsList, gcsStorage,
   getCachedSignedUrl, isLocalFile, rawFileUtils, wcachePath })

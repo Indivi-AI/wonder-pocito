@@ -4,12 +4,13 @@
 //   lambdaV = a node code-closure tarball id (lambdas/<lambdaV>.tar.gz)   — server extracts & runs it.
 //   appletV = a browser share-snapshot id (shared/<appletV>/…)            — the importmap points source there.
 // Routes (each run has a twin -sse-progress variant: same auth+source, but streams progress over SSE then a 'done' message):
-//  - POST /run-room-lambda[-sse-progress]/:roomId/:name → room member; run the room's lambda AS THE USER.
-//  - GET  /room/:roomId/applet/:name → serve the applet host page INLINE (no 302). Same URL for public & signed rooms; policy picks the teeth.
+//  - POST /run-[signed-]room-lambda[-sse-progress]/:roomId/:name → run a public/signed room lambda AS THE USER.
+//  - GET  /[signed-]room/:roomId/applet/:name → serve the matching public/signed applet host page inline.
 import express from 'express'
 import { jb, coreUtils } from '@jb6/core/index.js'
 import '@jb6/core/misc/jb-remote-via-cli.js'   // runStrippedCli (stripCtx-aware server↔child run)
 import { caller, roomPolicy, roleOf, canAccess } from './auth-utils.js'
+import { readJson } from './signed-url.js'
 import '@wonder/db/auth.js'
 import '@wonder/db/db-drivers.js'
 import { promises as fsp, existsSync } from 'fs'
@@ -122,20 +123,20 @@ export async function serveAppletPage(spec, res, localImports) {
 
 // running code closures (lambda / admin snippet)
 // Definitions live in the public bucket for public rooms and in the private bucket for signed rooms.
-export async function readDef(roomId, path) {
-  const ctx = new coreUtils.Ctx(), roomWUrl = await jb.wonderUtils.resolveWUrl(roomId, ctx)
-  const res = await jb.wonderUtils.wfetch2(`${roomWUrl}/${path}`, { method: 'GET' }, ctx).catch(() => null)
-  return res?.ok ? res.json() : null
+export async function readDef(roomWUrl, path) {
+  const def = roomWUrl.startsWith('signedRoom://') ? await readJson(`${roomWUrl.split('://')[1]}/${path}`)
+    : await jb.wonderUtils.wfetch2(`${roomWUrl}/${path}`, { method: 'GET' }, new coreUtils.Ctx()).then(r => r.ok ? r.json() : null, () => null)
+  return def?.content ?? def
 }
 
 // authorize a caller against a room: authenticate → load policy (null ⇒ public) → role. Returns { who, policy, role }.
 // who null ⇒ not authenticated (401). role null ⇒ authenticated but not a member of a restricted room (403).
-async function authorize(req, roomId, ctx) {
+async function authorize(req, roomId, ctx, signed) {
   const { authLogger } = ctx.vars
   const authAt = performance.now()
   authLogger?.info?.({t: 'authentication started', atEpoch: Date.now(), roomId,
     hasToken: !!req.headers['x-user-authorization']}, {}, {ctx})
-  const policy = await roomPolicy(roomId)
+  const policy = signed ? await roomPolicy(roomId) : null
   authLogger?.info?.({t: 'room policy loaded', atEpoch: Date.now(), roomId, signed: !!policy}, {}, {ctx})
   const policyMs = performance.now() - authAt, callerAt = performance.now()
   try {
@@ -202,18 +203,21 @@ export function setupRoomLambdaAndApplet(app) {
   // data gate: authorize against the room, then run the room's lambda AS THE USER
   // (caller idToken in ctx → signedRoom reads gated as the user, not the server SA).
   // the lambda def file <roomId>/lambdas/<name>.json IS { lambdaV, entryCompFullId }. profile = {$:entryCompFullId} + userVars params.
-  const roomLambdaGate = async (req, res) => {
+  const roomLambdaGate = signed => async (req, res) => {
     const gateAt = performance.now()
     const { roomId, name } = req.params
     const gateCtx = coreUtils.ensureLoggers((req.body?.logger || '').split(',').filter(name => name === 'authLogger'))
     const gateLogs = () => coreUtils.harvestLogs(gateCtx, ['authLogger'])
-    const { who, policy, role, authError, authTiming } = await authorize(req, roomId, gateCtx)   // 1. authenticate
+    const roomWUrl = `${signed ? 'signedRoom' : 'room'}://${roomId}`
+    const { who, policy, role, authError, authTiming } = await authorize(req, roomId, gateCtx, signed)   // 1. authenticate
+    if (signed && !policy) { res.status(404).json({ error: `no signed room ${roomId}` }); return null }
     if (authError) { res.status(401).json({ error: authError, logs: gateLogs() }); return null }
     // ?noAuth is honored ONLY on a PUBLIC room (policy null): run anonymously as the server SA — no idToken, no per-user data.
     const anon = !who && req.body?.noAuth && !policy
     if (!who && !anon) { res.status(401).json({ error: 'login required' }); return null }
-    const defAt = performance.now(), lambda = await readDef(roomId, `lambdas/${name}.json`), defMs = performance.now() - defAt
+    const defAt = performance.now(), lambda = await readDef(roomWUrl, `lambdas/${name}.json`), defMs = performance.now() - defAt
     if (!lambda) { res.status(500).json({ error: `no lambda ${name} in ${roomId}` }); return null }
+    if (lambda.roomWUrl && lambda.roomWUrl !== roomWUrl) { res.status(409).json({ error: `lambda room mismatch: ${lambda.roomWUrl}` }); return null }
     // 2. authorize read access to the lambda's declared dir against the room ACL (a lambda reads-to-execute). anon ⇒ public 'authenticated' role.
     const effRole = anon ? 'authenticated' : role, email = who?.email || 'anonymous'
     const denied = lambda.dir && !canAccess(policy, lambda.dir, 'r', effRole)
@@ -228,31 +232,37 @@ export function setupRoomLambdaAndApplet(app) {
       gateLogs: gateLogs(),
       profile: req.body?.profile || { $: lambda.entryCompFullId }, packedCtx: req.body?.packedCtx, logger: req.body?.logger,
       userVars: {
-        roomId, roomWUrl: req.body?.roomWUrl, ...(who && { idToken: who.token }), userEmail: email,
+        roomId, roomWUrl, ...(who && { idToken: who.token }), userEmail: email,
         hasGcpIdentity: true, isLocalHost, isStaging: !isLocalHost && req.hostname?.includes('staging')
       }
     } }
   }
-  app.post('/run-room-lambda/:roomId/:name', json, runRoute(false, roomLambdaGate))
-  app.post('/run-room-lambda-sse-progress/:roomId/:name', json, runRoute(true, roomLambdaGate))
+  app.post('/run-room-lambda/:roomId/:name', json, runRoute(false, roomLambdaGate(false)))
+  app.post('/run-room-lambda-sse-progress/:roomId/:name', json, runRoute(true, roomLambdaGate(false)))
+  app.post('/run-signed-room-lambda/:roomId/:name', json, runRoute(false, roomLambdaGate(true)))
+  app.post('/run-signed-room-lambda-sse-progress/:roomId/:name', json, runRoute(true, roomLambdaGate(true)))
 
-  // entry gate: serve the applet host page inline (keeps the pretty /room/.../applet URL — no 302).
-  // scheme is a property of the ROOM (has admin/users.json ⇒ signed), not of this GET's identity — a browser top-level nav
+  // entry gate: serve the applet host page inline. The route declares the scheme; storage is never probed to infer it.
+  // scheme is a property of the route, not of this GET's identity — a browser top-level nav
   // carries no x-user-authorization header (its token lives in localStorage.auth2, used later on the lambda POST). The host page
   // exposes no room data, so serving it unauthenticated is safe; the teeth are the downstream signedRoom:// per-file reads.
   // the applet def <roomId>/applets/<name>.json IS { cmpId, urlsToLoad, appletV }; appletV = the share snapshot id.
-  app.get('/room/:roomId/applet/:name', async (req, res) => {
+  const appletRoute = signed => async (req, res) => {
     try {
       const { roomId, name } = req.params
-      const applet = await readDef(roomId, `applets/${name}.json`)
+      const roomWUrl = `${signed ? 'signedRoom' : 'room'}://${roomId}`
+      const applet = await readDef(roomWUrl, `applets/${name}.json`)
       if (!applet) return res.status(404).json({ error: `no applet ${name} in ${roomId}` })
+      if (applet.roomWUrl && applet.roomWUrl !== roomWUrl) return res.status(409).json({ error: `applet room mismatch: ${applet.roomWUrl}` })
       const ogUrl = `${req.hostname === 'localhost' ? 'http' : 'https'}://${req.get('host')}${req.path}`
-      const og = [await readDef(roomId, 'admin/branding.json'), applet.og, { ogUrl }]
-      const spec = { cmpId: applet.cmpId, urlsToLoad: applet.urlsToLoad, roomWUrl: applet.roomWUrl,
+      const og = [await readDef(roomWUrl, 'admin/branding.json'), applet.og, { ogUrl }]
+      const spec = { cmpId: applet.cmpId, urlsToLoad: applet.urlsToLoad, roomWUrl,
         appletV: applet.appletV, og }
       await serveAppletPage(spec, res)
     } catch (e) { console.error('[room-applet] error', e); res.status(500).json({ error: e.stack }) }
-  })
+  }
+  app.get('/room/:roomId/applet/:name', appletRoute(false))
+  app.get('/signed-room/:roomId/applet/:name', appletRoute(true))
 }
 
 // localhost dev: run the caller's profile against the LIVE repo (discover its minimal imports) — no snapshot,

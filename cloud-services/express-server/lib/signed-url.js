@@ -104,7 +104,7 @@ export function setupSignedUrlRoute(app) {
 
       tick('getUsers')
       stage = 'read room policy'
-      const storedUsers = await readJson(`${roomId}/admin/users.json`), users = storedUsers?.content || storedUsers
+      const storedUsers = await readJson(`${roomId}/admin/users.json`), users = storedUsers?.content ?? storedUsers
       tick('checkAccess')
       const role = getRole(users, email)
       const permissions = users?.accessLevels?.[accessLevel]?.[role] || ''
@@ -157,7 +157,7 @@ export function setupSignedUrlRoute(app) {
       tick('getUsers')
       stage = 'read room policy'
       const { roomId } = req.params
-      const storedUsers = await readJson(`${roomId}/admin/users.json`), users = storedUsers?.content || storedUsers
+      const storedUsers = await readJson(`${roomId}/admin/users.json`), users = storedUsers?.content ?? storedUsers
       const role = getRole(users, email)
       log[role ? 'info' : 'error']({t: role ? 'membership granted' : 'membership denied', email, role, roomId, allowed: !!role})
       if (!role) return reply(403, {error: `${email} is not a member of room ${roomId}`})

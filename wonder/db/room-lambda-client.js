@@ -114,13 +114,15 @@ DbDriverInterceptor('roomLambda', {
       try {
       // lambdaHost: explicit override; else browser uses page origin and node uses staging.
       const base = ctx.vars.lambdaHost || globalThis.window?.location?.origin || 'https://w-staging.indivi.ai'
+      const roomWUrl = ctx.vars.roomWUrl.includes('://') ? ctx.vars.roomWUrl : `room://${ctx.vars.roomWUrl}`
+      const route = roomWUrl.startsWith('signedRoom://') ? 'run-signed-room-lambda' : 'run-room-lambda'
       const authAt = performance.now()
       const idToken = ctx.vars.noAuth ? null : await getIdToken(ctx)
       const authMs = performance.now() - authAt
       const authHeaders = { 'Content-Type': 'application/json', ...(idToken && { 'x-user-authorization': `Bearer ${idToken}` }) }
       // forward the caller's room + the active logger names (revived server-side, kept OUT of packedCtx)
       const requestAtEpoch = Date.now()
-      const body = JSON.stringify({ ...(opts.body || {}), roomWUrl: ctx.vars.roomWUrl, logger: activeLoggers(ctx),
+      const body = JSON.stringify({ ...(opts.body || {}), roomWUrl, logger: activeLoggers(ctx),
         requestAtEpoch, ...(ctx.vars.noAuth && { noAuth: true }) })
       roomLogger?.info?.({ t: 'roomLambda invoke', roomId, name, roomWUrl: ctx.vars.roomWUrl,
         stream: !!opts.body?.stream, noAuth: !!ctx.vars.noAuth, authMs }, {}, { ctx })
@@ -141,7 +143,7 @@ DbDriverInterceptor('roomLambda', {
         return { ok: !inner?.error, status: inner?.error ? 500 : 200, text: async () => JSON.stringify(inner?.result), json: async () => inner?.result }
       }
       if (!opts.body?.stream) {
-        const url = `${base}/run-room-lambda/${roomId}/${name}`
+        const url = `${base}/${route}/${roomId}/${name}`
         const res = await fetch(url, { method: 'POST', headers: authHeaders, body })
         const raw = await res.text()
         let json; try { json = JSON.parse(raw) } catch {}
@@ -164,7 +166,7 @@ DbDriverInterceptor('roomLambda', {
       }
       // stream:true → SSE, relay progress to the stepper, return the final result
       const requestAt = performance.now()
-      const res = await fetch(`${base}/run-room-lambda-sse-progress/${roomId}/${name}`, {
+      const res = await fetch(`${base}/${route}-sse-progress/${roomId}/${name}`, {
         method: 'POST', headers: { ...authHeaders, Accept: 'text/event-stream' }, body
       })
       const headersMs = performance.now() - requestAt, headersAtEpoch = Date.now()

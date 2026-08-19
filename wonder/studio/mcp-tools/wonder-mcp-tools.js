@@ -317,7 +317,7 @@ register('./loader.mjs', import.meta.url)
 `
   await fsp.writeFile(path.join(stageRoot, 'loader.mjs'), loaderJs)
   await fsp.writeFile(path.join(stageRoot, 'importmap.mjs'), importmapJs)
-  await fsp.writeFile(path.join(stageRoot, 'index.js'), `import '${entryPath}'\n`)
+  await fsp.writeFile(path.join(stageRoot, 'index.js'), `import './${path.relative(baseDir, absEntry)}'\n`)
 
   // Tar + gzip
   const tarBuffer = await new Promise(async (res, rej) => {
@@ -395,7 +395,7 @@ Tool('uploadRoomLambda', {
         }
         if (!comp) return JSON.stringify({error: `component '${compFullId}' is not registered; import its defining file in ${entryPath}`})
         const lambdaId = comp.id, compPath = comp.$location.path
-        const {roomId} = jb.wonderUtils.extractFromUrl(roomWUrl, ctx)
+        const {roomId} = jb.wonderUtils.extractFromUrl(roomWUrl, ctx), route = roomWUrl.startsWith('signedRoom://') ? 'run-signed-room-lambda' : 'run-room-lambda'
         ctx.vars.mcpLogger?.info?.({t: 'upload room lambda', compFullId, roomWUrl, entryPath, compPath, userEmail: ctx.vars.userEmail}, {}, {ctx})
         const script = `
 import { uploadLambdaCompDependencies } from '@wonder/studio/mcp-tools/wonder-mcp-tools.js'
@@ -418,15 +418,15 @@ await coreUtils.writeServiceResult({ ...packageInfo, dir })
           return JSON.stringify({error: String(failure), stderr, textToParse, compFullId, roomWUrl, entryPath, compPath,
             mcpMs: timer.totalMs, mcpTimeline: timer.timeline})
         }
-        const def = {lambdaV: result.lambdaV, entryCompFullId: compFullId, dir: result.dir, roomWUrl}
+        const def = {lambdaV: result.lambdaV, entryPath: compPath, entryCompFullId: compFullId, dir: result.dir, roomWUrl}
         const defPath = `${roomWUrl}/lambdas/${lambdaId}.json`
-        await wfetch2(defPath, {method: 'PUT', body: def}, ctx)
+        await wfetch2(defPath, {method: 'PUT', body: def, headers: { 'x-wonder-json': 'as-is' }}, ctx)
         timer.phase('writeManifest')
         ctx.vars.mcpLogger?.info?.({t: 'upload room lambda done', compFullId, entryPath, compPath,
           userEmail: ctx.vars.userEmail, tarBytes: result.tarBytes, uploadMs: result.uploadMs,
           mcpMs: timer.totalMs, mcpTimeline: timer.timeline}, {}, {ctx})
         return JSON.stringify({...result, lambdaId, defPath, def,
-          runUrl: `https://w-staging.indivi.ai/run-room-lambda/${roomId}/${lambdaId}`,
+          runUrl: `https://w-staging.indivi.ai/${route}/${roomId}/${lambdaId}`,
           mcpMs: timer.totalMs, mcpTimeline: timer.timeline})
       } catch (error) {
         coreUtils.logException(error, 'uploadRoomLambda', {ctx, compFullId, roomWUrl,
@@ -439,7 +439,7 @@ await coreUtils.writeServiceResult({ ...packageInfo, dir })
 })
 
 Tool('uploadRoomApplet', {
-  description: 'Publish a react comp as a room applet; roomId resolves to its canonical room wUrl.',
+  description: 'Publish a react comp as a public applet by default; signedRoom:// must be explicit.',
   params: [
     {id: 'roomId', as: 'string', description: 'room id or full room wUrl', mandatory: true},
     {id: 'entryPath', as: 'string', description: 'module path that defines the comp, e.g. @solution/...'},
@@ -450,8 +450,8 @@ Tool('uploadRoomApplet', {
     {id: 'ogImageLocalPath', as: 'string', description: 'optional local image to upload under the public room applet dir; overrides ogImage.'}
   ],
   impl: mcpTool(async (ctx, {}, {roomId, entryPath, entryCompFullId, ogTitle, ogDescription, ogImage, ogImageLocalPath}) => {
-    const roomWUrl = await jb.wonderUtils.resolveWUrl(roomId, ctx)
-    const resolvedRoomId = roomWUrl.split('://')[1]
+    const roomWUrl = roomId.includes('://') ? roomId : `room://${roomId}`
+    const resolvedRoomId = roomWUrl.split('://')[1], route = roomWUrl.startsWith('signedRoom://') ? 'signed-room' : 'room'
     const script = `
 import { uploadCompDependencies } from '@wonder/studio/mcp-tools/wonder-mcp-tools.js'
 import { jb, coreUtils } from '@jb6/core'
@@ -468,7 +468,7 @@ try {
   const imageUpload = imageName && jb.wonderUtils.wfetch2(imageUrl, {
     method: 'PUT', body: localImage, headers: { 'x-wonder-body': 'localFile' } }, dbCtx)
   const writeDef = ({ appletV }) => Promise.all([imageUpload, jb.wonderUtils.wfetch2(\`${roomWUrl}/applets/\${cmpId}.json\`, {
-    method: 'PUT', body: { cmpId, urlsToLoad: ${JSON.stringify(entryPath)}, appletV, roomWUrl,
+    method: 'PUT', headers: { 'x-wonder-json': 'as-is' }, body: { cmpId, urlsToLoad: ${JSON.stringify(entryPath)}, appletV, roomWUrl,
       entryCompFullId: ${JSON.stringify(entryCompFullId)}, ...(Object.keys(og).length && { og }) } }, dbCtx)])
   const { appletV, fileCount, uploadMs, timeline } = await uploadCompDependencies(${JSON.stringify(entryPath)}, writeDef)
   await coreUtils.writeServiceResult({ appletV, cmpId, fileCount, uploadMs, timeline, imageUrl,
@@ -478,24 +478,9 @@ try {
     const cliCtx = coreUtils.ensureLoggers(['cliLogger', 'cliLineLogger'])   // over-the-wire: child stderr lines -> these loggers
     const { result, error } = await coreUtils.runCliInContext(script, { ctx: cliCtx, importMapsInCli: jb.coreRegistry.importMapsInCli })
     if (error || result?.error) return JSON.stringify({ error: result?.error || error, cliLog: coreUtils.harvestLogs(cliCtx, ['cliLineLogger']).cliLineLogger })
-    return JSON.stringify({ ...result, entryUrl: `https://w-staging.indivi.ai/room/${resolvedRoomId}/applet/${result.cmpId}` })
+    return JSON.stringify({ ...result, entryUrl: `https://w-staging.indivi.ai/${route}/${resolvedRoomId}/applet/${result.cmpId}` })
   })
 })
-
-// recover a lambda's entryPath from its published tar: parse the root index.js (`import '<entryPath>'`).
-export async function lambdaEntryPath(lambdaV) {
-  const zlib = await import('zlib')
-  const r = await fetch(`https://storage.googleapis.com/${CDN_BUCKET}/lambdas/${lambdaV}.tar.gz`)
-  if (!r.ok) throw new Error(`tar fetch ${lambdaV} → ${r.status}`)
-  const raw = zlib.gunzipSync(Buffer.from(await r.arrayBuffer()))
-  for (let off = 0; off + 512 <= raw.length; ) {
-    const name = raw.toString('utf8', off, off + 100).replace(/\0.*/, '')
-    if (!name) break
-    const size = parseInt(raw.toString('utf8', off + 124, off + 136).replace(/\0.*/, '').trim() || '0', 8)
-    if (name === 'index.js') return raw.toString('utf8', off + 512, off + 512 + size).match(/import\s+'([^']+)'/)?.[1]
-    off += 512 + Math.ceil(size / 512) * 512
-  }
-}
 
 Tool('updateLambdasAndApplets', {
   description: 'Refresh every lambda and applet manifest in a room wUrl from its current source.',
@@ -503,10 +488,10 @@ Tool('updateLambdasAndApplets', {
     {id: 'roomId', as: 'string', mandatory: true, description: 'room id or full room wUrl'}
   ],
   impl: mcpTool(async (ctx, {}, {roomId}) => {
-    const roomWUrl = await jb.wonderUtils.resolveWUrl(roomId, ctx)
-    const resolvedRoomId = roomWUrl.split('://')[1]
+    const roomWUrl = roomId.includes('://') ? roomId : `room://${roomId}`
+    const resolvedRoomId = roomWUrl.split('://')[1], signed = roomWUrl.startsWith('signedRoom://')
     const script = `
-import { uploadLambdaCompDependencies, uploadCompDependencies, lambdaEntryPath } from '@wonder/studio/mcp-tools/wonder-mcp-tools.js'
+import { uploadLambdaCompDependencies, uploadCompDependencies } from '@wonder/studio/mcp-tools/wonder-mcp-tools.js'
 import { jb, coreUtils } from '@jb6/core'
 import '@wonder/db/db-drivers.js'
 try {
@@ -519,20 +504,20 @@ const defsIn = async dir => {
     return { name, url, def: await (await jb.wonderUtils.wfetch2(url, { method: 'GET' }, dbCtx)).json() }
   }))
 }
-const save = (url, obj) => jb.wonderUtils.wfetch2(url, { method: 'PUT', body: obj }, dbCtx)
+const save = (url, obj) => jb.wonderUtils.wfetch2(url, { method: 'PUT', body: obj, headers: { 'x-wonder-json': 'as-is' } }, dbCtx)
 
 const lambdas = await defsIn('lambdas')
 const lambdaResults = await Promise.all(lambdas.map(async ({ name, url, def }) => {
   const from = def.lambdaV || def.fullAdHocV
   try {
-    const entryPath = await lambdaEntryPath(from)
-    if (!entryPath) return { name, from, error: 'no entryPath in tar index.js' }
+    const {entryPath} = def
+    if (!entryPath) return { name, from, error: 're-upload lambda to add entryPath' }
     await import(entryPath)   // register the comp so getCompField resolves permissionByPath
     const { lambdaV, reused } = await uploadLambdaCompDependencies(entryPath)
     const [dir] = coreUtils.getCompField(def.entryCompFullId, 'permissionByPath')
-    await save(url, { lambdaV, entryCompFullId: def.entryCompFullId, dir, roomWUrl })
+    await save(url, { lambdaV, entryPath, entryCompFullId: def.entryCompFullId, dir, roomWUrl })
     return { name, entryPath, dir, from, to: lambdaV, changed: from !== lambdaV, reused: !!reused,
-      runUrl: \`https://w-staging.indivi.ai/run-room-lambda/${resolvedRoomId}/\${name}\` }
+      runUrl: \`https://w-staging.indivi.ai/\${signed ? 'run-signed-room-lambda' : 'run-room-lambda'}/${resolvedRoomId}/\${name}\` }
   } catch (e) { coreUtils.logException(e, 'updateLambdasAndApplets lambda',
     { roomId: '${resolvedRoomId}', name, from }); return { name, from, error: e.stack || String(e) } }
 }))
@@ -545,7 +530,7 @@ const appletResults = await Promise.all(applets.map(async ({ name, url, def }) =
     const { appletV, fileCount } = await uploadCompDependencies(def.urlsToLoad)
     await save(url, { ...def, appletV, roomWUrl })
     return { name, entryPath: def.urlsToLoad, fileCount, from, to: appletV, changed: from !== appletV,
-      entryUrl: \`https://w-staging.indivi.ai/room/${resolvedRoomId}/applet/\${name}\` }
+      entryUrl: \`https://w-staging.indivi.ai/\${signed ? 'signed-room' : 'room'}/${resolvedRoomId}/applet/\${name}\` }
   } catch (e) { coreUtils.logException(e, 'updateLambdasAndApplets applet',
     { roomId: '${resolvedRoomId}', name, from }); return { name, from, error: e.stack || String(e) } }
 }))
