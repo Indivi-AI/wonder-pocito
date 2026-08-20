@@ -7,6 +7,7 @@ const googleTestUser = CtxEnricher('googleTestUser', {
     {id: 'envName', as: 'string', mandatory: true}
   ],
   impl: async (ctx, {}, { envName }) => {
+    if (process.env.WONDER_AUTH_MODE == 'none') return ctx
     const email = process.env[envName]?.split(':', 1)[0]
     const refreshToken = JSON.parse(process.env.WONDER_USERS || '{}')[email]?.refreshToken
     if (!email || !refreshToken) throw new Error(`WONDER_USERS has no refresh token for ${email || envName}`)

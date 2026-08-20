@@ -10,6 +10,7 @@ const { wonderUtils } = jb
 const { storagePrefix, wonderBucketName } = wonderUtils
 const localhostServer = ctx => ctx.vars.localhostServer || globalThis.process?.env?.WONDER_LOCAL_SERVER || 'http://localhost:3000'
 const runtimeDb = ctx => ctx.vars.db || (!coreUtils.isNode && new URLSearchParams(globalThis.location?.search || '').get('db'))
+  || globalThis.WONDER_STORAGE_PROVIDER || globalThis.process?.env?.STORAGE_PROVIDER
 const gcsProxyBase = ctx => ctx.vars.wonderServiceBase || globalThis.location?.origin
   || globalThis.process?.env?.WONDER_SERVICE_URL || 'https://wonder-lambda-me-west1.indivi.ai'
 const { wresolve, successResult, errorResultByException, notFoundResult, bustCdnCache, gcsStorage, paginateGcsList, calcPath,
@@ -225,7 +226,7 @@ async function getDBDriver(url, ctx) {
   const isPublicBucket = extracted?.scope?.bucket === wonderBucketName
   // public-bucket READS go anonymous-HTTPS (GCS.node.publicGCS) — no token mint, no SDK ctor → 0 init (key on cloud).
   const isPublicRead = isPublicBucket && methodToAction((ctx.vars.opts?.method || ctx.vars.method || 'GET').toUpperCase()) === 'read'
-  const db = extracted.db || ctx.vars.db || (isPublicBucket ? 'gcs' : dbFromCtx) || 'gcs'
+  const db = extracted.db || ctx.vars.db || dbFromCtx || (isPublicBucket ? 'gcs' : null) || 'gcs'
   const dbNormalized = forceGCS ? 'gcs' : db === 'local' ? 'fs' : db.replace(/-/g, '')
   const scopeId = extracted?.scope?.id
   const backend = dsls.wonder['db-backend'][dbNormalized]?.$runWithCtx(ctx)
@@ -306,23 +307,26 @@ async function wfetch2(_url, opts, _ctx) {
   const extracted = extractFromUrl(url, ctx)
   const explicitDb = /^\w+:[^/]+\/\//.test(url), runtimeDbValue = runtimeDb(ctx)
   const rawDb = extracted.db || runtimeDbValue || 'gcs'
-  const db = ctx.vars.forceGCS ? 'gcs' : rawDb === 'local' ? 'fs' : rawDb.replace(/-/g, '')
-  const backend = dsls.wonder['db-backend'][db]?.$runWithCtx(ctx)
+  const resolvedDb = ctx.vars.forceGCS ? 'gcs' : rawDb === 'local' ? 'fs' : rawDb.replace(/-/g, '')
+  const bucketEndpoint = resolvedDb === 'minio' && !ctx.vars.bucketEndpoint && (coreUtils.isNode
+    ? globalThis.process?.env?.MINIO_ENDPOINT : globalThis.WONDER_STORAGE_URL)
+  if (bucketEndpoint) ctx = ctx.setVars({ bucketEndpoint })
+  const backend = dsls.wonder['db-backend'][resolvedDb]?.$runWithCtx(ctx)
   const backendCtx = backend?.enrichCtx ? await backend.enrichCtx(ctx) : ctx
   const enrichCtxProfile = coreUtils.tgpProfileToJson(backend?.enrichCtx.profile)
   const safeEnrichCtxProfile = enrichCtxProfile && JSON.parse(JSON.stringify(enrichCtxProfile, (key, value) => key === 'val' ? undefined : value))
   const backendVarNames = Object.keys(backendCtx.vars).filter(name => !(name in ctx.vars))
   const overriddenBackendVars = Object.keys(ctx.vars).filter(name => backendCtx.vars[name] !== ctx.vars[name])
-  ctx = backendCtx.setVars({ ...ctx.vars, db,
+  ctx = backendCtx.setVars({ ...ctx.vars, db: resolvedDb,
     categories: { ...Object.fromEntries((backend?.categories || []).map(category => [category, true])), ...ctx.vars.categories } })
-  dbLogger?.info?.({ t: 'DB backend resolved', db, source: ctx.vars.forceGCS ? 'forceGCS' : explicitDb ? 'wUrl'
+  dbLogger?.info?.({ t: 'DB backend resolved', db: resolvedDb, source: ctx.vars.forceGCS ? 'forceGCS' : explicitDb ? 'wUrl'
     : _ctx.vars.db ? 'ctx.vars.db' : runtimeDbValue ? 'runtimeDb' : 'default', categories: backend?.categories || [],
     enrichCtxProfile: safeEnrichCtxProfile, backendVarNames, overriddenBackendVars }, {}, { ctx })
   const { scope, roomId, userId, fileName, bucketName } = extracted
   // REST-standard: GET on a collection (trailing '/') = list; on a resource = get. No '.json' ext for a dir prefix.
   const isList = url.endsWith('/') && (opts.method || 'GET').toUpperCase() === 'GET'
   const ext = isList || fileName?.includes('.') ? '' : '.json'
-  const rawPath = await calcPath(ctx, { scope, roomId, userId, fileName, db }) + ext
+  const rawPath = await calcPath(ctx, { scope, roomId, userId, fileName, db: resolvedDb }) + ext
   const path = isList && !rawPath.endsWith('/') ? rawPath + '/' : rawPath
 
   let driverMethod = isList ? 'list' : (opts.method || 'GET').toLowerCase()

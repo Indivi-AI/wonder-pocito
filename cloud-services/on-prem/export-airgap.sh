@@ -21,7 +21,7 @@ trap cleanup EXIT
 mkdir -p "$OUT"
 git -C "$ROOT" bundle create "$OUT/wonder.bundle" HEAD "$BRANCH"
 "$ENGINE" build --platform "$PLATFORM" -t "$BASE_IMAGE" -f "$ROOT/cloud-services/wonder-base.docker" "$ROOT"
-"$ENGINE" build --platform "$PLATFORM" --build-arg "BASE_IMAGE=$BASE_IMAGE" --build-arg BUILD_TARGET=runtime \
+"$ENGINE" build --platform "$PLATFORM" --build-arg "BASE_IMAGE=$BASE_IMAGE" --build-arg BUILD_TARGET=runtime --build-arg INCLUDE_DUCKDB=false \
   -t "$SOURCE_IMAGE" -f "$ROOT/cloud-services/wonder.docker" "$ROOT"
 "$ENGINE" save "$SOURCE_IMAGE" | gzip -9 > "$OUT/wonder-image.tar.gz"
 CID="$("$ENGINE" create --platform "$PLATFORM" "$BASE_IMAGE")"

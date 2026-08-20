@@ -16,15 +16,18 @@ import '@wonder/db/db-drivers.js'
 import { promises as fsp, existsSync } from 'fs'
 import { spawn } from 'child_process'
 
-const FRONTEND_URL = 'https://jb6-cdn.pages.dev'
-const STORAGE_URL = 'https://storage.googleapis.com'
+const STORAGE_PROVIDER = process.env.STORAGE_PROVIDER || 'gcs'
+const FRONTEND_URL = process.env.WONDER_CDN_URL || 'https://jb6-cdn.pages.dev'
+const STORAGE_URL = process.env.WONDER_STORAGE_URL || 'https://storage.googleapis.com'
 const CODE_PACKAGES_URL = `${STORAGE_URL}/wonder-code-packages`
-const jb6Pkgs = ['core','common','react','rx','jq','llm-guide','mcp','testing','repo','lang-service','probe-studio']
+const CLIENT_STORAGE_ENV = { WONDER_STORAGE_PROVIDER: STORAGE_PROVIDER, WONDER_STORAGE_URL: STORAGE_URL }
+const jb6Pkgs = ['core','common','react','rx','jq','llm-guide','mcp','testing','repo','lang-service',
+  'probe-studio']
 const json = express.json({ limit: '1mb' })
 const respond = (res, r) => res.status(r.error ? 500 : 200).json(r.error ? r : { result: r })
 const extractionPromises = new Map()
 
-// ─── the applet host page ──────────────────────────────────────────────────────────────────────────
+// Applet host page
 const APPLET_HOST_HTML = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wonder Workspace</title>
@@ -40,7 +43,7 @@ z-index:9999;font-family:system-ui;color:#666;font-size:14px}
 </style>
 </head><body>
 <div id="loading">Loading...</div>
-<script>globalThis.WONDER_STORAGE_URL = ${JSON.stringify(STORAGE_URL)}</script>
+<script>Object.assign(globalThis, ${JSON.stringify(CLIENT_STORAGE_ENV)})</script>
 <script type="importmap">_IMPORT_MAP_</script>
 <div id="root" style="height:100vh"></div>
 <script type="module">
@@ -52,8 +55,8 @@ const appletSpec = _APPLET_SPEC_
 reactUtils.loadLucid05()
 const { urlsToLoad, roomWUrl } = appletSpec
 const cmpId = new URLSearchParams(location.search).get('cmpId') || appletSpec.cmpId   // multi-comp applets navigate by ?cmpId=; def cmpId is the default
-// ?noAuth on a PUBLIC room (room://) skips the login gate — data is public, so run anonymously (server SA) with no OAuth spin. Signed rooms ignore it.
-const noAuth = new URLSearchParams(location.search).has('noAuth') && roomWUrl?.startsWith('room://')
+// Server noAuth (or ?noAuth) skips login only for room://; signed rooms ignore it.
+const noAuth = (appletSpec.noAuth || new URLSearchParams(location.search).has('noAuth')) && roomWUrl?.startsWith('room://')
 const root = document.getElementById('root')
 if (appletSpec.liveRepo) await import('@wonder/db/room-lambda-live-repo.js')
 const runAutomation = async mCtx => {
@@ -64,10 +67,11 @@ const runAutomation = async mCtx => {
   }
 }
 // extendCtxWithUrl seeds ctx-* query params (e.g. ?ctx-reportUrl=…) + loggers from the URL; then add react + the applet's roomWUrl.
-const ctx = reactUtils.extendCtxWithUrl().setVars({ react: reactUtils, ...(roomWUrl && { roomWUrl }), ...(noAuth && { noAuth: true }) })
+const ctx = reactUtils.extendCtxWithUrl().setVars({ react: reactUtils, db: globalThis.WONDER_STORAGE_PROVIDER,
+  bucketEndpoint: globalThis.WONDER_STORAGE_URL, ...(roomWUrl && { roomWUrl }), ...(noAuth && { noAuth: true }) })
 const uiSource = appletSpec.liveRepo
   ? 'live-repo (localhost /jb6_packages, /wonder, /solution, /indiviai)'
-  : 'appletV snapshot ' + appletSpec.appletV + ' (GCS share, NOT live-repo) - edit-to-live needs uploadRoomApplet'
+  : 'appletV snapshot ' + appletSpec.appletV + ' (bucket share, NOT live-repo) - edit-to-live needs uploadRoomApplet'
 ctx.vars.roomLogger?.info?.({ t: 'serve applet page', roomWUrl, cmpId, urlsToLoad, appletV: appletSpec.appletV, uiSource }, {}, { ctx })
 document.getElementById('loading')?.remove()
 // the lambda runner is gated per-user (runs AS the caller) ⇒ an anonymous applet silently gets no data. force login first (into #root).
@@ -233,7 +237,7 @@ export function setupRoomLambdaAndApplet(app) {
       profile: req.body?.profile || { $: lambda.entryCompFullId }, packedCtx: req.body?.packedCtx, logger: req.body?.logger,
       userVars: {
         roomId, roomWUrl, ...(who && { idToken: who.token }), userEmail: email,
-        hasGcpIdentity: true, isLocalHost, isStaging: !isLocalHost && req.hostname?.includes('staging')
+        hasGcpIdentity: STORAGE_PROVIDER === 'gcs', isLocalHost, isStaging: !isLocalHost && req.hostname?.includes('staging')
       }
     } }
   }
@@ -257,7 +261,7 @@ export function setupRoomLambdaAndApplet(app) {
       const ogUrl = `${req.hostname === 'localhost' ? 'http' : 'https'}://${req.get('host')}${req.path}`
       const og = [await readDef(roomWUrl, 'admin/branding.json'), applet.og, { ogUrl }]
       const spec = { cmpId: applet.cmpId, urlsToLoad: applet.urlsToLoad, roomWUrl,
-        appletV: applet.appletV, og }
+        appletV: applet.appletV, noAuth: process.env.WONDER_AUTH_MODE === 'none' && !signed, og }
       await serveAppletPage(spec, res)
     } catch (e) { console.error('[room-applet] error', e); res.status(500).json({ error: e.stack }) }
   }

@@ -3,5 +3,4 @@ else {
   await import('./init-dev.js')
   await import('@jb6/mcp')
   await import('@wonder/studio/mcp-tools/wonder-mcp-tools.js')
-  await import('@wonder/studio/mcp-tools/wonder-on-prem-mcp-tools.js')
 }

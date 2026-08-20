@@ -113,7 +113,8 @@ export async function uploadCompDependencies(urlsToLoad, onVersion) {
   timer.phase('imports')
 
   const baseDir = await coreUtils.calcRepoRoot()
-  const dbCtx = new coreUtils.Ctx().setVars({ db: 'gcs' })
+  const db = process.env.STORAGE_PROVIDER || 'gcs'
+  const dbCtx = new coreUtils.Ctx().setVars({ db, ...(db === 'minio' && { bucketEndpoint: process.env.MINIO_ENDPOINT }) })
 
   const sourceFiles = urlsToLoad.split(',').map(f => f.trim()).filter(Boolean)
   if (!sourceFiles.length) throw new Error('no source files')
@@ -161,14 +162,25 @@ export async function uploadCompDependencies(urlsToLoad, onVersion) {
   const appletV = `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
     + `-${Math.random().toString(36).slice(2,6)}`
   timer.phase('versions')
+  const ctypeOf = f => /\.mjs$|\.js$/.test(f) ? 'text/javascript' : /\.wasm$/.test(f) ? 'application/wasm'
+    : /\.css$/.test(f) ? 'text/css' : /\.json$/.test(f) ? 'application/json' : 'application/octet-stream'
+  const bodies = await Promise.all(inputs.map(f => fsp.readFile(path.resolve(baseDir, f))))
+  if (dbCtx.vars.db === 'minio') {
+    const put = async (f, body) => {
+      const res = await fetch(encodeURI(await wresolve(`codePackages://shared/${appletV}/${relForUpload(f)}`, dbCtx, 'PUT')),
+        { method: 'PUT', headers: { 'content-type': ctypeOf(f) }, body })
+      if (!res.ok) throw new Error(`PUT ${relForUpload(f)} → ${res.status}`)
+    }
+    await Promise.all([onVersion?.({ appletV, dbCtx }), ...inputs.map((f, i) => put(f, bodies[i]))])
+    timer.phase('upload')
+    return { appletV, fileCount: inputs.length, totalBytes: bodies.reduce((sum, body) => sum + body.length, 0),
+      uploadMs: timer.totalMs, timeline: timer.timeline }
+  }
   const resolved = await wresolve(`codePackages://shared/${appletV}/${relForUpload(inputs[0])}`, dbCtx, 'PUT')
   const [, bucket, prefix] = resolved.match(/storage\.googleapis\.com\/([^/]+)\/(.*)$/)   // prefix = shared/<appletV>/<rel[0]>
   const gcsPrefix = prefix.slice(0, prefix.length - relForUpload(inputs[0]).length)        // strip rel[0] → shared/<appletV>/
   const token = await getAccessToken(dbCtx, { method: 'PUT' })
   const auth = { authorization: `Bearer ${token}` }
-  const ctypeOf = f => /\.mjs$|\.js$/.test(f) ? 'text/javascript' : /\.wasm$/.test(f) ? 'application/wasm'
-    : /\.css$/.test(f) ? 'text/css' : /\.json$/.test(f) ? 'application/json' : 'application/octet-stream'
-  const bodies = await Promise.all(inputs.map(f => fsp.readFile(path.resolve(baseDir, f))))
   const pool = new Pool('https://storage.googleapis.com', { connections: inputs.length + 1, pipelining: 1, keepAliveTimeout: 60000 })
   const put = async (f, body) => {
     const r = await pool.request({ method: 'PUT', path: `/${bucket}/${encodeURI(gcsPrefix + relForUpload(f))}`, headers: { ...auth, 'content-type': ctypeOf(f) }, body })
@@ -196,7 +208,8 @@ export async function uploadLambdaCompDependencies(entryPath) {
   timer.phase('imports')
 
   const baseDir = await coreUtils.calcRepoRoot()
-  const dbCtx = new coreUtils.Ctx().setVars({ db: 'gcs' })
+  const db = process.env.STORAGE_PROVIDER || 'gcs'
+  const dbCtx = new coreUtils.Ctx().setVars({ db, ...(db === 'minio' && { bucketEndpoint: process.env.MINIO_ENDPOINT }) })
   // Version identity = git sha + entry path. Clean tree → deterministic reuse per package entry.
   // Dirty tree → `MMDD-HHMM-<gitSha>-<rand>` so every uncommitted change rebuilds. Computed first to allow early reuse.
   const gitSha = execSync('git rev-parse --short HEAD', { encoding: 'utf8', cwd: baseDir }).trim()
@@ -330,17 +343,22 @@ register('./loader.mjs', import.meta.url)
   })
   timer.phase('tarGzip')
 
-  // direct-to-GCS PUT of the tar (same fast path as the applet upload) — resolve bucket/key, mint write token, one keep-alive Pool.
+  // Upload the tar directly to the selected bucket backend.
   const resolved = await wresolve(`codePackages://lambdas/${lambdaV}.tar.gz`, dbCtx, 'PUT')
-  const [, bucket, key] = resolved.match(/storage\.googleapis\.com\/([^/]+)\/(.*)$/)
-  const token = await getAccessToken(dbCtx, { method: 'PUT' })
-  const pool = new Pool('https://storage.googleapis.com', { keepAliveTimeout: 60000 })
-  try {
-    const r = await pool.request({ method: 'PUT', path: `/${bucket}/${encodeURI(key)}`,
-      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/gzip' }, body: tarBuffer })
-    await r.body.dump()
-    if (r.statusCode >= 400) throw new Error(`PUT ${lambdaV}.tar.gz → ${r.statusCode}`)
-  } finally { await pool.close() }
+  if (dbCtx.vars.db === 'minio') {
+    const res = await fetch(encodeURI(resolved), { method: 'PUT', headers: { 'content-type': 'application/gzip' }, body: tarBuffer })
+    if (!res.ok) throw new Error(`PUT ${lambdaV}.tar.gz → ${res.status}`)
+  } else {
+    const [, bucket, key] = resolved.match(/storage\.googleapis\.com\/([^/]+)\/(.*)$/)
+    const token = await getAccessToken(dbCtx, { method: 'PUT' })
+    const pool = new Pool('https://storage.googleapis.com', { keepAliveTimeout: 60000 })
+    try {
+      const r = await pool.request({ method: 'PUT', path: `/${bucket}/${encodeURI(key)}`,
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/gzip' }, body: tarBuffer })
+      await r.body.dump()
+      if (r.statusCode >= 400) throw new Error(`PUT ${lambdaV}.tar.gz → ${r.statusCode}`)
+    } finally { await pool.close() }
+  }
   await fsp.rm(stageRoot, { recursive: true, force: true })
   timer.phase('upload')
 
