@@ -15,6 +15,8 @@ ROOT = Path(__file__).parent
 DATA_DIR = ROOT / '.data'
 MARKETPLACE_DB = DATA_DIR / 'marketplace.db'
 MARKETPLACE_URL = os.getenv('MARKETPLACE_URL', 'http://127.0.0.1:7777')
+CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS',
+  'http://localhost:3001,http://127.0.0.1:3001,http://localhost:3004,http://127.0.0.1:3004').split(',')
 MARKETPLACE_RESOURCES = ('plugins', 'skills', 'tools', 'reports', 'agents')
 MARKETPLACE_SEED = json.loads((ROOT / 'marketplace.json').read_text())
 
@@ -140,8 +142,8 @@ plugin_agents = [Agent(
 ) for plugin in MARKETPLACE_SEED['plugins']]
 
 agent_os = AgentOS(
-    name='IDF Platform V0', agents=plugin_agents, db=agent_db, base_app=base_app,
-    cors_allowed_origins=['http://localhost:3001', 'http://127.0.0.1:3001'], telemetry=False
+  name='IDF Platform V0', agents=plugin_agents, db=agent_db, base_app=base_app,
+  cors_allowed_origins=CORS_ALLOWED_ORIGINS, telemetry=False
 )
 app = agent_os.get_app()
 
