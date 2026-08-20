@@ -19,10 +19,10 @@ ReactComp('PlatformV0Navigation', {
               h('span:grid h-8 w-8 place-items-center rounded-xl bg-[#2f6b4b] text-white', {}, h('L:ShieldCheck', {size: 17})),
               'פלאגין סטודיו'),
             primaryNav.map(navButton), h('div:px-3 pb-2 pt-7 text-xs text-[#a4aaa7]', {}, 'ספרייה'), libraryNav.map(navButton)),
-          h('nav:fixed bottom-0 left-0 right-0 z-50 flex border-t border-[#e4e8e5] bg-white sm:hidden', {},
+          h('nav:fixed bottom-0 left-0 right-0 z-50 grid grid-cols-6 border-t border-[#e4e8e5] bg-white sm:hidden', {},
             mobileNav.map(([id, icon, title]) => h(
-              `button:flex-1 py-2 text-[10px] ${view == id ? 'text-[#2f6b4b]' : 'text-gray-500'}`,
-              {key: id, onClick: () => setView(id)}, h(`L:${icon}`, {size: 18, className: 'mx-auto mb-0.5'}), title))))
+              `button:min-w-0 py-2 text-[9px] ${view == id ? 'text-[#2f6b4b]' : 'text-gray-500'}`,
+              {key: id, onClick: () => openView(id)}, h(`L:${icon}`, {size: 17, className: 'mx-auto mb-0.5'}), title))))
       }
     }
   })

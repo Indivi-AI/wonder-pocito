@@ -9,16 +9,20 @@ from agno.agent import Agent
 from agno.db.sqlite import SqliteDb
 from agno.models.openai import OpenAIResponses
 from agno.os import AgentOS
-from fastapi import Body, FastAPI, HTTPException
+from fastapi import Body, FastAPI, Form, HTTPException
 
 ROOT = Path(__file__).parent
 DATA_DIR = ROOT / '.data'
 MARKETPLACE_DB = DATA_DIR / 'marketplace.db'
 MARKETPLACE_URL = os.getenv('MARKETPLACE_URL', 'http://127.0.0.1:7777')
 CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS',
-  'http://localhost:3001,http://127.0.0.1:3001,http://localhost:3004,http://127.0.0.1:3004').split(',')
-MARKETPLACE_RESOURCES = ('plugins', 'skills', 'tools', 'reports', 'agents')
+  'http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001,'
+  'http://localhost:3004,http://127.0.0.1:3004').split(',')
 MARKETPLACE_SEED = json.loads((ROOT / 'marketplace.json').read_text())
+MARKETPLACE_RESOURCES = tuple(MARKETPLACE_SEED)
+LEGACY_SEEDS = {'skills': ['document-matching', 'operational-analysis', 'supplier-research'],
+  'tools': ['purchase-documents', 'wiki-search', 'report-reader'],
+  'agents': ['document-auditor', 'operations-analyst', 'service-writer']}
 
 
 def connect_marketplace():
@@ -31,10 +35,19 @@ def init_marketplace():
     DATA_DIR.mkdir(exist_ok=True)
     with connect_marketplace() as connection:
         connection.execute('CREATE TABLE IF NOT EXISTS assets (resource TEXT, name TEXT, data TEXT, PRIMARY KEY(resource, name))')
-        connection.executemany('INSERT OR IGNORE INTO assets VALUES (?, ?, ?)', [
-            (resource, item['name'], json.dumps(item, ensure_ascii=False))
-            for resource, items in MARKETPLACE_SEED.items() for item in items
-        ])
+        for resource, names in LEGACY_SEEDS.items():
+            connection.executemany('DELETE FROM assets WHERE resource = ? AND name = ?', ((resource, name) for name in names))
+        for resource, items in MARKETPLACE_SEED.items():
+            for seed in items:
+                row = connection.execute('SELECT data FROM assets WHERE resource = ? AND name = ?',
+                  (resource, seed['name'])).fetchone()
+                current = json.loads(row['data']) if row else {}
+                item = {**seed, **current}
+                for key in ('skills', 'tools', 'agents', 'rows', 'messages', 'inputSchema', 'outputCubes'):
+                    if key in seed and not isinstance(current.get(key), list):
+                        item[key] = seed[key]
+                connection.execute('INSERT OR REPLACE INTO assets VALUES (?, ?, ?)',
+                  (resource, seed['name'], json.dumps(item, ensure_ascii=False)))
 
 
 def require_resource(resource):
@@ -129,17 +142,32 @@ def search_marketplace(query: str) -> str:
 
 
 agent_db = SqliteDb(db_file=str(DATA_DIR / 'agents.db'))
-plugin_agents = [Agent(
-    id=plugin['name'], name=plugin['title'], model=OpenAIResponses(id=os.getenv('OPENAI_MODEL', 'gpt-5-mini')),
+
+
+def runtime_agent(asset):
+    return Agent(id=asset['name'], name=asset['title'], model=OpenAIResponses(id=os.getenv('OPENAI_MODEL', 'gpt-5-mini')),
     db=agent_db, tools=[search_marketplace, list_marketplace_assets, get_marketplace_asset],
     instructions=[
-        f"Your marketplace plugin is '{plugin['name']}': {plugin['description']}",
+        f"Your marketplace asset is '{asset['name']}': {asset['description']}",
+        asset.get('instructions', ''),
         'Always inspect the marketplace before answering and use the relevant plugins, skills, tools, reports, and sub-agents.',
         'Answer in Hebrew unless asked otherwise. Cite used marketplace asset names.',
         'When a verified report is relevant, append its exact marker once: [[report:report-name]].'
     ],
     add_history_to_context=True, num_history_runs=5, markdown=True
-) for plugin in MARKETPLACE_SEED['plugins']]
+    )
+
+
+@base_app.post('/api/v1/runtime/{agent_id}/runs')
+async def run_marketplace_agent(agent_id: str, message: str = Form(...), session_id: str = Form(...),
+  user_id: str = Form('platform-v0')):
+    asset = next((item for resource in ('plugins', 'agents') for item in list_assets(resource) if item['name'] == agent_id), None)
+    if not asset:
+        raise HTTPException(404, f'Agent {agent_id} not found')
+    return (await runtime_agent(asset).arun(message, session_id=session_id, user_id=user_id)).to_dict()
+
+
+plugin_agents = [runtime_agent(asset) for asset in MARKETPLACE_SEED['plugins'] + MARKETPLACE_SEED['agents']]
 
 agent_os = AgentOS(
   name='IDF Platform V0', agents=plugin_agents, db=agent_db, base_app=base_app,
