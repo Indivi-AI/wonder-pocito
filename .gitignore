@@ -6,3 +6,5 @@ cloud-services/.local/
 .cache/
 
 wonder.zip
+
+tmp/

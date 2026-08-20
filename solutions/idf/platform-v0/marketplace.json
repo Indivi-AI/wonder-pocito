@@ -1,0 +1,81 @@
+{
+  "plugins": [
+    {
+      "name": "proof-of-existence-analyst", "title": "אנליסט הוכחת קיום", "version": "V0", "skills": 2, "tools": 2, "agents": 1,
+      "description": "מריץ את תהליך הוכחת הקיום מקצה לקצה עבור ספק ותקופה, ומחזיר רשימת פערים מתועדת.",
+      "updated": "06/08"
+    },
+    {
+      "name": "service-designer", "title": "מאפיין שירות", "version": "V0", "skills": 1, "tools": 2, "agents": 1,
+      "description": "מייצר טיוטת מסמך אפיון לשירות חדש על בסיס פניות לקוח וקונטקסט ממרחבי הוויקי.",
+      "updated": "28/07"
+    },
+    {
+      "name": "operations-reviewer", "title": "סוקר דוחות תפעול", "version": "V0", "skills": 1, "tools": 2, "agents": 1,
+      "description": "קורא דוחות תפעוליים שבועיים, מחלץ מדדים, ומסמן חריגות מול הרף שהוגדר.", "updated": "05/08"
+    },
+    {
+      "name": "supplier-dossier", "title": "מכין תיק ספק", "version": "V0", "skills": 2, "tools": 2, "agents": 0,
+      "description": "מרכז את כל החומר הקיים על ספק לתיק אחד לפני פגישת התקשרות.", "updated": "24/07"
+    }
+  ],
+  "skills": [
+    {
+      "name": "document-matching", "title": "התאמת מסמכים", "version": "V0",
+      "description": "מתאימה הזמנה, חשבונית וקבלה ומסמנת פערים."
+    },
+    {
+      "name": "operational-analysis", "title": "ניתוח תפעולי", "version": "V0",
+      "description": "מחלצת מדדים וחריגות מדוחות תפעוליים."
+    },
+    {
+      "name": "supplier-research", "title": "מחקר ספק", "version": "V0",
+      "description": "מרכזת מקורות פנימיים לתמונת ספק מלאה."
+    }
+  ],
+  "tools": [
+    {
+      "name": "purchase-documents", "title": "מסמכי רכש", "version": "V0",
+      "description": "קורא הזמנות, חשבוניות וקבלות ממערכת הרכש."
+    },
+    {
+      "name": "wiki-search", "title": "חיפוש Wiki", "version": "V0",
+      "description": "מחפש מידע עסקי במרחבי הידע הארגוניים."
+    },
+    {
+      "name": "report-reader", "title": "קורא דוחות", "version": "V0",
+      "description": "טוען ומנתח דוחות CSV, Excel ו-PDF."
+    }
+  ],
+  "reports": [
+    {
+      "name": "procurement-gaps", "title": "פערי הוכחת קיום", "version": "V0", "verified": true,
+      "parameters": ["supplier", "period"], "description": "מסכם התאמות ופערים בין מסמכי הרכש לתקופת הדוח.", "updated": "12/08",
+      "metrics": [{"label": "מסמכים", "value": "14"}, {"label": "התאמה מלאה", "value": "12"}, {"label": "פערים", "value": "2"}]
+    },
+    {
+      "name": "supplier-evidence", "title": "תמונת ראיות לספק", "version": "V0", "verified": true,
+      "parameters": ["supplier"], "description": "מרכז את מקורות המידע והראיות המאומתות עבור ספק.", "updated": "10/08",
+      "metrics": [{"label": "מקורות", "value": "8"}, {"label": "מאומתים", "value": "7"}, {"label": "חסר", "value": "1"}]
+    },
+    {
+      "name": "operations-anomalies", "title": "חריגות תפעוליות", "version": "V0", "verified": true,
+      "parameters": ["week", "threshold"], "description": "מציג חריגות מול ספי הבקרה בדוח השבועי.", "updated": "09/08",
+      "metrics": [{"label": "מדדים", "value": "21"}, {"label": "תקינים", "value": "18"}, {"label": "חריגות", "value": "3"}]
+    }
+  ],
+  "agents": [
+    {
+      "name": "document-auditor", "title": "מבקר מסמכים", "version": "V0",
+      "description": "בודק עקביות ושלמות בין מסמכים."
+    },
+    {
+      "name": "operations-analyst", "title": "אנליסט תפעול", "version": "V0",
+      "description": "מזהה חריגות ומסביר את מקורן."
+    },
+    {
+      "name": "service-writer", "title": "כותב שירות", "version": "V0",
+      "description": "מנסח מסמכי אפיון תמציתיים."
+    }
+  ]
+}
