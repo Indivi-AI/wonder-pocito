@@ -36,7 +36,8 @@ Data('wFetch', {
     const res = await wfetch2(url(ctx), { method, headers, ...(body.profile ? { body: await body(ctx) } : {}) }, fetchCtx)
     const readBody = () => (method || 'GET').toUpperCase() === 'HEAD'
       ? { ok: res.ok, status: res.status, lastModified: res.headers?.get?.('last-modified'),
-          contentLength: res.headers?.get?.('content-length'), contentLocation: res.headers?.get?.('content-location') }
+          contentLength: res.headers?.get?.('content-length'), contentLocation: res.headers?.get?.('content-location'),
+          etag: res.headers?.get?.('etag'), generation: Number(res.headers?.get?.('generation') || 0) }
       : res.json()
     if (logger) return { result: await readBody(), ...coreUtils.harvestLogs(fetchCtx, logger.split(',')) }
     return stream ? res : readBody()
@@ -425,9 +426,10 @@ HeadMethod('whead.GcsJSApi', {
       const [metadata] = await gcsFile.getMetadata()
       const lastModified = metadata.updated
       const size = Number(metadata.size || 0)
-      dbLogger?.info?.({ t: 'GCS HEAD', lastModified, size, getMetadataMs: Date.now() - _t0 }, {}, { ctx })
+      const etag = metadata.etag, generation = Number(metadata.generation || 0)
+      dbLogger?.info?.({ t: 'GCS HEAD', lastModified, size, etag, generation, getMetadataMs: Date.now() - _t0 }, {}, { ctx })
       return { ok: true, status: 200, headers: {
-          get: (h) => ({ 'last-modified': lastModified, 'content-length': size }[h.toLowerCase()]) },
+          get: (h) => ({ 'last-modified': lastModified, 'content-length': size, etag, generation }[h.toLowerCase()]) },
         text: async () => null, json: async () => null
       }
     } catch (error) {
@@ -444,12 +446,13 @@ HeadMethod('whead.viaBucketApi', {
     const fetchReq = new Request(bustCdnCache(filePathUrl), { headers: { range: 'bytes=0-0' } })
     const response = await fetch(await authMethod.enrichRequest(fetchReq, authToken, ctx))
     if (!response.ok && response.status !== 206) {
-      dbLogger?.error?.({ t: 'HEAD failed' }, { filePathUrl }, { ctx, response })
+      dbLogger?.[response.status == 404 ? 'info' : 'error']?.({ t: response.status == 404 ? 'HEAD not found' : 'HEAD failed' }, { filePathUrl }, { ctx, response })
       return response
     }
     const size = (response.headers.get('content-range') || '').split('/')[1] || response.headers.get('content-length')
     return { ok: true, status: 200, headers: { get: h => ({ 'last-modified': response.headers.get('last-modified'),
-      'content-length': size }[h.toLowerCase()] ?? response.headers.get(h)) }, text: async () => null, json: async () => null }
+      'content-length': size, etag: response.headers.get('etag') }[h.toLowerCase()] ?? response.headers.get(h)) },
+      text: async () => null, json: async () => null }
   }
 })
 
@@ -543,7 +546,11 @@ PutMethod('wput.GcsJSApi', {
       const totalBytes = Buffer.byteLength(jsonStr)
       const mb = (totalBytes / 1e6).toFixed(1)
       dbLogger?.info?.({ t: 'wput.GcsJSApi start', bucketName, path, bytes: totalBytes }, {}, { ctx })
-      const stream = gcsFile.createWriteStream({ contentType: 'application/json', resumable: totalBytes > 5e6 })
+      const generation = Number(opts.headers?.['if-generation-match'])
+      const createOnly = opts.headers?.['if-none-match'] == '*'
+      const stream = gcsFile.createWriteStream({ contentType: 'application/json', resumable: totalBytes > 5e6,
+        ...(opts.headers?.['cache-control'] && {metadata: {cacheControl: opts.headers['cache-control']}}),
+        ...((generation || createOnly) && {preconditionOpts: {ifGenerationMatch: generation || 0}}) })
       const CHUNK = 256 * 1024
       await new Promise((resolve, reject) => {
         stream.on('error', reject)
@@ -569,9 +576,11 @@ PutMethod('wput.viaBucketApi', {
   impl: async (ctx, { filePathUrl, dbLogger, opts, authToken, authMethod }) => {
     const jsonStr = JSON.stringify(opts.headers?.['x-wonder-json'] === 'as-is' ? opts.body : { content: opts.body })
     const curl = `curl -X PUT -H "Content-Type: application/json" -d '${jsonStr}' "${filePathUrl}"`
-    let response, jsonRes
+    let response
     try {
-      const fetchReq = new Request(filePathUrl, { headers: { 'Content-Type': 'application/json' }, method: 'PUT', body: jsonStr })
+      const headers = new Headers(opts.headers)
+      headers.set('Content-Type', 'application/json')
+      const fetchReq = new Request(filePathUrl, { headers, method: 'PUT', body: jsonStr })
       response = await fetch(await authMethod.enrichRequest(fetchReq, authToken, ctx))
       await response.text()
     } catch (error) {
@@ -898,13 +907,16 @@ DbDriverInterceptor('rawFile', {
         const fs = isFile ? await import('fs') : null
         const sendBody = isFile ? fs.createReadStream(body) : await rawFileBody(body, contentType, opts)
         const bytes = isFile ? fs.statSync(body).size : sendBody.length
+        const headers = Object.fromEntries(new Headers(opts.headers))
+        delete headers['x-wonder-body']; delete headers['x-wonder-json']; headers['content-type'] = contentType
         // encoding of a STRING body: text mimes (rawText) → utf8; binary mimes (rawBinary) → the string is base64 → decoded.
         // a text format missing from rawText would fall to base64 and CORRUPT (e.g. jsonl mangled as base64 before it was classified text).
         dbLogger?.info?.({ t: 'rawFile PUT', contentType, bytes, streamed: isFile, encoding: isFile ? 'stream' : isTextMime(contentType) ? 'utf8' : 'base64' }, {}, { ctx })
         const uploadStarted = Date.now()
         let status = 200
-        if (!coreUtils.isNode) {
-          const res = await fetch(filePathUrl, { method: 'PUT', headers: { 'content-type': contentType }, body: sendBody })
+        const objectDb = extractFromUrl(url, ctx)?.db
+        if (!coreUtils.isNode || objectDb == 'minio') {
+          const res = await fetch(filePathUrl, { method: 'PUT', headers, body: sendBody })
           status = res.status
           if (!res.ok) throw new Error(`rawFile PUT failed: ${res.status} ${await res.text()}`)
         } else {
@@ -923,7 +935,7 @@ DbDriverInterceptor('rawFile', {
           let responseBody
           try {
             const response = await request(`${storagePrefix}/${bucketName}/${path}`, { method: 'PUT',
-              headers: { authorization: `Bearer ${accessToken}`, 'content-type': contentType }, body: sendBody })
+              headers: { ...headers, authorization: `Bearer ${accessToken}` }, body: sendBody })
             status = response.statusCode
             responseBody = await response.body.text()
           } finally {

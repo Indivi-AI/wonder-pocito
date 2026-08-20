@@ -1,0 +1,91 @@
+{
+  "_source": {
+    "images": [
+      "codex-clipboard-3acc840f-89f5-4df7-ab50-1b7df14f3c9d.png",
+      "codex-clipboard-732b64ac-5cfa-4b59-b5a4-a23d4202d692.png",
+      "codex-clipboard-dafe5824-830a-4734-9eab-d7403a637e54.png",
+      "codex-clipboard-97333bfb-47aa-4325-840d-19d8e92be1bf.png",
+      "codex-clipboard-150fa139-eb5d-48f1-93a1-c4496092dc92.png",
+      "codex-clipboard-bb30a8d8-e283-4c13-b0e3-7bc458d7b7e8.png",
+      "codex-clipboard-dcd73078-b295-428b-8ef9-93043715e2a2.png"
+    ],
+    "note": "Keys, defaults and enums are transcribed from the photographed schemas; values are schema-conforming examples.",
+    "intentional_spelling": "The API schema spells tracable without a k."
+  },
+  "createAgent": {
+    "display_name": "evidence-agent",
+    "hebrew_display_name": "סוכן ראיות",
+    "description": "Verifies claims against registered marketplace resources.",
+    "hebrew_description": "מאמת טענות מול משאבי המרקטפלייס.",
+    "tags": [{"tag_type": "domain", "tag_name": "audit"}],
+    "config": {
+      "system_prompt": "Use only cited evidence.",
+      "backend_config": {"harness_type": "deepagents", "model": "gpt-5-mini"},
+      "plugins": ["evidence-plugin"],
+      "skills": ["evidence-skill"],
+      "tools": ["evidence-search"],
+      "sub_agents": []
+    },
+    "readme": "# Evidence agent"
+  },
+  "createPlugin": {
+    "display_name": "evidence-plugin",
+    "hebrew_display_name": "פלאגין ראיות",
+    "description": "Bundles the evidence skill and search tool.",
+    "hebrew_description": "אורז מיומנות וכלי לחיפוש ראיות.",
+    "tags": [{"tag_type": "domain", "tag_name": "audit"}],
+    "config": {"skills": ["evidence-skill"], "tools": ["evidence-search"]},
+    "readme": "# Evidence plugin"
+  },
+  "createSkill": {
+    "display_name": "evidence-skill",
+    "hebrew_display_name": "מיומנות ראיות",
+    "description": "Builds a traceable evidence chain.",
+    "hebrew_description": "בונה שרשרת ראיות עקיבה.",
+    "tags": [{"tag_type": "domain", "tag_name": "audit"}],
+    "min_agent_version": "0.1.0",
+    "license": "MIT",
+    "skill_md": "# Evidence skill\n\nCite every claim.",
+    "assets": [{"path": "references/checklist.md", "content_b64": "IyBDaGVja2xpc3Q=", "mime_type": "text/markdown"}]
+  },
+  "createTool": {
+    "display_name": "evidence-search",
+    "hebrew_display_name": "חיפוש ראיות",
+    "description": "Searches registered evidence sources.",
+    "hebrew_description": "מחפש במקורות ראיות רשומים.",
+    "tool_type": "code",
+    "json_schema": {
+      "type": "object",
+      "properties": {"query": {"type": "string"}},
+      "required": ["query"]
+    },
+    "is_async": true,
+    "tracable": true,
+    "dedicated_tool_config": {},
+    "code_files": [{"path": "tool.py", "content": "def search(query: str):\n    return query"}]
+  },
+  "updateAgent": {
+    "description": "Updated English description.",
+    "config": {
+      "system_prompt": "Use only current cited evidence.",
+      "backend_config": {"harness_type": "claude"},
+      "plugins": [],
+      "skills": ["evidence-skill"],
+      "tools": ["evidence-search"],
+      "sub_agents": []
+    }
+  },
+  "updatePlugin": {"readme": "# Evidence plugin\n\nVersion two."},
+  "updateSkill": {"license": "Apache-2.0", "assets": []},
+  "updateTool": {"tool_type": "solr", "dedicated_tool_config": {"collection": "evidence"}, "code_files": []},
+  "presignDownload": {"key": "skills/evidence-skill/assets/checklist.md", "expires_in": 3600},
+  "presignUpload": {
+    "key": "skills/evidence-skill/assets/checklist.md",
+    "content_type": "text/markdown",
+    "expires_in": 3600
+  },
+  "createUser": {"username": "reviewer", "display_name": "Evidence Reviewer", "email": "reviewer@example.org"},
+  "validationError": {
+    "detail": [{"loc": ["body", "display_name"], "msg": "Field required", "type": "missing", "input": {}}]
+  }
+}

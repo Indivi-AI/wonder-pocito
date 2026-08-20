@@ -10,6 +10,7 @@ import { setupAuthRoutes } from './lib/auth-routes.js'
 import { setupGCSProxyRoute } from './lib/gcs-proxy.js'
 import { setupSignedUrlForwarder } from './lib/signed-url-forwarder.js'
 import { setupRoomLambdaAndApplet } from './lib/room-lambda-and-applet.js'
+import { setupWfetch } from './lib/wfetch.js'
 import { roomPolicy, signWonderToken } from './lib/auth-utils.js'
 import { readDef, serveAppletPage } from './lib/room-lambda-and-applet.js'
 import { useCors } from './lib/use-cors.js'
@@ -120,6 +121,7 @@ export async function createApp(mode = process.env.WONDER_SERVICE || 'public') {
       serverUtils.serveEditSource(app, { express })
       await serverUtils.serveMcpViaCli(app, { express })
     }
+    setupWfetch(app)
     setupRoomLambdaAndApplet(app)
     setupGCSProxyRoute(app)
   }

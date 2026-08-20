@@ -15,7 +15,8 @@ const b64url = value => Buffer.from(value).toString('base64url')
 const tokenCache = new Map(), policyCache = new Map()
 
 export const PUBLIC_DEFAULT = {
-  accessLevels: { usersRO: { authenticated: 'r' }, usersRW: { authenticated: 'rw' }, admin: { authenticated: 'r' } }
+  accessLevels: { usersRO: { authenticated: 'r' }, usersRW: { authenticated: 'rw' }, admin: { authenticated: 'r' },
+    doclets: { authenticated: 'rw' } }
 }
 export const roomPolicy = async roomId => {
   const cached = policyCache.get(roomId)

@@ -1,226 +1,164 @@
-import { dsls, jb } from '@jb6/core'
-import '@jb6/llm-guide'
-import '@wonder/ai/llm-flow-main-workflow.js'
-import '@wonder/db/db-drivers.js'
-import '@wonder/db/db-drivers-s3-minio.js'
+import { dsls } from '@jb6/core'
+import '@jb6/common'
+import './wonder-platform-skills.js'
 
-const {
-  common: { Data },
-  'llm-guide': { Booklet, Doclet, booklet: { booklet } },
-  workflow: { Workflow, workflow: { mainWorkflow }, mpi: { mpi } }
-} = dsls
+const { common: { Data } } = dsls
 
 Data('wonderPlatformSeed', {
   impl: () => {
-    const assets = (rows, keys) => rows.map(row => Object.fromEntries(keys.map((key, i) => [key, row[i]])))
-    const plugins = assets([
+    const rows = (keys, values) => values.map(row => Object.fromEntries(keys.map((key, index) => [key, row[index]])))
+    const plugins = rows(['id', 'name', 'mark', 'version', 'status', 'desc', 'skillIds', 'toolIds', 'subagentIds', 'evaluationId'], [
       ['p1', 'אנליסט הוכחת קיום', 'הק', 'V3', 'פורסם',
         'בודק טענות מול מקורות ארגוניים ומחזיר תשובה מנומקת עם ראיות.',
-        ['s1', 's3'], ['t1', 't3'], ['a1'], 'e1'],
+        ['evidenceVerification', 'documentationGaps'], ['t1', 't3'], ['a1'], 'e1'],
       ['p2', 'מפרט שירות', 'מש', 'V2', 'פורסם', 'מנסח מפרטי שירות עקביים מתוך מסמכי ידע, CRM ותקדימים.',
-        ['s2'], ['t2', 't3'], ['a3'], 'e2'],
+        ['serviceSpecification'], ['t2', 't3'], ['a3'], 'e2'],
       ['p3', 'מבקר תפעולי', 'מת', 'V4', 'טיוטה', 'מאתר חריגות במדדים תפעוליים ומנסח תמונת מצב ניתנת לפעולה.',
-        ['s4'], ['t4', 't6'], ['a2'], 'e3'],
+        ['operationalMetrics'], ['t4', 't6'], ['a2'], 'e3'],
       ['p4', 'חבילת ספק', 'חס', 'V1', 'פורסם', 'מרכז מסמכי ספק, פערים ואישורים לחבילה אחת מוכנה לבקרה.',
-        ['s1', 's2'], ['t2', 't5'], [], 'e4']
-    ], ['id', 'name', 'mark', 'version', 'status', 'desc', 'skillIds', 'toolIds', 'subagentIds', 'evaluationId'])
-      .map(x => ({ ...x, instructions: 'בסס כל מסקנה על מקורות, ציין פערים והחזר תשובה תמציתית שניתנת לאימות.' }))
-    const skills = assets([
-      ['s1', 'הוכחת קיום — תהליך מלא', 'הק', 'פירוק טענה, איסוף ראיות, הצלבה וניסוח מסקנה.', ['t1', 't2', 't6']],
-      ['s2', 'בניית מפרט שירות', 'מש', 'הפקת מפרט שירות מובנה ממקורות ארגוניים.', ['t2', 't3']],
-      ['s3', 'איתור פערי תיעוד', 'פת', 'השוואת מסמכים ואיתור מידע חסר או סותר.', ['t2']],
-      ['s4', 'חילוץ מדדים תפעוליים', 'מת', 'חילוץ, נרמול וסיכום מדדים מתוך דוחות תפעול.', ['t6', 't4']]
-    ], ['id', 'name', 'mark', 'desc', 'toolIds'])
-      .map(x => ({ ...x, instructions: 'פעל לפי שלבים סמנטיים, שמור את המקורות והצג רק ממצאים מבוססים.' }))
-    const tools = assets([
-      ['t1', 'חיפוש Jira', 'Ji', 'איתור משימות, סטטוסים וקישורים.', 'MCP · Connector', true],
-      ['t2', 'חיפוש Confluence', 'Co', 'איתור דפים ומקטעי ידע ארגוני.', 'MCP · Connector', true],
-      ['t3', 'CRM ארגוני', 'CR', 'קריאת חשבונות, אנשי קשר והזדמנויות.', 'MCP · Connector', true],
-      ['t4', 'איחוד דוחות שבועיים', 'דש', 'איחוד דוחות לפי טווח תאריכים.', 'Flow · 4821037'],
-      ['t5', 'שליחת חבילת מסמכים', 'שמ', 'אריזה ושליחת מסמכים בדוא״ל.', 'Flow · 4821048'],
-      ['t6', 'מדדי מחסן', 'ממ', 'שאילתת מדדי תפעול ומלאי.', 'Flow · 4821062']
-    ], ['id', 'name', 'mark', 'desc', 'kind', 'managed'])
-    const subagents = assets([
+        ['evidenceVerification', 'serviceSpecification'], ['t2', 't5'], [], 'e4']
+    ]).map(item => ({...item, created: '08/2026', updated: 'היום',
+      instructions: 'בסס כל מסקנה על מקורות, ציין פערים והחזר תשובה תמציתית שניתנת לאימות.',
+      categories: item.id == 'p1' ? ['audit', 'he'] : item.id == 'p2' ? ['regulated', 'he'] : item.id == 'p3' ? ['warehouse', 'he'] : ['audit']}))
+    const skills = dsls.common.data.wonderPlatformSkillDefinitions.$run()
+    const tools = rows(['id', 'name', 'mark', 'desc', 'kind', 'managed', 'packageId'], [
+      ['t1', 'חיפוש Jira', 'Ji', 'איתור משימות, סטטוסים וקישורים.', 'connector', true, ''],
+      ['t2', 'חיפוש Confluence', 'Co', 'איתור דפים ומקטעי ידע ארגוני.', 'connector', true, ''],
+      ['t3', 'CRM ארגוני', 'CR', 'קריאת חשבונות, אנשי קשר והזדמנויות.', 'connector', true, ''],
+      ['t4', 'איחוד דוחות שבועיים', 'דש', 'איחוד דוחות לפי טווח תאריכים.', 'flow', false, '4821037'],
+      ['t5', 'שליחת חבילת מסמכים', 'שמ', 'אריזה ושליחת מסמכים בדוא״ל.', 'flow', false, '4821048'],
+      ['t6', 'מדדי מחסן', 'ממ', 'שאילתת מדדי תפעול ומלאי.', 'flow', false, '4821062']
+    ]).map(item => ({...item, version: 'V0', created: '08/2026', updated: 'היום', inputSchema: [], outputCubes: []}))
+    const subagents = rows(['id', 'name', 'mark', 'desc', 'skillIds', 'toolIds'], [
       ['a1', 'מחלץ ישויות', 'מי', 'מחלץ ארגונים, אנשים, תאריכים ומזהים.', [], ['t1', 't2']],
-      ['a2', 'מסכם תמיכה', 'מת', 'מסכם רצף אירועי תמיכה לפי ציר זמן.', ['s4'], []],
-      ['a3', 'בודק עקביות', 'בע', 'מאתר סתירות בין מסמכים ורשומות.', ['s3'], ['t3']]
-    ], ['id', 'name', 'mark', 'desc', 'skillIds', 'toolIds'])
-      .map(x => ({ ...x, instructions: 'החזר רק מידע שנתמך במקורות שסופקו.' }))
-    const report = (id, name, status, verifiedAt, desc, sourceCount, rows) => ({
-      id, name, mark: 'דו', status, verifiedAt, desc, sourceCount, rows: assets(rows, ['subject', 'value', 'evidence'])
+      ['a2', 'מסכם תמיכה', 'מת', 'מסכם רצף אירועי תמיכה לפי ציר זמן.', ['operationalMetrics'], []],
+      ['a3', 'בודק עקביות', 'בע', 'מאתר סתירות בין מסמכים ורשומות.', ['documentationGaps'], ['t3']]
+    ]).map(item => ({...item, version: 'V0', created: '08/2026', updated: 'היום', evaluationId: '',
+      instructions: 'החזר רק מידע שנתמך במקורות שסופקו.'}))
+    const report = (id, name, status, verifiedAt, desc, sourceCount, reportRows) => ({
+      id, name, mark: 'דו', status, verifiedAt, desc, sourceCount, rows: rows(['subject', 'value', 'evidence'], reportRows)
     })
     const reports = [
       report('r1', 'דוח ראיות — תוכנית שחר', 'מאומת', '18.08.2026 · 14:32',
         'תמונת ראיות מאומתת לדרישות הליבה של תוכנית שחר.', 8, [
           ['אישור תקציבי', 'מאושר', 'Jira FIN-184 · פרוטוקול ועדה 12/08'],
           ['מוכנות תפעולית', '92%', 'דוח מחסן שבוע 33 · 46 מתוך 50 בדיקות'],
-          ['פער פתוח', 'נוהל התאוששות', 'Confluence OPS-DR · חסר אישור בעל תפקיד']
-        ]),
+          ['פער פתוח', 'נוהל התאוששות', 'Confluence OPS-DR · חסר אישור בעל תפקיד']]),
       report('r2', 'כיסוי מפרט שירות — מוקד צפון', 'מאומת', '17.08.2026 · 09:10',
         'בדיקת כיסוי בין המפרט המחייב לבין תצורת השירות הפעילה.', 5, [
-          ['חלון שירות', 'תואם', 'מפרט V6 · CRM SLA-41'],
-          ['זמן תגובה', 'חריגה של 12 דק׳', 'ממוצע 42 דק׳ מול יעד 30 דק׳'],
-          ['ערוץ חירום', 'פעיל', 'בדיקת קבלה 16/08 · קריאה INC-290']
-        ]),
+          ['חלון שירות', 'תואם', 'מפרט V6 · CRM SLA-41'], ['זמן תגובה', 'חריגה של 12 דק׳', 'ממוצע 42 דק׳ מול יעד 30 דק׳'],
+          ['ערוץ חירום', 'פעיל', 'בדיקת קבלה 16/08 · קריאה INC-290']]),
       report('r3', 'בקרת ספקים — אוגוסט', 'בטיוטה', 'טרם אומת', 'סטטוס מסמכי חובה ואישורים לספקים פעילים.', 12, [
-        ['ספקים תקינים', '18 מתוך 21', 'CRM ספקים · 18/08'],
-        ['חסרי ביטוח', '2', 'ספקי אורן וקשת · אישור פג תוקף'],
-        ['חסר אישור מס', '1', 'ספק גליל · בקשה פתוחה']
-      ])
+        ['ספקים תקינים', '18 מתוך 21', 'CRM ספקים · 18/08'], ['חסרי ביטוח', '2', 'ספקי אורן וקשת · אישור פג תוקף'],
+        ['חסר אישור מס', '1', 'ספק גליל · בקשה פתוחה']])
     ]
-    const evaluations = assets([
-      ['e1', 'אימות טענות ומקורות', 'בדיקות דיוק, כיסוי מקורות והצגת סתירות.', 'p1', '18.08.2026 · 16:40', 'עבר',
-        'האם תוכנית שחר מוכנה ליציאה?'],
-      ['e2', 'איכות מפרט שירות', 'מבנה, שלמות ועמידה במקור.', 'p2', '17.08.2026 · 11:18', 'עבר', 'בנה מפרט למוקד צפון.'],
-      ['e3', 'דיוק מדדים תפעוליים', 'יחידות, תקופות וחישובי חריגה.', 'p3', '16.08.2026 · 18:05', 'עבר',
-        'סכם חריגות שבוע 33.'],
-      ['e4', 'שלמות חבילת ספק', 'מסמכי חובה ועקביות פרטים.', 'p4', '—', 'טרם הורץ', 'בדוק את ספק גליל.']
-    ], ['id', 'name', 'desc', 'pluginId', 'lastRun', 'status', 'input'])
-      .map(({ input, ...x }) => ({ ...x, rows: [{ input, expected: 'תשובה מבוססת עם מקורות ובלי מידע מומצא.' }] }))
-    const steps = assets([
+    const evaluations = rows(['id', 'name', 'desc', 'rubric', 'input', 'expected'], [
+      ['e1', 'אימות טענות ומקורות', 'בדיקות דיוק, כיסוי מקורות והצגת סתירות.', 'זהה כל פער וציין את מקורו.',
+        'האם תוכנית שחר מוכנה ליציאה?', 'תשובה מבוססת עם מקורות ובלי מידע מומצא.'],
+      ['e2', 'איכות מפרט שירות', 'מבנה, שלמות ועמידה במקור.', 'סמן מידע חסר וסתירות.', 'בנה מפרט למוקד צפון.',
+        'מפרט מובנה שמפריד עובדה מהשערה.'],
+      ['e3', 'דיוק מדדים תפעוליים', 'יחידות, תקופות וחישובי חריגה.', 'נרמל יחידות לפני השוואה.',
+        'סכם חריגות שבוע 33.',
+        'חריגות עם ערך, סף ומקור.'],
+      ['e4', 'שלמות חבילת ספק', 'מסמכי חובה ועקביות פרטים.', 'אל תנחש מסמך חסר.', 'בדוק את ספק גליל.',
+        'רשימת מסמכים קיימים וחסרים.']
+    ]).map(({input, expected, ...item}) => ({...item, version: 'V0', created: '08/2026', updated: 'היום',
+      rows: [{input, expected, notes: ''}]}))
+    const steps = rows(['kind', 'name', 'ms'], [
       ['מיומנות', 'הוכחת קיום — תהליך מלא', '8.4s'], ['כלי', 'חיפוש Jira', '4.7s'],
-      ['כלי', 'חיפוש Confluence', '6.2s'], ['האצלה', 'מחלץ ישויות', '5.1s'], ['כלי', 'מדדי מחסן', '7.8s'],
-      ['מיומנות', 'איתור פערי תיעוד', '4.4s'], ['מודל', 'ניסוח תשובה מאומתת', '4.4s']
-    ], ['kind', 'name', 'ms'])
-    const conversations = [{
-      id: 'c1', title: 'מוכנות תוכנית שחר', pluginId: 'p1', when: 'היום', messages: [
-        { id: 'm1', role: 'user', text: 'בדוק האם תוכנית שחר מוכנה ליציאה והצג את הראיות המרכזיות.' },
-        { id: 'm2', role: 'agent', reportIds: ['r1', 'r2'], traceOpen: true, status: 'הושלם', duration: '41 שנ׳', steps,
-          text: 'תוכנית שחר מוכנה חלקית: האישור התקציבי קיים ו-92% מבדיקות המוכנות עברו. ' +
-            'הפער היחיד שחוסם אישור מלא הוא נוהל ההתאוששות, שעדיין חסר אישור בעל תפקיד.' }
-      ]
-    },
-    { id: 'c2', title: 'פערי מפרט מוקד צפון', pluginId: 'p2', when: 'אתמול', messages: [] },
-    { id: 'c3', title: 'חריגות שבוע 33', pluginId: 'p3', when: 'יום א׳', messages: [] }]
-    return { version: 1, plugins, skills, tools, subagents, reports, evaluations, conversations }
+      ['כלי', 'חיפוש Confluence', '6.2s'], ['האצלה', 'מחלץ ישויות', '5.1s'], ['מודל', 'ניסוח תשובה מאומתת', '4.4s']
+    ])
+    const conversations = [{id: 'c1', title: 'מוכנות תוכנית שחר', pluginId: 'p1', when: 'היום', messages: [
+      {id: 'm1', role: 'user', text: 'בדוק האם תוכנית שחר מוכנה ליציאה והצג את הראיות המרכזיות.'},
+      {id: 'm2', role: 'agent', reportIds: ['r1', 'r2'], status: 'הושלם', duration: '41 שנ׳', steps,
+        text: 'תוכנית שחר מוכנה חלקית: האישור התקציבי קיים ו-92% מבדיקות המוכנות עברו. ' +
+          'הפער החוסם הוא נוהל ההתאוששות.'}
+    ]}, {id: 'c2', title: 'פערי מפרט מוקד צפון', pluginId: 'p2', when: 'אתמול', messages: []},
+    {id: 'c3', title: 'חריגות שבוע 33', pluginId: 'p3', when: 'יום א׳', messages: []}]
+    const flowPackages = [
+      {id: '4821037', name: 'איחוד דוחות שבועיים', desc: 'מארז Flow לאיחוד דוחות לפי טווח.', inputSchema: [
+        {id: 'date_from', title: 'תאריך התחלה', type: 'DateTime', required: true},
+        {id: 'date_to', title: 'תאריך סיום', type: 'DateTime', required: true},
+        {id: 'unit_code', title: 'קוד יחידה', type: 'String'}, {id: 'include_drafts', title: 'כולל טיוטות', type: 'Boolean'}],
+      cubes: [{id: 'aggregate_table', title: 'טבלת איחוד מלאה'}, {id: 'summary_metrics', title: 'מדדים מסוכמים'}]},
+      {id: '4821048', name: 'שליחת חבילת מסמכים', desc: 'מארז Flow לשליחת מסמכים.', inputSchema: [], cubes: []},
+      {id: '4821062', name: 'מדדי מחסן', desc: 'מארז Flow לשאילתת מדדים.', inputSchema: [], cubes: []}
+    ]
+    return {version: 3, plugins, skills, tools, subagents, reports, evaluations, evalRuns: [], conversations, flowPackages}
   }
 })
+
+Data('wonderPlatformNormalize', {
+  params: [{id: 'repo', as: 'object'}, {id: 'seed', as: 'object'}],
+  impl: ({}, {}, {repo, seed}) => {
+    const stored = repo && typeof repo == 'object' ? repo : {}, list = key => Array.isArray(stored[key]) ? stored[key] : seed[key]
+    const stamp = item => ({version: 'V0', created: '08/2026', updated: 'היום', ...item})
+    const skillId = id => ({s1: 'evidenceVerification', s2: 'serviceSpecification', s3: 'documentationGaps', s4: 'operationalMetrics'}[id] || id)
+    return {...seed, ...stored, version: seed.version, plugins: list('plugins').map(item => stamp({...item,
+      skillIds: (item.skillIds || []).map(skillId), toolIds: item.toolIds || [], subagentIds: item.subagentIds || [], evaluationId: item.evaluationId || ''})),
+    skills: seed.skills, subagents: list('subagents').map(item => stamp({...item,
+      skillIds: (item.skillIds || []).map(skillId), toolIds: item.toolIds || [], evaluationId: item.evaluationId || ''})), tools: list('tools').map(item => stamp({...item,
+      kind: item.managed ? 'connector' : item.kind == 'flow' ? 'flow' : String(item.kind || '').startsWith('Flow') ? 'flow' : 'connector',
+      packageId: item.packageId || String(item.kind || '').match(/\d+/)?.[0] || '', inputSchema: item.inputSchema || [], outputCubes: item.outputCubes || []})),
+    evaluations: list('evaluations').map(item => stamp({...item, rubric: item.rubric || '', rows: item.rows || []})),
+    evalRuns: list('evalRuns'), conversations: list('conversations').map(item => ({...item, messages: item.messages || []})),
+    flowPackages: list('flowPackages')}
+  }
+})
+
+Data('wonderPlatformUpsert', {
+  params: [{id: 'repo', as: 'object'}, {id: 'resource', as: 'string'}, {id: 'item', as: 'object'}],
+  impl: ({}, {}, {repo, resource, item}) => {
+    const {originalId, ...saved} = {...item, updated: 'עכשיו'}, id = originalId || saved.id, items = repo[resource]
+    return {saved, repo: {...repo, [resource]: items.some(value => value.id == id)
+      ? items.map(value => value.id == id ? saved : value) : [...items, saved]}}
+  }
+})
+
+Data('wonderPlatformTrace', {
+  params: [{id: 'repo', as: 'object'}, {id: 'target', as: 'object'}],
+  impl: ({}, {}, {repo, target}) => {
+    const labels = {skills: 'מיומנות', tools: 'כלי', subagents: 'האצלה'}, fields = {skills: 'skillIds', tools: 'toolIds', subagents: 'subagentIds'}
+    const steps = [], seen = new Set(), visit = (resource, id, parent) => {
+      const item = repo[resource]?.find(value => value.id == id), key = `${resource}:${id}`
+      if (!item || seen.has(key)) return
+      seen.add(key); steps.push({resource, id, parent, kind: labels[resource], title: item.name})
+      ;['skills', 'tools'].forEach(child => (item[fields[child]] || []).forEach(childId => visit(child, childId, id)))
+    }
+    ;['skills', 'tools', 'subagents'].forEach(resource => (target[fields[resource]] || []).forEach(id => visit(resource, id, target.id)))
+    return steps
+  }
+})
+
 Data('wonderPlatformUi', {
-  impl: () => {
-    const button = 'inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3.5 py-2 cursor-pointer disabled:opacity-40'
-    const neutralBadge = 'inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs text-gray-600'
-    const positiveBadge = 'inline-flex items-center gap-1 rounded-full border border-[#bcdcc9] bg-[#e7f4ec] px-2.5 py-1 text-xs text-[#1c7c54]'
-    const field = 'flex flex-col gap-2 [&>span]:text-xs [&>span]:font-medium [&>span]:text-gray-600 [&>input]:w-full [&>input]:min-w-0 ' +
-      '[&>input]:rounded-lg [&>input]:border [&>input]:border-gray-200 [&>input]:bg-gray-50 [&>input]:px-3 [&>input]:py-2 ' +
-      '[&>textarea]:w-full [&>textarea]:min-w-0 [&>textarea]:rounded-lg [&>textarea]:border [&>textarea]:border-gray-200 ' +
-      '[&>textarea]:bg-gray-50 [&>textarea]:px-3 [&>textarea]:py-2'
-    return {
-      nav: [['plugins', 'Plug', 'פלאגינים'], ['chat', 'MessageCircle', 'צ׳אט'], ['evaluations', 'ClipboardCheck', 'אבלואציה'],
-        ['skills', 'FileText', 'מיומנויות'], ['tools', 'Wrench', 'כלים'], ['subagents', 'Bot', 'סאב-אייג׳נטים'],
-        ['reports', 'BadgeCheck', 'דוחות מאומתים']],
-      meta: {
-        plugins: ['פלאגינים', 'פלאגין אורז מיומנויות, כלים וסאב-אייג׳נטים ליחידה אחת.', 'פלאגין חדש'],
-        skills: ['מיומנויות', 'ספרייה משותפת של תהליכי ביצוע.', 'מיומנות חדשה'],
-        tools: ['כלים', 'כלי Connector מנוהלים וכלים ממארזי Flow.', 'כלי ממארז Flow'],
-        subagents: ['סאב-אייג׳נטים', 'ספרייה משותפת של אייג׳נטים מתמחים.', 'סאב-אייג׳נט חדש'],
-        reports: ['דוחות מאומתים', 'דוחות מבוססי ראיות שניתן לצרף לתשובות ולהפיץ.', 'דוח מאומת חדש'],
-        evaluations: ['סטי אבלואציה', 'ספרייה של תרחישי בדיקה, לשימוש חוזר מכל פלאגין.', 'סט חדש']
-      },
-      plural: { plugins: 'פלאגינים', skills: 'מיומנויות', tools: 'כלים', subagents: 'סאב-אייג׳נטים', reports: 'דוחות',
-        evaluations: 'סטים' },
-      prefixes: { plugins: 'p', skills: 's', tools: 't', subagents: 'a', reports: 'r', evaluations: 'e' },
-      relations: { plugins: [['skillIds', 'skills'], ['toolIds', 'tools'], ['subagentIds', 'subagents']],
-        skills: [['toolIds', 'tools']], subagents: [['skillIds', 'skills'], ['toolIds', 'tools']] },
-      classes: { button, primaryButton: button + ' border-[#0e5c3f] bg-[#0e5c3f] text-white',
-        softButton: button + ' border-[#c7e4d5] bg-[#e3f2ea] text-[#0a4a32]', neutralBadge, positiveBadge, field,
-        assetMark: 'w-9 h-9 shrink-0 rounded-xl grid place-items-center bg-[#e3f2ea] border border-[#c7e4d5] text-[#0a4a32] font-semibold',
-        search: 'relative flex-1 max-w-[380px] [&_input]:w-full [&_input]:rounded-lg [&_input]:border [&_input]:border-gray-200 ' +
-          '[&_input]:bg-white [&_input]:py-2 [&_input]:pr-9 [&_input]:pl-3 [&_input]:outline-none [&_svg]:absolute ' +
-          '[&_svg]:right-3 [&_svg]:top-2.5 [&_svg]:text-gray-400' }
+  impl: () => ({
+    resources: {
+      plugins: {title: 'פלאגינים', subtitle: 'פלאגין אורז מיומנויות וכלים ליחידה אחת.',
+        create: 'פלאגין חדש',
+        icon: 'PlugZap', label: 'פלאגין', relations: [['skillIds', 'skills', 'מיומנויות'], ['toolIds', 'tools', 'כלים']]},
+      skills: {title: 'מיומנויות', subtitle: 'ספרייה משותפת של תהליכי ביצוע.', create: 'מיומנות חדשה', icon: 'BookOpenText',
+        label: 'מיומנות', relations: [['toolIds', 'tools', 'כלים']]},
+      tools: {title: 'כלים', subtitle: 'כלי Connector מנוהלים וכלי Flow ניתנים לעריכה.',
+        create: 'כלי ממארז Flow', icon: 'Wrench', label: 'כלי'},
+      subagents: {title: 'סאב-אייג׳נטים', subtitle: 'ספרייה משותפת של יעדי האצלה ממוקדים.', create: 'סאב-אייג׳נט חדש',
+        icon: 'Network', label: 'סאב-אייג׳נט', relations: [['skillIds', 'skills', 'מיומנויות'], ['toolIds', 'tools', 'כלים']]},
+      reports: {title: 'דוחות מאומתים', subtitle: 'דוחות מבוססי ראיות שניתן לצרף לתשובות.',
+        create: 'דוח חדש', icon: 'BadgeCheck', label: 'דוח'}
+    },
+    primaryNav: [['plugins', 'PlugZap', 'פלאגינים'], ['chat', 'MessageCircle', 'צ׳אט'], ['evaluations', 'SquareCheckBig', 'אבלואציה']],
+    libraryNav: [['skills', 'BookOpenText', 'מיומנויות'], ['tools', 'Wrench', 'כלים'], ['subagents', 'Network', 'סאב-אייג׳נטים'],
+      ['reports', 'BadgeCheck', 'דוחות']],
+    mobileNav: [['plugins', 'PlugZap', 'פלאגינים'], ['chat', 'MessageCircle', 'צ׳אט'], ['evaluations', 'SquareCheckBig', 'אבלואציה'],
+      ['skills', 'BookOpenText', 'מיומנויות'], ['tools', 'Wrench', 'כלים'], ['subagents', 'Network', 'סאב-אייג׳נטים'],
+      ['reports', 'BadgeCheck', 'דוחות']],
+    labels: {plugins: 'פלאגין', skills: 'מיומנות', tools: 'כלי', subagents: 'סאב-אייג׳נט', evaluations: 'סט אבלואציה'},
+    prefixes: {plugins: 'p', skills: 's', tools: 't', subagents: 'a', reports: 'r', evaluations: 'e'},
+    classes: {
+      button: 'inline-flex items-center justify-center gap-2 rounded-xl border border-[#dfe5e1] bg-white px-3.5 py-2 text-sm',
+      primary: 'inline-flex items-center justify-center gap-2 rounded-xl bg-[#2f6b4b] px-4 py-2.5 text-sm font-semibold text-white',
+      field: 'mt-2 w-full rounded-xl border border-[#dfe5e1] bg-[#f8faf9] px-3 py-2.5 text-sm outline-none focus:border-[#789b86]',
+      card: 'rounded-2xl border border-[#e1e7e3] bg-white p-5 shadow-[0_1px_2px_rgba(30,50,40,.04)]',
+      chip: 'rounded-full border border-[#dfe5e1] bg-[#f4f6f5] px-2.5 py-1 text-[11px] text-[#59615d]'
     }
-  }
-})
-Data('wonderPlatformRoomStore', {
-  params: [
-    {id: 'roomWUrl', as: 'string'}
-  ],
-  impl: (ctx, {}, {roomWUrl}) => {
-    const url = roomWUrl.replace(/\/$/, '') + '/usersRW/wonder-platform/assets'
-    return {
-      load: async seed => {
-        const res = await jb.wonderUtils.wfetch2(url, {}, ctx)
-        if (res.ok) return res.json()
-        await jb.wonderUtils.wfetch2(url, { method: 'PUT', body: seed }, ctx)
-        return seed
-      },
-      save: repo => jb.wonderUtils.wfetch2(url, { method: 'PUT', body: repo }, ctx)
-    }
-  }
-})
-Data('wonderPlatformAnswer', {
-  params: [
-    {id: 'text', as: 'string'},
-    {id: 'plugin', as: 'object'},
-    {id: 'repo', as: 'object'},
-    {id: 'history', as: 'array'}
-  ],
-  impl: async (ctx, {}, {text, plugin, repo, history}) => {
-    const started = Date.now(), workflowCtx = await jb.workflowUtils.extendWithWorkflowVars(ctx.setVars({
-      userMessage: text, selectedPlugin: JSON.stringify(plugin), accumulatedContext: { chatHistory: history },
-      assetRepoText: JSON.stringify({ plugin, skills: repo.skills.filter(x => plugin.skillIds?.includes(x.id)),
-        tools: repo.tools.filter(x => plugin.toolIds?.includes(x.id)), subagents: repo.subagents.filter(x => plugin.subagentIds?.includes(x.id)),
-        reports: repo.reports }), llmProxyUrl: 'https://node25-automations-server-365199207445.me-west1.run.app/llmProxy'
-    }))
-    const result = await dsls.workflow.workflow.wonderPlatformAgent.$run().calcWorkflow(workflowCtx)
-    const output = typeof result.runRes === 'string' ? { text: result.runRes } : result.runRes || {}
-    return { text: output.text || result.workflowErrors?.[0]?.t || 'ההרצה הסתיימה ללא תשובה.', reportIds: output.reportIds || [],
-      followUps: output.followUps || [], status: result.workflowErrors?.length ? 'נכשל' : 'הושלם',
-      duration: Math.max(1, Math.round((Date.now() - started) / 1000)) + ' שנ׳',
-      steps: (result.workflowTrace || []).filter(x => x.flowIndex != null).map((x, i) => ({ kind: i ? 'כלי' : 'מודל',
-        name: x.setVars ? Object.keys(x.setVars)[0] : 'שלב llm-flow ' + (i + 1), ms: '—' })) }
-  }
-})
-Booklet('wonderPlatform', {
-  impl: booklet('wonderPlatformAssets,wonderPlatformResponse')
-})
-Doclet('wonderPlatformAssets', {
-  impl: `
-The ASSET_REPOSITORY in the prompt is authoritative room data.
-Use only its plugins, skills, tools, subagents and reports.
-Honor the selected plugin instructions and connected asset IDs.
-Never claim that a connector ran when its room asset supplies no result.
-A verified report may be cited only by a real report id from ASSET_REPOSITORY.
-`
-})
-Doclet('wonderPlatformResponse', {
-  impl: `
-Answer in the user's language, concisely and professionally.
-Lead with the conclusion, then name supporting evidence and any material gap.
-Return zero to three reportIds that directly support the answer. Prefer status "מאומת" reports.
-followUps contains two short, useful next questions.
-`
-})
-Doclet('essentialOutputFormat.wonderPlatform', {
-  impl: `
-Return one javascript code block containing one flow.
-The flow has one setCtxData element whose jqSingle exp is a literal object.
-The object shape is {text: string, reportIds: string[], followUps: string[]}.
-Escape quotes for one jq string and emit no other code.
-Example:
-\`\`\`javascript
-{$: 'flow-elem<workflow>flow', elems: [
-  {$: 'flow-elem<workflow>setCtxData', goal: 'Compose grounded answer', status: 'מנסח תשובה מאומתת...',
-    value: {$: 'data<common>jqSingle', exp: '{text:"המסקנה המבוססת",reportIds:["r1"],followUps:["בדוק פער","הצג מקורות"]}'}}
-]}
-\`\`\`
-`
-})
-Workflow('wonderPlatformAgent', {
-  params: [
-    {id: 'model', as: 'string', defaultValue: 'gemini/gemini-3.5-flash'}
-  ],
-  impl: mainWorkflow({
-    main: mpi('%$model%', {
-      prompt: `USER_MESSAGE: %$userMessage%
-SELECTED_PLUGIN: %$selectedPlugin%
-ASSET_REPOSITORY: %$assetRepoText%
-Return a grounded answer and relevant verified report ids.`,
-      instructions: `%$llmFlowBooklet%
-%$wonderPlatform%
-Use the exact structured response flow and no unavailable component.`,
-      thinkingBudget: 0
-    }),
-    categories: ['wonderPlatform'],
-    bookletsToLoad: ['wonderPlatform']
   })
 })

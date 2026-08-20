@@ -1,0 +1,696 @@
+{
+  "openapi": "3.1.0",
+  "info": {"title": "marketplace", "version": "0.1.0"},
+  "x-source": "Reconstructed from seven photographed /openapi.json and Swagger UI frames.",
+  "paths": {
+    "/healthz": {
+      "get": {
+        "tags": ["health"],
+        "summary": "Healthz",
+        "description": "Return service status + S3 reachability. Never raises.",
+        "operationId": "healthz_healthz_get",
+        "responses": {"200": {"$ref": "#/components/responses/Object"}}
+      }
+    },
+    "/api/v1/tools/": {
+      "get": {
+        "tags": ["tools"],
+        "summary": "List Tools",
+        "description": "List every published tool config.",
+        "operationId": "list_tools_api_v1_tools__get",
+        "responses": {"200": {"$ref": "#/components/responses/ObjectList"}}
+      },
+      "post": {
+        "tags": ["tools"],
+        "summary": "Create Tool",
+        "description": "Create a tool. 409 on id collision; 422 on invalid body.",
+        "operationId": "create_tool_api_v1_tools__post",
+        "requestBody": {"$ref": "#/components/requestBodies/CreateTool"},
+        "responses": {"201": {"$ref": "#/components/responses/Empty"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/tools/{name}": {
+      "get": {
+        "tags": ["tools"],
+        "summary": "Get Tool",
+        "description": "Get a single tool config (id+tags synthesized). 404 if missing.",
+        "operationId": "get_tool_api_v1_tools__name__get",
+        "parameters": [{"$ref": "#/components/parameters/Name"}],
+        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+      },
+      "put": {
+        "tags": ["tools"],
+        "summary": "Update Tool",
+        "description": "Partial update. Snapshots the prior state (incl. code bytes), bumps version, audits.",
+        "operationId": "update_tool_api_v1_tools__name__put",
+        "parameters": [{"$ref": "#/components/parameters/Name"}],
+        "requestBody": {"$ref": "#/components/requestBodies/UpdateTool"},
+        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+      },
+      "delete": {
+        "tags": ["tools"],
+        "summary": "Delete Tool",
+        "description": "Unpublish + wipe. 204 on success; 404 if the config did not exist.",
+        "operationId": "delete_tool_api_v1_tools__name__delete",
+        "parameters": [{"$ref": "#/components/parameters/Name"}],
+        "responses": {"204": {"$ref": "#/components/responses/NoContent"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/tools/{name}/code/{path}": {
+      "get": {
+        "tags": ["tools"],
+        "summary": "Get Tool Code",
+        "description": "Read a tool source file. 404 if the object is missing.",
+        "operationId": "get_tool_code_api_v1_tools__name__code__path__get",
+        "parameters": [{"$ref": "#/components/parameters/Name"}, {"$ref": "#/components/parameters/Path"}],
+        "responses": {"200": {"$ref": "#/components/responses/Text"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/tools/{name}/versions": {
+      "get": {
+        "tags": ["tools"],
+        "summary": "List Tool Versions",
+        "description": "List every snapshot config for the tool, ascending by version.",
+        "operationId": "list_tool_versions_api_v1_tools__name__versions_get",
+        "parameters": [{"$ref": "#/components/parameters/Name"}],
+        "responses": {"200": {"$ref": "#/components/responses/ObjectList"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/tools/{name}/versions/{n}": {
+      "get": {
+        "tags": ["tools"],
+        "summary": "Read Tool Version",
+        "description": "Read a specific version's config snapshot (id+tags stripped). 404 if missing.",
+        "operationId": "read_tool_version_api_v1_tools__name__versions__n__get",
+        "parameters": [{"$ref": "#/components/parameters/Name"}, {"$ref": "#/components/parameters/Version"}],
+        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/skills/": {
+      "get": {
+        "tags": ["skills"],
+        "summary": "List Skills",
+        "description": "List every published skill manifest.",
+        "operationId": "list_skills_api_v1_skills__get",
+        "responses": {"200": {"$ref": "#/components/responses/ObjectList"}}
+      },
+      "post": {
+        "tags": ["skills"],
+        "summary": "Create Skill",
+        "description": "Create a skill. 409 on id collision; 422 on invalid body.",
+        "operationId": "create_skill_api_v1_skills__post",
+        "requestBody": {"$ref": "#/components/requestBodies/CreateSkill"},
+        "responses": {"201": {"$ref": "#/components/responses/Empty"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/skills/{name}": {
+      "get": {
+        "tags": ["skills"],
+        "summary": "Get Skill",
+        "description": "Get a single skill manifest by display_name. 404 if missing.",
+        "operationId": "get_skill_api_v1_skills__name__get",
+        "parameters": [{"$ref": "#/components/parameters/Name"}],
+        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+      },
+      "put": {
+        "tags": ["skills"],
+        "summary": "Update Skill",
+        "description": "Partial update. Snapshots the prior state, bumps version, audits.",
+        "operationId": "update_skill_api_v1_skills__name__put",
+        "parameters": [{"$ref": "#/components/parameters/Name"}],
+        "requestBody": {"$ref": "#/components/requestBodies/UpdateSkill"},
+        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+      },
+      "delete": {
+        "tags": ["skills"],
+        "summary": "Delete Skill",
+        "description": "Unpublish + wipe. 204 on success; 404 if the manifest did not exist.",
+        "operationId": "delete_skill_api_v1_skills__name__delete",
+        "parameters": [{"$ref": "#/components/parameters/Name"}],
+        "responses": {"204": {"$ref": "#/components/responses/NoContent"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/skills/{name}/SKILL.md": {
+      "get": {
+        "tags": ["skills"],
+        "summary": "Get Skill Md",
+        "description": "Read the SKILL.md document. 404 if missing.",
+        "operationId": "get_skill_md_api_v1_skills__name__SKILL_md_get",
+        "parameters": [{"$ref": "#/components/parameters/Name"}],
+        "responses": {"200": {"$ref": "#/components/responses/Text"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/skills/{name}/assets/{path}": {
+      "get": {
+        "tags": ["skills"],
+        "summary": "Get Skill Asset",
+        "description": "Read a skill asset as raw bytes (binary-safe). 404 if missing.",
+        "operationId": "get_skill_asset_api_v1_skills__name__assets__path__get",
+        "parameters": [{"$ref": "#/components/parameters/Name"}, {"$ref": "#/components/parameters/Path"}],
+        "responses": {"200": {"$ref": "#/components/responses/Empty"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/skills/{name}/versions": {
+      "get": {
+        "tags": ["skills"],
+        "summary": "List Skill Versions",
+        "description": "List every snapshot manifest for the skill, ascending by version.",
+        "operationId": "list_skill_versions_api_v1_skills__name__versions_get",
+        "parameters": [{"$ref": "#/components/parameters/Name"}],
+        "responses": {"200": {"$ref": "#/components/responses/ObjectList"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/skills/{name}/versions/{n}": {
+      "get": {
+        "tags": ["skills"],
+        "summary": "Read Skill Version",
+        "description": "Read a specific version's manifest snapshot. 404 if missing.",
+        "operationId": "read_skill_version_api_v1_skills__name__versions__n__get",
+        "parameters": [{"$ref": "#/components/parameters/Name"}, {"$ref": "#/components/parameters/Version"}],
+        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/plugins/": {
+      "get": {
+        "tags": ["plugins"],
+        "summary": "List Plugins",
+        "description": "List every published plugin manifest.",
+        "operationId": "list_plugins_api_v1_plugins__get",
+        "responses": {"200": {"$ref": "#/components/responses/ObjectList"}}
+      },
+      "post": {
+        "tags": ["plugins"],
+        "summary": "Create Plugin",
+        "description": "Create a plugin. 409 on id collision; 422 on invalid body.",
+        "operationId": "create_plugin_api_v1_plugins__post",
+        "requestBody": {"$ref": "#/components/requestBodies/CreatePlugin"},
+        "responses": {"201": {"$ref": "#/components/responses/Empty"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/plugins/{name}": {
+      "get": {
+        "tags": ["plugins"],
+        "summary": "Get Plugin",
+        "description": "Get a single plugin manifest. 404 if missing.",
+        "operationId": "get_plugin_api_v1_plugins__name__get",
+        "parameters": [{"$ref": "#/components/parameters/Name"}],
+        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+      },
+      "put": {
+        "tags": ["plugins"],
+        "summary": "Update Plugin",
+        "description": "Partial update. Snapshots the prior state, bumps version, audits.",
+        "operationId": "update_plugin_api_v1_plugins__name__put",
+        "parameters": [{"$ref": "#/components/parameters/Name"}],
+        "requestBody": {"$ref": "#/components/requestBodies/UpdatePlugin"},
+        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+      },
+      "delete": {
+        "tags": ["plugins"],
+        "summary": "Delete Plugin",
+        "description": "Unpublish + wipe. 204 on success; 404 if the manifest did not exist.",
+        "operationId": "delete_plugin_api_v1_plugins__name__delete",
+        "parameters": [{"$ref": "#/components/parameters/Name"}],
+        "responses": {"204": {"$ref": "#/components/responses/NoContent"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/plugins/{name}/config.yaml": {
+      "get": {
+        "tags": ["plugins"],
+        "summary": "Get Plugin Config",
+        "description": "Read the config.yaml document. 404 if missing.",
+        "operationId": "get_plugin_config_api_v1_plugins__name__config_yaml_get",
+        "parameters": [{"$ref": "#/components/parameters/Name"}],
+        "responses": {"200": {"$ref": "#/components/responses/Text"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/plugins/{name}/README.md": {
+      "get": {
+        "tags": ["plugins"],
+        "summary": "Get Plugin Readme",
+        "description": "Read the README.md document. 404 if missing.",
+        "operationId": "get_plugin_readme_api_v1_plugins__name__README_md_get",
+        "parameters": [{"$ref": "#/components/parameters/Name"}],
+        "responses": {"200": {"$ref": "#/components/responses/Text"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/plugins/{name}/references": {
+      "get": {
+        "tags": ["plugins"],
+        "summary": "Check Plugin References",
+        "description": "Check existence of every tool/skill referenced by the plugin. 404 if missing.",
+        "operationId": "check_plugin_references_api_v1_plugins__name__references_get",
+        "parameters": [{"$ref": "#/components/parameters/Name"}],
+        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/plugins/{name}/versions": {
+      "get": {
+        "tags": ["plugins"],
+        "summary": "List Plugin Versions",
+        "description": "List every snapshot manifest for the plugin, ascending by version.",
+        "operationId": "list_plugin_versions_api_v1_plugins__name__versions_get",
+        "parameters": [{"$ref": "#/components/parameters/Name"}],
+        "responses": {"200": {"$ref": "#/components/responses/ObjectList"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/plugins/{name}/versions/{n}": {
+      "get": {
+        "tags": ["plugins"],
+        "summary": "Read Plugin Version",
+        "description": "Read a specific version's manifest snapshot. 404 if missing.",
+        "operationId": "read_plugin_version_api_v1_plugins__name__versions__n__get",
+        "parameters": [{"$ref": "#/components/parameters/Name"}, {"$ref": "#/components/parameters/Version"}],
+        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/agents/": {
+      "get": {
+        "tags": ["agents"],
+        "summary": "List Agents",
+        "description": "List every published agent manifest.",
+        "operationId": "list_agents_api_v1_agents__get",
+        "responses": {"200": {"$ref": "#/components/responses/ObjectList"}}
+      },
+      "post": {
+        "tags": ["agents"],
+        "summary": "Create Agent",
+        "description": "Create an agent. 409 on id collision; 422 on invalid body.",
+        "operationId": "create_agent_api_v1_agents__post",
+        "requestBody": {"$ref": "#/components/requestBodies/CreateAgent"},
+        "responses": {"201": {"$ref": "#/components/responses/Empty"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/agents/{name}": {
+      "get": {
+        "tags": ["agents"],
+        "summary": "Get Agent",
+        "description": "Get a single agent manifest. 404 if missing.",
+        "operationId": "get_agent_api_v1_agents__name__get",
+        "parameters": [{"$ref": "#/components/parameters/Name"}],
+        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+      },
+      "put": {
+        "tags": ["agents"],
+        "summary": "Update Agent",
+        "description": "Partial update. Snapshots the prior state, bumps version, audits.",
+        "operationId": "update_agent_api_v1_agents__name__put",
+        "parameters": [{"$ref": "#/components/parameters/Name"}],
+        "requestBody": {"$ref": "#/components/requestBodies/UpdateAgent"},
+        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+      },
+      "delete": {
+        "tags": ["agents"],
+        "summary": "Delete Agent",
+        "description": "Unpublish + wipe. 204 on success; 404 if the manifest did not exist.",
+        "operationId": "delete_agent_api_v1_agents__name__delete",
+        "parameters": [{"$ref": "#/components/parameters/Name"}],
+        "responses": {"204": {"$ref": "#/components/responses/NoContent"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/agents/{name}/config.yaml": {
+      "get": {
+        "tags": ["agents"],
+        "summary": "Get Agent Config",
+        "description": "Read the config.yaml document. 404 if missing.",
+        "operationId": "get_agent_config_api_v1_agents__name__config_yaml_get",
+        "parameters": [{"$ref": "#/components/parameters/Name"}],
+        "responses": {"200": {"$ref": "#/components/responses/Text"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/agents/{name}/references": {
+      "get": {
+        "tags": ["agents"],
+        "summary": "Check Agent References",
+        "description": "Check existence of every plugin/tool/skill/sub-agent. 404 if missing.",
+        "operationId": "check_agent_references_api_v1_agents__name__references_get",
+        "parameters": [{"$ref": "#/components/parameters/Name"}],
+        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/agents/{name}/versions": {
+      "get": {
+        "tags": ["agents"],
+        "summary": "List Agent Versions",
+        "description": "List every snapshot manifest for the agent, ascending by version.",
+        "operationId": "list_agent_versions_api_v1_agents__name__versions_get",
+        "parameters": [{"$ref": "#/components/parameters/Name"}],
+        "responses": {"200": {"$ref": "#/components/responses/ObjectList"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/agents/{name}/versions/{n}": {
+      "get": {
+        "tags": ["agents"],
+        "summary": "Read Agent Version",
+        "description": "Read a specific version's manifest snapshot. 404 if missing.",
+        "operationId": "read_agent_version_api_v1_agents__name__versions__n__get",
+        "parameters": [{"$ref": "#/components/parameters/Name"}, {"$ref": "#/components/parameters/Version"}],
+        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/presign/download": {
+      "post": {
+        "tags": ["presign"],
+        "summary": "Presign Download",
+        "description": "Return a presigned GET URL for payload.key.",
+        "operationId": "presign_download_api_v1_presign_download_post",
+        "requestBody": {"$ref": "#/components/requestBodies/DownloadRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/presign/upload": {
+      "post": {
+        "tags": ["presign"],
+        "summary": "Presign Upload",
+        "description": "Return a presigned PUT URL for payload.key.",
+        "operationId": "presign_upload_api_v1_presign_upload_post",
+        "requestBody": {"$ref": "#/components/requestBodies/UploadRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/audit/{resource_type}/{resource_name}": {
+      "get": {
+        "tags": ["audit"],
+        "summary": "List Audit Events",
+        "description": "List every audit event for resource_name of resource_type, sorted by ts descending. Returns an empty list when none exist.",
+        "operationId": "list_audit_events_api_v1_audit__resource_type___resource_name__get",
+        "parameters": [
+          {"$ref": "#/components/parameters/ResourceType"},
+          {"$ref": "#/components/parameters/ResourceName"}
+        ],
+        "responses": {"200": {"$ref": "#/components/responses/ObjectList"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/users/": {
+      "post": {
+        "tags": ["users"],
+        "summary": "Create User",
+        "description": "Create a user. Returns the new UserObject. Uids are unique; usernames are not.",
+        "operationId": "create_user_api_v1_users__post",
+        "requestBody": {"$ref": "#/components/requestBodies/CreateUser"},
+        "responses": {"201": {"$ref": "#/components/responses/Empty"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    },
+    "/api/v1/users/{uid}": {
+      "get": {
+        "tags": ["users"],
+        "summary": "Get User",
+        "description": "Read a user by id. 404 if missing; 422 if the stored object is corrupt.",
+        "operationId": "get_user_api_v1_users__uid__get",
+        "parameters": [{"$ref": "#/components/parameters/Uid"}],
+        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "Name": {"name": "name", "in": "path", "required": true, "schema": {"type": "string", "title": "Name"}},
+      "Path": {"name": "path", "in": "path", "required": true, "schema": {"type": "string", "title": "Path"}},
+      "Version": {"name": "n", "in": "path", "required": true, "schema": {"type": "integer", "title": "N"}},
+      "Uid": {"name": "uid", "in": "path", "required": true, "schema": {"type": "string", "title": "Uid"}},
+      "ResourceName": {
+        "name": "resource_name",
+        "in": "path",
+        "required": true,
+        "schema": {"type": "string", "title": "Resource Name"}
+      },
+      "ResourceType": {
+        "name": "resource_type",
+        "in": "path",
+        "required": true,
+        "schema": {"type": "string", "enum": ["tool", "skill", "plugin", "agent"], "title": "Resource Type"}
+      }
+    },
+    "responses": {
+      "Object": {
+        "description": "Successful Response",
+        "content": {"application/json": {"schema": {"type": "object", "additionalProperties": true}}}
+      },
+      "ObjectList": {
+        "description": "Successful Response",
+        "content": {"application/json": {"schema": {"type": "array", "items": {"type": "object", "additionalProperties": true}}}}
+      },
+      "Text": {
+        "description": "Successful Response",
+        "content": {"text/plain": {"schema": {"type": "string"}}}
+      },
+      "Empty": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}},
+      "NoContent": {"description": "Successful Response"},
+      "Validation": {
+        "description": "Validation Error",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}
+      }
+    },
+    "requestBodies": {
+      "CreateAgent": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CreateAgent"}}}},
+      "CreatePlugin": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CreatePlugin"}}}},
+      "CreateSkill": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CreateSkill"}}}},
+      "CreateTool": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CreateTool"}}}},
+      "CreateUser": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CreateUser"}}}},
+      "UpdateAgent": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/UpdateAgent"}}}},
+      "UpdatePlugin": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/UpdatePlugin"}}}},
+      "UpdateSkill": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/UpdateSkill"}}}},
+      "UpdateTool": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/UpdateTool"}}}},
+      "DownloadRequest": {
+        "required": true,
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DownloadRequest"}}}
+      },
+      "UploadRequest": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/UploadRequest"}}}}
+    },
+    "schemas": {
+      "AgentConfig": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["system_prompt", "backend_config"],
+        "properties": {
+          "system_prompt": {"type": "string", "title": "System Prompt"},
+          "backend_config": {"$ref": "#/components/schemas/BackendConfig"},
+          "plugins": {"type": "array", "items": {"type": "string"}, "title": "Plugins"},
+          "skills": {"type": "array", "items": {"type": "string"}, "title": "Skills"},
+          "tools": {"type": "array", "items": {"type": "string"}, "title": "Tools"},
+          "sub_agents": {"type": "array", "items": {"type": "string"}, "title": "Sub Agents"}
+        },
+        "title": "AgentConfig"
+      },
+      "AssetInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "content_b64"],
+        "properties": {
+          "path": {"type": "string", "title": "Path"},
+          "content_b64": {"type": "string", "title": "Content B64"},
+          "mime_type": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Mime Type"}
+        },
+        "title": "AssetInput"
+      },
+      "BackendConfig": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["harness_type"],
+        "properties": {"harness_type": {"type": "string", "enum": ["deepagents", "claude"], "title": "Harness Type"}},
+        "title": "BackendConfig"
+      },
+      "CodeFile": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "content"],
+        "properties": {"path": {"type": "string"}, "content": {"type": "string"}},
+        "title": "CodeFile"
+      },
+      "CreateAgent": {
+        "allOf": [{"$ref": "#/components/schemas/ManifestBase"}],
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["display_name", "description", "config"],
+        "properties": {
+          "display_name": {"type": "string"},
+          "hebrew_display_name": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+          "description": {"type": "string"},
+          "hebrew_description": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+          "tags": {"type": "array", "items": {"$ref": "#/components/schemas/TagRef"}},
+          "config": {"$ref": "#/components/schemas/AgentConfig"},
+          "readme": {"type": "string", "default": ""}
+        },
+        "title": "CreateAgent"
+      },
+      "CreatePlugin": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["display_name", "description", "config"],
+        "properties": {
+          "display_name": {"type": "string"},
+          "hebrew_display_name": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+          "description": {"type": "string"},
+          "hebrew_description": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+          "tags": {"type": "array", "items": {"$ref": "#/components/schemas/TagRef"}},
+          "config": {"$ref": "#/components/schemas/PluginConfig"},
+          "readme": {"type": "string", "default": ""}
+        },
+        "title": "CreatePlugin"
+      },
+      "CreateSkill": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["display_name", "description"],
+        "properties": {
+          "display_name": {"type": "string"},
+          "hebrew_display_name": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+          "description": {"type": "string"},
+          "hebrew_description": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+          "tags": {"type": "array", "items": {"$ref": "#/components/schemas/TagRef"}},
+          "min_agent_version": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+          "license": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+          "skill_md": {"type": "string", "default": ""},
+          "assets": {"type": "array", "items": {"$ref": "#/components/schemas/AssetInput"}}
+        },
+        "title": "CreateSkill"
+      },
+      "CreateTool": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["display_name", "description", "tool_type"],
+        "properties": {
+          "display_name": {"type": "string"},
+          "hebrew_display_name": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+          "description": {"type": "string"},
+          "hebrew_description": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+          "tool_type": {"$ref": "#/components/schemas/ToolType"},
+          "json_schema": {"type": "object", "additionalProperties": true},
+          "is_async": {"type": "boolean", "default": true},
+          "tracable": {"type": "boolean", "default": true},
+          "dedicated_tool_config": {"type": "object", "additionalProperties": true},
+          "code_files": {"type": "array", "items": {"$ref": "#/components/schemas/CodeFile"}}
+        },
+        "title": "CreateTool"
+      },
+      "CreateUser": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["username"],
+        "properties": {
+          "username": {"type": "string"},
+          "display_name": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+          "email": {"anyOf": [{"type": "string"}, {"type": "null"}]}
+        },
+        "title": "CreateUser"
+      },
+      "DownloadRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key"],
+        "properties": {
+          "key": {"type": "string"},
+          "expires_in": {"type": "integer", "minimum": 1, "maximum": 86400, "default": 3600}
+        },
+        "title": "DownloadRequest"
+      },
+      "HTTPValidationError": {
+        "type": "object",
+        "properties": {"detail": {"type": "array", "items": {"$ref": "#/components/schemas/ValidationError"}}},
+        "title": "HTTPValidationError"
+      },
+      "ManifestBase": {"type": "object"},
+      "PluginConfig": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "skills": {"type": "array", "items": {"type": "string"}},
+          "tools": {"type": "array", "items": {"type": "string"}}
+        },
+        "title": "PluginConfig"
+      },
+      "TagRef": {
+        "type": "object",
+        "required": ["tag_type", "tag_name"],
+        "properties": {"tag_type": {"type": "string"}, "tag_name": {"type": "string"}},
+        "title": "TagRef"
+      },
+      "ToolType": {
+        "type": "string",
+        "enum": ["code", "flow_package", "flow_cube", "solr", "kick_graphql"],
+        "title": "ToolType"
+      },
+      "UpdateAgent": {"$ref": "#/components/schemas/UpdateAgentExpanded"},
+      "UpdateAgentExpanded": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "display_name": {"$ref": "#/components/schemas/NullableString"},
+          "hebrew_display_name": {"$ref": "#/components/schemas/NullableString"},
+          "description": {"$ref": "#/components/schemas/NullableString"},
+          "hebrew_description": {"$ref": "#/components/schemas/NullableString"},
+          "tags": {"anyOf": [{"type": "array", "items": {"$ref": "#/components/schemas/TagRef"}}, {"type": "null"}]},
+          "config": {"anyOf": [{"$ref": "#/components/schemas/AgentConfig"}, {"type": "null"}]}
+        }
+      },
+      "UpdatePlugin": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "display_name": {"$ref": "#/components/schemas/NullableString"},
+          "hebrew_display_name": {"$ref": "#/components/schemas/NullableString"},
+          "description": {"$ref": "#/components/schemas/NullableString"},
+          "hebrew_description": {"$ref": "#/components/schemas/NullableString"},
+          "tags": {"anyOf": [{"type": "array", "items": {"$ref": "#/components/schemas/TagRef"}}, {"type": "null"}]},
+          "config": {"anyOf": [{"$ref": "#/components/schemas/PluginConfig"}, {"type": "null"}]},
+          "readme": {"$ref": "#/components/schemas/NullableString"}
+        }
+      },
+      "UpdateSkill": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "display_name": {"$ref": "#/components/schemas/NullableString"},
+          "hebrew_display_name": {"$ref": "#/components/schemas/NullableString"},
+          "description": {"$ref": "#/components/schemas/NullableString"},
+          "hebrew_description": {"$ref": "#/components/schemas/NullableString"},
+          "tags": {"anyOf": [{"type": "array", "items": {"$ref": "#/components/schemas/TagRef"}}, {"type": "null"}]},
+          "min_agent_version": {"$ref": "#/components/schemas/NullableString"},
+          "license": {"$ref": "#/components/schemas/NullableString"},
+          "skill_md": {"$ref": "#/components/schemas/NullableString"},
+          "assets": {"anyOf": [{"type": "array", "items": {"$ref": "#/components/schemas/AssetInput"}}, {"type": "null"}]}
+        }
+      },
+      "UpdateTool": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "display_name": {"$ref": "#/components/schemas/NullableString"},
+          "hebrew_display_name": {"$ref": "#/components/schemas/NullableString"},
+          "description": {"$ref": "#/components/schemas/NullableString"},
+          "hebrew_description": {"$ref": "#/components/schemas/NullableString"},
+          "tool_type": {"anyOf": [{"$ref": "#/components/schemas/ToolType"}, {"type": "null"}]},
+          "json_schema": {"anyOf": [{"type": "object", "additionalProperties": true}, {"type": "null"}]},
+          "is_async": {"anyOf": [{"type": "boolean"}, {"type": "null"}]},
+          "tracable": {"anyOf": [{"type": "boolean"}, {"type": "null"}]},
+          "dedicated_tool_config": {"anyOf": [{"type": "object", "additionalProperties": true}, {"type": "null"}]},
+          "code_files": {"anyOf": [{"type": "array", "items": {"$ref": "#/components/schemas/CodeFile"}}, {"type": "null"}]}
+        }
+      },
+      "UploadRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key"],
+        "properties": {
+          "key": {"type": "string"},
+          "content_type": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+          "expires_in": {"type": "integer", "minimum": 1, "maximum": 86400, "default": 3600}
+        },
+        "title": "UploadRequest"
+      },
+      "ValidationError": {
+        "type": "object",
+        "required": ["loc", "msg", "type"],
+        "properties": {
+          "loc": {"type": "array", "items": {"anyOf": [{"type": "string"}, {"type": "integer"}]}},
+          "msg": {"type": "string"},
+          "type": {"type": "string"},
+          "input": {},
+          "ctx": {"type": "object"}
+        },
+        "title": "ValidationError"
+      },
+      "NullableString": {"anyOf": [{"type": "string"}, {"type": "null"}]}
+    }
+  }
+}
