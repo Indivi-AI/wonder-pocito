@@ -1,9 +1,9 @@
-# Versioned Doclets in Object Storage
+# Versioned Doclets in Room Storage
 
 ## Design goal
 
-Publish each TGP doclet family as immutable, reproducible releases while preserving category-based selection. A mutable `latest` pointer should allow
-atomic promotion and rollback without changing published releases.
+Publish each TGP doclet family inside a public or signed room as immutable, reproducible releases while preserving category-based selection. A mutable
+`latest` pointer should allow atomic promotion and rollback without changing published releases.
 
 ## Identity
 
@@ -27,17 +27,21 @@ description, and rendering the component supplies the Markdown content.
 ## WURL
 
 ```text
-doclet://<id>?v=<version>
+room://<roomId>/doclets/<id>?v=<version>
+signedRoom://<roomId>/doclets/<id>?v=<version>
 ```
 
 Examples:
 
 ```text
-doclet://customerSummary
-doclet://customerSummary.finance
-doclet://customerSummary.finance?v=1.2.0
-doclet://customerSummary?v=latest
+room://sales/doclets/customerSummary
+room://sales/doclets/customerSummary.finance
+signedRoom://sales/doclets/customerSummary.finance?v=1.2.0
+signedRoom://sales/doclets/customerSummary?v=latest
 ```
+
+The room scheme controls storage and authorization, `roomId` controls ownership and namespace, and `/doclets/` identifies the resource type. Doclet is
+therefore a room resource, not a storage scheme. Shared public doclets can live in a designated room such as `room://wonder/doclets/customerSummary`.
 
 `v` is optional. Missing `v` and `v=latest` both resolve through the family head. An explicit version always selects an immutable release.
 
@@ -49,20 +53,19 @@ resolver.
 All category variants of a doclet name belong to one versioned family:
 
 ```text
-doclets/
-  customerSummary/
-    head.json
-    releases/
-      1.2.0/
-        manifest.json
-        customerSummary.md
-        customerSummary.finance.md
-        customerSummary.finance.he.md
-      1.3.0/
-        manifest.json
-        customerSummary.md
-        customerSummary.finance.md
-        customerSummary.finance.he.md
+<roomId>/doclets/customerSummary/
+  head.json
+  releases/
+    1.2.0/
+      manifest.json
+      customerSummary.md
+      customerSummary.finance.md
+      customerSummary.finance.he.md
+    1.3.0/
+      manifest.json
+      customerSummary.md
+      customerSummary.finance.md
+      customerSummary.finance.he.md
 ```
 
 Versions belong to the family, not to individual category variants. This prevents category resolution from combining files published at different
@@ -117,12 +120,13 @@ Each immutable release contains a manifest describing its TGP variants and conte
 
 Resolution must choose the release before choosing the category variant:
 
-1. Parse the ID into its first segment `name` and remaining `categories`.
-2. Resolve missing `v` or `v=latest` through `head.json`; use an explicit `v` directly.
-3. Load `releases/<version>/manifest.json`.
-4. For an ID with categories, select the exact variant.
-5. For a name-only ID, apply the existing category ranking to the variants in that release.
-6. Fetch and return the selected Markdown object.
+1. Parse the room scheme, `roomId`, `/doclets/` path, ID, and optional version.
+2. Parse the ID into its first segment `name` and remaining `categories`.
+3. Resolve missing `v` or `v=latest` through `head.json`; use an explicit `v` directly.
+4. Load `releases/<version>/manifest.json` through the same room scheme and `roomId`.
+5. For an ID with categories, select the exact variant.
+6. For a name-only ID, apply the existing category ranking to the variants in that release.
+7. Fetch and return the selected Markdown object through the same room scope.
 
 An unknown version or exact category variant returns not found. Resolution never falls back from an explicitly requested version or variant.
 
@@ -131,23 +135,24 @@ An unknown version or exact category variant returns not found. Resolution never
 The Python agent treats published doclets as skills and exposes two operations:
 
 ```text
-GET /api/v1/skills
-GET /api/v1/skills/<id>?v=<version>
+listSkills(roomWUrl)
+getSkill(docletWUrl)
 ```
 
-The list operation returns names, descriptions, latest versions, and available categories without loading Markdown content. The get operation applies the
-WURL resolution rules and returns the selected variant metadata and content. A bucket catalog may cache list metadata, but family heads and immutable
-release manifests remain authoritative.
+`roomWUrl` is the public or signed room root. `docletWUrl` is the complete room-scoped WURL. The list operation returns names, descriptions, latest
+versions, and available categories without loading Markdown content. The get operation applies the WURL resolution rules and returns the selected
+variant metadata and content. A room catalog may cache list metadata, but family heads and immutable release manifests remain authoritative.
 
 ## Publishing
 
 Publishing a release is ordered so readers never observe a partial latest release:
 
-1. Render every registered TGP variant whose first ID segment matches the doclet name.
-2. Validate the version is new and the IDs, descriptions, categories, and rendered contents are valid.
-3. Upload all Markdown files under the immutable release path.
-4. Upload `manifest.json` after the content files and verify its checksums.
-5. Update `head.json` last using an object-generation or ETag precondition.
+1. Resolve the target public or signed room and its authorization.
+2. Render every registered TGP variant whose first ID segment matches the doclet name.
+3. Validate the version is new and the IDs, descriptions, categories, and rendered contents are valid.
+4. Upload all Markdown files under the immutable room release path.
+5. Upload `manifest.json` after the content files and verify its checksums.
+6. Update `head.json` last using an object-generation or ETag precondition.
 
 If any immutable upload fails, `head.json` remains unchanged. Existing release objects are never overwritten.
 
