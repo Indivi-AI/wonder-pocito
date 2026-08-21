@@ -66,7 +66,7 @@ ReactComp('wonderPlatformResourceEditor', {
       field('description', h(`textarea:${classes.field} min-h-24 resize-y`, {dir: 'ltr', value: item.apiDescription || '',
         onInput: event => update({...item, apiDescription: event.target.value})})), field('hebrew_description', h(
         `textarea:${classes.field} min-h-24 resize-y`, {value: item.desc || '', onInput: event => update({...item, desc: event.target.value})})),
-      repo.marketplace && h('section:rounded-2xl border border-[#e2e7e4] p-4', {}, h('div:flex items-center justify-between', {},
+      repo.marketplace && resource != 'tools' && h('section:rounded-2xl border border-[#e2e7e4] p-4', {}, h('div:flex items-center justify-between', {},
         h('b:text-sm', {}, 'Tags'), h(`button:${classes.button}`, {onClick: () => update({...item,
           tags: [...(item.tags || []), {tag_type: '', tag_name: ''}]})}, h('L:Plus', {size: 14}), 'Tag')), (item.tags || []).map((tag, index) => h(
         'div:mt-3 grid grid-cols-[1fr_1fr_32px] gap-2', {key: index}, h('input:min-w-0 rounded-lg border p-2 font-mono text-xs', {

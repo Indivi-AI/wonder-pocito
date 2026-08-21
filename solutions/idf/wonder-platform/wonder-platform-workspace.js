@@ -13,7 +13,9 @@ ReactComp('wonderPlatformWorkspace', {
       const [runs, setRuns] = useState([]), [evaluationId, setEvaluationId] = useState(workspace.item.evaluationId || '')
       const [evaluationRun, setEvaluationRun] = useState(), [detail, setDetail] = useState(-1)
       useEffect(() => { setDraft({...workspace.item}); setEvaluationId(workspace.item.evaluationId || '') }, [workspace.item])
-      const targetLabel = workspace.resource == 'plugins' ? 'הפלאגין' : 'הסאב-אייג׳נט', persist = next => (setDraft(next), saveWorkspace(next))
+      const targetLabel = workspace.resource == 'plugins' ? 'הפלאגין' : 'הסאב-אייג׳נט'
+      const createPending = repo.marketplace && workspace.resource == 'subagents' && !draft.originalId
+      const persist = next => (setDraft(next), !createPending && saveWorkspace(next))
       const relationRows = workspace.resource == 'plugins' ? [['skillIds', 'skills', 'מיומנויות'], ['toolIds', 'tools', 'כלים']]
         : [['pluginIds', 'plugins', 'פלאגינים'], ['skillIds', 'skills', 'מיומנויות'], ['toolIds', 'tools', 'כלים'],
           ['subagentIds', 'subagents', 'סאב-אייג׳נטים']]
@@ -25,7 +27,7 @@ ReactComp('wonderPlatformWorkspace', {
         const id = `test-${Date.now()}`, pending = {id, input: text, status: 'מריץ…', trace: semanticTrace}
         setRuns(items => [...items, pending]); setTestInput('')
         try {
-          const result = await runTarget(text, draft, [])
+          const result = await runTarget(text, draft)
           setRuns(items => items.map(run => run.id == id ? {...run, ...result, output: result.text, status: result.status,
             trace: [...semanticTrace, ...(result.runtimeSteps || [])]} : run))
         } catch (error) {
@@ -40,7 +42,7 @@ ReactComp('wonderPlatformWorkspace', {
       const relationSection = ([field, resource, title]) => h(`section:${classes.card}`, {key: field},
         h('div:flex items-center justify-between', {}, h('div:flex items-center gap-2', {}, h('b', {}, title),
           h(`span:${classes.chip}`, {}, draft[field]?.length || 0)), h(`button:${classes.button}`, {
-            onClick: () => openPicker(field, resource, title)}, h('L:Plus', {size: 14}), 'הוספה')),
+            disabled: createPending, onClick: () => openPicker(field, resource, title)}, h('L:Plus', {size: 14}), 'הוספה')),
         h('div:mt-3 space-y-3', {}, (draft[field] || []).map(id => {
           const item = repo[resource].find(value => value.id == id), managed = resource == 'tools' && item?.managed
           if (!item) return null
@@ -102,17 +104,19 @@ ReactComp('wonderPlatformWorkspace', {
         'aria-label': `חזרה ל${workspace.resource == 'plugins' ? 'פלאגינים' : 'סאב-אייג׳נטים'}`}, h('L:ChevronRight', {size: 16})),
       h('span:text-xs text-[#8b948f]', {}, labels[workspace.resource]), h('input:min-w-0 flex-1 text-xl font-bold outline-none', {
         value: draft.name, placeholder: `שם ${targetLabel}…`, onInput: event => setDraft({...draft, name: event.target.value}),
-        onBlur: () => saveWorkspace(draft)}), h(`span:${classes.chip}`, {}, draft.version || 'V0'),
-      h('span:text-[10px] text-[#9aa19d]', {}, 'נשמר אוטומטית'), h('button:text-xs text-red-600', {onClick: props.deleteWorkspace}, 'מחיקה')),
+        onBlur: () => !createPending && saveWorkspace(draft)}), h(`span:${classes.chip}`, {}, draft.version || 'V0'), createPending ? h(
+          `button:${classes.primary}`, {disabled: !draft.name.trim() || !draft.id.trim(), onClick: () => saveWorkspace(draft)}, 'יצירת סוכן') : h(
+            'span:text-[10px] text-[#9aa19d]', {}, 'נשמר אוטומטית'), draft.originalId && h(
+              'button:text-xs text-red-600', {onClick: props.deleteWorkspace}, 'מחיקה')),
       h('div:flex min-h-[calc(100vh-65px)] max-lg:block', {}, h(`section:min-w-0 flex-1 space-y-4 p-5 ${panelOpen ? 'lg:max-w-[58%]' : ''}`, {},
         h(`section:${classes.card} space-y-4`, {}, h('label:block text-xs font-semibold', {}, 'display_name', h(
           'input:mt-2 w-full rounded-xl border border-[#e2e7e4] bg-[#f6f8f7] p-3 font-mono text-sm', {dir: 'ltr', value: draft.id || '',
             disabled: !!draft.originalId, onInput: event => setDraft({...draft, id: event.target.value})})), h('label:block text-xs font-semibold', {},
           'Description', h('textarea:mt-2 w-full resize-y rounded-xl border border-[#e2e7e4] bg-[#f6f8f7] p-3 text-sm', {
             dir: 'ltr', value: draft.apiDescription || '', onInput: event => setDraft({...draft, apiDescription: event.target.value}),
-            onBlur: () => saveWorkspace(draft)})), h('label:block text-xs font-semibold', {}, 'תיאור בעברית', h(
+            onBlur: () => !createPending && saveWorkspace(draft)})), h('label:block text-xs font-semibold', {}, 'תיאור בעברית', h(
           'textarea:mt-2 w-full resize-y rounded-xl border border-[#e2e7e4] bg-[#f6f8f7] p-3 text-sm', {value: draft.desc || '',
-            onInput: event => setDraft({...draft, desc: event.target.value}), onBlur: () => saveWorkspace(draft)}))),
+            onInput: event => setDraft({...draft, desc: event.target.value}), onBlur: () => !createPending && saveWorkspace(draft)}))),
         h(`section:${classes.card}`, {}, h('div:flex items-center justify-between', {}, h('b:text-sm', {}, 'תגיות'), h(
           `button:${classes.button}`, {onClick: () => setDraft({...draft, tags: [...(draft.tags || []), {tag_type: '', tag_name: ''}]})},
         h('L:Plus', {size: 14}), 'תגית')), (draft.tags || []).map((tag, index) => h(
@@ -129,7 +133,11 @@ ReactComp('wonderPlatformWorkspace', {
           'textarea:mt-3 min-h-44 w-full resize-y rounded-xl border border-[#e2e7e4] bg-[#f6f8f7] p-3 text-sm leading-7', {
             value: workspace.resource == 'plugins' ? draft.readme || '' : draft.instructions || '',
             onInput: event => setDraft({...draft, [workspace.resource == 'plugins' ? 'readme' : 'instructions']: event.target.value}),
-            onBlur: () => saveWorkspace(draft)})), workspace.resource == 'subagents' && h(`section:${classes.card}`, {},
+            onBlur: () => !createPending && saveWorkspace(draft)})), createPending && h(`section:${classes.card}`, {},
+          h('b:text-sm', {}, 'README (creation only)'), h(
+            'textarea:mt-3 min-h-32 w-full resize-y rounded-xl border border-[#e2e7e4] bg-[#f6f8f7] p-3 text-sm', {
+              value: draft.readme || '', onInput: event => setDraft({...draft, readme: event.target.value})})),
+        workspace.resource == 'subagents' && h(`section:${classes.card}`, {},
           h('b:text-sm', {}, 'BackendConfig'), h('select:mt-3 w-full rounded-xl border border-[#e2e7e4] bg-[#f6f8f7] p-3 text-sm', {
             value: draft.backendConfig?.harness_type || 'deepagents', onChange: event => persist({...draft,
               backendConfig: {...draft.backendConfig, harness_type: event.target.value}})}, h('option', {value: 'deepagents'}, 'deepagents'),

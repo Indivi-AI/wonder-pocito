@@ -1,27 +1,28 @@
-import { dsls } from '@jb6/core'
+import { dsls, jb } from '@jb6/core'
 import '@jb6/common'
 import './wonder-platform-domain.js'
+import './wonder-platform-marketplace-wurl.js'
 
 const { common: { Data } } = dsls
 
 Data('wonderPlatformMarketplaceRequest', {
   params: [
     {id: 'method', as: 'string', defaultValue: 'GET'},
-    {id: 'path', as: 'string', mandatory: true},
+    {id: 'wUrl', as: 'string', mandatory: true},
     {id: 'body', as: 'object'},
     {id: 'baseUrl', as: 'string', defaultValue: 'http://localhost:7777'}
   ],
-  impl: async (ctx, {}, {method, path, body, baseUrl}) => {
+  impl: async (ctx, {}, {method, wUrl, body, baseUrl}) => {
     const hasBody = !['GET', 'DELETE'].includes(method) && body != null
-    const response = await fetch(`${baseUrl.replace(/\/$/, '')}${path}`, {
-      method, headers: hasBody ? {'Content-Type': 'application/json'} : {}, ...(hasBody ? {body: JSON.stringify(body)} : {})
-    })
-    ctx.vars.marketplaceLogger?.info?.({t: 'marketplaceApi', method, path, status: response.status}, {}, {ctx})
+    const response = await jb.wonderUtils.wfetch2(wUrl, {method, ...(hasBody ? {body} : {})},
+      ctx.setVars({marketplaceBaseUrl: baseUrl}))
     if (!response.ok) throw new Error(`Marketplace ${response.status}: ${await response.text()}`)
     if (response.status == 204) return null
     return response.headers.get('content-type')?.includes('json') ? response.json() : response.text()
   }
 })
+
+const { wonderPlatformMarketplaceRequest } = dsls.common.data
 
 Data('wonderPlatformMarketplaceCall', {
   params: [
@@ -31,44 +32,54 @@ Data('wonderPlatformMarketplaceCall', {
     {id: 'filePath', as: 'string'},
     {id: 'version', as: 'number'},
     {id: 'body', as: 'object'},
+    {id: 'roomWUrl', as: 'string', defaultValue: 'room://wonder-platform'},
     {id: 'baseUrl', as: 'string', defaultValue: 'http://localhost:7777'},
-    {id: 'request', dynamic: true,
-      defaultValue: dsls.common.data.wonderPlatformMarketplaceRequest('%$method%', '%$apiPath%', '%$body%', '%$baseUrl%')}
+    {id: 'request', dynamic: true, defaultValue: wonderPlatformMarketplaceRequest('%$method%', '%$wUrl%', {
+      body: '%$body%',
+      baseUrl: '%$baseUrl%'
+    })}
   ],
-  impl: (ctx, {}, {operation, resource, name, filePath, version, body, baseUrl, request}) => {
+  impl: (ctx, {}, {operation, resource, name, filePath, version, body, roomWUrl, baseUrl, request}) => {
     const apiResource = resource == 'subagents' ? 'agents' : resource, id = encodeURIComponent(name || '')
+    const file = String(filePath || '').split('/').map(encodeURIComponent).join('/')
     const routes = {
-      health: ['GET', '/healthz'], list: ['GET', `/api/v1/${apiResource}/`], create: ['POST', `/api/v1/${apiResource}/`],
-      get: ['GET', `/api/v1/${apiResource}/${id}`], update: ['PUT', `/api/v1/${apiResource}/${id}`],
-      delete: ['DELETE', `/api/v1/${apiResource}/${id}`], config: ['GET', `/api/v1/${apiResource}/${id}/config.yaml`],
-      document: ['GET', `/api/v1/${apiResource}/${id}/${resource == 'skills' ? 'SKILL.md' : 'README.md'}`],
-      references: ['GET', `/api/v1/${apiResource}/${id}/references`], versions: ['GET', `/api/v1/${apiResource}/${id}/versions`],
-      version: ['GET', `/api/v1/${apiResource}/${id}/versions/${version}`],
-      asset: ['GET', `/api/v1/skills/${id}/assets/${encodeURIComponent(filePath || '')}`],
-      code: ['GET', `/api/v1/tools/${id}/code/${encodeURIComponent(filePath || '')}`],
-      audit: ['GET', `/api/v1/audit/${{tools: 'tool', skills: 'skill', plugins: 'plugin', agents: 'agent'}[apiResource]}/${id}`],
-      presignDownload: ['POST', '/api/v1/presign/download'],
-      presignUpload: ['POST', '/api/v1/presign/upload'], createUser: ['POST', '/api/v1/users/'],
-      getUser: ['GET', `/api/v1/users/${id}`]
+      health: ['GET', 'healthz'], list: ['GET', `${apiResource}/`], create: ['POST', `${apiResource}/`],
+      get: ['GET', `${apiResource}/${id}`], update: ['PUT', `${apiResource}/${id}`],
+      delete: ['DELETE', `${apiResource}/${id}`], config: ['GET', `${apiResource}/${id}/config.yaml`],
+      document: ['GET', `${apiResource}/${id}/${resource == 'skills' ? 'SKILL.md' : 'README.md'}`],
+      references: ['GET', `${apiResource}/${id}/references`],
+      versions: ['GET', `${apiResource}/${id}/versions`],
+      version: ['GET', `${apiResource}/${id}/versions/${version}`],
+      asset: ['GET', `skills/${id}/assets/${file}`],
+      code: ['GET', `tools/${id}/code/${file}`],
+      audit: ['GET', `audit/${{tools: 'tool', skills: 'skill', plugins: 'plugin', agents: 'agent'}[apiResource]}/${id}`],
+      presignDownload: ['POST', 'presign/download'],
+      presignUpload: ['POST', 'presign/upload'],
+      createUser: ['POST', 'users/'],
+      getUser: ['GET', `users/${id}`]
     }
-    const [method, apiPath] = routes[operation]
-    return request(ctx.setVars({method, apiPath, body, baseUrl}))
+    const [method, resourcePath] = routes[operation]
+    const wUrl = `${roomWUrl.replace(/\/$/, '')}/${resourcePath}`
+    return request(ctx.setVars({method, wUrl, body, baseUrl}))
   }
 })
 
+const { wonderPlatformMarketplaceCall } = dsls.common.data
+
 Data('wonderPlatformMarketplaceManifest', {
-  params: [{id: 'resource', as: 'string'}, {id: 'item', as: 'object'}],
-  impl: ({}, {}, {resource, item}) => {
+  params: [{id: 'resource', as: 'string'}, {id: 'item', as: 'object'}, {id: 'operation', as: 'string', defaultValue: 'create'}],
+  impl: ({}, {}, {resource, item, operation}) => {
     const base = {display_name: item.id || item.display_name, hebrew_display_name: item.name || null,
       description: item.apiDescription || item.desc || '', hebrew_description: item.desc || null, tags: item.tags || []}
     if (resource == 'plugins') return {...base, config: {skills: item.skillIds || [], tools: item.toolIds || []},
       readme: item.readme || ''}
     if (resource == 'subagents') return {...base, config: {system_prompt: item.instructions || '',
       backend_config: item.backendConfig || {harness_type: 'deepagents'}, plugins: item.pluginIds || [], skills: item.skillIds || [],
-      tools: item.toolIds || [], sub_agents: item.subagentIds || []}, readme: item.readme || ''}
+      tools: item.toolIds || [], sub_agents: item.subagentIds || []}, ...(operation == 'create' ? {readme: item.readme || ''} : {})}
     if (resource == 'skills') return {...base, min_agent_version: item.minAgentVersion || null, license: item.license || null,
       skill_md: item.content || '', assets: item.assets || []}
-    return {...base, tool_type: item.toolType || item.tool_type || 'code', json_schema: item.jsonSchema || {},
+    const {tags, ...toolBase} = base
+    return {...toolBase, tool_type: item.toolType || item.tool_type || 'code', json_schema: item.jsonSchema || {},
       is_async: item.isAsync ?? true, tracable: item.tracable ?? true, dedicated_tool_config: item.dedicatedToolConfig || {},
       code_files: item.codeFiles || []}
   }
@@ -94,23 +105,31 @@ Data('wonderPlatformMarketplaceItem', {
 
 Data('wonderPlatformMarketplaceLoad', {
   params: [
+    {id: 'roomWUrl', as: 'string', defaultValue: 'room://wonder-platform'},
     {id: 'baseUrl', as: 'string', defaultValue: 'http://localhost:7777'},
-    {id: 'call', dynamic: true,
-      defaultValue: dsls.common.data.wonderPlatformMarketplaceCall('list', '%$resource%', {baseUrl: '%$baseUrl%'})}
+    {id: 'call', dynamic: true, defaultValue: wonderPlatformMarketplaceCall('list', '%$resource%', {
+      roomWUrl: '%$roomWUrl%',
+      baseUrl: '%$baseUrl%'
+    })}
   ],
-  impl: async (ctx, {}, {baseUrl, call}) => Object.fromEntries(await Promise.all(['plugins', 'skills', 'tools', 'subagents'].map(async resource =>
-    [resource, await call(ctx.setVars({resource, baseUrl}))])))
+  impl: async (ctx, {}, {roomWUrl, baseUrl, call}) => Object.fromEntries(await Promise.all(
+    ['plugins', 'skills', 'tools', 'subagents'].map(async resource =>
+      [resource, await call(ctx.setVars({resource, roomWUrl, baseUrl}))])
+  ))
 })
+
+const { wonderPlatformMarketplaceItem, wonderPlatformMarketplaceLoad, wonderPlatformSeed } = dsls.common.data
 
 Data('wonderPlatformMarketplaceRepository', {
   params: [
+    {id: 'roomWUrl', as: 'string', defaultValue: 'room://wonder-platform'},
     {id: 'baseUrl', as: 'string', defaultValue: 'http://localhost:7777'},
-    {id: 'seed', dynamic: true, defaultValue: dsls.common.data.wonderPlatformSeed()},
-    {id: 'load', dynamic: true, defaultValue: dsls.common.data.wonderPlatformMarketplaceLoad('%$baseUrl%')},
-    {id: 'normalize', dynamic: true, defaultValue: dsls.common.data.wonderPlatformMarketplaceItem('%$resource%', '%$item%')}
+    {id: 'seed', dynamic: true, defaultValue: wonderPlatformSeed()},
+    {id: 'load', dynamic: true, defaultValue: wonderPlatformMarketplaceLoad('%$roomWUrl%', '%$baseUrl%')},
+    {id: 'normalize', dynamic: true, defaultValue: wonderPlatformMarketplaceItem('%$resource%', '%$item%')}
   ],
-  impl: async (ctx, {}, {baseUrl, seed, load, normalize}) => {
-    const catalog = await load(ctx.setVars({baseUrl}))
+  impl: async (ctx, {}, {roomWUrl, baseUrl, seed, load, normalize}) => {
+    const catalog = await load(ctx.setVars({roomWUrl, baseUrl}))
     return {...seed(ctx), ...Object.fromEntries(Object.entries(catalog).map(([resource, items]) =>
       [resource, items.map(item => normalize(ctx.setVars({resource, item})))])), marketplace: true}
   }
@@ -118,14 +137,19 @@ Data('wonderPlatformMarketplaceRepository', {
 
 Data('wonderPlatformMarketplaceDetail', {
   params: [
-    {id: 'resource', as: 'string', mandatory: true}, {id: 'name', as: 'string', mandatory: true},
+    {id: 'resource', as: 'string', mandatory: true},
+    {id: 'name', as: 'string', mandatory: true},
+    {id: 'roomWUrl', as: 'string', defaultValue: 'room://wonder-platform'},
     {id: 'baseUrl', as: 'string', defaultValue: 'http://localhost:7777'},
-    {id: 'call', dynamic: true,
-      defaultValue: dsls.common.data.wonderPlatformMarketplaceCall('%$operation%', '%$resource%', '%$name%', {baseUrl: '%$baseUrl%'})},
-    {id: 'normalize', dynamic: true, defaultValue: dsls.common.data.wonderPlatformMarketplaceItem('%$resource%', '%$manifest%')}
+    {id: 'call', dynamic: true, defaultValue: wonderPlatformMarketplaceCall('%$operation%', '%$resource%', {
+      name: '%$name%',
+      roomWUrl: '%$roomWUrl%',
+      baseUrl: '%$baseUrl%'
+    })},
+    {id: 'normalize', dynamic: true, defaultValue: wonderPlatformMarketplaceItem('%$resource%', '%$manifest%')}
   ],
-  impl: async (ctx, {}, {resource, name, baseUrl, call, normalize}) => {
-    const run = (operation, vars = {}) => call(ctx.setVars({operation, resource, name, baseUrl, ...vars}))
+  impl: async (ctx, {}, {resource, name, roomWUrl, baseUrl, call, normalize}) => {
+    const run = (operation, vars = {}) => call(ctx.setVars({operation, resource, name, roomWUrl, baseUrl, ...vars}))
     const [manifest, versions, audit] = await Promise.all([run('get'), run('versions'), run('audit')])
     const [references, document, configYaml] = await Promise.all([
       ['plugins', 'subagents'].includes(resource) ? run('references') : null,
@@ -139,37 +163,60 @@ Data('wonderPlatformMarketplaceDetail', {
 
 Data('wonderPlatformAgentOsRequest', {
   params: [
-    {id: 'agentId', as: 'string', mandatory: true}, {id: 'message', as: 'string', mandatory: true},
-    {id: 'sessionId', as: 'string', mandatory: true}, {id: 'baseUrl', as: 'string', defaultValue: 'http://localhost:7777'},
+    {id: 'agentId', as: 'string', mandatory: true},
+    {id: 'message', as: 'string', mandatory: true},
+    {id: 'sessionId', as: 'string', mandatory: true},
+    {id: 'roomWUrl', as: 'string', defaultValue: 'room://wonder-platform'},
+    {id: 'baseUrl', as: 'string', defaultValue: 'http://localhost:7777'},
     {id: 'token', as: 'string'}
   ],
-  impl: async (ctx, {}, {agentId, message, sessionId, baseUrl, token}) => {
+  impl: async (ctx, {}, {agentId, message, sessionId, roomWUrl, baseUrl, token}) => {
     const body = new FormData()
-    Object.entries({message, session_id: sessionId, user_id: 'wonder-platform', stream: 'false'}).forEach(([key, value]) => body.append(key, value))
-    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/agents/${encodeURIComponent(agentId)}/runs`, {
-      method: 'POST', headers: token ? {Authorization: `Bearer ${token}`} : {}, body
-    })
+    Object.entries({message, session_id: sessionId, user_id: 'wonder-platform', stream: 'false'})
+      .forEach(([key, value]) => body.append(key, value))
+    const wUrl = `${roomWUrl.replace(/\/$/, '')}/agents/${encodeURIComponent(agentId)}/runs`
+    const response = await jb.wonderUtils.wfetch2(wUrl, {
+      method: 'POST',
+      headers: token ? {Authorization: `Bearer ${token}`} : {},
+      body
+    }, ctx.setVars({marketplaceBaseUrl: baseUrl}))
     ctx.vars.agentOsLogger?.info?.({t: 'agentOsRun', agentId, sessionId, status: response.status}, {}, {ctx})
     if (!response.ok) throw new Error(`AgentOS ${response.status}: ${await response.text()}`)
     return response.json()
   }
 })
 
+const { wonderPlatformAgentOsRequest } = dsls.common.data
+
 Data('wonderPlatformAgentOsRun', {
   params: [
-    {id: 'text', as: 'string', mandatory: true}, {id: 'target', as: 'object', mandatory: true},
-    {id: 'sessionId', as: 'string', mandatory: true}, {id: 'baseUrl', as: 'string', defaultValue: 'http://localhost:7777'},
+    {id: 'text', as: 'string', mandatory: true},
+    {id: 'target', as: 'object', mandatory: true},
+    {id: 'sessionId', as: 'string', mandatory: true},
+    {id: 'roomWUrl', as: 'string', defaultValue: 'room://wonder-platform'},
+    {id: 'baseUrl', as: 'string', defaultValue: 'http://localhost:7777'},
     {id: 'token', as: 'string'},
-    {id: 'request', dynamic: true,
-      defaultValue: dsls.common.data.wonderPlatformAgentOsRequest('%$agentId%', '%$text%', '%$sessionId%', '%$baseUrl%', '%$token%')}
+    {id: 'request', dynamic: true, defaultValue: wonderPlatformAgentOsRequest('%$agentId%', '%$text%', {
+      sessionId: '%$sessionId%',
+      roomWUrl: '%$roomWUrl%',
+      baseUrl: '%$baseUrl%',
+      token: '%$token%'
+    })}
   ],
-  impl: async (ctx, {}, {text, target, sessionId, baseUrl, token, request}) => {
-    const startedAt = Date.now(), run = await request(ctx.setVars({agentId: target.id, text, sessionId, baseUrl, token}))
-    const output = typeof run.content == 'string' ? run.content : JSON.stringify(run.content || ''), markers = [...output.matchAll(
-      /\[\[report:([\w-]+)\]\]/g)]
-    return {text: output.replace(/\s*\[\[report:[\w-]+\]\]/g, '').trim(), reportIds: [...new Set(markers.map(([, id]) => id))],
-      followUps: [], status: String(run.status || '').toLowerCase().includes('fail') ? 'נכשל' : 'הושלם',
-      duration: `${Math.max(1, Math.round((Date.now() - startedAt) / 1000))} שנ׳`, runId: run.run_id || run.runId,
-      opikUrl: run.opik_url || run.trace_url, runtimeSteps: [{kind: 'AgentOS', title: target.name, runtime: true}]}
+  impl: async (ctx, {}, {text, target, sessionId, roomWUrl, baseUrl, token, request}) => {
+    const startedAt = Date.now(), run = await request(
+      ctx.setVars({agentId: target.id, text, sessionId, roomWUrl, baseUrl, token}))
+    const output = typeof run.content == 'string' ? run.content : JSON.stringify(run.content || '')
+    const markers = [...output.matchAll(/\[\[report:([\w-]+)\]\]/g)]
+    return {
+      text: output.replace(/\s*\[\[report:[\w-]+\]\]/g, '').trim(),
+      reportIds: [...new Set(markers.map(([, id]) => id))],
+      followUps: [],
+      status: String(run.status || '').toLowerCase().includes('fail') ? 'נכשל' : 'הושלם',
+      duration: `${Math.max(1, Math.round((Date.now() - startedAt) / 1000))} שנ׳`,
+      runId: run.run_id || run.runId,
+      opikUrl: run.opik_url || run.trace_url,
+      runtimeSteps: [{kind: 'AgentOS', title: target.name, runtime: true}]
+    }
   }
 })

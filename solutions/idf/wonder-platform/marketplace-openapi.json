@@ -1,696 +1,2821 @@
 {
   "openapi": "3.1.0",
-  "info": {"title": "marketplace", "version": "0.1.0"},
-  "x-source": "Reconstructed from seven photographed /openapi.json and Swagger UI frames.",
+  "info": {
+    "title": "marketplace",
+    "version": "0.1.0"
+  },
   "paths": {
     "/healthz": {
       "get": {
-        "tags": ["health"],
+        "tags": [
+          "health"
+        ],
         "summary": "Healthz",
         "description": "Return service status + S3 reachability. Never raises.",
         "operationId": "healthz_healthz_get",
-        "responses": {"200": {"$ref": "#/components/responses/Object"}}
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Healthz Healthz Get"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/tools/": {
       "get": {
-        "tags": ["tools"],
+        "tags": [
+          "tools"
+        ],
         "summary": "List Tools",
         "description": "List every published tool config.",
         "operationId": "list_tools_api_v1_tools__get",
-        "responses": {"200": {"$ref": "#/components/responses/ObjectList"}}
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response List Tools Api V1 Tools  Get"
+                }
+              }
+            }
+          }
+        }
       },
       "post": {
-        "tags": ["tools"],
+        "tags": [
+          "tools"
+        ],
         "summary": "Create Tool",
         "description": "Create a tool. 409 on id collision; 422 on invalid body.",
         "operationId": "create_tool_api_v1_tools__post",
-        "requestBody": {"$ref": "#/components/requestBodies/CreateTool"},
-        "responses": {"201": {"$ref": "#/components/responses/Empty"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTool"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/tools/{name}": {
       "get": {
-        "tags": ["tools"],
+        "tags": [
+          "tools"
+        ],
         "summary": "Get Tool",
         "description": "Get a single tool config (id+tags synthesized). 404 if missing.",
         "operationId": "get_tool_api_v1_tools__name__get",
-        "parameters": [{"$ref": "#/components/parameters/Name"}],
-        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Tool Api V1 Tools  Name  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       },
       "put": {
-        "tags": ["tools"],
+        "tags": [
+          "tools"
+        ],
         "summary": "Update Tool",
         "description": "Partial update. Snapshots the prior state (incl. code bytes), bumps version, audits.",
         "operationId": "update_tool_api_v1_tools__name__put",
-        "parameters": [{"$ref": "#/components/parameters/Name"}],
-        "requestBody": {"$ref": "#/components/requestBodies/UpdateTool"},
-        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTool"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Update Tool Api V1 Tools  Name  Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       },
       "delete": {
-        "tags": ["tools"],
+        "tags": [
+          "tools"
+        ],
         "summary": "Delete Tool",
         "description": "Unpublish + wipe. 204 on success; 404 if the config did not exist.",
         "operationId": "delete_tool_api_v1_tools__name__delete",
-        "parameters": [{"$ref": "#/components/parameters/Name"}],
-        "responses": {"204": {"$ref": "#/components/responses/NoContent"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/tools/{name}/code/{path}": {
       "get": {
-        "tags": ["tools"],
+        "tags": [
+          "tools"
+        ],
         "summary": "Get Tool Code",
         "description": "Read a tool source file. 404 if the object is missing.",
         "operationId": "get_tool_code_api_v1_tools__name__code__path__get",
-        "parameters": [{"$ref": "#/components/parameters/Name"}, {"$ref": "#/components/parameters/Path"}],
-        "responses": {"200": {"$ref": "#/components/responses/Text"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/tools/{name}/versions": {
       "get": {
-        "tags": ["tools"],
+        "tags": [
+          "tools"
+        ],
         "summary": "List Tool Versions",
         "description": "List every snapshot config for the tool, ascending by version.",
         "operationId": "list_tool_versions_api_v1_tools__name__versions_get",
-        "parameters": [{"$ref": "#/components/parameters/Name"}],
-        "responses": {"200": {"$ref": "#/components/responses/ObjectList"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response List Tool Versions Api V1 Tools  Name  Versions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/tools/{name}/versions/{n}": {
       "get": {
-        "tags": ["tools"],
+        "tags": [
+          "tools"
+        ],
         "summary": "Read Tool Version",
         "description": "Read a specific version's config snapshot (id+tags stripped). 404 if missing.",
         "operationId": "read_tool_version_api_v1_tools__name__versions__n__get",
-        "parameters": [{"$ref": "#/components/parameters/Name"}, {"$ref": "#/components/parameters/Version"}],
-        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "n",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "N"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Read Tool Version Api V1 Tools  Name  Versions  N  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/skills/": {
       "get": {
-        "tags": ["skills"],
+        "tags": [
+          "skills"
+        ],
         "summary": "List Skills",
         "description": "List every published skill manifest.",
         "operationId": "list_skills_api_v1_skills__get",
-        "responses": {"200": {"$ref": "#/components/responses/ObjectList"}}
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response List Skills Api V1 Skills  Get"
+                }
+              }
+            }
+          }
+        }
       },
       "post": {
-        "tags": ["skills"],
+        "tags": [
+          "skills"
+        ],
         "summary": "Create Skill",
         "description": "Create a skill. 409 on id collision; 422 on invalid body.",
         "operationId": "create_skill_api_v1_skills__post",
-        "requestBody": {"$ref": "#/components/requestBodies/CreateSkill"},
-        "responses": {"201": {"$ref": "#/components/responses/Empty"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSkill"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/skills/{name}": {
       "get": {
-        "tags": ["skills"],
+        "tags": [
+          "skills"
+        ],
         "summary": "Get Skill",
         "description": "Get a single skill manifest by display_name. 404 if missing.",
         "operationId": "get_skill_api_v1_skills__name__get",
-        "parameters": [{"$ref": "#/components/parameters/Name"}],
-        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Skill Api V1 Skills  Name  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       },
       "put": {
-        "tags": ["skills"],
+        "tags": [
+          "skills"
+        ],
         "summary": "Update Skill",
         "description": "Partial update. Snapshots the prior state, bumps version, audits.",
         "operationId": "update_skill_api_v1_skills__name__put",
-        "parameters": [{"$ref": "#/components/parameters/Name"}],
-        "requestBody": {"$ref": "#/components/requestBodies/UpdateSkill"},
-        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSkill"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Update Skill Api V1 Skills  Name  Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       },
       "delete": {
-        "tags": ["skills"],
+        "tags": [
+          "skills"
+        ],
         "summary": "Delete Skill",
         "description": "Unpublish + wipe. 204 on success; 404 if the manifest did not exist.",
         "operationId": "delete_skill_api_v1_skills__name__delete",
-        "parameters": [{"$ref": "#/components/parameters/Name"}],
-        "responses": {"204": {"$ref": "#/components/responses/NoContent"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/skills/{name}/SKILL.md": {
       "get": {
-        "tags": ["skills"],
+        "tags": [
+          "skills"
+        ],
         "summary": "Get Skill Md",
         "description": "Read the SKILL.md document. 404 if missing.",
         "operationId": "get_skill_md_api_v1_skills__name__SKILL_md_get",
-        "parameters": [{"$ref": "#/components/parameters/Name"}],
-        "responses": {"200": {"$ref": "#/components/responses/Text"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/skills/{name}/assets/{path}": {
       "get": {
-        "tags": ["skills"],
+        "tags": [
+          "skills"
+        ],
         "summary": "Get Skill Asset",
         "description": "Read a skill asset as raw bytes (binary-safe). 404 if missing.",
         "operationId": "get_skill_asset_api_v1_skills__name__assets__path__get",
-        "parameters": [{"$ref": "#/components/parameters/Name"}, {"$ref": "#/components/parameters/Path"}],
-        "responses": {"200": {"$ref": "#/components/responses/Empty"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/skills/{name}/versions": {
       "get": {
-        "tags": ["skills"],
+        "tags": [
+          "skills"
+        ],
         "summary": "List Skill Versions",
         "description": "List every snapshot manifest for the skill, ascending by version.",
         "operationId": "list_skill_versions_api_v1_skills__name__versions_get",
-        "parameters": [{"$ref": "#/components/parameters/Name"}],
-        "responses": {"200": {"$ref": "#/components/responses/ObjectList"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response List Skill Versions Api V1 Skills  Name  Versions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/skills/{name}/versions/{n}": {
       "get": {
-        "tags": ["skills"],
+        "tags": [
+          "skills"
+        ],
         "summary": "Read Skill Version",
         "description": "Read a specific version's manifest snapshot. 404 if missing.",
         "operationId": "read_skill_version_api_v1_skills__name__versions__n__get",
-        "parameters": [{"$ref": "#/components/parameters/Name"}, {"$ref": "#/components/parameters/Version"}],
-        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "n",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "N"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Read Skill Version Api V1 Skills  Name  Versions  N  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/plugins/": {
       "get": {
-        "tags": ["plugins"],
+        "tags": [
+          "plugins"
+        ],
         "summary": "List Plugins",
         "description": "List every published plugin manifest.",
         "operationId": "list_plugins_api_v1_plugins__get",
-        "responses": {"200": {"$ref": "#/components/responses/ObjectList"}}
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response List Plugins Api V1 Plugins  Get"
+                }
+              }
+            }
+          }
+        }
       },
       "post": {
-        "tags": ["plugins"],
+        "tags": [
+          "plugins"
+        ],
         "summary": "Create Plugin",
         "description": "Create a plugin. 409 on id collision; 422 on invalid body.",
         "operationId": "create_plugin_api_v1_plugins__post",
-        "requestBody": {"$ref": "#/components/requestBodies/CreatePlugin"},
-        "responses": {"201": {"$ref": "#/components/responses/Empty"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePlugin"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/plugins/{name}": {
       "get": {
-        "tags": ["plugins"],
+        "tags": [
+          "plugins"
+        ],
         "summary": "Get Plugin",
         "description": "Get a single plugin manifest. 404 if missing.",
         "operationId": "get_plugin_api_v1_plugins__name__get",
-        "parameters": [{"$ref": "#/components/parameters/Name"}],
-        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Plugin Api V1 Plugins  Name  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       },
       "put": {
-        "tags": ["plugins"],
+        "tags": [
+          "plugins"
+        ],
         "summary": "Update Plugin",
         "description": "Partial update. Snapshots the prior state, bumps version, audits.",
         "operationId": "update_plugin_api_v1_plugins__name__put",
-        "parameters": [{"$ref": "#/components/parameters/Name"}],
-        "requestBody": {"$ref": "#/components/requestBodies/UpdatePlugin"},
-        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePlugin"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Update Plugin Api V1 Plugins  Name  Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       },
       "delete": {
-        "tags": ["plugins"],
+        "tags": [
+          "plugins"
+        ],
         "summary": "Delete Plugin",
         "description": "Unpublish + wipe. 204 on success; 404 if the manifest did not exist.",
         "operationId": "delete_plugin_api_v1_plugins__name__delete",
-        "parameters": [{"$ref": "#/components/parameters/Name"}],
-        "responses": {"204": {"$ref": "#/components/responses/NoContent"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/plugins/{name}/config.yaml": {
       "get": {
-        "tags": ["plugins"],
+        "tags": [
+          "plugins"
+        ],
         "summary": "Get Plugin Config",
         "description": "Read the config.yaml document. 404 if missing.",
         "operationId": "get_plugin_config_api_v1_plugins__name__config_yaml_get",
-        "parameters": [{"$ref": "#/components/parameters/Name"}],
-        "responses": {"200": {"$ref": "#/components/responses/Text"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/plugins/{name}/README.md": {
       "get": {
-        "tags": ["plugins"],
+        "tags": [
+          "plugins"
+        ],
         "summary": "Get Plugin Readme",
         "description": "Read the README.md document. 404 if missing.",
         "operationId": "get_plugin_readme_api_v1_plugins__name__README_md_get",
-        "parameters": [{"$ref": "#/components/parameters/Name"}],
-        "responses": {"200": {"$ref": "#/components/responses/Text"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/plugins/{name}/references": {
       "get": {
-        "tags": ["plugins"],
+        "tags": [
+          "plugins"
+        ],
         "summary": "Check Plugin References",
         "description": "Check existence of every tool/skill referenced by the plugin. 404 if missing.",
         "operationId": "check_plugin_references_api_v1_plugins__name__references_get",
-        "parameters": [{"$ref": "#/components/parameters/Name"}],
-        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Check Plugin References Api V1 Plugins  Name  References Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/plugins/{name}/versions": {
       "get": {
-        "tags": ["plugins"],
+        "tags": [
+          "plugins"
+        ],
         "summary": "List Plugin Versions",
         "description": "List every snapshot manifest for the plugin, ascending by version.",
         "operationId": "list_plugin_versions_api_v1_plugins__name__versions_get",
-        "parameters": [{"$ref": "#/components/parameters/Name"}],
-        "responses": {"200": {"$ref": "#/components/responses/ObjectList"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response List Plugin Versions Api V1 Plugins  Name  Versions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/plugins/{name}/versions/{n}": {
       "get": {
-        "tags": ["plugins"],
+        "tags": [
+          "plugins"
+        ],
         "summary": "Read Plugin Version",
         "description": "Read a specific version's manifest snapshot. 404 if missing.",
         "operationId": "read_plugin_version_api_v1_plugins__name__versions__n__get",
-        "parameters": [{"$ref": "#/components/parameters/Name"}, {"$ref": "#/components/parameters/Version"}],
-        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "n",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "N"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Read Plugin Version Api V1 Plugins  Name  Versions  N  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/agents/": {
       "get": {
-        "tags": ["agents"],
+        "tags": [
+          "agents"
+        ],
         "summary": "List Agents",
         "description": "List every published agent manifest.",
         "operationId": "list_agents_api_v1_agents__get",
-        "responses": {"200": {"$ref": "#/components/responses/ObjectList"}}
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response List Agents Api V1 Agents  Get"
+                }
+              }
+            }
+          }
+        }
       },
       "post": {
-        "tags": ["agents"],
+        "tags": [
+          "agents"
+        ],
         "summary": "Create Agent",
         "description": "Create an agent. 409 on id collision; 422 on invalid body.",
         "operationId": "create_agent_api_v1_agents__post",
-        "requestBody": {"$ref": "#/components/requestBodies/CreateAgent"},
-        "responses": {"201": {"$ref": "#/components/responses/Empty"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAgent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/agents/{name}": {
       "get": {
-        "tags": ["agents"],
+        "tags": [
+          "agents"
+        ],
         "summary": "Get Agent",
         "description": "Get a single agent manifest. 404 if missing.",
         "operationId": "get_agent_api_v1_agents__name__get",
-        "parameters": [{"$ref": "#/components/parameters/Name"}],
-        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Agent Api V1 Agents  Name  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       },
       "put": {
-        "tags": ["agents"],
+        "tags": [
+          "agents"
+        ],
         "summary": "Update Agent",
         "description": "Partial update. Snapshots the prior state, bumps version, audits.",
         "operationId": "update_agent_api_v1_agents__name__put",
-        "parameters": [{"$ref": "#/components/parameters/Name"}],
-        "requestBody": {"$ref": "#/components/requestBodies/UpdateAgent"},
-        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAgent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Update Agent Api V1 Agents  Name  Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       },
       "delete": {
-        "tags": ["agents"],
+        "tags": [
+          "agents"
+        ],
         "summary": "Delete Agent",
         "description": "Unpublish + wipe. 204 on success; 404 if the manifest did not exist.",
         "operationId": "delete_agent_api_v1_agents__name__delete",
-        "parameters": [{"$ref": "#/components/parameters/Name"}],
-        "responses": {"204": {"$ref": "#/components/responses/NoContent"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/agents/{name}/config.yaml": {
       "get": {
-        "tags": ["agents"],
+        "tags": [
+          "agents"
+        ],
         "summary": "Get Agent Config",
         "description": "Read the config.yaml document. 404 if missing.",
         "operationId": "get_agent_config_api_v1_agents__name__config_yaml_get",
-        "parameters": [{"$ref": "#/components/parameters/Name"}],
-        "responses": {"200": {"$ref": "#/components/responses/Text"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/agents/{name}/references": {
       "get": {
-        "tags": ["agents"],
+        "tags": [
+          "agents"
+        ],
         "summary": "Check Agent References",
         "description": "Check existence of every plugin/tool/skill/sub-agent. 404 if missing.",
         "operationId": "check_agent_references_api_v1_agents__name__references_get",
-        "parameters": [{"$ref": "#/components/parameters/Name"}],
-        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Check Agent References Api V1 Agents  Name  References Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/agents/{name}/versions": {
       "get": {
-        "tags": ["agents"],
+        "tags": [
+          "agents"
+        ],
         "summary": "List Agent Versions",
         "description": "List every snapshot manifest for the agent, ascending by version.",
         "operationId": "list_agent_versions_api_v1_agents__name__versions_get",
-        "parameters": [{"$ref": "#/components/parameters/Name"}],
-        "responses": {"200": {"$ref": "#/components/responses/ObjectList"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response List Agent Versions Api V1 Agents  Name  Versions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/agents/{name}/versions/{n}": {
       "get": {
-        "tags": ["agents"],
+        "tags": [
+          "agents"
+        ],
         "summary": "Read Agent Version",
         "description": "Read a specific version's manifest snapshot. 404 if missing.",
         "operationId": "read_agent_version_api_v1_agents__name__versions__n__get",
-        "parameters": [{"$ref": "#/components/parameters/Name"}, {"$ref": "#/components/parameters/Version"}],
-        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "n",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "N"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Read Agent Version Api V1 Agents  Name  Versions  N  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/presign/download": {
       "post": {
-        "tags": ["presign"],
+        "tags": [
+          "presign"
+        ],
         "summary": "Presign Download",
         "description": "Return a presigned GET URL for payload.key.",
         "operationId": "presign_download_api_v1_presign_download_post",
-        "requestBody": {"$ref": "#/components/requestBodies/DownloadRequest"},
-        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DownloadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Presign Download Api V1 Presign Download Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/presign/upload": {
       "post": {
-        "tags": ["presign"],
+        "tags": [
+          "presign"
+        ],
         "summary": "Presign Upload",
         "description": "Return a presigned PUT URL for payload.key.",
         "operationId": "presign_upload_api_v1_presign_upload_post",
-        "requestBody": {"$ref": "#/components/requestBodies/UploadRequest"},
-        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Presign Upload Api V1 Presign Upload Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/audit/{resource_type}/{resource_name}": {
       "get": {
-        "tags": ["audit"],
+        "tags": [
+          "audit"
+        ],
         "summary": "List Audit Events",
-        "description": "List every audit event for resource_name of resource_type, sorted by ts descending. Returns an empty list when none exist.",
+        "description": "List every audit event for `resource_name` of `resource_type`, sorted by ts ascending.\n\nReturns an empty list when the resource has no events (or doesn't exist). Per-event deserialization errors are swallowed by the storage layer so one corrupt event does not 500 the entire audit read.",
         "operationId": "list_audit_events_api_v1_audit__resource_type___resource_name__get",
         "parameters": [
-          {"$ref": "#/components/parameters/ResourceType"},
-          {"$ref": "#/components/parameters/ResourceName"}
+          {
+            "name": "resource_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "tool",
+                "skill",
+                "plugin",
+                "agent"
+              ],
+              "title": "Resource Type"
+            }
+          },
+          {
+            "name": "resource_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Resource Name"
+            }
+          }
         ],
-        "responses": {"200": {"$ref": "#/components/responses/ObjectList"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response List Audit Events Api V1 Audit  Resource Type   Resource Name  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/users/": {
       "post": {
-        "tags": ["users"],
+        "tags": [
+          "users"
+        ],
         "summary": "Create User",
-        "description": "Create a user. Returns the new UserObject. Uids are unique; usernames are not.",
+        "description": "Create a user. Returns the new UserObject. uids are unique; usernames are not.",
         "operationId": "create_user_api_v1_users__post",
-        "requestBody": {"$ref": "#/components/requestBodies/CreateUser"},
-        "responses": {"201": {"$ref": "#/components/responses/Empty"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUser"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/users/{uid}": {
       "get": {
-        "tags": ["users"],
+        "tags": [
+          "users"
+        ],
         "summary": "Get User",
         "description": "Read a user by id. 404 if missing; 422 if the stored object is corrupt.",
         "operationId": "get_user_api_v1_users__uid__get",
-        "parameters": [{"$ref": "#/components/parameters/Uid"}],
-        "responses": {"200": {"$ref": "#/components/responses/Object"}, "422": {"$ref": "#/components/responses/Validation"}}
+        "parameters": [
+          {
+            "name": "uid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Uid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get User Api V1 Users  Uid  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
   "components": {
-    "parameters": {
-      "Name": {"name": "name", "in": "path", "required": true, "schema": {"type": "string", "title": "Name"}},
-      "Path": {"name": "path", "in": "path", "required": true, "schema": {"type": "string", "title": "Path"}},
-      "Version": {"name": "n", "in": "path", "required": true, "schema": {"type": "integer", "title": "N"}},
-      "Uid": {"name": "uid", "in": "path", "required": true, "schema": {"type": "string", "title": "Uid"}},
-      "ResourceName": {
-        "name": "resource_name",
-        "in": "path",
-        "required": true,
-        "schema": {"type": "string", "title": "Resource Name"}
-      },
-      "ResourceType": {
-        "name": "resource_type",
-        "in": "path",
-        "required": true,
-        "schema": {"type": "string", "enum": ["tool", "skill", "plugin", "agent"], "title": "Resource Type"}
-      }
-    },
-    "responses": {
-      "Object": {
-        "description": "Successful Response",
-        "content": {"application/json": {"schema": {"type": "object", "additionalProperties": true}}}
-      },
-      "ObjectList": {
-        "description": "Successful Response",
-        "content": {"application/json": {"schema": {"type": "array", "items": {"type": "object", "additionalProperties": true}}}}
-      },
-      "Text": {
-        "description": "Successful Response",
-        "content": {"text/plain": {"schema": {"type": "string"}}}
-      },
-      "Empty": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}},
-      "NoContent": {"description": "Successful Response"},
-      "Validation": {
-        "description": "Validation Error",
-        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}
-      }
-    },
-    "requestBodies": {
-      "CreateAgent": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CreateAgent"}}}},
-      "CreatePlugin": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CreatePlugin"}}}},
-      "CreateSkill": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CreateSkill"}}}},
-      "CreateTool": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CreateTool"}}}},
-      "CreateUser": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CreateUser"}}}},
-      "UpdateAgent": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/UpdateAgent"}}}},
-      "UpdatePlugin": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/UpdatePlugin"}}}},
-      "UpdateSkill": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/UpdateSkill"}}}},
-      "UpdateTool": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/UpdateTool"}}}},
-      "DownloadRequest": {
-        "required": true,
-        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DownloadRequest"}}}
-      },
-      "UploadRequest": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/UploadRequest"}}}}
-    },
     "schemas": {
       "AgentConfig": {
         "type": "object",
         "additionalProperties": true,
-        "required": ["system_prompt", "backend_config"],
+        "required": [
+          "system_prompt",
+          "backend_config"
+        ],
         "properties": {
-          "system_prompt": {"type": "string", "title": "System Prompt"},
-          "backend_config": {"$ref": "#/components/schemas/BackendConfig"},
-          "plugins": {"type": "array", "items": {"type": "string"}, "title": "Plugins"},
-          "skills": {"type": "array", "items": {"type": "string"}, "title": "Skills"},
-          "tools": {"type": "array", "items": {"type": "string"}, "title": "Tools"},
-          "sub_agents": {"type": "array", "items": {"type": "string"}, "title": "Sub Agents"}
+          "system_prompt": {
+            "type": "string",
+            "title": "System Prompt"
+          },
+          "backend_config": {
+            "$ref": "#/components/schemas/BackendConfig"
+          },
+          "plugins": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Plugins"
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Skills"
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Tools"
+          },
+          "sub_agents": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sub Agents"
+          }
         },
-        "title": "AgentConfig"
+        "title": "AgentConfig",
+        "description": "The agent payload previously split across system_prompt.md and config.yaml.\n\nReference lists live here as flat string ids; the manifest stays pure metadata. extra=\"allow\" keeps the schema forward-compatible."
       },
       "AssetInput": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["path", "content_b64"],
+        "required": [
+          "path",
+          "content_b64"
+        ],
         "properties": {
-          "path": {"type": "string", "title": "Path"},
-          "content_b64": {"type": "string", "title": "Content B64"},
-          "mime_type": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Mime Type"}
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "content_b64": {
+            "type": "string",
+            "title": "Content B64"
+          },
+          "mime_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mime Type"
+          }
         },
-        "title": "AssetInput"
+        "title": "AssetInput",
+        "description": "One asset attached to a skill. content_b64 is base64-encoded raw bytes."
       },
       "BackendConfig": {
         "type": "object",
         "additionalProperties": true,
-        "required": ["harness_type"],
-        "properties": {"harness_type": {"type": "string", "enum": ["deepagents", "claude"], "title": "Harness Type"}},
-        "title": "BackendConfig"
+        "required": [
+          "harness_type"
+        ],
+        "properties": {
+          "harness_type": {
+            "type": "string",
+            "enum": [
+              "deepagents",
+              "claude"
+            ],
+            "title": "Harness Type"
+          }
+        },
+        "title": "BackendConfig",
+        "description": "Backend harness selection plus extensible backend fields.\n\nextra=\"allow\" lets future fields (model name, temperature, etc.) be handled without breaking deserialization of existing config.yaml files."
       },
       "CodeFile": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["path", "content"],
-        "properties": {"path": {"type": "string"}, "content": {"type": "string"}},
-        "title": "CodeFile"
+        "required": [
+          "path",
+          "content"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          }
+        },
+        "title": "CodeFile",
+        "description": "One source file attached to a tool. The user supplies already-wrapped tool code; the marketplace stores it under tools/{id}/code/{path} byte-for-byte with no transformation."
       },
       "CreateAgent": {
-        "allOf": [{"$ref": "#/components/schemas/ManifestBase"}],
         "type": "object",
         "additionalProperties": false,
-        "required": ["display_name", "description", "config"],
+        "required": [
+          "display_name",
+          "description",
+          "config"
+        ],
         "properties": {
-          "display_name": {"type": "string"},
-          "hebrew_display_name": {"anyOf": [{"type": "string"}, {"type": "null"}]},
-          "description": {"type": "string"},
-          "hebrew_description": {"anyOf": [{"type": "string"}, {"type": "null"}]},
-          "tags": {"type": "array", "items": {"$ref": "#/components/schemas/TagRef"}},
-          "config": {"$ref": "#/components/schemas/AgentConfig"},
-          "readme": {"type": "string", "default": ""}
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "hebrew_display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hebrew Display Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "hebrew_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hebrew Description"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TagRef"
+            },
+            "title": "Tags"
+          },
+          "config": {
+            "$ref": "#/components/schemas/AgentConfig"
+          },
+          "readme": {
+            "type": "string",
+            "default": "",
+            "title": "Readme"
+          }
         },
-        "title": "CreateAgent"
+        "title": "CreateAgent",
+        "description": "Create body. config.yaml (system_prompt + backend_config + reference id lists) is uploaded first; manifest last."
       },
       "CreatePlugin": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["display_name", "description", "config"],
+        "required": [
+          "display_name",
+          "description",
+          "config"
+        ],
         "properties": {
-          "display_name": {"type": "string"},
-          "hebrew_display_name": {"anyOf": [{"type": "string"}, {"type": "null"}]},
-          "description": {"type": "string"},
-          "hebrew_description": {"anyOf": [{"type": "string"}, {"type": "null"}]},
-          "tags": {"type": "array", "items": {"$ref": "#/components/schemas/TagRef"}},
-          "config": {"$ref": "#/components/schemas/PluginConfig"},
-          "readme": {"type": "string", "default": ""}
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "hebrew_display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hebrew Display Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "hebrew_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hebrew Description"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TagRef"
+            },
+            "title": "Tags"
+          },
+          "config": {
+            "$ref": "#/components/schemas/PluginConfig"
+          },
+          "readme": {
+            "type": "string",
+            "default": "",
+            "title": "Readme"
+          }
         },
-        "title": "CreatePlugin"
+        "title": "CreatePlugin",
+        "description": "Create body. config.yaml (typed skill/tool flat ids) and README.md are uploaded first; manifest last."
       },
       "CreateSkill": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["display_name", "description"],
+        "required": [
+          "display_name",
+          "description"
+        ],
         "properties": {
-          "display_name": {"type": "string"},
-          "hebrew_display_name": {"anyOf": [{"type": "string"}, {"type": "null"}]},
-          "description": {"type": "string"},
-          "hebrew_description": {"anyOf": [{"type": "string"}, {"type": "null"}]},
-          "tags": {"type": "array", "items": {"$ref": "#/components/schemas/TagRef"}},
-          "min_agent_version": {"anyOf": [{"type": "string"}, {"type": "null"}]},
-          "license": {"anyOf": [{"type": "string"}, {"type": "null"}]},
-          "skill_md": {"type": "string", "default": ""},
-          "assets": {"type": "array", "items": {"$ref": "#/components/schemas/AssetInput"}}
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "hebrew_display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hebrew Display Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "hebrew_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hebrew Description"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TagRef"
+            },
+            "title": "Tags"
+          },
+          "min_agent_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Agent Version"
+          },
+          "license": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "License"
+          },
+          "skill_md": {
+            "type": "string",
+            "default": "",
+            "title": "Skill Md"
+          },
+          "assets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssetInput"
+            },
+            "title": "Assets"
+          }
         },
-        "title": "CreateSkill"
+        "title": "CreateSkill",
+        "description": "Create body. SKILL.md and assets are uploaded first; the manifest is written last."
       },
       "CreateTool": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["display_name", "description", "tool_type"],
+        "required": [
+          "display_name",
+          "description",
+          "tool_type"
+        ],
         "properties": {
-          "display_name": {"type": "string"},
-          "hebrew_display_name": {"anyOf": [{"type": "string"}, {"type": "null"}]},
-          "description": {"type": "string"},
-          "hebrew_description": {"anyOf": [{"type": "string"}, {"type": "null"}]},
-          "tool_type": {"$ref": "#/components/schemas/ToolType"},
-          "json_schema": {"type": "object", "additionalProperties": true},
-          "is_async": {"type": "boolean", "default": true},
-          "tracable": {"type": "boolean", "default": true},
-          "dedicated_tool_config": {"type": "object", "additionalProperties": true},
-          "code_files": {"type": "array", "items": {"$ref": "#/components/schemas/CodeFile"}}
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "hebrew_display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hebrew Display Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "hebrew_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hebrew Description"
+          },
+          "tool_type": {
+            "$ref": "#/components/schemas/ToolType"
+          },
+          "json_schema": {
+            "type": "object",
+            "additionalProperties": true,
+            "title": "Json Schema"
+          },
+          "is_async": {
+            "type": "boolean",
+            "default": true,
+            "title": "Is Async"
+          },
+          "tracable": {
+            "type": "boolean",
+            "default": true,
+            "title": "Tracable"
+          },
+          "dedicated_tool_config": {
+            "type": "object",
+            "additionalProperties": true,
+            "title": "Dedicated Tool Config"
+          },
+          "code_files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CodeFile"
+            },
+            "title": "Code Files"
+          }
         },
-        "title": "CreateTool"
+        "title": "CreateTool",
+        "description": "Create body. Code files are uploaded first; config.json is written last.\n\ndedicated_tool_config is validated against the schema registered for tool_type."
       },
       "CreateUser": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["username"],
+        "required": [
+          "username"
+        ],
         "properties": {
-          "username": {"type": "string"},
-          "display_name": {"anyOf": [{"type": "string"}, {"type": "null"}]},
-          "email": {"anyOf": [{"type": "string"}, {"type": "null"}]}
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          }
         },
-        "title": "CreateUser"
+        "title": "CreateUser",
+        "description": "Create-user request body."
       },
       "DownloadRequest": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["key"],
+        "required": [
+          "key"
+        ],
         "properties": {
-          "key": {"type": "string"},
-          "expires_in": {"type": "integer", "minimum": 1, "maximum": 86400, "default": 3600}
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "expires_in": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 86400,
+            "default": 3600,
+            "title": "Expires In"
+          }
         },
-        "title": "DownloadRequest"
+        "title": "DownloadRequest",
+        "description": "Request body for a presigned download URL."
       },
       "HTTPValidationError": {
         "type": "object",
-        "properties": {"detail": {"type": "array", "items": {"$ref": "#/components/schemas/ValidationError"}}},
+        "properties": {
+          "detail": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail"
+          }
+        },
         "title": "HTTPValidationError"
       },
-      "ManifestBase": {"type": "object"},
       "PluginConfig": {
         "type": "object",
         "additionalProperties": true,
         "properties": {
-          "skills": {"type": "array", "items": {"type": "string"}},
-          "tools": {"type": "array", "items": {"type": "string"}}
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Skills"
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Tools"
+          }
         },
-        "title": "PluginConfig"
+        "title": "PluginConfig",
+        "description": "Plugin payload of flat skill and tool ids stored in config.yaml. extra=\"allow\" keeps the schema forward-compatible."
       },
       "TagRef": {
         "type": "object",
-        "required": ["tag_type", "tag_name"],
-        "properties": {"tag_type": {"type": "string"}, "tag_name": {"type": "string"}},
-        "title": "TagRef"
+        "required": [
+          "tag_type",
+          "tag_name"
+        ],
+        "properties": {
+          "tag_type": {
+            "type": "string",
+            "title": "Tag Type"
+          },
+          "tag_name": {
+            "type": "string",
+            "title": "Tag Name"
+          }
+        },
+        "title": "TagRef",
+        "description": "A typed tag attached to a manifest."
       },
       "ToolType": {
         "type": "string",
-        "enum": ["code", "flow_package", "flow_cube", "solr", "kick_graphql"],
-        "title": "ToolType"
+        "enum": [
+          "code",
+          "flow_package",
+          "flow_cube",
+          "solr",
+          "kick_graphql"
+        ],
+        "title": "ToolType",
+        "description": "How a tool is invoked by the agent runtime. code replaces the prior function/api/mcp/dedicated split; dedicated runtime types carry typed dedicated_tool_config."
       },
-      "UpdateAgent": {"$ref": "#/components/schemas/UpdateAgentExpanded"},
-      "UpdateAgentExpanded": {
+      "UpdateAgent": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "display_name": {"$ref": "#/components/schemas/NullableString"},
-          "hebrew_display_name": {"$ref": "#/components/schemas/NullableString"},
-          "description": {"$ref": "#/components/schemas/NullableString"},
-          "hebrew_description": {"$ref": "#/components/schemas/NullableString"},
-          "tags": {"anyOf": [{"type": "array", "items": {"$ref": "#/components/schemas/TagRef"}}, {"type": "null"}]},
-          "config": {"anyOf": [{"$ref": "#/components/schemas/AgentConfig"}, {"type": "null"}]}
-        }
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "hebrew_display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hebrew Display Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "hebrew_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hebrew Description"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/TagRef"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentConfig"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          }
+        },
+        "title": "UpdateAgent",
+        "description": "Partial update — only fields explicitly set overwrite the stored manifest/config."
       },
       "UpdatePlugin": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "display_name": {"$ref": "#/components/schemas/NullableString"},
-          "hebrew_display_name": {"$ref": "#/components/schemas/NullableString"},
-          "description": {"$ref": "#/components/schemas/NullableString"},
-          "hebrew_description": {"$ref": "#/components/schemas/NullableString"},
-          "tags": {"anyOf": [{"type": "array", "items": {"$ref": "#/components/schemas/TagRef"}}, {"type": "null"}]},
-          "config": {"anyOf": [{"$ref": "#/components/schemas/PluginConfig"}, {"type": "null"}]},
-          "readme": {"$ref": "#/components/schemas/NullableString"}
-        }
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "hebrew_display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hebrew Display Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "hebrew_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hebrew Description"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/TagRef"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PluginConfig"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "readme": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readme"
+          }
+        },
+        "title": "UpdatePlugin",
+        "description": "Partial update — only fields explicitly set overwrite the stored manifest/config."
       },
       "UpdateSkill": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "display_name": {"$ref": "#/components/schemas/NullableString"},
-          "hebrew_display_name": {"$ref": "#/components/schemas/NullableString"},
-          "description": {"$ref": "#/components/schemas/NullableString"},
-          "hebrew_description": {"$ref": "#/components/schemas/NullableString"},
-          "tags": {"anyOf": [{"type": "array", "items": {"$ref": "#/components/schemas/TagRef"}}, {"type": "null"}]},
-          "min_agent_version": {"$ref": "#/components/schemas/NullableString"},
-          "license": {"$ref": "#/components/schemas/NullableString"},
-          "skill_md": {"$ref": "#/components/schemas/NullableString"},
-          "assets": {"anyOf": [{"type": "array", "items": {"$ref": "#/components/schemas/AssetInput"}}, {"type": "null"}]}
-        }
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "hebrew_display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hebrew Display Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "hebrew_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hebrew Description"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/TagRef"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "min_agent_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Agent Version"
+          },
+          "license": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "License"
+          },
+          "skill_md": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skill Md"
+          },
+          "assets": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/AssetInput"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assets"
+          }
+        },
+        "title": "UpdateSkill",
+        "description": "Partial update — only fields explicitly set overwrite the stored manifest/config."
       },
       "UpdateTool": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "display_name": {"$ref": "#/components/schemas/NullableString"},
-          "hebrew_display_name": {"$ref": "#/components/schemas/NullableString"},
-          "description": {"$ref": "#/components/schemas/NullableString"},
-          "hebrew_description": {"$ref": "#/components/schemas/NullableString"},
-          "tool_type": {"anyOf": [{"$ref": "#/components/schemas/ToolType"}, {"type": "null"}]},
-          "json_schema": {"anyOf": [{"type": "object", "additionalProperties": true}, {"type": "null"}]},
-          "is_async": {"anyOf": [{"type": "boolean"}, {"type": "null"}]},
-          "tracable": {"anyOf": [{"type": "boolean"}, {"type": "null"}]},
-          "dedicated_tool_config": {"anyOf": [{"type": "object", "additionalProperties": true}, {"type": "null"}]},
-          "code_files": {"anyOf": [{"type": "array", "items": {"$ref": "#/components/schemas/CodeFile"}}, {"type": "null"}]}
-        }
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "hebrew_display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hebrew Display Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "hebrew_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hebrew Description"
+          },
+          "tool_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ToolType"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Type"
+          },
+          "json_schema": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Json Schema"
+          },
+          "is_async": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Async"
+          },
+          "tracable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tracable"
+          },
+          "dedicated_tool_config": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dedicated Tool Config"
+          },
+          "code_files": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/CodeFile"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code Files"
+          }
+        },
+        "title": "UpdateTool",
+        "description": "Partial update — only fields explicitly set overwrite the stored config. code_files is a write-only side effect and is never persisted in config.json. dedicated_tool_config is only revalidated if tool_type is also supplied."
       },
       "UploadRequest": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["key"],
+        "required": [
+          "key"
+        ],
         "properties": {
-          "key": {"type": "string"},
-          "content_type": {"anyOf": [{"type": "string"}, {"type": "null"}]},
-          "expires_in": {"type": "integer", "minimum": 1, "maximum": 86400, "default": 3600}
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "content_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Type"
+          },
+          "expires_in": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 86400,
+            "default": 3600,
+            "title": "Expires In"
+          }
         },
-        "title": "UploadRequest"
+        "title": "UploadRequest",
+        "description": "Request body for a presigned upload URL."
       },
       "ValidationError": {
         "type": "object",
-        "required": ["loc", "msg", "type"],
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
         "properties": {
-          "loc": {"type": "array", "items": {"anyOf": [{"type": "string"}, {"type": "integer"}]}},
-          "msg": {"type": "string"},
-          "type": {"type": "string"},
-          "input": {},
-          "ctx": {"type": "object"}
+          "loc": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
         },
         "title": "ValidationError"
-      },
-      "NullableString": {"anyOf": [{"type": "string"}, {"type": "null"}]}
+      }
     }
   }
 }

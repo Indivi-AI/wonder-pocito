@@ -9,7 +9,7 @@
       "codex-clipboard-bb30a8d8-e283-4c13-b0e3-7bc458d7b7e8.png",
       "codex-clipboard-dcd73078-b295-428b-8ef9-93043715e2a2.png"
     ],
-    "note": "Keys, defaults and enums are transcribed from the photographed schemas; values are schema-conforming examples.",
+    "note": "Keys, defaults and enums are transcribed from the photographs; values are illustrative schema-conforming examples because no payload values are shown.",
     "intentional_spelling": "The API schema spells tracable without a k."
   },
   "createAgent": {

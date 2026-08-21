@@ -2,14 +2,16 @@ import { coreUtils, dsls } from '@jb6/core'
 import '@jb6/testing'
 import '@jb6/react/automation.js'
 import '@jb6/react/tests/react-testers.js'
+import './wonder-platform-runtime.js'
 import './wonder-platform.js'
 
 const {
+  tgp: { CtxEnricher },
   common: { Data, data: { asIs, wFetch, wonderPlatformAnswer, wonderPlatformListSkills, wonderPlatformLoadSkill,
     wonderPlatformLoadTargetSkills, wonderPlatformMarketplaceCall, wonderPlatformMarketplaceItem, wonderPlatformMarketplaceManifest,
     wonderPlatformNormalize, wonderPlatformPublishSkill, wonderPlatformSeed, wonderPlatformUpsert, wonderPlatformAgentOsRun },
     boolean: { and, contains, equals } },
-  react: { ReactComp, 'react-comp': { comp, wonderPlatform }, 'ui-action': { actions, click, waitForText } },
+  react: { ReactComp, UiAction, 'react-comp': { comp, wonderPlatform }, 'ui-action': { actions, click, waitForText } },
   test: { Test, test: { dataTest, reactTest } },
   workflow: { Workflow }
 } = dsls
@@ -31,7 +33,7 @@ Data('wonderPlatformTestSave', {impl: () => true})
 
 Data('wonderPlatformApiCapture', {
   impl: (ctx, {marketplaceLogger}) => {
-    const result = {method: ctx.vars.method, path: ctx.vars.apiPath,
+    const result = {method: ctx.vars.method, wUrl: ctx.vars.wUrl,
       ...(['GET', 'DELETE'].includes(ctx.vars.method) ? {} : {body: ctx.vars.body})}
     marketplaceLogger?.info?.({t: 'capturedMarketplaceRequest', ...result}, {}, {ctx})
     return result
@@ -163,20 +165,27 @@ ReactComp('wonderPlatformMarketplaceTestApp', {
 Test('wonderPlatform.marketplaceApiRoutes', {
   impl: dataTest({
     calculate: async ctx => {
-      const request = dsls.common.data.wonderPlatformApiCapture(), call = args => wonderPlatformMarketplaceCall.$runWithCtx(ctx, {...args, request})
+      const request = dsls.common.data.wonderPlatformApiCapture()
+      const call = args => wonderPlatformMarketplaceCall.$runWithCtx(ctx, {
+        roomWUrl: 'room://tenant-a',
+        ...args,
+        request
+      })
       const [list, version, audit, update, upload] = await Promise.all([
-        call({operation: 'list', resource: 'plugins'}), call({operation: 'version', resource: 'subagents', name: 'a b', version: 2}),
-        call({operation: 'audit', resource: 'skills', name: 'skill-1'}), call({operation: 'update', resource: 'tools', name: 'tool-1',
-          body: {tracable: true}}), call({operation: 'presignUpload', body: {key: 'assets/a'}})
+        call({operation: 'list', resource: 'plugins'}),
+        call({operation: 'version', resource: 'subagents', name: 'a b', version: 2}),
+        call({operation: 'audit', resource: 'skills', name: 'skill-1'}),
+        call({operation: 'update', resource: 'tools', name: 'tool-1', body: {tracable: true}}),
+        call({operation: 'presignUpload', body: {key: 'assets/a'}})
       ])
       return {result: {list, version, audit, update, upload}, ...coreUtils.harvestLogs(ctx)}
     },
     expectedResult: equals('%result%', asIs({
-      list: {method: 'GET', path: '/api/v1/plugins/'},
-      version: {method: 'GET', path: '/api/v1/agents/a%20b/versions/2'},
-      audit: {method: 'GET', path: '/api/v1/audit/skill/skill-1'},
-      update: {method: 'PUT', path: '/api/v1/tools/tool-1', body: {tracable: true}},
-      upload: {method: 'POST', path: '/api/v1/presign/upload', body: {key: 'assets/a'}}
+        list: {method: 'GET', wUrl: 'room://tenant-a/plugins/'},
+        version: {method: 'GET', wUrl: 'room://tenant-a/agents/a%20b/versions/2'},
+        audit: {method: 'GET', wUrl: 'room://tenant-a/audit/skill/skill-1'},
+        update: {method: 'PUT', wUrl: 'room://tenant-a/tools/tool-1', body: {tracable: true}},
+        upload: {method: 'POST', wUrl: 'room://tenant-a/presign/upload', body: {key: 'assets/a'}}
     })),
     logger: 'marketplaceLogger'
   })
@@ -187,11 +196,13 @@ Test('wonderPlatform.marketplaceManifest', {
     calculate: () => ({result: {
       plugin: wonderPlatformMarketplaceManifest.$run({resource: 'plugins', item: {id: 'p', name: 'פ', desc: 'ת', skillIds: ['s'],
         toolIds: ['t'], subagentIds: ['a']}}), tool: wonderPlatformMarketplaceManifest.$run({resource: 'tools', item: {id: 't', name: 'כ',
-          desc: 'ת', toolType: 'code', tracable: true}})}}),
+          desc: 'ת', toolType: 'code', tracable: true}}), agentCreateReadme: wonderPlatformMarketplaceManifest.$run({resource: 'subagents',
+            item: {id: 'a', readme: '# Agent'}}).readme, agentUpdateHasReadme: 'readme' in wonderPlatformMarketplaceManifest.$run({
+              resource: 'subagents', operation: 'update', item: {id: 'a', readme: '# Agent'}})}}),
     expectedResult: equals('%result%', asIs({plugin: {display_name: 'p', hebrew_display_name: 'פ', description: 'ת',
       hebrew_description: 'ת', tags: [], config: {skills: ['s'], tools: ['t']}, readme: ''}, tool: {display_name: 't',
-      hebrew_display_name: 'כ', description: 'ת', hebrew_description: 'ת', tags: [], tool_type: 'code', json_schema: {}, is_async: true,
-      tracable: true, dedicated_tool_config: {}, code_files: []}}))
+      hebrew_display_name: 'כ', description: 'ת', hebrew_description: 'ת', tool_type: 'code', json_schema: {}, is_async: true,
+      tracable: true, dedicated_tool_config: {}, code_files: []}, agentCreateReadme: '# Agent', agentUpdateHasReadme: false}))
   })
 })
 
@@ -376,6 +387,12 @@ Test('wonderPlatform.marketplaceAgentWorkspace', {
         waitForText('BackendConfig'))})
 })
 
+Test('wonderPlatform.marketplaceAgentCreate', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformMarketplaceTestApp(), and(contains('README (creation only)'), contains('יצירת סוכן')), {
+    userActions: actions(waitForText('פלאגין ראיות'), click('סאב-אייג׳נטים'), waitForText('סוכן ראיות'), click('סאב-אייג׳נט חדש'),
+      waitForText('README (creation only)'))})
+})
+
 ReactComp('wonderPlatformChatTestHost', {
   impl: comp({hFunc: ctx => {
     const App = dsls.react['react-comp'].wonderPlatform.$runWithCtx(ctx, {roomWUrl: 'room:minio//wonder-platform-chat-test'})
@@ -388,4 +405,189 @@ ReactComp('wonderPlatformVerificationHost', {
     const App = dsls.react['react-comp'].wonderPlatform.$runWithCtx(ctx, {roomWUrl: 'room:minio//wonder-platform-verification-v3'})
     return () => ctx.vars.react.h(App)
   }})
+})
+Test('wonderPlatform.marketplaceWUrlInterceptor', {
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: async ctx => {
+      const {createServer} = await import('node:http')
+      const server = createServer(async (request, response) => {
+        const chunks = []
+        for await (const chunk of request) chunks.push(chunk)
+        response.setHeader('content-type', 'application/json')
+        response.end(JSON.stringify({
+          path: request.url,
+          hasRoomHeader: 'x-wonder-room' in request.headers,
+          method: request.method,
+          body: JSON.parse(Buffer.concat(chunks).toString() || 'null')
+        }))
+      })
+      await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
+      try {
+        const result = await dsls.common.data.wonderPlatformMarketplaceRequest.$runWithCtx(ctx, {
+          method: 'PUT',
+          wUrl: 'room://tenant-x/skills/skill-a?includeAssets=true',
+          body: {skill_md: 'single scope'},
+          baseUrl: `http://127.0.0.1:${server.address().port}`
+        })
+        return {result, ...coreUtils.harvestLogs(ctx)}
+      } finally {
+        await new Promise(resolve => server.close(resolve))
+      }
+    },
+    expectedResult: equals('%result%', asIs({
+        path: '/api/v1/skills/skill-a?includeAssets=true',
+        hasRoomHeader: false,
+        method: 'PUT',
+        body: {skill_md: 'single scope'}
+    })),
+    timeout: 10000,
+    logger: 'marketplaceLogger'
+  })
+})
+UiAction('wonderPlatformSetControl', {
+  params: [
+    {id: 'label', as: 'string'},
+    {id: 'placeholder', as: 'string'},
+    {id: 'value', as: 'string', mandatory: true}
+  ],
+  impl: ({}, {}, {label, placeholder, value}) => ({
+    async exec({vars: {win}}) {
+      const controls = [...win.document.querySelectorAll('input, textarea')]
+      const control = controls.find(element => label ? element.parentElement?.textContent.trim().startsWith(label)
+        : element.placeholder?.includes(placeholder))
+      if (!control) throw new Error(`Control not found: ${label || placeholder}`)
+      const prototype = control instanceof win.HTMLTextAreaElement ? win.HTMLTextAreaElement.prototype : win.HTMLInputElement.prototype
+      Object.getOwnPropertyDescriptor(prototype, 'value').set.call(control, value)
+      control.dispatchEvent(new win.Event('input', {bubbles: true}))
+      control.dispatchEvent(new win.Event('change', {bubbles: true}))
+      control.dispatchEvent(new win.FocusEvent('focusout', {bubbles: true}))
+      await win.waitForMutations(100)
+    }
+  })
+})
+UiAction('wonderPlatformClickInSection', {
+  params: [
+    {id: 'section', as: 'string', mandatory: true},
+    {id: 'button', as: 'string', mandatory: true}
+  ],
+  impl: ({}, {}, {section, button}) => ({
+    async exec({vars: {win}}) {
+      const candidates = [...win.document.querySelectorAll('section')].filter(element => element.textContent.includes(section))
+        .sort((left, right) => left.textContent.length - right.textContent.length)
+      const target = [...(candidates[0]?.querySelectorAll('button') || [])].find(element => element.outerHTML.includes(button))
+      if (!target) throw new Error(`Button not found: ${section} / ${button}`)
+      target.dispatchEvent(new win.MouseEvent('click', {bubbles: true, cancelable: true}))
+      await win.waitForMutations(100)
+    }
+  })
+})
+UiAction('wonderPlatformWaitForButtonGone', {
+  params: [
+    {id: 'text', as: 'string', mandatory: true},
+    {id: 'timeout', as: 'number', defaultValue: 5000}
+  ],
+  impl: ({}, {}, {text, timeout}) => ({
+    async exec({vars: {win}}) {
+      const started = Date.now()
+      while ([...win.document.querySelectorAll('button')].some(element => element.outerHTML.includes(text))) {
+        if (Date.now() - started > timeout) throw new Error(`Button did not disappear: ${text}`)
+        await new Promise(resolve => setTimeout(resolve, 20))
+      }
+    }
+  })
+})
+
+const { wonderPlatformClickInSection, wonderPlatformSetControl, wonderPlatformWaitForButtonGone } = dsls.react['ui-action']
+ReactComp('wonderPlatformMarketplaceE2eApp', {
+  impl: comp({hFunc: ctx => {
+    const App = wonderPlatform.$runWithCtx(ctx, {roomWUrl: 'room://marketplace',
+      marketplaceBaseUrl: 'http://localhost:7777', agentOsBaseUrl: 'http://localhost:7777'})
+    return () => ctx.vars.react.h(App)
+  }})
+})
+
+const { wonderPlatformMarketplaceE2eApp } = dsls.react['react-comp']
+
+Test('wonderPlatform.marketplaceUiAgentE2e', {
+  doNotRunInTests: true,
+  impl: reactTest(wonderPlatformMarketplaceE2eApp(), and(contains('E2E_SKILL_FACT_731'), contains('TOOL_OK')), {
+    userActions: actions(
+      waitForText('פלאגין חדש'),
+      click('מיומנויות'),
+      click('מיומנות חדשה'),
+      wonderPlatformSetControl('hebrew_display_name', { value: 'E2E Skill' }),
+      wonderPlatformSetControl('display_name', { value: 'e2e-skill' }),
+      wonderPlatformSetControl('SKILL.md', {
+        value: '# E2E Skill\n\nThe verification phrase is E2E_SKILL_FACT_731. Return it when asked.'
+      }),
+      click('שמירה למרקטפלייס'),
+      wonderPlatformWaitForButtonGone('שמירה למרקטפלייס'),
+      click('כלים'),
+      waitForText('כלי ממארז Flow'),
+      click('כלי ממארז Flow'),
+      wonderPlatformSetControl('hebrew_display_name', { value: 'E2E Tool' }),
+      wonderPlatformSetControl('display_name', { value: 'e2e-tool' }),
+      wonderPlatformSetControl('json_schema', {
+        value: '{"type":"object","properties":{"name":{"type":"string"}}}'
+      }),
+      wonderPlatformSetControl('dedicated_tool_config', { value: '{"entrypoint":"tool.py:greet"}' }),
+      click('קובץ'),
+      wonderPlatformSetControl({ placeholder: 'path', value: 'tool.py' }),
+      wonderPlatformSetControl({
+        placeholder: 'content',
+        value: 'def greet(name: str = "marketplace") -> str:\n    return f"TOOL_OK:{name}"'
+      }),
+      click('שמירה למרקטפלייס'),
+      wonderPlatformWaitForButtonGone('שמירה למרקטפלייס'),
+      click('פלאגינים'),
+      waitForText('פלאגין חדש'),
+      click('פלאגין חדש'),
+      wonderPlatformSetControl('display_name', { value: 'e2e-plugin' }),
+      wonderPlatformSetControl({ placeholder: 'שם הפלאגין', value: 'E2E Plugin' }),
+      wonderPlatformClickInSection('מיומנויות', 'הוספה'),
+      waitForText('E2E Skill'),
+      click('E2E Skill'),
+      click('צירוף מיומנויות'),
+      wonderPlatformWaitForButtonGone('צירוף מיומנויות'),
+      wonderPlatformClickInSection('כלים', 'הוספה'),
+      waitForText('E2E Tool'),
+      click('E2E Tool'),
+      click('צירוף כלים'),
+      wonderPlatformWaitForButtonGone('צירוף כלים'),
+      click('סאב-אייג׳נטים'),
+      waitForText('סאב-אייג׳נט חדש'),
+      click('סאב-אייג׳נט חדש'),
+      waitForText('README (creation only)'),
+      wonderPlatformSetControl({ placeholder: 'שם הסאב-אייג׳נט', value: 'E2E Agent' }),
+      wonderPlatformSetControl('display_name', { value: 'e2e-agent' }),
+      wonderPlatformSetControl('system_prompt', {
+        value: 'Use the attached plugin. Return its skill fact and exact tool result.'
+      }),
+      click('יצירת סוכן'),
+      wonderPlatformWaitForButtonGone('יצירת סוכן'),
+      wonderPlatformClickInSection('פלאגינים', 'הוספה'),
+      waitForText('E2E Plugin'),
+      click('E2E Plugin'),
+      click('צירוף פלאגינים'),
+      wonderPlatformWaitForButtonGone('צירוף פלאגינים'),
+      wonderPlatformSetControl({
+        placeholder: 'נסה את הסאב-אייג׳נט',
+        value: 'What is the verification phrase? Call the plugin tool with name browser.'
+      }),
+      click('aria-label="הרצה"'),
+      waitForText('E2E_SKILL_FACT_731', 20000),
+      waitForText('TOOL_OK', 20000)
+    ),
+    logger: 'uiLogger,marketplaceLogger,agentOsLogger',
+    setup: {$: 'ctx-enricher<tgp>wonderPlatformMarketplaceE2eSetup'},
+    timeout: 60000
+  })
+})
+CtxEnricher('wonderPlatformMarketplaceE2eSetup', {
+  impl: async ctx => {
+    await Promise.all(['agents/e2e-agent', 'plugins/e2e-plugin', 'skills/e2e-skill', 'tools/e2e-tool'].map(path =>
+      fetch(`http://localhost:7777/api/v1/${path}`, {method: 'DELETE'})))
+    return ctx
+  }
 })

@@ -3,30 +3,42 @@ import '@jb6/react'
 import './wonder-platform-domain.js'
 import './wonder-platform-marketplace-api.js'
 import './wonder-platform-repository.js'
-import './wonder-platform-runtime.js'
 import './wonder-platform-views.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
+const { wonderPlatformAgentOsRun, wonderPlatformListSkills, wonderPlatformLoadSkill, wonderPlatformMarketplaceCall,
+  wonderPlatformMarketplaceDetail, wonderPlatformMarketplaceManifest, wonderPlatformMarketplaceRepository,
+  wonderPlatformPublishSkill, wonderPlatformSaveRepository, wonderPlatformUpsert } = dsls.common.data
 
 ReactComp('wonderPlatform', {
   params: [
-    {id: 'roomWUrl', as: 'string', defaultValue: 'room:minio//wonder-platform'},
+    {id: 'roomWUrl', as: 'string', defaultValue: 'room://wonder-platform'},
     {id: 'marketplaceBaseUrl', as: 'string', defaultValue: 'http://localhost:7777'},
     {id: 'agentOsBaseUrl', as: 'string', defaultValue: 'http://localhost:7777'},
     {id: 'agentOsToken', as: 'string'},
-    {id: 'loadRepo', dynamic: true, defaultValue: dsls.common.data.wonderPlatformMarketplaceRepository('%$marketplaceBaseUrl%')},
-    {id: 'saveRepo', dynamic: true, defaultValue: dsls.common.data.wonderPlatformSaveRepository('%$roomWUrl%', '%$repo%')},
-    {id: 'upsert', dynamic: true, defaultValue: dsls.common.data.wonderPlatformUpsert('%$repo%', '%$resource%', '%$item%')},
-    {id: 'loadSkill', dynamic: true, defaultValue: dsls.common.data.wonderPlatformLoadSkill('%$docletWUrl%')},
-    {id: 'listSkills', dynamic: true, defaultValue: dsls.common.data.wonderPlatformListSkills('%$roomWUrl%')},
-    {id: 'publishSkill', dynamic: true, defaultValue: dsls.common.data.wonderPlatformPublishSkill('%$roomWUrl%', '%$skill%')},
-    {id: 'marketplaceCall', dynamic: true, defaultValue: dsls.common.data.wonderPlatformMarketplaceCall(
-      '%$operation%', '%$resource%', '%$name%', {body: '%$body%', baseUrl: '%$marketplaceBaseUrl%'})},
-    {id: 'marketplaceDetail', dynamic: true,
-      defaultValue: dsls.common.data.wonderPlatformMarketplaceDetail('%$resource%', '%$name%', '%$marketplaceBaseUrl%')},
-    {id: 'manifest', dynamic: true, defaultValue: dsls.common.data.wonderPlatformMarketplaceManifest('%$resource%', '%$item%')},
-    {id: 'runAgent', dynamic: true,
-      defaultValue: dsls.common.data.wonderPlatformAgentOsRun('%$text%', '%$target%', '%$sessionId%', '%$agentOsBaseUrl%', '%$agentOsToken%')}
+    {id: 'loadRepo', dynamic: true, defaultValue: wonderPlatformMarketplaceRepository('%$roomWUrl%', '%$marketplaceBaseUrl%')},
+    {id: 'saveRepo', dynamic: true, defaultValue: wonderPlatformSaveRepository('%$roomWUrl%', '%$repo%')},
+    {id: 'upsert', dynamic: true, defaultValue: wonderPlatformUpsert('%$repo%', '%$resource%', { item: '%$item%' })},
+    {id: 'loadSkill', dynamic: true, defaultValue: wonderPlatformLoadSkill('%$docletWUrl%')},
+    {id: 'listSkills', dynamic: true, defaultValue: wonderPlatformListSkills('%$roomWUrl%')},
+    {id: 'publishSkill', dynamic: true, defaultValue: wonderPlatformPublishSkill('%$roomWUrl%', '%$skill%')},
+    {id: 'marketplaceCall', dynamic: true, defaultValue: wonderPlatformMarketplaceCall('%$operation%', '%$resource%', {
+      name: '%$name%',
+      body: '%$body%',
+      roomWUrl: '%$roomWUrl%',
+      baseUrl: '%$marketplaceBaseUrl%'
+    })},
+    {id: 'marketplaceDetail', dynamic: true, defaultValue: wonderPlatformMarketplaceDetail('%$resource%', '%$name%', {
+      roomWUrl: '%$roomWUrl%',
+      baseUrl: '%$marketplaceBaseUrl%'
+    })},
+    {id: 'manifest', dynamic: true, defaultValue: wonderPlatformMarketplaceManifest('%$resource%', '%$item%', { operation: '%$operation%' })},
+    {id: 'runAgent', dynamic: true, defaultValue: wonderPlatformAgentOsRun('%$text%', '%$target%', {
+      sessionId: '%$sessionId%',
+      roomWUrl: '%$roomWUrl%',
+      baseUrl: '%$agentOsBaseUrl%',
+      token: '%$agentOsToken%'
+    })}
   ],
   impl: comp({
     hFunc: (ctx, {react: {h, hh, useEffect, useState}},
@@ -40,10 +52,10 @@ ReactComp('wonderPlatform', {
       const [editors, setEditors] = useState([]), [picker, setPicker] = useState(), [report, setReport] = useState()
       const [conversationId, setConversationId] = useState('c1'), [message, setMessage] = useState(''), [busy, setBusy] = useState(false)
       const [runningSet, setRunningSet] = useState(''), [notice, setNotice] = useState('')
-      useEffect(() => { void Promise.resolve(loadRepo(ctx.setVars({roomWUrl: repositoryRoomWUrl,
-        marketplaceBaseUrl: marketplaceUrl}))).then(setRepo, setLoadError) }, [])
+      useEffect(() => { void Promise.resolve(loadRepo(ctx.setVars({roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))).then(setRepo, setLoadError) }, [])
       const flash = text => (setNotice(text), setTimeout(() => setNotice(''), 1800))
-      const persistRepo = async next => (setRepo(next), await saveRepo(ctx.setVars({repo: next, roomWUrl: repositoryRoomWUrl})), next)
+      const persistRepo = async next => (setRepo(next), next.marketplace || await saveRepo(
+        ctx.setVars({repo: next, roomWUrl: repositoryRoomWUrl})), next)
       const blank = resource => ({id: `${config.prefixes[resource]}-${Date.now()}`, name: '', desc: '', instructions: '',
         version: resource == 'skills' ? '1.0.0' : 'V0', publishVersion: resource == 'skills' ? '1.0.0' : undefined, content: '',
         created: 'היום', updated: 'עכשיו', skillIds: [], toolIds: [], subagentIds: [], evaluationId: '', rows: [], rubric: '',
@@ -51,9 +63,9 @@ ReactComp('wonderPlatform', {
         pluginIds: [], assets: [], toolType: resource == 'tools' ? 'code' : undefined, jsonSchema: {}, isAsync: true, tracable: true,
         dedicatedToolConfig: {}, codeFiles: [], packageId: '', inputSchema: [], outputCubes: []})
       const saveRemote = async (resource, item) => {
-        const body = manifest(ctx.setVars({resource, item})), operation = item.originalId ? 'update' : 'create'
+        const operation = item.originalId ? 'update' : 'create', body = manifest(ctx.setVars({resource, item, operation}))
         const response = await marketplaceCall(ctx.setVars({operation, resource, name: item.originalId, body,
-          marketplaceBaseUrl: marketplaceUrl}))
+          roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))
         return {...dsls.common.data.wonderPlatformMarketplaceItem.$runWithCtx(ctx, {resource, item: {...body, ...response}}),
           originalId: item.originalId}
       }
@@ -71,7 +83,7 @@ ReactComp('wonderPlatform', {
       const openItem = async (resource, item) => {
         if (resource == 'reports') return setReport(item), setView('report')
         if (repo.marketplace && ['plugins', 'skills', 'tools', 'subagents'].includes(resource)) item = await marketplaceDetail(
-          ctx.setVars({resource, name: item.id, marketplaceBaseUrl: marketplaceUrl}))
+          ctx.setVars({resource, name: item.id, roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))
         if (['plugins', 'subagents'].includes(resource)) return setWorkspace({resource, item: {...item, originalId: item.id}}), setView('workspace')
         if (resource == 'skills') item = await skillDraft(item)
         setEditors([{resource, item: {...item, originalId: item.id}, createLabel: config.resources[resource]?.create}])
@@ -85,13 +97,13 @@ ReactComp('wonderPlatform', {
       }
       const deleteWorkspace = async () => {
         if (repo.marketplace) await marketplaceCall(ctx.setVars({operation: 'delete', resource: workspace.resource,
-          name: workspace.item.originalId || workspace.item.id, marketplaceBaseUrl: marketplaceUrl}))
+          name: workspace.item.originalId || workspace.item.id, roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))
         await persistRepo({...repo, [workspace.resource]: repo[workspace.resource].filter(item => item.id != workspace.item.id)})
         openView(workspace.resource)
       }
       const openWorkspaceEditor = async (resource, item) => {
         if (!item) return
-        if (repo.marketplace) item = await marketplaceDetail(ctx.setVars({resource, name: item.id, marketplaceBaseUrl: marketplaceUrl}))
+        if (repo.marketplace) item = await marketplaceDetail(ctx.setVars({resource, name: item.id, roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))
         const draft = resource == 'skills' ? await skillDraft(item) : item
         setEditors(current => [...current, {resource, item: {...draft, originalId: item.id}, createLabel: config.resources[resource]?.create}])
       }
@@ -143,12 +155,12 @@ ReactComp('wonderPlatform', {
       const deleteEditor = async () => {
         const active = editors.at(-1)
         if (repo.marketplace) await marketplaceCall(ctx.setVars({operation: 'delete', resource: active.resource,
-          name: active.item.originalId, marketplaceBaseUrl: marketplaceUrl}))
+          name: active.item.originalId, roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))
         await persistRepo({...repo, [active.resource]: repo[active.resource].filter(item => item.id != active.item.originalId)})
         setEditors(editors.slice(0, -1))
       }
-      const runTarget = (text, target, history, sessionId = `${target.id}-${Date.now()}`) => runAgent(ctx.setVars({text, target, sessionId,
-        agentOsBaseUrl: agentUrl, agentOsToken: token}))
+      const runTarget = (text, target, sessionId = `${target.id}-${Date.now()}`) => runAgent(ctx.setVars({text, target, sessionId,
+        roomWUrl: repositoryRoomWUrl, agentOsBaseUrl: agentUrl, agentOsToken: token}))
       const runEval = async (evaluation, targetResource, target) => {
         const startedAt = Date.now(), id = `eval-${startedAt}`, started = new Date(startedAt).toLocaleString('he-IL', {
           dateStyle: 'short', timeStyle: 'short'}), pending = {id, evaluationId: evaluation.id, targetResource, targetId: target.id,
@@ -157,7 +169,7 @@ ReactComp('wonderPlatform', {
         const semanticTrace = dsls.common.data.wonderPlatformTrace.$runWithCtx(ctx, {repo, target})
         const rows = await Promise.all(evaluation.rows.map(async row => {
           try {
-            const result = await runTarget(row.input, target, [])
+            const result = await runTarget(row.input, target)
             return {...row, actual: result.text, reportIds: result.reportIds, runId: result.runId, opikUrl: result.opikUrl,
               trace: [...semanticTrace, ...(result.runtimeSteps || [])]}
           } catch (error) { return {...row, actual: String(error.message || error), error: true, trace: semanticTrace} }
@@ -180,7 +192,7 @@ ReactComp('wonderPlatform', {
           messages: [...conversation.messages, {id: `m-${Date.now()}`, role: 'user', text}]}
         await updateConversation(pending)
         try {
-          const result = await runTarget(text, plugin, pending.messages.map(item => ({role: item.role, text: item.text})), conversation.id)
+          const result = await runTarget(text, plugin, conversation.id)
           const reportIds = result.reportIds.filter(id => repo.reports.some(report => report.id == id))
           const steps = [...dsls.common.data.wonderPlatformTrace.$runWithCtx(ctx, {repo, target: plugin}), ...(result.runtimeSteps || [])]
           await updateConversation({...pending, messages: [...pending.messages, {id: `m-${Date.now() + 1}`, role: 'agent', text: result.text,
