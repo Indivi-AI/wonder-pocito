@@ -8,6 +8,7 @@ import { coreUtils } from '@jb6/core'
 import '@jb6/core/misc/import-map-services.js'
 import { setupAuthRoutes } from './lib/auth-routes.js'
 import { setupGCSProxyRoute } from './lib/gcs-proxy.js'
+import { setupLlmProxyRoute } from './lib/llm-proxy.js'
 import { setupSignedUrlForwarder } from './lib/signed-url-forwarder.js'
 import { setupRoomLambdaAndApplet } from './lib/room-lambda-and-applet.js'
 import { setupWfetch } from './lib/wfetch.js'
@@ -124,6 +125,7 @@ export async function createApp(mode = process.env.WONDER_SERVICE || 'public') {
     setupWfetch(app)
     setupRoomLambdaAndApplet(app)
     setupGCSProxyRoute(app)
+    setupLlmProxyRoute(app)
   }
   app.get('/health', (_, res) => res.json({ status: 'ok', mode }))
   return app

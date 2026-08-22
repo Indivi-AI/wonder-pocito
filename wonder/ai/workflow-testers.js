@@ -1,11 +1,12 @@
-import { dsls, jb } from '@jb6/core'
+import { dsls, jb, coreUtils } from '@jb6/core'
 import '@jb6/common'
 import '@jb6/testing'
 import '@wonder/ai/llm-flow-core.js'
 import { fetchItemsFromLLMReactiveP } from '@wonder/ai/reactive-llm.js'
 
-const { tgp: { TgpType, Component }, common: { Boolean }, test: { Logger, Test, logger: { domainLogger }, test: { dataTest } } } = dsls
-const Evaluation = TgpType('evaluation', 'ai', {description: 'Workflow evaluation based on the Agno evaluation framework',
+const { tgp: { TgpType, Component }, common: { Boolean, data: { first } },
+  test: { Logger, Test, logger: { domainLogger }, test: { dataTest } } } = dsls
+const Evaluation = TgpType('evaluation', 'ai', {description: "Workflow evaluation components inspired by Agno's evaluation framework",
   typescript: 'Promise<boolean>', moreTypes: 'boolean<common>'})
 
 Evaluation('evaluations', {
@@ -34,6 +35,7 @@ Test('workflowTest', {
     {id: 'userMessage', as: 'string'},
     {id: 'userId', as: 'string', defaultValue: 'ScreenshotService'},
     {id: 'db', as: 'string', defaultValue: 'local'},
+    {id: 'wonderServiceBase', as: 'string', defaultValue: 'http://localhost:3000'},
     {id: 'categories', as: 'string[]'},
     {id: 'iterations', as: 'number', defaultValue: 1},
     {id: 'evaluations', type: 'evaluation<ai>', dynamic: true, defaultValue: true},
@@ -43,11 +45,11 @@ Test('workflowTest', {
     {id: 'allowError', type: 'boolean<common>', dynamic: true}
   ],
   impl: dataTest({
-    calculate: async (ctx, {}, {workflow, roomId, userMessage, userId, db, categories, iterations, evaluations}) => {
+    calculate: async (ctx, {}, {workflow, roomId, userMessage, userId, db, wonderServiceBase, categories, iterations, evaluations}) => {
       const results = []
       for (let iteration = 0; iteration < iterations; iteration++) {
         const runCtx = await jb.workflowUtils.extendWithWorkflowVars(ctx.setVars({roomId, roomWUrl: roomId && `room://${roomId}`,
-          userMessage, userId, db, iteration, accumulatedContext: {chatHistory: []},
+          userMessage, userId, db, wonderServiceBase, iteration, accumulatedContext: {chatHistory: []},
           categories: Object.fromEntries((categories || []).map(category => [category, true]))}))
         const result = await workflow.calcWorkflow(runCtx)
         results.push({...result, evaluation: {iteration, workflowLog: runCtx.vars.workflowLogger?.workflowLog || [],
@@ -63,7 +65,7 @@ Test('workflowTest', {
   })
 })
 Evaluation('accuracy', {
-  description: 'Accuracy evaluator based on the Agno evaluation framework',
+  description: 'Compare workflow output with the expected output',
   params: [
     {id: 'output', dynamic: true, defaultValue: '%runRes%'},
     {id: 'expectedOutput', dynamic: true, mandatory: true}
@@ -73,7 +75,7 @@ Evaluation('accuracy', {
 })
 
 Evaluation('agentAsJudge', {
-  description: 'Agent-as-judge evaluator based on the Agno evaluation framework',
+  description: 'Evaluate workflow output against criteria using an LLM judge',
   params: [
     {id: 'criteria', as: 'text', mandatory: true},
     {id: 'output', dynamic: true, defaultValue: '%%'},
@@ -84,7 +86,7 @@ Evaluation('agentAsJudge', {
     {id: 'additionalGuidelines', as: 'string[]'},
     {id: 'model', as: 'string', defaultValue: 'openai/gpt-5-mini'}
   ],
-  impl: async (ctx, {}, {criteria, output, input, referenceOutput, scoringStrategy, threshold, additionalGuidelines, model}) => {
+  impl: async (ctx, {evaluationLogger}, {criteria, output, input, referenceOutput, scoringStrategy, threshold, additionalGuidelines, model}) => {
     const runs = Array.isArray(ctx.data) ? ctx.data : [ctx.data]
     const schema = scoringStrategy == 'numeric'
       ? {type: 'object', properties: {score: {type: 'integer', minimum: 1, maximum: 10}, reason: {type: 'string'}},
@@ -93,20 +95,27 @@ Evaluation('agentAsJudge', {
           required: ['passed', 'reason'], additionalProperties: false}
     const scores = await Promise.all(runs.map(async run => {
       const runCtx = ctx.setData(run), candidate = output(runCtx), reference = referenceOutput(runCtx)
-      const prompt = JSON.stringify({input: input(runCtx), output: candidate, ...(reference == null ? {} : {referenceOutput: reference})})
-      const instructions = ['Judge only the supplied output against the criteria.', criteria, ...(additionalGuidelines || []),
-        scoringStrategy == 'numeric' ? 'Score from 1 to 10.' : 'Return pass or fail.'].join('\n')
-      const {responseText} = await fetchItemsFromLLMReactiveP({ctx: runCtx, model, goal: 'agentAsJudge', prompt, instructions,
-        maxTokens: 500, temperature: 0, thinkingBudget: 0, responseSchema: schema})
-      const result = JSON.parse(responseText.replace(/```(?:json)?/g, '').trim())
-      const passed = scoringStrategy == 'numeric' ? result.score >= threshold : result.passed
-      return {passed, ...result}
+      try {
+        const prompt = JSON.stringify({input: input(runCtx), output: candidate, ...(reference == null ? {} : {referenceOutput: reference})})
+        const instructions = ['Judge only the supplied output against the criteria.', criteria, ...(additionalGuidelines || []),
+          scoringStrategy == 'numeric' ? 'Score from 1 to 10.' : 'Return pass or fail.'].join('\n')
+        const {responseText} = await fetchItemsFromLLMReactiveP({ctx: runCtx, model, goal: 'agentAsJudge', prompt, instructions,
+          maxTokens: 500, temperature: 0, thinkingBudget: 0, responseSchema: schema})
+        const result = JSON.parse(responseText.replace(/```(?:json)?/g, '').trim())
+        if (result.passed == null && result.score == null) throw new Error(`invalid judge response: ${responseText}`)
+        return {passed: scoringStrategy == 'numeric' ? result.score >= threshold : result.passed, ...result}
+      } catch (error) {
+        coreUtils.logException(error, 'agentAsJudge', {ctx: runCtx, model, candidate})
+        evaluationLogger?.error?.({t: 'agentAsJudge invalid response', logToDelete: true, model, scoringStrategy,
+          error: error.stack || String(error)}, {candidate}, {ctx: runCtx, error})
+        return {passed: false, error: error.message}
+      }
     }))
     return scores.every(result => result.passed)
   }
 })
 Evaluation('performance', {
-  description: 'Performance evaluator based on the Agno evaluation framework',
+  description: 'Evaluate average runtime against a maximum duration',
   params: [
     {id: 'func', dynamic: true, defaultValue: '%runRes%'},
     {id: 'maxRuntimeMs', as: 'number', defaultValue: 100},
@@ -120,18 +129,13 @@ Evaluation('performance', {
     return (performance.now() - start) / numIterations <= maxRuntimeMs
   }
 })
-Evaluation('reliability', {
-  description: 'Reliability evaluator based on the Agno evaluation framework',
+Evaluation('toolCallExpectedResult', {
+  description: 'Evaluate aggregated results of calls to a named tool',
   params: [
-    {id: 'actualToolCalls', dynamic: true, defaultValue: '%toolCalls%'},
-    {id: 'expectedToolCalls', as: 'string[]'},
-    {id: 'allowAdditionalToolCalls', as: 'boolean', type: 'boolean<common>'},
-    {id: 'expectedToolCallArguments', as: 'object'}
+    {id: 'toolName', as: 'string', mandatory: true},
+    {id: 'expectedResult', type: 'boolean<common>', dynamic: true, mandatory: true},
+    {id: 'aggToolResults', dynamic: true, defaultValue: first()}
   ],
-  impl: (ctx, {}, {actualToolCalls, expectedToolCalls, allowAdditionalToolCalls, expectedToolCallArguments}) => {
-    const calls = actualToolCalls(ctx) || [], names = calls.map(call => call.name)
-    return (expectedToolCalls || []).every(name => names.includes(name)) && (allowAdditionalToolCalls || names.length == (expectedToolCalls || []).length)
-      && Object.entries(expectedToolCallArguments || {}).every(([name, args]) =>
-        calls.some(call => call.name == name && JSON.stringify(call.arguments) == JSON.stringify(args)))
-  }
+  impl: (ctx, {}, {toolName, expectedResult, aggToolResults}) => (Array.isArray(ctx.data) ? ctx.data : [ctx.data]).every(run =>
+    expectedResult(ctx.setData(aggToolResults(ctx.setData((run.toolCalls || []).filter(call => call.name == toolName))))))
 })
