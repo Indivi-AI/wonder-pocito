@@ -9,7 +9,7 @@ jb.importMapCache = {
   fileContext: {}
 }
 Object.assign(coreUtils, { getStaticServeConfig, calcImportData, calcImportsForFiles, resolveWithImportMap, fetchByEnv, calcRepoRoot,
-  resolveDeveloperEntryPoint, calcJb6RepoRootAndImportMapsInCli, ensureImportMapsInCli, discoverDslEntryPoints, absPathToImportUrl })
+  readJb6Settings, resolveDeveloperEntryPoint, calcJb6RepoRootAndImportMapsInCli, ensureImportMapsInCli, discoverDslEntryPoints, absPathToImportUrl })
 
 const ignoreDirs = [ 'node_modules', '3rd-party', '.git'] 
 async function calcRepoRoot(options) {
@@ -47,17 +47,35 @@ import '@jb6/core/misc/import-map-services.js'
 await coreUtils.writeServiceResult(await coreUtils.resolveDeveloperEntryPoint())`, { ctx })
     return jb.coreRegistry.developerEntryPoint = res.result
   }
+  let repoRoot, configuredPath, developerEntryPoint
   try {
-    const { promisify } = await import('node:util'), { execFile } = await import('node:child_process')
-    const { access } = await import('node:fs/promises'), repoRoot = await calcRepoRoot()
-    const { stdout } = await promisify(execFile)('git', ['config', 'user.email']), id = stdout.trim().split('@')[0]
-    const path = pathJoin(repoRoot, '.jb6', `entry-points-${id}.js`)
-    await access(path)
-    return jb.coreRegistry.developerEntryPoint = path
+    repoRoot = await calcRepoRoot({ctx})
+    configuredPath = (await readJb6Settings({repoRoot})).developerEntryPoint
+    if (!configuredPath)
+      throw new Error(`missing developerEntryPoint in ${pathJoin(repoRoot, '.jb6/settings.json')}`)
+
+    if (configuredPath.includes('{gitUser}')) {
+      const { promisify } = await import('node:util'), { execFile } = await import('node:child_process')
+      const { stdout } = await promisify(execFile)('git', ['config', 'user.email'], {cwd: repoRoot})
+      const gitUser = stdout.trim().split('@')[0]
+      if (!gitUser) throw new Error(`git user.email is not configured in ${repoRoot}`)
+      configuredPath = configuredPath.replaceAll('{gitUser}', gitUser)
+    }
+
+    developerEntryPoint = pathJoin(repoRoot, configuredPath)
+    await (await import('node:fs/promises')).access(developerEntryPoint)
+    return jb.coreRegistry.developerEntryPoint = developerEntryPoint
   } catch (error) {
-    logException(error, 'resolve developer entry point', { ctx })
+    logException(error, 'resolve developer entry point', {repoRoot, configuredPath, developerEntryPoint, ctx})
     throw error
   }
+}
+
+async function readJb6Settings({repoRoot} = {}) {
+  repoRoot = repoRoot || await calcRepoRoot()
+  const settingsPath = pathJoin(repoRoot, '.jb6/settings.json')
+  const { readFile } = await import('node:fs/promises')
+  return JSON.parse(await readFile(settingsPath, 'utf8'))
 }
 
 async function calcJb6RepoRootAndImportMapsInCli() {
@@ -188,9 +206,8 @@ try {
   const importMapData = await getStaticConfig(repoRoot, pkgJson, {})
   if (importMapData.error) return createErrorResult(importMapData.error, validEntryPoints, pkgJson)
 
-  const discoveredFiles = forRepo
-    ? await discoverFiles(importMapData.staticMappings, await packageJson(projectDir || repoRoot), {projectDir: projectDir || repoRoot})
-    : {testFiles: [], llmGuideFiles: []}
+  const projectPkgJson = await packageJson(projectDir || repoRoot)
+  const discoveredFiles = await discoverFiles(importMapData.staticMappings, projectPkgJson, {projectDir: projectDir || repoRoot, maxDepth: 10})
   
   return jb.importMapCache.fileContext[cacheKey] = { repoRoot, projectDir, ...importMapData, ...discoveredFiles, entryFiles: validEntryPoints, 
     repoRootName: pkgJson.name }
@@ -261,7 +278,7 @@ async function getStaticConfig(repoRoot, pkgJson) {
 }
 
 async function normalizeToValidEntryPoints({entryPointPaths, forDsls}) {
-  const dslEntryPoints = !entryPointPaths && forDsls ? await discoverDslEntryPoints(forDsls) : []
+  const dslEntryPoints = forDsls ? await discoverDslEntryPoints(forDsls) : []
   const entryPoints = [...asArray(entryPointPaths),...dslEntryPoints]
 
   const { stat } = await import('fs/promises')
