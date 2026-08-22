@@ -84,8 +84,7 @@ Test('roomLambdaTest.ensureExtracted.concurrent', {
       await coreUtils.runBashScript(`tar -czf ${root}/lambda.tar.gz -C ${src} .`)
       const tar = await fsp.readFile(`${root}/lambda.tar.gz`)
       let fetches = 0
-      const dirs = await Promise.all(Array.from({ length: 20 }, () => ensureExtracted(
-        'race-test', 'lambdaCode:fs//race-test.tar.gz', {
+      const dirs = await Promise.all(Array.from({ length: 20 }, () => ensureExtracted('race-test', {
         root: code, fetchTar: async () => (fetches++, await new Promise(r => setTimeout(r, 20)), tar)
       })))
       const files = await fsp.readdir(dirs[0])

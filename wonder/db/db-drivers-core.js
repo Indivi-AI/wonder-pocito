@@ -103,10 +103,6 @@ Scope('roomLogs', {
   impl: scope('logs-bucket-me-west1', { path: ['roomId', 'fileName'] })
 })
 
-Scope('codePackages', {
-  impl: scope('wonder-code-packages', { path: ['fileName'] })
-})
-
 Scope('analytics', {
   impl: scope('ecommerce-clients-analysis', { path: ['fileName'] })
 })

@@ -10,7 +10,7 @@ Scope('clientCode', {
 })
 
 Scope('lambdaCode', {
-  impl: scope('wonder-code-packages', { folderInBucket: 'lambda', path: ['fileName'] })
+  impl: scope('wonder-code-packages', { folderInBucket: 'lambdas', path: ['fileName'] })
 })
 
 ObjectStore('cloudflare', {

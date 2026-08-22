@@ -18,6 +18,7 @@ import { spawn } from 'child_process'
 
 const STORAGE_PROVIDER = process.env.STORAGE_PROVIDER || 'gcs'
 const STORAGE_URL = process.env.WONDER_STORAGE_URL || 'https://storage.googleapis.com'
+const CODE_PACKAGES_URL = `${STORAGE_URL}/wonder-code-packages`
 const CLIENT_STORAGE_ENV = { WONDER_STORAGE_PROVIDER: STORAGE_PROVIDER, WONDER_STORAGE_URL: STORAGE_URL }
 const CLIENT_RUNTIME_WURL = 'clientCode:cloudflare//runtime/'
 const jb6Pkgs = ['core','common','react','rx','jq','llm-guide','mcp','testing','repo','lang-service',
@@ -164,7 +165,7 @@ const runRoute = (withProgress, gated) => async (req, res) => {
     const routeAt = performance.now(), routeAtEpoch = Date.now()
     const job = await gated(req, res)
     if (!job) return
-    if (!withProgress) return respond(res, await run(job.lambdaV, job.lambdaCodeWUrl, job.source, req.body.serverTimeout))
+    if (!withProgress) return respond(res, await run(job.lambdaV, job.source, req.body.serverTimeout))
     res.setHeader('Content-Type', 'text/event-stream'); res.setHeader('Cache-Control', 'no-cache'); res.setHeader('Connection', 'keep-alive')
     res.flushHeaders?.()
     const send = msg => res.write(`data: ${JSON.stringify(msg)}\n\n`)
@@ -172,7 +173,7 @@ const runRoute = (withProgress, gated) => async (req, res) => {
     coreUtils.eventEmitter.on('progress', onProgress)
     try {
       const runAt = performance.now(), runAtEpoch = Date.now()
-      const result = await run(job.lambdaV, job.lambdaCodeWUrl, job.source, req.body.serverTimeout), serializeAt = performance.now()
+      const result = await run(job.lambdaV, job.source, req.body.serverTimeout), serializeAt = performance.now()
       const done = JSON.stringify({ type: 'done', result })
       send({ type: 'timing', gateMs: runAt - routeAt, runMs: serializeAt - runAt,
         serializeMs: performance.now() - serializeAt, resultBytes: Buffer.byteLength(done),
@@ -185,20 +186,20 @@ const runRoute = (withProgress, gated) => async (req, res) => {
 }
 
 const TIMED_OUT = Symbol('timedOut')
-const run = async (lambdaV, lambdaCodeWUrl, source, serverTimeout) => {
+const run = async (lambdaV, source, serverTimeout) => {
   const ctx = await coreUtils.ensureLoggers((source.logger || '').split(',').filter(Boolean))
   Object.entries(source.gateLogs || {}).forEach(([name, channels]) => Object.entries(channels).forEach(([channel, entries]) =>
     ctx.vars[name]?.[channel]?.push(...entries)))
   const roomLogger = ctx.vars.roomLogger
   if (source.gate) roomLogger?.info?.({ event: 'gate', ...source.gate }, {}, { ctx })   // runs-as-user + permissionByPath decision, harvestable
-  roomLogger?.info?.({ event: 'run version', lambdaV, lambdaCodeWUrl,
+  roomLogger?.info?.({ event: 'run version', lambdaV,
     uptimeMs: process.uptime() * 1000 }, {}, { ctx })   // small uptime ⇒ cold container
   const timeout = serverTimeout && new Promise(ok => setTimeout(() => ok(TIMED_OUT), serverTimeout))
   const t0 = Date.now()
-  const imports = await sourceImports(lambdaV, lambdaCodeWUrl, source, ctx)
+  const imports = await sourceImports(lambdaV, source, ctx)
   const extractMs = Date.now() - t0
   roomLogger?.info?.({ event: source.userVars?.isLocalHost ? 'live-repo imports (localhost, no snapshot)' : 'extract tar',
-    lambdaV, lambdaCodeWUrl, extractMs }, {}, { ctx })
+    lambdaV, extractMs }, {}, { ctx })
   const res = await Promise.race([runProfile(imports, source, ctx), timeout].filter(Boolean))
   if (res === TIMED_OUT) return { result: 'serverTimeout', logs: coreUtils.harvestLogs(ctx) }
   roomLogger?.info?.({ event: 'server run done', lambdaV, extractMs, runMs: Date.now() - t0 - extractMs }, {}, { ctx })   // $source carries machine:pid
@@ -226,7 +227,6 @@ export function setupRoomLambdaAndApplet(app) {
     if (!who && !anon) { res.status(401).json({ error: 'login required' }); return null }
     const defAt = performance.now(), lambda = await readDef(roomWUrl, `lambdas/${name}.json`), defMs = performance.now() - defAt
     if (!lambda) { res.status(500).json({ error: `no lambda ${name} in ${roomId}` }); return null }
-    if (!lambda.lambdaCodeWUrl) { res.status(500).json({ error: `lambda ${name} has no lambdaCodeWUrl; publish it again` }); return null }
     if (lambda.roomWUrl && lambda.roomWUrl !== roomWUrl) { res.status(409).json({ error: `lambda room mismatch: ${lambda.roomWUrl}` }); return null }
     // 2. authorize read access to the lambda's declared dir against the room ACL (a lambda reads-to-execute). anon ⇒ public 'authenticated' role.
     const effRole = anon ? 'authenticated' : role, email = who?.email || 'anonymous'
@@ -234,7 +234,7 @@ export function setupRoomLambdaAndApplet(app) {
     if (denied) { res.status(403).json({ error: `forbidden: ${lambda.dir} for role ${effRole} for user ${email}` }); return null }
     // roomWUrl tells signedRoom:// reads which signed-room policy applies.
     const isLocalHost = req.hostname === 'localhost'
-    return { lambdaV: lambda.lambdaV, lambdaCodeWUrl: lambda.lambdaCodeWUrl, source: {   // 3. run AS THE USER (or anon SA)
+    return { lambdaV: lambda.lambdaV, source: {   // 3. run AS THE USER (or anon SA)
       // profile = the call; packedCtx = the caller's ctx slice (stripCtx, logger-free).
       // logger = active logger names, revived server-side. The server overlays the TRUSTED identity.
       gate: { roomId, name, email, role: effRole, dir: lambda.dir, denied, anon,
@@ -278,37 +278,36 @@ export function setupRoomLambdaAndApplet(app) {
 
 // localhost dev: run the caller's profile against the LIVE repo (discover its minimal imports) — no snapshot,
 // so flow/comp edits take effect with no uploadRoomLambda. staging/prod: run the published lambdaV tarball.
-async function sourceImports(lambdaV, lambdaCodeWUrl, source, ctx) {
+async function sourceImports(lambdaV, source, ctx) {
   if (source.userVars?.isLocalHost && source.profile) {
     const { liveRepoSourceImports } = await import('./room-lambda-and-applet-live-repo.js')
     const imp = await liveRepoSourceImports(source.profile, ctx)
     if (!imp.error) return imp
     ctx.vars.roomLogger?.info?.({ event: 'live-repo discover failed → snapshot fallback', error: imp.error }, {}, { ctx })
   }
-  const dir = await ensureExtracted(lambdaV, lambdaCodeWUrl, { ctx })
+  const dir = await ensureExtracted(lambdaV)
   return { importsStr: "await import('./index.js')", projectDir: dir, importMapsInCli: `${dir}/importmap.mjs` }
 }
 
-export async function ensureExtracted(lambdaV, lambdaCodeWUrl, { root = '/tmp/code', fetchTar = fetchLambdaTar, ctx = new coreUtils.Ctx() } = {}) {
-  const store = jb.wonderUtils.extractFromUrl(lambdaCodeWUrl, ctx)?.db || 'default'
-  const dir = `${root}/${store}-${lambdaV}`, key = `${root}:${lambdaCodeWUrl}`
+export async function ensureExtracted(lambdaV, { root = '/tmp/code', fetchTar = fetchLambdaTar } = {}) {
+  const dir = `${root}/${lambdaV}`, key = `${root}:${lambdaV}`
   if (existsSync(`${dir}/index.js`)) return dir
   if (!extractionPromises.has(key)) extractionPromises.set(key,
-    extractLambda(lambdaV, lambdaCodeWUrl, dir, root, fetchTar, ctx).finally(() => extractionPromises.delete(key)))
+    extractLambda(lambdaV, dir, root, fetchTar).finally(() => extractionPromises.delete(key)))
   return extractionPromises.get(key)
 }
 
-async function fetchLambdaTar(lambdaCodeWUrl, ctx) {
-  const res = await jb.wonderUtils.wfetch2(lambdaCodeWUrl, { method: 'GET' }, ctx)
-  if (!res.ok) throw new Error(`lambda package ${lambdaCodeWUrl}: ${res.status}`)
+async function fetchLambdaTar(lambdaV) {
+  const res = await fetch(`${CODE_PACKAGES_URL}/lambdas/${lambdaV}.tar.gz`)
+  if (!res.ok) throw new Error(`lambda package ${lambdaV}: ${res.status}`)
   return Buffer.from(await res.arrayBuffer())
 }
 
-async function extractLambda(lambdaV, lambdaCodeWUrl, dir, root, fetchTar, ctx) {
+async function extractLambda(lambdaV, dir, root, fetchTar) {
   await fsp.mkdir(root, { recursive: true })
   const tmp = await fsp.mkdtemp(`${root}/${lambdaV}-`), tarPath = `${tmp}.tar.gz`
   try {
-    await fsp.writeFile(tarPath, await fetchTar(lambdaCodeWUrl, ctx))
+    await fsp.writeFile(tarPath, await fetchTar(lambdaV))
     await new Promise((ok, fail) => spawn('tar', ['-xzf', tarPath, '-C', tmp]).on('close', c => c === 0 ? ok() : fail(new Error(`tar ${c}`))))
     if (existsSync(dir) && !existsSync(`${dir}/index.js`)) await fsp.rm(dir, { recursive: true, force: true })
     await fsp.rename(tmp, dir).catch(e => { if (!existsSync(`${dir}/index.js`)) throw e })
