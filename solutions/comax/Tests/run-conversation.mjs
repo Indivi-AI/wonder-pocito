@@ -20,7 +20,7 @@ const run = async (userMessage, chatHistory) => {
     isLocalHost: false, llmProxyUrl, reportsRoot: LOCAL_ROOT, accumulatedContext: { chatHistory },
     categories: { reportsAnalytics: true, reports: true, local: true } }
   const wfCtx = await jb.workflowUtils.extendWithWorkflowVars(new jb.coreUtils.Ctx().setVars(vars))
-  return dsls.workflow.workflow['fast-report'].$runWithCtx(wfCtx).calcWorkflow(wfCtx)
+  return dsls.ai.workflow['fast-report'].$runWithCtx(wfCtx).calcWorkflow(wfCtx)
 }
 const sig = d => {
   const rr = typeof d.runRes == 'object' && d.runRes || {}

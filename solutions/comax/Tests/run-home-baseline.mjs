@@ -33,7 +33,7 @@ for (const [id, userMessage] of QUESTIONS) {
     const vars = { db: 'local', userId: 'BaselineRunner', roomId: 'comaxDemo', userMessage, doNotWriteLogs: true,
       isLocalHost: false, llmProxyUrl, reportsRoot: LOCAL_ROOT, categories: { reportsAnalytics: true, reports: true, local: true } }
     const wfCtx = await jb.workflowUtils.extendWithWorkflowVars(new jb.coreUtils.Ctx().setVars(vars))
-    d = await dsls.workflow.workflow['fast-report'].$runWithCtx(wfCtx).calcWorkflow(wfCtx)
+    d = await dsls.ai.workflow['fast-report'].$runWithCtx(wfCtx).calcWorkflow(wfCtx)
   } catch (e) { d = { runRes: { error: e.stack } } } finally { jb.coreUtils.eventEmitter.off('fastReportPartial', onPartial) }
   const rr = typeof d.runRes == 'object' && d.runRes || {}
   const out = { suffix, userMessage, durMs: Date.now() - start,

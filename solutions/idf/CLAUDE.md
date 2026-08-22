@@ -91,7 +91,7 @@ const workflowCtx = await jb.workflowUtils.extendWithWorkflowVars(ctx.setVars({
   assetRepoText: JSON.stringify({ plugin, skills, tools, subagents, reports }),
   llmProxyUrl: 'https://node25-automations-server-365199207445.me-west1.run.app/llmProxy'
 }))
-const result = await dsls.workflow.workflow.wonderPlatformAgent.$run().calcWorkflow(workflowCtx)
+const result = await dsls.ai.workflow.wonderPlatformAgent.$run().calcWorkflow(workflowCtx)
 ```
 
 Do not guess another enrichment API and do not replace this with `ctx.run(profile)`.
