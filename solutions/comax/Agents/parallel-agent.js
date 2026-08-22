@@ -5,7 +5,7 @@ import './analytics-agent.js'       // registers the basicAnalytics workflow
 
 const {
   common: { data: { runAgentWorkflow, decideBestAnswer } },
-  workflow: { Workflow, workflow: { flowWorkflow }, 'flow-elem': { flow, parallel, setCtxData, setCtxVar } }
+  ai: { Workflow, workflow: { flowWorkflow }, 'flow-elem': { flow, parallel, setCtxData, setCtxVar } }
 } = dsls
 
 export const SQL_AGENT_MODEL = 'openai/gpt-5.5'

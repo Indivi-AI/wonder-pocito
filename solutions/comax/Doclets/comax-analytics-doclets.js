@@ -282,16 +282,16 @@ Write the Hebrew answer for a supermarket branch/category manager - not a develo
 Doclet('essentialOutputFormat.analytics', {
   impl: `
 Return only one javascript code block containing a flow with this backbone:
-0) Before asking, inspect accumulatedContext.clarifiedParams and chatHistory. If an assistant chatHistory turn has rowsShown/entitiesShown/caveats, those are the rows the user actually saw and the caveats that were active on that answer; use them for follow-ups and do not contradict the displayed categories. If the needed product/branch was already clarified, reuse it and do not ask again. If the user gives a specific product or branch name/phrase to filter and it can match 2+ real entities, FIRST add flow-elem<workflow>asHumanFeedback with options data<common>comaxEntityCandidates. Use the exact user phrase as query (e.g. 'עגבניות שרי'), varName 'selectedProducts' or 'selectedBranches', and mode 'multi' unless the question clearly needs one. Never ask when product/branch is only a grouping/output dimension (e.g. "לפי פריט", top products, all branches, promotion id). Continue with unrelated planning; the first later profile that references $selectedProducts / $selectedBranches in jq/TGP or %$selectedProducts.sqlIn% / %$selectedBranches.sqlIn% in SQL waits automatically. Never use {{...}} for human feedback vars.
+0) Before asking, inspect accumulatedContext.clarifiedParams and chatHistory. If an assistant chatHistory turn has rowsShown/entitiesShown/caveats, those are the rows the user actually saw and the caveats that were active on that answer; use them for follow-ups and do not contradict the displayed categories. If the needed product/branch was already clarified, reuse it and do not ask again. If the user gives a specific product or branch name/phrase to filter and it can match 2+ real entities, FIRST add flow-elem<ai>asHumanFeedback with options data<common>comaxEntityCandidates. Use the exact user phrase as query (e.g. 'עגבניות שרי'), varName 'selectedProducts' or 'selectedBranches', and mode 'multi' unless the question clearly needs one. Never ask when product/branch is only a grouping/output dimension (e.g. "לפי פריט", top products, all branches, promotion id). Continue with unrelated planning; the first later profile that references $selectedProducts / $selectedBranches in jq/TGP or %$selectedProducts.sqlIn% / %$selectedBranches.sqlIn% in SQL waits automatically. Never use {{...}} for human feedback vars.
 1) setCtxData running data<common>duckDbSql. The SQL must return COMPACT AGGREGATES, never raw un-aggregated rows: GROUP BY the requested dimension with counts/sums/avg plus min/max when relevant, ORDER BY the key metric, LIMIT to a top-N (usually <=20). Name filters must follow the exact-dimension-values rules — a grounded exact name, or the self-resolving LIKE subselect — and any free-text name filter REQUIRES the step-5 replan element. For best+worst, NEVER use UNION: rank the aggregate once with row_number() over both ASC and DESC orders, then select where either rank=1. The sql param is ONE plain quoted or backtick SQL string (no .trim() or other JS methods, and NEVER + concatenation - the parser reads only literals and drops expressions, leaving the sql empty; Hebrew literals like branch = 'גני תקווה' are fine inside a backtick string).
 PERFORMANCE (date-scoped scans): KupaDoc_Lines has no date column and both files are sorted by doc id, so whenever you join Lines l to a date-filtered Header h (h.DateDoc >= X), ALSO add: l.KupaDocC >= (SELECT min(C) FROM <header parquet> WHERE DateDoc >= X). It is result-identical (a redundant lower bound) and lets DuckDB skip most of the 617MB Lines file.
 2) setCtxVar 'rows' with value jqSingle exp '.' — copy this element VERBATIM from the example; it keeps the aggregate rows.
 3) setCtxVar 'answer' via data<common>llmSummary writing one-sentence SHORT_ANSWER and 3-4 sentence LONG_ANSWER.
-4) flow-elem<workflow>finalAnswer — DECLARATIVE assembly of the final { text, narrative, sql, rows, widgets, followUps } object. The runtime reads the answer and rows vars by itself, echoes your sql string, materializes widgets from the rows, truncates to 50 rows, and handles the empty-rows case automatically (default narrative, no widgets) — do NOT write an empty-rows branch and do NOT use jqSingle to build the final object.
+4) flow-elem<ai>finalAnswer — DECLARATIVE assembly of the final { text, narrative, sql, rows, widgets, followUps } object. The runtime reads the answer and rows vars by itself, echoes your sql string, materializes widgets from the rows, truncates to 50 rows, and handles the empty-rows case automatically (default narrative, no widgets) — do NOT write an empty-rows branch and do NOT use jqSingle to build the final object.
 5) SAFETY NET — MANDATORY whenever your SQL filters by ANY user-supplied free-text NAME (supplier/promotion/customer, or a product/branch not resolved via
-asHumanFeedback), even when you used the LIKE subselect (the token may still miss): append flow-elem<workflow>replan as the LAST element, after finalAnswer.
+asHumanFeedback), even when you used the LIKE subselect (the token may still miss): append flow-elem<ai>replan as the LAST element, after finalAnswer.
 It costs nothing when rows exist (the verifier passes instantly) and recovers bad-name empties instead of answering a blind "לא נמצאו נתונים":
-{$: 'flow-elem<workflow>replan', goal: 'Verify empty result is not a bad name filter',
+{$: 'flow-elem<ai>replan', goal: 'Verify empty result is not a bad name filter',
   task: 'התוצאה ריקה — ייתכן שהשם <the filtered name> לא קיים ככתבו. Author a recovery flow: (1) duckDbSql discovery — SELECT C, trim(Nm) FROM the entity dimension (Prt/Suppliers/Mivza/Idx) WHERE Nm LIKE on the DISTINCTIVE token of the name, never on a generic word (מחלבות/סוכנות/בע"מ/גבינה); (2) setCtxVar keeping the matches; (3) data<common>llmSql answering the ORIGINAL question for the discovered exact ids, GROUP BY the matched name so the answer shows what matched; (4) setCtxVar answer via llmSummary noting the corrected name, business Hebrew only — never mention vars/rows/#FLOW_VARS; (5) finalAnswer. If discovery finds nothing, or only names sharing nothing but a generic word — the entity does not exist in the data: answer that honestly, name what was checked, optionally list up to 3 near names as suggestions, and NEVER run numbers for a different entity. If discovery finds 2+ distinct entities and the question needs one, use asHumanFeedback with comaxEntityCandidates.',
   verifier: {$: 'boolean<common>jqBoolean', exp: '$rows | length > 0'},
   maxRuns: 1, instructions: '%$llmFlowBooklet%\n%$comaxAnalytics%'}
@@ -305,18 +305,18 @@ finalAnswer params:
 Each element may carry a short Hebrew present-tense status, e.g. "בודק מכירות..." or "מרכיב תשובה...".
 When using selected entities in SQL, write IN (%$selectedProducts.sqlIn%) / IN (%$selectedBranches.sqlIn%) for numeric ids, or IN (%$selectedProducts.sqlLabelsIn%) / IN (%$selectedBranches.sqlLabelsIn%) when the available column is a name like item or branch; never manually quote selected values and never use {{...}} for human feedback vars.
 \`\`\`javascript
-{$: 'flow-elem<workflow>flow', elems: [
-  {$: 'flow-elem<workflow>setCtxData',
+{$: 'flow-elem<ai>flow', elems: [
+  {$: 'flow-elem<ai>setCtxData',
     goal: 'Run DuckDB SQL', status: 'בודק מכירות...',
     value: {$: 'data<common>duckDbSql', sql: 'SELECT name, value FROM ... ORDER BY value DESC LIMIT 8'},
     postCondition: {$: 'boolean<common>jqBoolean', exp: 'type == "array"'}
   },
-  {$: 'flow-elem<workflow>setCtxVar', goal: 'Keep rows', varName: 'rows', value: {$: 'data<common>jqSingle', exp: '.'}},
-  {$: 'flow-elem<workflow>setCtxVar', goal: 'Write answer', status: 'מסכם תובנות...', varName: 'answer',
+  {$: 'flow-elem<ai>setCtxVar', goal: 'Keep rows', varName: 'rows', value: {$: 'data<common>jqSingle', exp: '.'}},
+  {$: 'flow-elem<ai>setCtxVar', goal: 'Write answer', status: 'מסכם תובנות...', varName: 'answer',
     value: {$: 'data<common>llmSummary', summaryCategories: 'dataInsights', evaluation: 'כתוב SHORT_ANSWER בעברית במשפט אחד עם המספר המרכזי ב-**bold**, ו-LONG_ANSWER של 3-4 משפטים עסקיים. אם אין שורות, אמור שלא נמצאו נתונים מתאימים.'},
     postCondition: {$: 'boolean<common>jqBoolean', exp: '(type == "string" and length > 0) or (.text | type == "string" and length > 0)'}
   },
-  {$: 'flow-elem<workflow>finalAnswer',
+  {$: 'flow-elem<ai>finalAnswer',
     goal: 'Return explorable answer', status: 'מרכיב תשובה...',
     sql: 'SELECT name, value FROM ... ORDER BY value DESC LIMIT 8',
     narrative: '{0.name} מוביל עם {0.value:₪} (נטו ללא מע"מ)',

@@ -12,9 +12,9 @@ Doclet('essentialOutputFormat.reportsAnalyticsSmall', {
   impl: `You answer Comax supermarket ERP analytics questions. Reply with EXACTLY ONE \`\`\`javascript code block containing a flow (a JSON profile), 2-space indent before each flow elem. Answer in business Hebrew; keep SQL/column names in English code spans, currency as ₪.
 
 FLOW DSL
-- flow-elem<workflow>flow { elems:[...] } — the container.
-- flow-elem<workflow>setCtxData { goal, status?, value: data<common>, postCondition? } — sets ctx data.
-- flow-elem<workflow>setCtxVar { goal, status?, varName, value, postCondition? } — keeps a var (read later as $varName).
+- flow-elem<ai>flow { elems:[...] } — the container.
+- flow-elem<ai>setCtxData { goal, status?, value: data<common>, postCondition? } — sets ctx data.
+- flow-elem<ai>setCtxVar { goal, status?, varName, value, postCondition? } — keeps a var (read later as $varName).
 - data<common>: runReport, queryReportFullData, jqSingle (single object), jqArray (array), llmSummary. boolean<common>jqBoolean for postConditions (with and/or inside jq, parenthesize each side).
 - status is a short Hebrew present-tense progress line, e.g. "מריץ דוח מבצעים...", "מסכם תובנות...".
 
@@ -51,29 +51,29 @@ Empty rows are a valid result: postConditions accept any array, llmSummary says 
 JQ SAFETY (jqSingle strings): build dynamic text by jq string CONCATENATION with tostring for numbers; NULL-GUARD every numeric op — rows may hold null, so add 0 before round/floor (null+0==0), e.g. (($rows[0].tied_cash_ils + 0) | round | tostring). Percent columns (*_pct) are ALREADY 0-100 — use as-is, NEVER ×100. Do NOT use jq \\(...) interpolation, and never emit literal placeholders like \`$rows[0].item\` inside a quoted string. Hebrew gershayim/geresh inside a string literal must be the Unicode marks ״ and ׳ (מע״מ, סופ״ש, צ׳ויס) — an ASCII quote inside a Hebrew word terminates the literal.
 
 \`\`\`javascript
-{$: 'flow-elem<workflow>flow', elems: [
-  {$: 'flow-elem<workflow>setCtxData',
+{$: 'flow-elem<ai>flow', elems: [
+  {$: 'flow-elem<ai>setCtxData',
     goal: 'Run promo recommendations report for the branch', status: 'מריץ דוח מבצעים...',
     value: {$: 'data<common>runReport', reportId: 'promo-recommendations', scope: 'none', sections: ['rerun-winners', 'clearance-candidates'], sectionDepth: 'summary'},
     postCondition: {$: 'boolean<common>jqBoolean', exp: 'has("results")'}
   },
-  {$: 'flow-elem<workflow>setCtxVar', goal: 'Keep prebuilt widgets', varName: 'reportWidgets', value: {$: 'data<common>jqSingle', exp: '.widgets'}},
-  {$: 'flow-elem<workflow>setCtxVar', goal: 'Slice clearance to the branch', status: 'בודק עודפי מלאי בסניף...', varName: 'rows',
+  {$: 'flow-elem<ai>setCtxVar', goal: 'Keep prebuilt widgets', varName: 'reportWidgets', value: {$: 'data<common>jqSingle', exp: '.widgets'}},
+  {$: 'flow-elem<ai>setCtxVar', goal: 'Slice clearance to the branch', status: 'בודק עודפי מלאי בסניף...', varName: 'rows',
     value: {$: 'data<common>queryReportFullData', reportId: 'promo-recommendations', sectionId: 'clearance-candidates', sql: \`SELECT item, dept, round(tied_cash_ils) AS tied_cash_ils, days_cover, rec_depth_pct, rec_mechanic FROM full_data WHERE branch = 'גני תקווה' ORDER BY tied_cash_ils DESC LIMIT 12\`},
     postCondition: {$: 'boolean<common>jqBoolean', exp: 'type == "array"'}
   },
-  {$: 'flow-elem<workflow>setCtxVar', goal: 'Keep proven rerun deals', varName: 'winners',
+  {$: 'flow-elem<ai>setCtxVar', goal: 'Keep proven rerun deals', varName: 'winners',
     value: {$: 'data<common>jqSingle', exp: '.results.sections."rerun-winners".rows[:8]'},
     postCondition: {$: 'boolean<common>jqBoolean', exp: 'type == "array"'}
   },
-  {$: 'flow-elem<workflow>setCtxData', goal: 'Focus summary on the answer basis',
+  {$: 'flow-elem<ai>setCtxData', goal: 'Focus summary on the answer basis',
     value: {$: 'data<common>jqSingle', exp: '{clearance: $rows, winners: $winners}'}
   },
-  {$: 'flow-elem<workflow>setCtxVar', goal: 'Write answer', status: 'מסכם תובנות...', varName: 'answer',
+  {$: 'flow-elem<ai>setCtxVar', goal: 'Write answer', status: 'מסכם תובנות...', varName: 'answer',
     value: {$: 'data<common>llmSummary', summaryCategories: 'dataInsights', evaluation: 'בסס על clearance ו-winners בלבד. כתוב SHORT_ANSWER במשפט אחד עם ההמלצה המובילה והמספר ב-**bold**, ו-LONG_ANSWER של 3-4 משפטים עם 1-2 המלצות ומגבלות מהותיות. אם אין שורות, אמור שלא נמצאו נתונים מתאימים. בלי שמות שדות או ערכי קוד.'},
     postCondition: {$: 'boolean<common>jqBoolean', exp: '(type == "string" and length > 0) or (.text | type == "string" and length > 0)'}
   },
-  {$: 'flow-elem<workflow>finalAnswerFromReport',
+  {$: 'flow-elem<ai>finalAnswerFromReport',
     goal: 'Return explorable answer', status: 'מרכיב תשובה...',
     textVar: 'answer', rowsVar: 'rows', reportWidgetsVar: 'reportWidgets',
     narrative: '{0.item} עם הון כלוא של {0.tied_cash_ils:₪} מוביל את מועמדי החיסול.',

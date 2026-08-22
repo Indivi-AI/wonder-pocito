@@ -554,10 +554,6 @@ Test('coreTest.runBashScriptStreamingLines', {
   })
 })
 
-// runBashScriptStreamViaJbWebServer: live SSE streaming through the express server.
-// requires the dev server running on http://localhost:8083 (with serveCliStream mounted).
-// Script has explicit sleeps to force chunks to arrive over time (not in one flush) so we can
-// assert the chunks really stream live (verified by gap timing between first/last chunk).
 Test('coreTest.runBashScriptStreamViaJbWebServer', {
   HeavyTest: true,
   impl: dataTest({

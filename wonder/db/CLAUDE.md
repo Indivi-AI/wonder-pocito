@@ -28,7 +28,7 @@ The directory conventions are identical for every room type:
 ## Room lambdas - invokeSnippetInContext
 
 Run a tgp snippet **on the remote, gated AS THE USER, within tgp context**, via the `wFetch` comp:
-`{$:'data<common>wFetch', url:'<roomWUrl>/lambda/<name>', method:'post', body:{profile, packedCtx, stream, serverTimeout, logger}}`
+`{$:'data<common>wFetch', url:'<roomWUrl>/lambdas/<name>', method:'post', body:{profile, packedCtx, stream, serverTimeout, logger}}`
 
 ## Signed rooms via MCP
 Signed-room MCP work requires a logged-in developer; outside the sandbox run `gcloud auth list --filter=status:ACTIVE "--format=value(account)"`.

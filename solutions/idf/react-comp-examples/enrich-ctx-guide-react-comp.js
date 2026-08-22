@@ -20,7 +20,7 @@ ReactComp('enrichCtxGuide', {
             assetRepoText: JSON.stringify(groundedAssets),
             llmProxyUrl: 'https://node25-automations-server-365199207445.me-west1.run.app/llmProxy'
           }))
-          const result = await dsls.workflow.workflow.wonderPlatformAgent.$run().calcWorkflow(workflowCtx)
+          const result = await dsls.ai.workflow.wonderPlatformAgent.$run().calcWorkflow(workflowCtx)
           setAnswer(typeof result.runRes === 'string' ? result.runRes : result.runRes?.text || '')
           setBusy(false)
         }

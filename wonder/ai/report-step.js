@@ -446,7 +446,7 @@ Doclet('runReportDataComponent', {
   impl: dataComp('runReport', {
     guidance: [
       example(`
-{$: 'flow-elem<workflow>setCtxData',
+{$: 'flow-elem<ai>setCtxData',
   goal: 'Run the sales overview report',
   value: {$: 'data<common>runReport', reportId: 'branch-performance', scope: 'none', sections: ['daily-sales'],
     sectionDepth: 'summary', params: {'daily-sales': {reportDate: 'latest'}}},
@@ -474,7 +474,7 @@ Doclet('queryReportFullDataDataComponent', {
   impl: dataComp('queryReportFullData', {
     guidance: [
       example(`
-{$: 'flow-elem<workflow>setCtxVar',
+{$: 'flow-elem<ai>setCtxVar',
   goal: 'Slice branch sales to Fridays only', varName: 'fridayRows',
   value: {$: 'data<common>queryReportFullData', reportId: 'branch-performance', sectionId: 'daily-sales',
     sql: 'SELECT branch, round(sum(net)) AS net FROM full_data WHERE weekday_no = 5 GROUP BY 1 ORDER BY 2 DESC LIMIT 10'},

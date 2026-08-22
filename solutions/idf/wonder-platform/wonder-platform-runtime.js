@@ -7,7 +7,7 @@ import './wonder-platform-skills.js'
 const {
   common: { Data },
   'llm-guide': { Booklet, Doclet, booklet: { booklet } },
-  workflow: { Workflow, workflow: { mainWorkflow }, mpi: { mpi } }
+  ai: { Workflow, workflow: { mainWorkflow }, mpi: { mpi } }
 } = dsls
 
 Booklet('wonderPlatform', {impl: booklet('wonderPlatformAssets,wonderPlatformResponse')})
@@ -40,8 +40,8 @@ The object shape is {text: string, reportIds: string[], followUps: string[]}.
 Escape quotes for one jq string and emit no other code.
 Example:
 \`\`\`javascript
-{$: 'flow-elem<workflow>flow', elems: [
-  {$: 'flow-elem<workflow>setCtxData', goal: 'Compose grounded answer', status: 'מנסח תשובה מאומתת...',
+{$: 'flow-elem<ai>flow', elems: [
+  {$: 'flow-elem<ai>setCtxData', goal: 'Compose grounded answer', status: 'מנסח תשובה מאומתת...',
     value: {$: 'data<common>jqSingle', exp: '{text:"המסקנה המבוססת",reportIds:["r1"],followUps:["בדוק פער","הצג מקורות"]}'}}
 ]}
 \`\`\`
@@ -78,7 +78,7 @@ Data('wonderPlatformAnswer', {
     {id: 'roomWUrl', as: 'string', defaultValue: 'room:minio//wonder-platform'},
     {id: 'loadSkills', dynamic: true,
       defaultValue: dsls.common.data.wonderPlatformLoadTargetSkills('%$roomWUrl%', '%$target%')},
-    {id: 'agentWorkflow', type: 'workflow<workflow>', dynamic: true, defaultValue: dsls.workflow.workflow.wonderPlatformAgent()}
+    {id: 'agentWorkflow', type: 'workflow<ai>', dynamic: true, defaultValue: dsls.ai.workflow.wonderPlatformAgent()}
   ],
   impl: async (ctx, {}, {text, target, repo, history, roomWUrl, loadSkills, agentWorkflow}) => {
     const startedAt = Date.now(), loadedSkills = (await loadSkills(ctx.setVars({roomWUrl, target}))).filter(Boolean)

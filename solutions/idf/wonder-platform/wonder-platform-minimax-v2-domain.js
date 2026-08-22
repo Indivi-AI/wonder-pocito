@@ -7,7 +7,7 @@ import '@wonder/db/db-drivers-s3-minio.js'
 const {
   common: { Data },
   'llm-guide': { Booklet, Doclet, booklet: { booklet } },
-  workflow: { Workflow, workflow: { mainWorkflow }, mpi: { mpi } }
+  ai: { Workflow, workflow: { mainWorkflow }, mpi: { mpi } }
 } = dsls
 
 Data('wonderPlatformMinimaxV2Seed', {
@@ -166,7 +166,7 @@ Data('wonderPlatformMinimaxV2Answer', {
         reports: repo.reports, selectedReports: extraReports }),
       llmProxyUrl: 'https://node25-automations-server-365199207445.me-west1.run.app/llmProxy'
     }))
-    const result = await dsls.workflow.workflow.wonderPlatformMinimaxV2Agent.$run().calcWorkflow(workflowCtx)
+    const result = await dsls.ai.workflow.wonderPlatformMinimaxV2Agent.$run().calcWorkflow(workflowCtx)
     const output = typeof result.runRes === 'string' ? { text: result.runRes } : result.runRes || {}
     const reportIds = Array.from(new Set([...(output.reportIds || []), ...extraReports.map(x => x.id)]))
       .filter(id => repo.reports.some(x => x.id === id))
@@ -205,8 +205,8 @@ The object shape is {text: string, reportIds: string[], followUps: string[]}.
 Escape quotes for one jq string and emit no other code.
 Example:
 \`\`\`javascript
-{$: 'flow-elem<workflow>flow', elems: [
-  {$: 'flow-elem<workflow>setCtxData', goal: 'Compose grounded answer', status: 'מנסח תשובה מאומתת...',
+{$: 'flow-elem<ai>flow', elems: [
+  {$: 'flow-elem<ai>setCtxData', goal: 'Compose grounded answer', status: 'מנסח תשובה מאומתת...',
     value: {$: 'data<common>jqSingle', exp: '{text:"המסקנה המבוססת",reportIds:["r1"],followUps:["בדוק פער","הצג מקורות"]}'}}
 ]}
 \`\`\`

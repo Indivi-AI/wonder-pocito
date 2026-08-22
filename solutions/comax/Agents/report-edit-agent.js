@@ -10,9 +10,9 @@ const {
   tgp: { TgpType },
   common: { Data, data: { runReport, verifiedReportsRegistry } },
   'llm-guide': { Booklet, Doclet, booklet: { booklet }, doclet: { dataComp }, guidance: { example, mustDo }, explanationPoint: { explanation, syntax } },
-  workflow: { Workflow }
+  ai: { Workflow }
 } = dsls
-const FlowElem = TgpType('flow-elem', 'workflow'), MODEL = 'openai/gpt-5.5', REPORT = 'promotions'
+const FlowElem = TgpType('flow-elem', 'ai'), MODEL = 'openai/gpt-5.5', REPORT = 'promotions'
 const LOCAL_ROOT = globalThis.process?.versions?.node ? new URL('../../../../files/rooms/comaxDemo/usersRO/parquet/OEM_BI_4466', import.meta.url).pathname : 'files/rooms/comaxDemo/usersRO/parquet/OEM_BI_4466'
 const DEPTHS = ['executiveSummary', 'summary', 'inDepth']
 const roomFile = (roomWUrl, reportId = REPORT, suffix = '-draft-patch') => `${String(roomWUrl || 'signedRoom://comaxDemo/usersRW').replace(/\/$/, '')}/report-studio/${reportId}${suffix}.json`

@@ -9,7 +9,7 @@ const {
   tgp: { CtxEnricher, 'ctx-enricher': { addCategory, setupCube, Var, enrichCtx } },
   common: { data: { verifiedReportsCatalog, cubeSummary, bookletContent } },
   bi: { cube: { comaxSalesCube } },
-  workflow: { Workflow, workflow: { verifiedReportAgent } },
+  ai: { Workflow, workflow: { verifiedReportAgent } },
   'llm-guide': { Doclet, Booklet, booklet: { booklet } }
 } = dsls
 
@@ -25,7 +25,7 @@ Doclet('comaxReports.catalog.comax', { impl: `AVAILABLE VERIFIED REPORTS
 <BOOKLET-EVALUATE>%$verifiedReportsCatalog%</BOOKLET-EVALUATE>` })
 Doclet('comaxReports.output.comax', {
   impl: `For a report request return one TGP profile without prose.
-Use flow-elem<workflow>calcVerifiedReport with the exact report id from the catalog.
+Use flow-elem<ai>calcVerifiedReport with the exact report id from the catalog.
 Use showIn nextChatItem for a compact report or sidePanel for a detailed report.
 Use summaryCategories dataInsights for an explanation, otherwise noSummary.`
 })

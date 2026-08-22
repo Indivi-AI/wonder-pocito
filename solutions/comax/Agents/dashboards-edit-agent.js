@@ -16,8 +16,8 @@ const { wfetch2, wresolve } = jb.wonderUtils
 import { fetchItemsFromLLMReactiveP } from '@wonder/ai/reactive-llm.js'
 import { PERF_VIEW } from '../Reports/promo-shared.js'
 
-const { tgp: { TgpType }, common: { Data, data }, workflow: { Workflow, workflow: { flowWorkflow }, 'flow-elem': { flow, setCtxVar, until, replan } }, 'llm-guide': { Doclet } } = dsls
-const FlowElem = TgpType('flow-elem', 'workflow'), MODEL = 'openai/gpt-5.5', ROOT = 'signedRoom://comaxDemo/usersRO/parquet/OEM_BI_4466'
+const { tgp: { TgpType }, common: { Data, data }, ai: { Workflow, workflow: { flowWorkflow }, 'flow-elem': { flow, setCtxVar, until, replan } }, 'llm-guide': { Doclet } } = dsls
+const FlowElem = TgpType('flow-elem', 'ai'), MODEL = 'openai/gpt-5.5', ROOT = 'signedRoom://comaxDemo/usersRO/parquet/OEM_BI_4466'
 const arr = v => Array.isArray(v) ? v : v == null ? [] : [v]
 const rowsOf = v => Array.isArray(v) ? v : Array.isArray(v?.rows) ? v.rows : Array.isArray(v?.data) ? v.data : arr(v)
 const esc = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -139,7 +139,7 @@ const dashboardsEditFlow = flowWorkflow({
           setCtxVar({ goal: 'Run dashboard edit SQL', status: 'בודק שאילתה מול מסד הנתונים...', varName: 'dashboardEditRows', value: ctx => runDashboardEditSql(ctx, ctx.vars.dashboardEditPlan) })
         ] }),
         verifier: validEditRows }),
-      dsls.workflow['flow-elem'].editDashboardWIdget({ id: 'dashboards.reportCanvas', dashboardUrl: '%$dashboardUrl%' }),
+      dsls.ai['flow-elem'].editDashboardWIdget({ id: 'dashboards.reportCanvas', dashboardUrl: '%$dashboardUrl%' }),
       replan({ goal: 'Verify dashboard draft was saved and is renderable', task: '%$userMessage%', verifier: validDraft, maxRuns: 1, model: '%$model%', instructions: '%$dashboardEditDoclets%' })
     ] })
 })

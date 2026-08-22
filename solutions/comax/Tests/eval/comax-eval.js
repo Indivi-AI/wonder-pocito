@@ -111,7 +111,7 @@ Data('comaxBIEvaluation', {
     // keep one toxic flow from killing the whole evaluation process
     process.on('uncaughtException', e => console.log('biEval survived uncaughtException:', String(e).slice(0, 120)))
     process.on('unhandledRejection', e => console.log('biEval survived unhandledRejection:', String(e).slice(0, 120)))
-    const workflow = dsls.workflow.workflow[workflowName]
+    const workflow = dsls.ai.workflow[workflowName]
     const ctx = await jb.workflowUtils.extendWithWorkflowVars(_ctx.setVars({
       roomId: 'comaxDemo', isTest: true, runningAsAutomation: true, userId: 'ScreenshotService', db: 'local', localProxy: false, comaxDataset: 'big',
       duckdbMemoryLimit: '4GB', duckdbThreads: 4,   // cap each spawned duckdb: parallel eval flows OOM the machine on defaults; 2GB made heavy cost-joins spill for minutes

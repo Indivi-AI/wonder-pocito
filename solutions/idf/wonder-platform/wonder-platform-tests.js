@@ -13,7 +13,7 @@ const {
     boolean: { and, contains, equals } },
   react: { ReactComp, UiAction, 'react-comp': { comp, wonderPlatform }, 'ui-action': { actions, click, waitForText } },
   test: { Test, test: { dataTest, reactTest } },
-  workflow: { Workflow }
+  ai: { Workflow }
 } = dsls
 
 Data('wonderPlatformRepositoryRoundTrip', {
@@ -271,7 +271,7 @@ Test('wonderPlatform.moduleContracts', {
       'data<common>wonderPlatformMarketplaceManifest', 'data<common>wonderPlatformMarketplaceItem',
       'data<common>wonderPlatformMarketplaceLoad', 'data<common>wonderPlatformMarketplaceRepository',
       'data<common>wonderPlatformMarketplaceDetail', 'data<common>wonderPlatformAgentOsRequest', 'data<common>wonderPlatformAgentOsRun',
-      'workflow<workflow>wonderPlatformAgent', 'react-comp<react>wonderPlatformNavigation', 'react-comp<react>wonderPlatformCatalog',
+      'workflow<ai>wonderPlatformAgent', 'react-comp<react>wonderPlatformNavigation', 'react-comp<react>wonderPlatformCatalog',
       'react-comp<react>wonderPlatformAttachPicker', 'react-comp<react>wonderPlatformResourceEditor',
       'react-comp<react>wonderPlatformWorkspace', 'react-comp<react>wonderPlatformVerifiedReport', 'react-comp<react>wonderPlatformChat',
       'react-comp<react>wonderPlatformEvaluation', 'react-comp<react>wonderPlatform'].every(id => coreUtils.compByFullId(id))}),

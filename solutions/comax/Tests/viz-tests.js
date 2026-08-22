@@ -24,14 +24,14 @@ const {
     'ui-action': { delay, click },
     test: { dataTest, reactTest },
   },
-  workflow: {
+  ai: {
     workflow: { basicAnalytics },
   },
 =======
   common: { boolean: { contains, notContains, and, equals } },
   react: { 'react-comp': { AnalyticsAssistantResponse }, 'ui-action': { delay, click } },
   test: { Test, test: { dataTest, reactTest } },
-  workflow: { workflow: { basicAnalytics } }
+  ai: { workflow: { basicAnalytics } }
 >>>>>>> origin/master
 } = dsls
 
@@ -52,13 +52,13 @@ const campaignRows = [
 // ============================================================================
 const flowEmitting = (widgetExp) => `
 \`\`\`javascript
-{$: 'flow-elem<workflow>flow', elems: [
-  {$: 'flow-elem<workflow>setCtxData', goal: 'Load rows',
+{$: 'flow-elem<ai>flow', elems: [
+  {$: 'flow-elem<ai>setCtxData', goal: 'Load rows',
     value: {$: 'data<common>jqArray', exp: '[{"name":"Alice","value":120},{"name":"Bob","value":80},{"name":"Carol","value":50}]'},
     postCondition: {$: 'boolean<common>jqBoolean', exp: 'length == 3'}},
-  {$: 'flow-elem<workflow>setCtxVar', goal: 'Keep rows', varName: 'rows',
+  {$: 'flow-elem<ai>setCtxVar', goal: 'Keep rows', varName: 'rows',
     value: {$: 'data<common>jqSingle', exp: '.'}},
-  {$: 'flow-elem<workflow>setCtxData', goal: 'Return text + chart',
+  {$: 'flow-elem<ai>setCtxData', goal: 'Return text + chart',
     value: {$: 'data<common>jqSingle', exp: '{ text: "Top senders", widgets: [ ${widgetExp} ] }'},
     postCondition: {$: 'boolean<common>jqBoolean', exp: 'has("text") and (.widgets|type=="array")'}}
 ]}
@@ -102,14 +102,14 @@ Test('vizFlow.setCtxVarPostConditionOnValue', {
   impl: dataTest({
     calculate: runFlow(`
 \`\`\`javascript
-{$: 'flow-elem<workflow>flow', elems: [
-  {$: 'flow-elem<workflow>setCtxData', goal: 'Load rows',
+{$: 'flow-elem<ai>flow', elems: [
+  {$: 'flow-elem<ai>setCtxData', goal: 'Load rows',
     value: {$: 'data<common>jqArray', exp: '[{"name":"Alice","value":120}]'},
     postCondition: {$: 'boolean<common>jqBoolean', exp: 'type == "array" and length > 0'}},
-  {$: 'flow-elem<workflow>setCtxVar', goal: 'Write the answer', varName: 'answer',
+  {$: 'flow-elem<ai>setCtxVar', goal: 'Write the answer', varName: 'answer',
     value: {$: 'data<common>jqSingle', exp: '"the answer"'},
     postCondition: {$: 'boolean<common>jqBoolean', exp: 'type == "string" and length > 0'}},
-  {$: 'flow-elem<workflow>setCtxData', goal: 'Return answer',
+  {$: 'flow-elem<ai>setCtxData', goal: 'Return answer',
     value: {$: 'data<common>jqSingle', exp: '{ text: $answer }'},
     postCondition: {$: 'boolean<common>jqBoolean', exp: 'has("text")'}}
 ]}
@@ -188,13 +188,13 @@ Test('vizFlow.emitsExplorableAnswer', {
   impl: dataTest({
     calculate: runFlow(`
 \`\`\`javascript
-{$: 'flow-elem<workflow>flow', elems: [
-  {$: 'flow-elem<workflow>setCtxData', goal: 'Load rows',
+{$: 'flow-elem<ai>flow', elems: [
+  {$: 'flow-elem<ai>setCtxData', goal: 'Load rows',
     value: {$: 'data<common>jqArray', exp: '[{"name":"Alice","value":120},{"name":"Bob","value":80}]'},
     postCondition: {$: 'boolean<common>jqBoolean', exp: 'length == 2'}},
-  {$: 'flow-elem<workflow>setCtxVar', goal: 'Keep rows', varName: 'rows', value: {$: 'data<common>jqSingle', exp: '.'}},
-  {$: 'flow-elem<workflow>setCtxVar', goal: 'Keep sql', varName: 'sql', value: {$: 'data<common>jqSingle', exp: '"SELECT name, value FROM t"'}},
-  {$: 'flow-elem<workflow>setCtxData', goal: 'Return explorable answer',
+  {$: 'flow-elem<ai>setCtxVar', goal: 'Keep rows', varName: 'rows', value: {$: 'data<common>jqSingle', exp: '.'}},
+  {$: 'flow-elem<ai>setCtxVar', goal: 'Keep sql', varName: 'sql', value: {$: 'data<common>jqSingle', exp: '"SELECT name, value FROM t"'}},
+  {$: 'flow-elem<ai>setCtxData', goal: 'Return explorable answer',
     value: {$: 'data<common>jqSingle', exp: '{ text: "**Top senders**", narrative: "Alice leads.", sql: $sql, rows: $rows[0:50], \
       widgets: [ { kind: "bar", title: "Senders", data: ($rows | map({name:.name, value:.value})), drill: {dimension: "sender", \
       question: "Break {name} down by day"} } ], followUps: [ {label: "By day", question: "Break the top sender down by day"} ] }'},

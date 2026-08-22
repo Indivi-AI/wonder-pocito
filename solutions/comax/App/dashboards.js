@@ -284,7 +284,7 @@ ReactComp('Dashboards', {
                 ...(ctx.vars.sqlLambda ? {} : { db: 'local' }),
                 duckdbMatRun: `dashboards_ai_${Date.now()}`,
               })
-            const res = await dsls.workflow.workflow['dashboards-edit'].$run({ model: MODEL }).calcWorkflow(editCtx)
+            const res = await dsls.ai.workflow['dashboards-edit'].$run({ model: MODEL }).calcWorkflow(editCtx)
             const rows = traceEditRows(res)
             let edit = flowEditResult(res)
             if (rows && mod?.createDashboardDraft) edit = await mod.createDashboardDraft(editCtx, { id: selectedWidgetId, dashboardUrl, planRows: rows })

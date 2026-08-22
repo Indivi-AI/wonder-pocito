@@ -8,7 +8,7 @@ const {
   tgp: { 'ctx-enricher': { Var } },
   common: { VerifiedReport2, data: { cubeQuery, asIs, llmSummary } },
   bi: { cube: { comaxSalesCube, comaxInventoryCube } },
-  workflow: { FlowElem },
+  ai: { FlowElem },
   react: { ReactComp, 'react-comp': { comp } }
 } = dsls
 

@@ -764,7 +764,7 @@ ReactComp('FinanceDemoDesktop', {
           }
           try {
             const wfres = WASM
-              ? await dsls.workflow.workflow.financeAnalytics.$run().calcWorkflow(await Promise.resolve(wasmCtx(ctx.setVars(wfVars)).run(setupCube(demoFinanacialCubeV2()))))
+              ? await dsls.ai.workflow.financeAnalytics.$run().calcWorkflow(await Promise.resolve(wasmCtx(ctx.setVars(wfVars)).run(setupCube(demoFinanacialCubeV2()))))
               : await ctx.setVars({ roomWUrl: ctx.vars.roomWUrl || `room://${FINANCE_ROOM}` }).run(invokeSnippetInContext(runFinanceAnalytics({ userMessage })))
             setMessages((m) => [...m, { role: 'assistant', ...askPayload(wfres, depth) }])
           } catch (e) {

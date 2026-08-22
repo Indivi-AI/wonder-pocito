@@ -12,7 +12,7 @@ const {
     guidance: { doNot, example, mustDo, solution },
     problemStatement: { problem }
   },
-  workflow: { Mpi,
+  ai: { Mpi,
     mpi: { mpi }
   }
 } = dsls
@@ -88,7 +88,7 @@ Component('llmSummary', {
     {id: 'evaluation', as: 'text'},
     {id: 'maxInputSize', as: 'number', defaultValue: 50000},
     {id: 'model', as: 'string', defaultValue: '%$summaryModel%'},
-    {id: 'mpi', type: 'mpi<workflow>', defaultValue: llmSummaryMpi()}
+    {id: 'mpi', type: 'mpi<ai>', defaultValue: llmSummaryMpi()}
   ],
   impl: async (__ctx,{flowIndex, workflowLogger,userMessage},
       {mpi, model, summaryCategories,evaluation,maxInputSize, includeSourceRefs}) => {
@@ -170,7 +170,7 @@ Component('llmSummary', {
   ]
 })
 
-{$: 'flow-elem<workflow>setCtxData',
+{$: 'flow-elem<ai>setCtxData',
   goal: 'Summarize data insights',
   value: {$: 'data<common>llmSummary',
     goal: 'Summarize insights',
@@ -235,4 +235,3 @@ Doclet('llmSummary.dataInsights', {
     })
   )
 })
-

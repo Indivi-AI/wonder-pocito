@@ -182,9 +182,9 @@ Doclet('uploadReactCompDataComponent', {
     guidance: [
       example(`
 // fetch a room react-comp source, then upload an edited version. the room serves the applet from this file - upload makes the edit live
-{$: 'flow-elem<workflow>setCtxVar', goal: 'read current source', varName: 'compSource',
+{$: 'flow-elem<ai>setCtxVar', goal: 'read current source', varName: 'compSource',
   value: {$: 'data<common>fetchReactCompSource', wUrl: 'room://idf/reactComps/chatUi.js'}}
-{$: 'flow-elem<workflow>setCtxData', goal: 'save edited source',
+{$: 'flow-elem<ai>setCtxData', goal: 'save edited source',
   value: {$: 'data<common>uploadReactComp', wUrl: 'room://idf/reactComps/chatUi.js', compId: 'chatUi'}}
 `),
       mustDo('pass compId - upload validates the source compiles AND re-registers ReactComp(compId) before writing'),

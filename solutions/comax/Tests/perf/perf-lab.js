@@ -18,7 +18,7 @@ import '../../Doclets/perf/perf-instructions-medium.js'
 const {
   tgp: { 'ctx-enricher': { setVars } },
   common: { Data, data: { verifiedReportsRegistry } },
-  workflow: { Workflow, workflow: { mainWorkflow }, mpi: { mpi } }
+  ai: { Workflow, workflow: { mainWorkflow }, mpi: { mpi } }
 } = dsls
 
 const LLM_PROXY = 'https://node25-automations-server-365199207445.me-west1.run.app/llmProxy'
@@ -62,7 +62,7 @@ Data('runReportsAnalyticsPerf', {
     const wf = variantCategory(variant)
     const vars = { db: 'local', roomId: ctx.vars.roomId || 'comaxDemo', userMessage, llmProxyUrl: LLM_PROXY, summaryModel: SUMMARY_MODEL, accumulatedContext: {}, categories: { local: true } }
     const wfCtx = await jb.workflowUtils.extendWithWorkflowVars(ctx.setVars(vars))
-    return dsls.workflow.workflow[wf].$runWithCtx(wfCtx, { ...(model ? { model } : {}) }).calcWorkflow(wfCtx)
+    return dsls.ai.workflow[wf].$runWithCtx(wfCtx, { ...(model ? { model } : {}) }).calcWorkflow(wfCtx)
   }
 })
 

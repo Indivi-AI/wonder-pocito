@@ -26,7 +26,7 @@ ReactComp('comaxAiApplet', {
           const accumulatedContext = { chatHistory: next.map(({ role, text: content }) => ({ role, content })) }
           const requestCtx = coreUtils.ensureLoggers('workflowLogger,llmCallLogger,biLogger,dbLogger,errorLogger', {
             ctx: ctx.setVars({ roomId: 'comaxDemo', roomWUrl: 'room://comaxDemo', userMessage: question, accumulatedContext }) })
-          const result = await dsls.workflow.workflow.comaxVerifiedReports.$runWithCtx(requestCtx).calcWorkflow(requestCtx)
+          const result = await dsls.ai.workflow.comaxVerifiedReports.$runWithCtx(requestCtx).calcWorkflow(requestCtx)
           const answer = { role: 'assistant', ...result.runRes }
           answer.showIn == 'sidePanel' ? setDetails(answer) : setMessages([...next, answer])
         } catch (error) { setMessages([...next, { role: 'assistant', text: error.message }]) }

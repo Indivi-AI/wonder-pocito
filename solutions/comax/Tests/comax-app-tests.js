@@ -440,7 +440,7 @@ const runDashboardEdit = async (ctx, message, id) => {
     currentReportId: 'promotions', userMessage: message, widgetId: 'dashboards.reportCanvas', duckdbMemoryLimit: '2GB',
     duckdbThreads: 4, duckDbSqlCache: false, doNotWriteLogs: true })
   await wfetch2(url, { method: 'PUT', body: jb.dashboardUtils.defaultDashboardJs }, vars)
-  const res = await dsls.workflow.workflow['dashboards-edit'].$run({ model: 'openai/gpt-5.5' }).calcWorkflow(vars)
+  const res = await dsls.ai.workflow['dashboards-edit'].$run({ model: 'openai/gpt-5.5' }).calcWorkflow(vars)
   const code = res.runRes?.draftUrl ? await readLocalJs(res.runRes.draftUrl, vars) : ''
   return { ...res.runRes, adminUrl: res.adminUrl, bigLogRes: res.bigLogRes, code: undefined, editedCode: undefined,
     hasExistingPromos: code.includes('כל המבצעים הקיימים'), hasMechanic: code.includes('מבצעים לפי מנגנון'),
@@ -569,7 +569,7 @@ Test('comaxAgentsRepo.listsRegisteredAgents', {
     calculate: () => dsls.common.data.comaxAnalyticsAgents.$run(),
     expectedResult: ctx => { const xs = ctx.data
       return JSON.stringify(xs.map(x => x.id)) == JSON.stringify(['comaxVerifiedReports'])
-        && xs.every(a => dsls.workflow.workflow[a.id] && a.label && a.hint) }
+        && xs.every(a => dsls.ai.workflow[a.id] && a.label && a.hint) }
   })
 })
 

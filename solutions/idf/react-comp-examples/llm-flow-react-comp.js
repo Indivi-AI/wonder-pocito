@@ -19,7 +19,7 @@ Data('llmFlowExampleAnswer', {
         subagents: repo.subagents.filter(item => plugin.subagentIds.includes(item.id)), reports: repo.reports }),
       llmProxyUrl: 'https://node25-automations-server-365199207445.me-west1.run.app/llmProxy'
     }))
-    const result = await dsls.workflow.workflow.wonderPlatformAgent.$run().calcWorkflow(workflowCtx)
+    const result = await dsls.ai.workflow.wonderPlatformAgent.$run().calcWorkflow(workflowCtx)
     const output = typeof result.runRes === 'string' ? { text: result.runRes } : result.runRes || {}
     return { text: output.text || '', reportIds: output.reportIds || [], followUps: output.followUps || [],
       trace: result.workflowTrace || [] }

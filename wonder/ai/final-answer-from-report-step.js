@@ -3,7 +3,7 @@ import './llm-flow-core.js'
 import { materializeWidgets } from './widget-column-resolver.js'
 
 const { tgp: { TgpType } } = dsls
-const FlowElem = TgpType('flow-elem', 'workflow')
+const FlowElem = TgpType('flow-elem', 'ai')
 
 // Declarative final-answer assembly for the reports agent — like finalAnswer, plus report-specific
 // behaviours that keep the LLM from re-typing what the runtime already knows: it uses runReport's prebuilt

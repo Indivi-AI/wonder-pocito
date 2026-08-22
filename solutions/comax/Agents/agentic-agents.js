@@ -7,7 +7,7 @@ import { retrieveDoclets, RETRIEVAL_MODEL } from '../nostalgy/retrieval-analytic
 const {
   tgp: { 'ctx-enricher': { setVars } },
   common: { data: { runAgentWorkflow, llmVerdict } },
-  workflow: { Workflow, workflow: { flowWorkflow, mainWorkflow }, mpi: { mpi }, 'flow-elem': { flow, setCtxVar, setCtxData, until } }
+  ai: { Workflow, workflow: { flowWorkflow, mainWorkflow }, mpi: { mpi }, 'flow-elem': { flow, setCtxVar, setCtxData, until } }
 } = dsls
 
 const MAIN_MODEL = 'gemini/gemini-3.5-flash'
@@ -82,9 +82,9 @@ Workflow('agenticAnalytics', {
 %$comaxAnalytics%
 %$vizWidgets%
 %$retrievedDoclets%
-Use one DuckDB SQL query over the Comax supermarket ERP parquets in signedRoom://comaxDemo/usersRO/parquet, never repo-local admin/comax paths. Keep its rows and exact SQL string in vars, then llmSummary, then return { text, narrative, sql, rows, widgets, followUps } with Hebrew RTL-friendly markdown. Aggregate inside SQL - GROUP BY with counts/sums/avg and relevant min/max, ORDER BY the metric and LIMIT to a top-N - so downstream gets compact aggregates, not whole datasets. Empty arrays are valid: do not require length > 0. Assemble the answer with flow-elem<workflow>finalAnswer (declarative assembly: literal sql string, narrative template, chart widgets with nameCol/valueCol and table widgets with columns — the runtime builds data/rows from the rows) and never assemble the final object with jq. Never pass widget data/rows/series/items. Prefer a coherent widget set from the same rows, with Hebrew titles/highlights and grounded Hebrew followUps. Complex questions should use joins, not disconnected queries. Narrate progress with short Hebrew status text.
+Use one DuckDB SQL query over the Comax supermarket ERP parquets in signedRoom://comaxDemo/usersRO/parquet, never repo-local admin/comax paths. Keep its rows and exact SQL string in vars, then llmSummary, then return { text, narrative, sql, rows, widgets, followUps } with Hebrew RTL-friendly markdown. Aggregate inside SQL - GROUP BY with counts/sums/avg and relevant min/max, ORDER BY the metric and LIMIT to a top-N - so downstream gets compact aggregates, not whole datasets. Empty arrays are valid: do not require length > 0. Assemble the answer with flow-elem<ai>finalAnswer (declarative assembly: literal sql string, narrative template, chart widgets with nameCol/valueCol and table widgets with columns — the runtime builds data/rows from the rows) and never assemble the final object with jq. Never pass widget data/rows/series/items. Prefer a coherent widget set from the same rows, with Hebrew titles/highlights and grounded Hebrew followUps. Complex questions should use joins, not disconnected queries. Narrate progress with short Hebrew status text.
 The VERY LAST flow element must be a replan element that verifies the task completed and self-extends the plan when it did not:
-{$: 'flow-elem<workflow>replan',
+{$: 'flow-elem<ai>replan',
   goal: 'ודא שהשאלה נענתה במלואה',
   verifier: {$: 'boolean<common>llmVerdict', criteria: 'the result object has text answering the question with concrete numbers, sql matching the question, and grounded rows; a stated "data is missing" answer also passes: %$userMessage%'},
   maxRuns: 2,

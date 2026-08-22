@@ -9,7 +9,7 @@ import '../Doclets/comax-analytics-doclets.js'
 
 const {
   common: { data: { runReport, queryReportFullData, comaxEntityCandidates, duckDbSql } },
-  workflow: { 'flow-elem': { flow, asHumanFeedback } }
+  ai: { 'flow-elem': { flow, asHumanFeedback } }
 } = dsls
 
 export const PROMOTION_ACTION_QUESTION = 'נתח ביצועי מבצעים והמלץ על פעולות'
@@ -324,7 +324,7 @@ export const requiresReportExecution = slots => !slots.slice || !!Object.keys(sl
 export const runCustomAnswer = async (ctx, model) => {
   const nextCtx = ctx.setVars({comaxDataset: 'big', unverifiedAnswerWarning: UNVERIFIED_WARNING,
     categories: {...(ctx.vars.categories || {}), analytics: true, local: true, viz: true}})
-  const workflow = dsls.workflow.workflow.basicAnalytics.$runWithCtx(nextCtx,
+  const workflow = dsls.ai.workflow.basicAnalytics.$runWithCtx(nextCtx,
     {...(model && {model}), ...(ctx.vars.summaryModel && {summaryModel: ctx.vars.summaryModel})})
   return validateCustomAnswer(nextCtx, await workflow.calcWorkflow(nextCtx))
 }

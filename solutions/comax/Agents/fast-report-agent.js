@@ -8,7 +8,7 @@ import { CAVEAT_POLICY, antiRepeatFailure, awaitEntityVars, cleanAnswer, execute
 
 const {
   common: { Data, data: { verifiedReportsRegistry, runReport, queryReportFullData, llmSummary, comaxEntityCandidates } },
-  workflow: { Workflow, 'flow-elem': { flow, setCtxData, setCtxVar, asHumanFeedback, finalAnswerFromReport } }
+  ai: { Workflow, 'flow-elem': { flow, setCtxData, setCtxVar, asHumanFeedback, finalAnswerFromReport } }
 } = dsls
 
 const LLM_PROXY = 'https://node25-automations-server-365199207445.me-west1.run.app/llmProxy'
@@ -306,7 +306,7 @@ Data('runFastReport', {
       llmProxyUrl: LLM_PROXY, summaryModel: SUMMARY_MODEL, accumulatedContext: {chatHistory},
       categories: {reportsAnalytics: true, reports: true, local: true}}
     const wfCtx = await jb.workflowUtils.extendWithWorkflowVars(ctx.setVars(vars))
-    return dsls.workflow.workflow['fast-report'].$runWithCtx(wfCtx, { ...(model ? { model } : {}) }).calcWorkflow(wfCtx)
+    return dsls.ai.workflow['fast-report'].$runWithCtx(wfCtx, { ...(model ? { model } : {}) }).calcWorkflow(wfCtx)
   }
 })
 

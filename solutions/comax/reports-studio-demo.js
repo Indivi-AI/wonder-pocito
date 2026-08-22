@@ -231,7 +231,7 @@ ReactComp('comaxReportsStudioDemo', {
               dbHost: 'node',
               roomId: 'comaxDemo',
             })
-            const wf = await dsls.workflow.workflow['reports-studio-edit'].$run().calcWorkflow(wfCtx),
+            const wf = await dsls.ai.workflow['reports-studio-edit'].$run().calcWorkflow(wfCtx),
               out = wf?.runRes
             setTrace(wf?.workflowTrace || [])
             setLast({ adminUrl: wf?.adminUrl, patch: out?.patch, log: wf?.workflowLog || [] })

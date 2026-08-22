@@ -13,7 +13,7 @@ const { extendWithWorkflowVars, docletContent, bookletContent } = jb.workflowUti
 const { tgp: { Component } } = dsls
 
 const mainWorkflow = Component('mainWorkflow', {
-  type: 'workflow<workflow>',
+  type: 'workflow<ai>',
   params: [
     { id: 'main', type: 'mpi' },
     { id: 'categories', as: 'array' },

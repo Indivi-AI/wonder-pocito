@@ -41,17 +41,17 @@ Doclet('llmFlow', {
 imutable ctx:
 '(ctx) => ctx.setVars/setData(...), modify context immutably'
 
-TgpType('flow-elem', 'workflow', {typescript: 'async ctx => ctx'})
+TgpType('flow-elem', 'ai', {typescript: 'async ctx => ctx'})
 
 Component('flow', {
-  type: 'flow-elem<workflow>',
+  type: 'flow-elem<ai>',
   params: [
-    {id: 'elems', type: 'flow-elem<workflow>[]' }
+    {id: 'elems', type: 'flow-elem<ai>[]' }
   ]
 })
 
 Component('setCtxData', {
-  type: 'flow-elem<workflow>',
+  type: 'flow-elem<ai>',
   params: [
     {id: 'goal', as: 'string'},
     {id: 'value', type: 'data<common>'},
@@ -60,7 +60,7 @@ Component('setCtxData', {
 })
 
 Component('setCtxVar', {
-  type: 'flow-elem<workflow>',
+  type: 'flow-elem<ai>',
   params: [
     {id: 'goal', as: 'string'},
     {id: 'varName', as: 'string'},
@@ -99,7 +99,7 @@ Component('duckDbSql', {
 })
 
 Component('asHumanFeedback', {
-  type: 'flow-elem<workflow>',
+  type: 'flow-elem<ai>',
   params: [
     {id: 'varName', as: 'string'},
     {id: 'question', as: 'string'},
@@ -109,19 +109,19 @@ Component('asHumanFeedback', {
 })
 
 // Example profile as JS object:
-{$: 'flow-elem<workflow>flow', elems: [
-  {$: 'flow-elem<workflow>setCtxVar',
+{$: 'flow-elem<ai>flow', elems: [
+  {$: 'flow-elem<ai>setCtxVar',
     goal: 'Setup threshold',
     varName: 'threshold',
     value: {$: 'data<common>jqSingle', exp: '84'},
     postCondition: {$: 'boolean<common>jqBoolean', exp: '$threshold == 84'}
   },
-  {$: 'flow-elem<workflow>setCtxData',
+  {$: 'flow-elem<ai>setCtxData',
     goal: 'Load scores',
     value: {$: 'data<common>jqArray', exp: '[85, 92, 67, 94, 78]'},
     postCondition: {$: 'boolean<common>jqBoolean', exp: 'length(.) == 5'}
   },
-  {$: 'flow-elem<workflow>setCtxData',
+  {$: 'flow-elem<ai>setCtxData',
     goal: 'Filter scores above threshold',
     value: {$: 'data<common>jqArray', exp: 'map(select(. >= $threshold))'},
     postCondition: {$: 'boolean<common>jqBoolean', exp: 'all(. >= $threshold)'}
@@ -139,7 +139,7 @@ var by $varName in jq/TGP or %$varName.path% in string/SQL params.
 The resolved var shape is {ids,id,sqlIn,sqlLabelsIn,labels,items}; use %$selectedProducts.sqlIn% for numeric ids,
 %$selectedProducts.sqlLabelsIn% for item-name filters, and $selectedProducts.items in jq/llmSummary basis. Never use {{...}} for human feedback vars.
 \`\`\`javascript
-{$: 'flow-elem<workflow>asHumanFeedback',
+{$: 'flow-elem<ai>asHumanFeedback',
   goal: 'Clarify exact products', status: 'מחפש מוצרים מתאימים...',
   varName: 'selectedProducts',
   question: 'לאיזה מוצר התכוונת?',

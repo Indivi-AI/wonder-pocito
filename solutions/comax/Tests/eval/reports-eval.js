@@ -9,7 +9,7 @@ import { loadVerifiedQuestions, pMap } from './eval-utils.js'
 const {
   common: { Data, data: { verifiedReportsRegistry }, boolean: { notNull } },
   test: { Test, test: { dataTest } },
-  workflow: { workflow: { reportsAnalytics } }
+  ai: { workflow: { reportsAnalytics } }
 } = dsls
 
 // BI evaluation of the reports-based analytics flow on the 50 verified retail questions.

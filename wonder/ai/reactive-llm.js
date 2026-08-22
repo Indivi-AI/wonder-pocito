@@ -168,8 +168,8 @@ export async function fetchItemsFromLLMReactive({messages, goal, prompt, instruc
     const logBody = {messages: logMessages, model, userRequestId,
       ...(maxTokens == null ? {} : {[tokenLimitParam(provider, model)]: maxTokens}), temperature}
     const tokenCount = await countTokens({messages, model, instructions, context})
-    ctx.vars.llmCallLogger?.info?.({t: 'llm request', goal, model, userRequestId, workflowStack: ctx.vars.workflowStack},
-      {messages: logMessages, sourceRefs: coreUtils.sourceRefs?.ids?.(logMessages) || []}, {ctx})
+    ctx.vars.llmCallLogger?.info?.({t: 'llm request', goal, provider, model, userRequestId, workflowStack: ctx.vars.workflowStack},
+      {requestBody: reqBody, sourceRefs: coreUtils.sourceRefs?.ids?.(logMessages) || []}, {ctx})
     if (tokenCount !== null)
       logger?.info?.({t:`${goal}: countInputTokens`, tokenCount, instructionsLength: instructions?.length || 0, contextLength: context?.length || 0}, logBody, {ctx})
 

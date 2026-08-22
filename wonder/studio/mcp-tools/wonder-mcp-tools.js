@@ -81,8 +81,8 @@ Tool('runWorkflow', {
   ],
   impl: mcpTool(async (ctx, {}, {userMessage, roomId, userId, workflowName}) => {
     try {
-      const wfProfile = dsls.workflow.workflow[workflowName]
-      if (!wfProfile) return `Workflow not found: ${workflowName}. Available: ${Object.keys(dsls.workflow.workflow).join(', ')}`
+      const wfProfile = dsls.ai.workflow[workflowName]
+      if (!wfProfile) return `Workflow not found: ${workflowName}. Available: ${Object.keys(dsls.ai.workflow).join(', ')}`
       const wfCtx = await extendWithWorkflowVars(new coreUtils.Ctx().setVars({userMessage, roomId, userId, accumulatedContext: {chatHistory: []}}))
       const wf = wfProfile.$runWithCtx(wfCtx)
       const result = await wf.calcWorkflow(wfCtx)

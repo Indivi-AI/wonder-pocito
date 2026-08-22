@@ -4,7 +4,7 @@ import '@wonder/ai/llm-flow-core.js'
 import '@wonder/ai/category-dsl.js'
 import {fetchItemsFromLLMReactiveP} from '@wonder/ai/reactive-llm.js'
 
-const {tgp: {CategoryType, 'category-type': {categoryTypeBySuffix}}, common: {Data, VerifiedReport2, data: {runLLMFlowScript}}, workflow: {FlowElem, Workflow},
+const {tgp: {CategoryType, 'category-type': {categoryTypeBySuffix}}, common: {Data, VerifiedReport2, data: {runLLMFlowScript}}, ai: {FlowElem, Workflow},
   react: {'react-comp': reactComps}} = dsls
 const {bestVariant} = jb.workflowUtils
 
@@ -86,7 +86,7 @@ Workflow('verifiedReportAgent', {
     const {responseText} = await fetchItemsFromLLMReactiveP({ctx, model: ctx.vars.flowModel || model, goal,
       prompt: ctx.vars.userMessage, instructions: await booklet(ctx), context: JSON.stringify(ctx.vars.accumulatedContext),
       temperature: 0, thinkingBudget: 0})
-    const res = responseText.includes('flow-elem<workflow>calcVerifiedReport')
+    const res = responseText.includes('flow-elem<ai>calcVerifiedReport')
       ? await ctx.run(runLLMFlowScript(responseText)) : {runRes: {text: responseText}}
     const report = res?.runRes
     return report?.viewId || report?.text ? res : {...res,

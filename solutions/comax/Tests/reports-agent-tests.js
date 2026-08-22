@@ -25,7 +25,7 @@ const {
   test: { Test, test: { dataTest, reactTest } },
   react: { 'ui-action': { actions, click, waitForText, delay } },
   react: { 'react-comp': { reportsWorkspace, reportStudio } },
-  workflow: { 'flow-elem': { finalAnswerFromReport } }
+  ai: { 'flow-elem': { finalAnswerFromReport } }
 } = dsls
 
 const llmProxyUrl = 'https://node25-automations-server-365199207445.me-west1.run.app/llmProxy'
@@ -183,14 +183,14 @@ Test('fastReport.sliceAnswerIsUnverified', {
 
 Test('fastReport.middlePlannerUsesGpt54Mini', {
   impl: dataTest({
-    calculate: () => dsls.workflow.workflow['fast-report'][jb.coreUtils.asJbComp].params.find(p=>p.id=='model').defaultValue,
+    calculate: () => dsls.ai.workflow['fast-report'][jb.coreUtils.asJbComp].params.find(p=>p.id=='model').defaultValue,
     expectedResult: equals('openai/gpt-5.4-mini')
   })
 })
 
 Test('fastReport.twoStageGptOssModels', {
   impl: dataTest({
-    calculate: () => Object.fromEntries(dsls.workflow.workflow['fast-report'][jb.coreUtils.asJbComp].params
+    calculate: () => Object.fromEntries(dsls.ai.workflow['fast-report'][jb.coreUtils.asJbComp].params
       .filter(p => ['routerModel', 'plannerModel'].includes(p.id)).map(p => [p.id, p.defaultValue])),
     expectedResult: ctx => ctx.data.routerModel == 'groq/openai/gpt-oss-20b'
       && ctx.data.plannerModel == 'groq/openai/gpt-oss-120b' || {testFailure: JSON.stringify(ctx.data)}
@@ -686,7 +686,7 @@ Test('structuredReportsTemplate.agentRegistered', {
 Test('fastReport.agentRegistered', {
   impl: dataTest({
     calculate: () => dsls.common.data.comaxAnalyticsAgents.$run().map(a => a.id),
-    expectedResult: ctx => ctx.data.includes('fast-report') && dsls.workflow.workflow['fast-report'] || { testFailure: JSON.stringify(ctx.data) }
+    expectedResult: ctx => ctx.data.includes('fast-report') && dsls.ai.workflow['fast-report'] || { testFailure: JSON.stringify(ctx.data) }
   })
 })
 
@@ -1055,7 +1055,7 @@ const runReportsFlow = userMessage => async ctx => {
   const vars = { db: 'local', userId: 'ScreenshotService', roomId: 'comaxDemo', userMessage, doNotWriteLogs: true, isLocalHost: false,
     llmProxyUrl, summaryModel: SUMMARY_MODEL, categories: { reportsAnalytics: true, local: true } }
   const wfCtx = await jb.workflowUtils.extendWithWorkflowVars(ctx.setVars(vars))
-  return dsls.workflow.workflow.reportsAnalytics.$runWithCtx(wfCtx).calcWorkflow(wfCtx)
+  return dsls.ai.workflow.reportsAnalytics.$runWithCtx(wfCtx).calcWorkflow(wfCtx)
 }
 
 Test('workflowTest.reportsAnalytics.hebrewSmoke', {
@@ -1079,7 +1079,7 @@ const runStructuredReportsTemplateFlow = userMessage => async ctx => {
   const vars = { db: 'local', userId: 'ScreenshotService', roomId: 'comaxDemo', userMessage, isLocalHost: false,
     llmProxyUrl, summaryModel: SUMMARY_MODEL, categories: { reportsAnalytics: true, reports: true, local: true } }
   const wfCtx = await jb.workflowUtils.extendWithWorkflowVars(ctx.setVars(vars))
-  return dsls.workflow.workflow.structuredReportsTemplateAnalytics.$runWithCtx(wfCtx).calcWorkflow(wfCtx)
+  return dsls.ai.workflow.structuredReportsTemplateAnalytics.$runWithCtx(wfCtx).calcWorkflow(wfCtx)
 }
 
 const runFastReportFlow = userMessage => async ctx => {
@@ -1089,7 +1089,7 @@ const runFastReportFlow = userMessage => async ctx => {
     const vars = { db: 'local', userId: 'ScreenshotService', roomId: 'comaxDemo', userMessage, doNotWriteLogs: true, isLocalHost: false,
       llmProxyUrl, summaryModel: SUMMARY_MODEL, categories: { reportsAnalytics: true, reports: true, local: true } }
     const wfCtx = await jb.workflowUtils.extendWithWorkflowVars(ctx.setVars(vars))
-    return { ...(await dsls.workflow.workflow['fast-report'].$runWithCtx(wfCtx).calcWorkflow(wfCtx)), partials }
+    return { ...(await dsls.ai.workflow['fast-report'].$runWithCtx(wfCtx).calcWorkflow(wfCtx)), partials }
   } finally { jb.coreUtils.eventEmitter.off('fastReportPartial', onPartial) }
 }
 
@@ -1325,7 +1325,7 @@ const runPanelFlow = userMessage => async ctx => {
   const vars = { db: 'local', userId: 'ScreenshotService', roomId: 'comaxDemo', userMessage, doNotWriteLogs: true, isLocalHost: false,
     llmProxyUrl, summaryModel: SUMMARY_MODEL, categories: { local: true } }
   const wfCtx = await jb.workflowUtils.extendWithWorkflowVars(ctx.setVars(vars))
-  return dsls.workflow.workflow.comaxAgentPanel.$runWithCtx(wfCtx).calcWorkflow(wfCtx)
+  return dsls.ai.workflow.comaxAgentPanel.$runWithCtx(wfCtx).calcWorkflow(wfCtx)
 }
 
 Test('workflowTest.comaxAgentPanel.hebrewSmoke', {

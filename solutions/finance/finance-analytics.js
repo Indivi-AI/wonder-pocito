@@ -10,7 +10,7 @@ const {
   tgp: { Component, 'ctx-enricher': { setupCube } },
   common: { Lambda, data: { cubeQuery } },
   'llm-guide': { Booklet, Doclet, booklet: { booklet } },
-  workflow: { Workflow, workflow: { mainWorkflow }, mpi: { mpi } },
+  ai: { Workflow, workflow: { mainWorkflow }, mpi: { mpi } },
   bi: { cube: { demoFinanacialCubeV2 } }
 } = dsls
 
@@ -70,21 +70,21 @@ Return one javascript code block containing a flow:
 1. setCtxData runs one aggregate data<common>cubeQuery with no FROM or path.
 2. setCtxVar rows uses data<common>jqSingle with exp '.'.
 3. setCtxVar answer uses data<common>llmSummary with summaryCategories 'dataInsights'.
-4. flow-elem<workflow>finalAnswer returns text, narrative, sql, rows, widgets and followUps declaratively.
+4. flow-elem<ai>finalAnswer returns text, narrative, sql, rows, widgets and followUps declaratively.
 Charts declare kind, title, nameCol and valueCol; never embed rows/data/series. Use output aliases "name" and "value".
 Every flow element has a short present-tense status. Keep result sets aggregate and normally limit top-N to 20.
 
 \`\`\`javascript
-{$: 'flow-elem<workflow>flow', elems: [
-  {$: 'flow-elem<workflow>setCtxData', goal: 'Run cube query', status: 'Querying portfolio...',
+{$: 'flow-elem<ai>flow', elems: [
+  {$: 'flow-elem<ai>setCtxData', goal: 'Run cube query', status: 'Querying portfolio...',
     value: {$: 'data<common>cubeQuery',
       sql: 'select product as "name",completed_value as "value" group by 1 order by 2 desc limit 8'}},
-  {$: 'flow-elem<workflow>setCtxVar', goal: 'Keep rows', varName: 'rows',
+  {$: 'flow-elem<ai>setCtxVar', goal: 'Keep rows', varName: 'rows',
     value: {$: 'data<common>jqSingle', exp: '.'}},
-  {$: 'flow-elem<workflow>setCtxVar', goal: 'Write answer', status: 'Summarising...', varName: 'answer',
+  {$: 'flow-elem<ai>setCtxVar', goal: 'Write answer', status: 'Summarising...', varName: 'answer',
     value: {$: 'data<common>llmSummary', summaryCategories: 'dataInsights',
       evaluation: 'Write SHORT_ANSWER and LONG_ANSWER naming the leading product and completed value.'}},
-  {$: 'flow-elem<workflow>finalAnswer', goal: 'Return answer', status: 'Composing answer...',
+  {$: 'flow-elem<ai>finalAnswer', goal: 'Return answer', status: 'Composing answer...',
     sql: 'select product as "name",completed_value as "value" group by 1 order by 2 desc limit 8',
     narrative: '{0.name} leads completed value at {0.value:$}.',
     widgets: [{kind: 'bar', title: 'Completed value by product', valueFormat: '$',
@@ -164,6 +164,6 @@ Lambda('runFinanceAnalytics', {
     }
     const cubeCtx = await Promise.resolve(ctx.setVars(vars).run(setupCube(demoFinanacialCubeV2())))
     const wfCtx = await jb.workflowUtils.extendWithWorkflowVars(cubeCtx)
-    return dsls.workflow.workflow.financeAnalytics.$runWithCtx(wfCtx).calcWorkflow(wfCtx)
+    return dsls.ai.workflow.financeAnalytics.$runWithCtx(wfCtx).calcWorkflow(wfCtx)
   }
 })

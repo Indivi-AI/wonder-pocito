@@ -3,7 +3,7 @@ import './llm-flow-core.js'
 import { materializeWidgets } from './widget-column-resolver.js'
 
 const { tgp: { TgpType } } = dsls
-const FlowElem = TgpType('flow-elem', 'workflow')
+const FlowElem = TgpType('flow-elem', 'ai')
 
 // Declarative final-answer assembly — replaces the LLM-authored jq mega-expression that crashed on
 // Hebrew quotes (מע"מ), `=` assignments and unresolved $rows. The LLM only declares literal strings

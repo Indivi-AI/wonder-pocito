@@ -51,11 +51,10 @@ const unPackagedInLiveRepo = LambdaPackaging('unPackagedInLiveRepo', {
 
 const roomLambda = LambdaPackaging('roomLambda', {
   params: [
-    { id: 'streamProgress', as: 'boolean' },
-    { id: 'timeout', as: 'number', defaultValue: '%$testTimeout%' },
-    { id: 'timeoutRatio', as: 'number', defaultValue: 0.8 },
-    { id: 'maxPackedBytes', as: 'number', defaultValue: 65536,
-      description: 'advisory wire-size budget (~one 64K transport chunk); a bigger input belongs in a room file, not packedCtx' }
+    {id: 'streamProgress', as: 'boolean', type: 'boolean<common>'},
+    {id: 'timeout', as: 'number', defaultValue: '%$testTimeout%'},
+    {id: 'timeoutRatio', as: 'number', defaultValue: 0.8},
+    {id: 'maxPackedBytes', as: 'number', defaultValue: 65536 }
   ],
   impl: (_, {}, { streamProgress, timeout, timeoutRatio, maxPackedBytes }) => ({
     run: async (ctx, compToRun) => {
@@ -79,7 +78,7 @@ const roomLambda = LambdaPackaging('roomLambda', {
       const serverTimeout = timeout && timeout * timeoutRatio
       const t0 = Date.now()
       const TIMED_OUT = Symbol('timedOut')
-      const fetching = wfetch2(`${ctx.vars.roomWUrl}/lambda/${name}`,
+      const fetching = wfetch2(`${ctx.vars.roomWUrl}/lambdas/${name}`,
         { method: 'post', body: { profile, packedCtx, stream: !!streamProgress, serverTimeout } }, ctx)
       const deadline = serverTimeout && new Promise(ok => setTimeout(() => ok(TIMED_OUT), serverTimeout))
       const res = await Promise.race([fetching, deadline].filter(Boolean))
@@ -109,8 +108,8 @@ Data('invokeSnippetInContext', {
 DbDriverInterceptor('roomLambda', {
   impl: dbDriverInterceptor({
     pre: async (ctx, { roomId, fileName, driverMethod, opts, roomLogger }) => {
-      if (driverMethod !== 'append' || !fileName?.startsWith('lambda/')) return null
-      const name = fileName.slice('lambda/'.length)
+      if (driverMethod !== 'append' || !fileName?.startsWith('lambdas/')) return null
+      const name = fileName.slice('lambdas/'.length)
       try {
       // lambdaHost: explicit override; else browser uses page origin and node uses staging.
       const base = ctx.vars.lambdaHost || globalThis.window?.location?.origin || 'https://w-staging.indivi.ai'

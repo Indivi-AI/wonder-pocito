@@ -7,7 +7,7 @@ const {
   tgp: { 'ctx-enricher': { setVars } },
   common: { data: { duckDbSql, asIs, comaxEntityCandidates }, boolean: { and, contains, equals, notNull } },
   test: { Test, test: { dataTest } },
-  workflow: { workflow: { basicAnalytics } }
+  ai: { workflow: { basicAnalytics } }
 } = dsls
 
 const llmProxyUrl = 'https://node25-automations-server-365199207445.me-west1.run.app/llmProxy'
@@ -34,12 +34,12 @@ const runComaxAnalytics = userMessage => async ctx => {
 const runFinalAnswer = (rows, profileExtra = {}) => async ctx => {
   const logger = { workflowTrace: [], info() {}, error() {}, status() {}, warning() {}, step() {} }
   const { vars = {}, ...extra } = profileExtra
-  const profile = { $: 'flow-elem<workflow>finalAnswer',
+  const profile = { $: 'flow-elem<ai>finalAnswer',
     sql: "SELECT name, value FROM t WHERE name LIKE '%קפה%'",
     narrative: '{0.name} מוביל עם {0.value:₪} (ללא מע"מ)',
     widgets: [{ kind: 'bar', title: 'מכירות', valueFormat: '₪', nameCol: 'name', valueCol: 'value', drill: { dimension: 'name', question: 'פרק את {name}' } }],
     followUps: [{ label: 'פירוק', question: 'פרק לפי סניף' }], ...extra }
-  coreUtils.resolveProfileTypes(profile, { expectedType: 'flow-elem<workflow>', tgpModel: jb })
+  coreUtils.resolveProfileTypes(profile, { expectedType: 'flow-elem<ai>', tgpModel: jb })
   const res = await ctx.setVars({ workflowLogger: logger, rows, answer: 'תשובה בעברית', ...vars }).run(profile)
   return res instanceof coreUtils.Ctx ? res.data : res
 }
@@ -294,7 +294,7 @@ Test('comaxAnalytics.outputFormat.safetyNet', {
   impl: dataTest({
     calculate: ctx => jb.workflowUtils.docletContent('essentialOutputFormat', ctx.setVars({categories: {analytics: true, local: true}})),
     expectedResult: contains({
-      text: ['flow-elem<workflow>replan', 'data<common>llmSql', '$rows | length > 0', 'name what was checked', 'DISTINCTIVE token', 'NEVER run numbers for a different entity', '%$comaxAnalytics%'],
+      text: ['flow-elem<ai>replan', 'data<common>llmSql', '$rows | length > 0', 'name what was checked', 'DISTINCTIVE token', 'NEVER run numbers for a different entity', '%$comaxAnalytics%'],
       anyOrder: true
     })
   })

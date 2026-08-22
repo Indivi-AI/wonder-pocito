@@ -8,7 +8,7 @@ const {
   common: { Data },
   'llm-guide': { Doclet, doclet: { dataComp }, guidance: { example, mustDo, doNot }, explanationPoint: { explanation, syntax, whenToUse } }
 } = dsls
-const FlowElem = TgpType('flow-elem', 'workflow')
+const FlowElem = TgpType('flow-elem', 'ai')
 const { squeeze, getWorkflowVars, parseFlowCode, resolveCompRefs, lastFencedBlock } = jb.workflowUtils
 
 // verifier contract: a boolean<common> profile returning boolean (jqBoolean) or a {satisfied, reason} verdict (llmVerdict).
@@ -61,7 +61,7 @@ async function authorFollowUpFlow(ctx, {goal, task, attempts, model, instruction
     `CURRENT RESULT (ctx.data): ${squeeze(ctx.data, 4000)}`,
     Object.keys(workflowVars).length ? `WORKFLOW VARS: ${squeeze(workflowVars, 2000)}` : null,
     `VERIFIER FEEDBACK - why the task is not complete, most recent last:\n${attempts.map((r, i) => `${i + 1}. ${r}`).join('\n')}`,
-    'Reply with ONLY a ```javascript block containing a flow-elem<workflow> profile. Do NOT include a replan element in it.'
+    'Reply with ONLY a ```javascript block containing a flow-elem<ai> profile. Do NOT include a replan element in it.'
   ].filter(Boolean).join('\n\n')
   const { responseText } = await fetchItemsFromLLMReactiveP({
     ctx, model, goal: `replan: ${goal || task}`, prompt,
@@ -102,7 +102,7 @@ FlowElem('replan', {
         const flowCode = await authorFollowUpFlow(runCtx, {goal, task: task(runCtx), attempts, logger,
           model: model || runCtx.vars.flowModel || runCtx.vars.summaryModel || 'gemini/gemini-3.5-flash', instructions: instructions.profile ? instructions(runCtx) : null})
         const profile = await parseFlowCode(flowCode, logger, runCtx)
-        coreUtils.resolveProfileTypes(profile, {expectedType: 'flow-elem<workflow>', tgpModel: jb})
+        coreUtils.resolveProfileTypes(profile, {expectedType: 'flow-elem<ai>', tgpModel: jb})
         resolveCompRefs(profile)
         logger?.info({t: 'replan follow-up flow', goal, replans: replans + 1}, {flowCode}, {ctx: runCtx})
         const raw = await coreUtils.waitForInnerElements(await runCtx.run(profile))
@@ -154,9 +154,9 @@ Doclet('agentLoopComponents', {
     guidance: [
       example(`
 // until: evaluator-optimizer loop - rerun body until verifier passes (max maxRuns)
-{$: 'flow-elem<workflow>until',
+{$: 'flow-elem<ai>until',
   goal: 'Fetch rows until relevant ones are found',
-  body: {$: 'flow-elem<workflow>setCtxData',
+  body: {$: 'flow-elem<ai>setCtxData',
     goal: 'query',
     value: {$: 'data<common>duckDbSql', sql: 'SELECT * FROM data LIMIT 20'}},
   verifier: {$: 'boolean<common>jqBoolean', exp: 'length > 0'},
@@ -165,7 +165,7 @@ Doclet('agentLoopComponents', {
 
 // replan: END the flow with it when the task may need follow-up steps.
 // It judges completion; if incomplete, it writes and runs a follow-up flow (up to maxRuns times, default 3)
-{$: 'flow-elem<workflow>replan',
+{$: 'flow-elem<ai>replan',
   goal: 'Ensure the user question is fully answered',
   verifier: {$: 'boolean<common>llmVerdict', criteria: 'the result fully answers: %$userMessage%'},
   maxRuns: 3

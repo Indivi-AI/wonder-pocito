@@ -10,7 +10,7 @@ import '../Doclets/viz-doclets.js'
 const {
   tgp: { 'ctx-enricher': { setVars } },
   common: { Data },
-  workflow: { Workflow, workflow: { mainWorkflow }, mpi: { mpi } }
+  ai: { Workflow, workflow: { mainWorkflow }, mpi: { mpi } }
 } = dsls
 
 const LLM_PROXY = 'https://node25-automations-server-365199207445.me-west1.run.app/llmProxy'
@@ -36,7 +36,7 @@ never use repo-local admin/comax paths. Complex questions use joins or CTEs, not
 Keep rows and exact SQL in vars, run llmSummary, then return
 { text, narrative, sql, rows, widgets, followUps } with Hebrew RTL-friendly markdown.
 Aggregate in SQL so downstream receives compact results, not raw data. Empty arrays are valid.
-End with flow-elem<workflow>finalAnswer; never assemble the final object with jq.
+End with flow-elem<ai>finalAnswer; never assemble the final object with jq.
 Declare chart nameCol/valueCol and table columns; never pass widget data/rows/series/items.
 Before writing the flow, split the question into every requested outcome. SQL, summary and widgets must cover all.
 Never use a source lacking a requested entity or metric.
@@ -75,6 +75,6 @@ Data('runAnalytics', {
       summaryModel: SUMMARY_MODEL, accumulatedContext: {chatHistory},
       categories: {analytics: true, local: true, duckdb: true, comax: true}}
     const wfCtx = await jb.workflowUtils.extendWithWorkflowVars(ctx.setVars(vars))
-    return dsls.workflow.workflow.basicAnalytics.$runWithCtx(wfCtx).calcWorkflow(wfCtx)
+    return dsls.ai.workflow.basicAnalytics.$runWithCtx(wfCtx).calcWorkflow(wfCtx)
   }
 })

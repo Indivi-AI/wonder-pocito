@@ -12,7 +12,7 @@ const {
   tgp: { Component, 'ctx-enricher': { setupCube, setupComax } },
   common: { Lambda, data: { cubeQuery } },
   'llm-guide': { Doclet },
-  workflow: { Workflow, workflow: { mainWorkflow }, mpi: { mpi } },
+  ai: { Workflow, workflow: { mainWorkflow }, mpi: { mpi } },
   bi: { cube: { comaxSalesCube } }
 } = dsls
 
@@ -46,18 +46,18 @@ Return only one javascript code block containing a flow with this backbone:
 1) setCtxData running data<common>cubeQuery — the FROM is ALWAYS \`base\` (the cube's star injects joins + the date window). NEVER a file path, read_parquet or room:// url. Select the cube's metric fragments (sum(net_sales_amount), …) and GROUP BY the requested dimension so the result is COMPACT AGGREGATES: ORDER BY the key metric, LIMIT a top-N (<=20). The sql param is ONE plain string.
 2) setCtxVar 'rows' with data<common>jqSingle exp '.' — copy VERBATIM; it keeps the aggregate rows.
 3) setCtxVar 'answer' via data<common>llmSummary summaryCategories 'dataInsights' — a one-sentence SHORT_ANSWER and a 3-4 sentence LONG_ANSWER, in Hebrew.
-4) flow-elem<workflow>finalAnswer — DECLARATIVE { text, narrative, sql, rows, widgets, followUps }. The runtime reads the answer/rows vars, echoes your sql, materializes widgets from the rows and handles empty rows — do NOT write an empty-rows branch and do NOT build the object with jq.
+4) flow-elem<ai>finalAnswer — DECLARATIVE { text, narrative, sql, rows, widgets, followUps }. The runtime reads the answer/rows vars, echoes your sql, materializes widgets from the rows and handles empty rows — do NOT write an empty-rows branch and do NOT build the object with jq.
 finalAnswer params: sql (the SAME literal string you ran); narrative (ONE Hebrew sentence, {0.col} inserts row 0's column, {0.col:₪} formats); widgets (declarative kind + nameCol/valueCol for charts, kind:'table' + columns for tables — NEVER data/rows/series); followUps (2-4 Hebrew {label, question}, label <=40 chars). Each flow element carries a short Hebrew present-tense status.
 \`\`\`javascript
-{$:'flow-elem<workflow>flow', elems:[
-  {$:'flow-elem<workflow>setCtxData', goal:'Query sales', status:'שולף מכירות...',
+{$:'flow-elem<ai>flow', elems:[
+  {$:'flow-elem<ai>setCtxData', goal:'Query sales', status:'שולף מכירות...',
     value:{$:'data<common>cubeQuery', sql:'select branch as "name", round(sum(net_sales_amount),2) as "value" from base group by 1 order by 2 desc limit 8'},
     postCondition:{$:'boolean<common>jqBoolean', exp:'type == "array"'}},
-  {$:'flow-elem<workflow>setCtxVar', goal:'Keep rows', varName:'rows', value:{$:'data<common>jqSingle', exp:'.'}},
-  {$:'flow-elem<workflow>setCtxVar', goal:'Write answer', status:'מסכם...', varName:'answer',
+  {$:'flow-elem<ai>setCtxVar', goal:'Keep rows', varName:'rows', value:{$:'data<common>jqSingle', exp:'.'}},
+  {$:'flow-elem<ai>setCtxVar', goal:'Write answer', status:'מסכם...', varName:'answer',
     value:{$:'data<common>llmSummary', summaryCategories:'dataInsights', evaluation:'כתוב SHORT_ANSWER במשפט אחד עם הסניף המוביל והסכום ב-**bold**, ו-LONG_ANSWER בן 3-4 משפטים. אם אין שורות, ציין שלא נמצאו נתונים.'},
     postCondition:{$:'boolean<common>jqBoolean', exp:'(type == "string" and length > 0) or (.text | type == "string" and length > 0)'}},
-  {$:'flow-elem<workflow>finalAnswer', goal:'Return answer', status:'מרכיב תשובה...',
+  {$:'flow-elem<ai>finalAnswer', goal:'Return answer', status:'מרכיב תשובה...',
     sql:'select branch as "name", round(sum(net_sales_amount),2) as "value" from base group by 1 order by 2 desc limit 8',
     narrative:'הסניף המוביל הוא {0.name} עם {0.value:₪}.',
     widgets:[{kind:'hbar', title:'סניפים מובילים · ₪', valueFormat:'₪', nameCol:'name', valueCol:'value', highlight:{max:true, note:'הסניף המוביל'}}],
@@ -114,6 +114,6 @@ Lambda('runComaxCubeAnalytics', {
     const vars = { userMessage, llmProxyUrl: LLM_PROXY, summaryModel: SUMMARY_MODEL, accumulatedContext: { chatHistory }, categories: { comax: true, viz: true } }
     const cubeCtx = await Promise.resolve(ctx.setVars(vars).run(setupComax(comaxSalesCube(), { period, prior })))
     const wfCtx = await jb.workflowUtils.extendWithWorkflowVars(cubeCtx)
-    return dsls.workflow.workflow.comaxCubeAnalytics.$runWithCtx(wfCtx).calcWorkflow(wfCtx)
+    return dsls.ai.workflow.comaxCubeAnalytics.$runWithCtx(wfCtx).calcWorkflow(wfCtx)
   }
 })

@@ -12,9 +12,9 @@ Doclet('essentialOutputFormat.reportsAnalyticsMedium', {
 Answer Comax supermarket ERP analytics questions. Reply with ONE \`\`\`javascript code block containing a flow (2-space indent before each flow elem), no prose around it.
 
 ## Flow DSL
-- flow-elem<workflow>flow { elems:[...] } — the top wrapper.
-- flow-elem<workflow>setCtxData { goal, status?, value:data<common>, postCondition:boolean<common> } — sets ctx.data.
-- flow-elem<workflow>setCtxVar { goal, status?, varName, value, postCondition? } — keeps a named var (read later as $varName).
+- flow-elem<ai>flow { elems:[...] } — the top wrapper.
+- flow-elem<ai>setCtxData { goal, status?, value:data<common>, postCondition:boolean<common> } — sets ctx.data.
+- flow-elem<ai>setCtxVar { goal, status?, varName, value, postCondition? } — keeps a named var (read later as $varName).
 - data comps: runReport, queryReportFullData, llmSummary, jqSingle (force single obj), jqArray (force array).
 - boolean<common>jqBoolean { exp } — postCondition; use parens around and/or, e.g. (. >= $t) and (length == 5).
 status is a short Hebrew present-tense label ("מריץ דוח מבצעים...", "מסכם תובנות...").
@@ -76,25 +76,25 @@ highlight forms: "Name" | index | {name,note} | {max:true,note} | {min:true} —
 
 ## Backbone example
 \`\`\`javascript
-{$: 'flow-elem<workflow>flow', elems: [
-  {$: 'flow-elem<workflow>setCtxData',
+{$: 'flow-elem<ai>flow', elems: [
+  {$: 'flow-elem<ai>setCtxData',
     goal: 'Run promo recommendations', status: 'מריץ דוח המלצות מבצעים...',
     value: {$: 'data<common>runReport', reportId: 'promo-recommendations', scope: 'none', sections: ['rerun-winners', 'clearance-candidates'], sectionDepth: 'summary'},
     postCondition: {$: 'boolean<common>jqBoolean', exp: 'has("results")'}
   },
-  {$: 'flow-elem<workflow>setCtxVar', goal: 'Keep prebuilt widgets', varName: 'reportWidgets', value: {$: 'data<common>jqSingle', exp: '.widgets'}},
-  {$: 'flow-elem<workflow>setCtxVar', goal: 'Clearance for branch', status: 'מסנן עודפים בסניף...', varName: 'rows',
+  {$: 'flow-elem<ai>setCtxVar', goal: 'Keep prebuilt widgets', varName: 'reportWidgets', value: {$: 'data<common>jqSingle', exp: '.widgets'}},
+  {$: 'flow-elem<ai>setCtxVar', goal: 'Clearance for branch', status: 'מסנן עודפים בסניף...', varName: 'rows',
     value: {$: 'data<common>queryReportFullData', reportId: 'promo-recommendations', sectionId: 'clearance-candidates', sql: \`SELECT item, dept, round(tied_cash_ils) AS tied_cash_ils, round(days_cover) AS days_cover, round(rec_depth_pct) AS rec_depth_pct, rec_mechanic FROM full_data WHERE branch = 'גני תקווה' ORDER BY tied_cash_ils DESC LIMIT 12\`},
     postCondition: {$: 'boolean<common>jqBoolean', exp: 'type == "array"'}
   },
-  {$: 'flow-elem<workflow>setCtxData', goal: 'Focus summary on the basis',
+  {$: 'flow-elem<ai>setCtxData', goal: 'Focus summary on the basis',
     value: {$: 'data<common>jqSingle', exp: '{clearance: $rows}'}
   },
-  {$: 'flow-elem<workflow>setCtxVar', goal: 'Write answer', status: 'מסכם תובנות...', varName: 'answer',
+  {$: 'flow-elem<ai>setCtxVar', goal: 'Write answer', status: 'מסכם תובנות...', varName: 'answer',
     value: {$: 'data<common>llmSummary', summaryCategories: 'dataInsights', evaluation: 'בסס את התשובה על clearance בלבד. כתוב SHORT_ANSWER במשפט אחד עם הפריט המוביל והעומק המומלץ, ו-LONG_ANSWER של 3-4 משפטים עם 1-2 פריטים מובילים, מספרים ב-**bold**, והסתייגויות מהותיות. אם אין שורות, אמור שלא נמצאו מועמדים.'},
     postCondition: {$: 'boolean<common>jqBoolean', exp: '(type == "string" and length > 0) or (.text | type == "string" and length > 0)'}
   },
-  {$: 'flow-elem<workflow>finalAnswerFromReport',
+  {$: 'flow-elem<ai>finalAnswerFromReport',
     goal: 'Return explorable answer', status: 'מרכיב תשובה...',
     textVar: 'answer', rowsVar: 'rows', reportWidgetsVar: 'reportWidgets',
     narrative: '{0.item} כובל הכי הרבה מזומן — {0.tied_cash_ils:₪}, עומק מומלץ {0.rec_depth_pct:%}.',

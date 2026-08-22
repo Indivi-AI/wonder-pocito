@@ -11,11 +11,11 @@ const {
 
 const { extendWithWorkflowVars } = jb.workflowUtils
 
-// run a hand-authored flow-elem tree as a workflow<workflow> (the non-LLM counterpart of mainWorkflow)
+// run a hand-authored flow-elem tree as a workflow<ai> (the non-LLM counterpart of mainWorkflow)
 Component('flowWorkflow', {
-  type: 'workflow<workflow>',
+  type: 'workflow<ai>',
   params: [
-    {id: 'flow', type: 'flow-elem<workflow>', dynamic: true}
+    {id: 'flow', type: 'flow-elem<ai>', dynamic: true}
   ],
   impl: ({}, {}, { flow }) => ({
     async calcWorkflow(__ctx) {
@@ -40,7 +40,7 @@ Data('runAgentWorkflow', {
     {id: 'model', as: 'string', description: 'optional model override for the agent main flow'}
   ],
   impl: async (ctx, {}, { workflow, model }) => {
-    const wf = dsls.workflow.workflow[workflow]
+    const wf = dsls.ai.workflow[workflow]
     if (!wf) return { error: `runAgentWorkflow: unknown workflow '${workflow}'` }
     const res = await wf.$run().calcWorkflow(ctx.setVars({ workflowLogger: undefined, flowModelOverride: model || undefined }))
     return res?.runRes && typeof res.runRes == 'object' && !Array.isArray(res.runRes)
@@ -86,14 +86,14 @@ Doclet('parallelDataComponents', {
   impl: dataComp('parallel', {
     guidance: [
       example(`
-{$: 'flow-elem<workflow>setCtxData',
+{$: 'flow-elem<ai>setCtxData',
   goal: 'Run two agents on the same question, concurrently',
-  value: {$: 'flow-elem<workflow>parallel', branches: [
-    {$: 'flow-elem<workflow>setCtxData', goal: 'Agent A', value: {$: 'data<common>runAgentWorkflow', workflow: 'reportsAnalytics'}},
-    {$: 'flow-elem<workflow>setCtxData', goal: 'Agent B', value: {$: 'data<common>runAgentWorkflow', workflow: 'basicAnalytics', model: 'anthropic/claude-sonnet-4-5'}}
+  value: {$: 'flow-elem<ai>parallel', branches: [
+    {$: 'flow-elem<ai>setCtxData', goal: 'Agent A', value: {$: 'data<common>runAgentWorkflow', workflow: 'reportsAnalytics'}},
+    {$: 'flow-elem<ai>setCtxData', goal: 'Agent B', value: {$: 'data<common>runAgentWorkflow', workflow: 'basicAnalytics', model: 'anthropic/claude-sonnet-4-5'}}
   ]}
 }
-{$: 'flow-elem<workflow>setCtxData', goal: 'Pick the better answer',
+{$: 'flow-elem<ai>setCtxData', goal: 'Pick the better answer',
   value: {$: 'data<common>decideBestAnswer',
     criteria: 'Pick the best answer to the user question: %$userMessage%, by correctness, grounding in the data and clarity. Reason in the user language.',
     sources: ['reports', 'sql/sonnet']}}

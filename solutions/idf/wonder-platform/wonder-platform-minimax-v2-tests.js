@@ -67,7 +67,7 @@ Test('wonderPlatformMinimaxV2.agentGrounding', {
         accumulatedContext: { chatHistory: [] },
         llmProxyUrl: 'https://node25-automations-server-365199207445.me-west1.run.app/llmProxy'
       }))
-      const res = await dsls.workflow.workflow.wonderPlatformMinimaxV2Agent.$run().calcWorkflow(workflowCtx)
+      const res = await dsls.ai.workflow.wonderPlatformMinimaxV2Agent.$run().calcWorkflow(workflowCtx)
       return {
         ok: typeof res.runRes?.text === 'string' && Array.isArray(res.runRes.reportIds),
         answer: res.runRes,

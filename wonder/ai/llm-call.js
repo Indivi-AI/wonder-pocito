@@ -10,7 +10,7 @@ const {
 
 
 Component('llmCall', {
-  type: 'workflow<workflow>',
+  type: 'workflow<ai>',
   params: [
     { id: 'mpi', type: 'mpi' },
     { id: 'categories', as: 'string[]' },

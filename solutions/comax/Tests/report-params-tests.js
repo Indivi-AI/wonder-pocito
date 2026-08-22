@@ -477,7 +477,7 @@ Test('reportParams.planRetryLiveV6', {
         llmProxyUrl: 'https://node25-automations-server-365199207445.me-west1.run.app/llmProxy',
         categories: {reportsAnalytics: true, reports: true, local: true}}
       const wfCtx = await jb.workflowUtils.extendWithWorkflowVars(ctx.setVars(vars))
-      const result = await dsls.workflow.workflow['fast-report'].$runWithCtx(wfCtx).calcWorkflow(wfCtx)
+      const result = await dsls.ai.workflow['fast-report'].$runWithCtx(wfCtx).calcWorkflow(wfCtx)
       return {reportId: result.reportSlots?.reportId, attempts: result.reportExecution?.attempts,
         rows: result.runRes?.rows?.length, error: result.runRes?.error, errors: result.workflowErrors}
     },
@@ -497,7 +497,7 @@ Test('reportParams.originalQuestionEndToEndFinalV7', {
         llmProxyUrl: 'https://node25-automations-server-365199207445.me-west1.run.app/llmProxy',
         summaryModel: 'openai/gpt-5.4', categories: {reportsAnalytics: true, reports: true, local: true}}
       const wfCtx = await jb.workflowUtils.extendWithWorkflowVars(ctx.setVars(vars))
-      const result = await dsls.workflow.workflow['fast-report'].$runWithCtx(wfCtx).calcWorkflow(wfCtx)
+      const result = await dsls.ai.workflow['fast-report'].$runWithCtx(wfCtx).calcWorkflow(wfCtx)
       return {reportId: result.reportSlots?.reportId,
         sections: result.reportSlots?.sections,
         slice: result.reportSlots?.slice, execution: result.reportExecution,

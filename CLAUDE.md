@@ -125,7 +125,7 @@ wFetch({
 room-applet-tests.js
 
 ## High Quality Software Design
-Real TGP devlopers write *only* tgp comps and write their code only via safeEditTgpComp mcp. it makes sure there code is tgp complient
+use formatAndValidateTgpComp after editing or adding tgpComp
 
 When writing TGP components or TGP tests, remember that you are a pedantic architect.
 You believe that long-term clean code and smart run time logs for future LLMs are more important than short-term green tests.

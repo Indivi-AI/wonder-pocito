@@ -8,5 +8,5 @@ const { common: { Data } } = dsls
 Data('comaxAnalyticsAgents', {
   impl: () => [
     { id: 'comaxVerifiedReports', label: 'דוחות מאומתים', hint: 'בחירת דוח מוגדר ומאומת מראש' }
-  ].filter(a => dsls.workflow.workflow[a.id])
+  ].filter(a => dsls.ai.workflow[a.id])
 })

@@ -203,12 +203,27 @@ Test('dbDriverTests.resolveCodeLocations', {
       ]) }
     },
     expectedResult: equals('%result%', asIs([
-      { db: 'cloudflare', fullyResolvedWUrl: 'clientCode:cloudflare//runtime/react.js',
-        resolved: 'https://jb6-cdn.pages.dev/react.js', isWUrl: true, isLocal: false },
-      { db: 'gcs', fullyResolvedWUrl: 'clientCode:gcs//applets/v1/wonder/ui.js',
-        resolved: 'https://storage.googleapis.com/wonder-code-packages/applets/v1/wonder/ui.js', isWUrl: true, isLocal: false },
-      { db: 'gcs', fullyResolvedWUrl: 'lambdaCode:gcs//v1.tar.gz',
-        resolved: 'https://storage.googleapis.com/wonder-code-packages/lambda/v1.tar.gz', isWUrl: true, isLocal: false }
+        {
+          db: 'cloudflare',
+          fullyResolvedWUrl: 'clientCode:cloudflare//runtime/react.js',
+          resolved: 'https://jb6-cdn.pages.dev/react.js',
+          isWUrl: true,
+          isLocal: false
+        },
+        {
+          db: 'gcs',
+          fullyResolvedWUrl: 'clientCode:gcs//applets/v1/wonder/ui.js',
+          resolved: 'https://storage.googleapis.com/wonder-code-packages/applets/v1/wonder/ui.js',
+          isWUrl: true,
+          isLocal: false
+        },
+        {
+          db: 'gcs',
+          fullyResolvedWUrl: 'lambdaCode:gcs//v1.tar.gz',
+          resolved: 'https://storage.googleapis.com/wonder-code-packages/lambdas/v1.tar.gz',
+          isWUrl: true,
+          isLocal: false
+        }
     ]))
   })
 })

@@ -2,7 +2,7 @@ import { dsls } from '@jb6/core'
 import '@wonder/workflows/workflows.js'
 import '@wonder/workflows/workflow-testers.js'
 
-const { test: { Test, test: { workflowTest } }, workflow: { workflow: { simpleLlmCall } } } = dsls
+const { test: { Test, test: { workflowTest } }, ai: { workflow: { simpleLlmCall } } } = dsls
 const models = [
   ['gemma4_31b_it', 'gcp/gemma-4-31b-it', 'gemini', 'gemma-4-31b-it'],
   ['gemma4_26b_a4b_it', 'gcp/gemma-4-26b-a4b-it', 'gemini', 'gemma-4-26b-a4b-it'],

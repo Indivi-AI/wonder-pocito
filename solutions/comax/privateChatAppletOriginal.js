@@ -1101,7 +1101,7 @@ async function sendMessage({ txt, agents: agentIds, model, chatElements, setChat
   const runOne = async (id) => {
     const start = Date.now()
     try {
-      const wfres = (await dsls.workflow.workflow[id].$run(model ? { model } : {}).calcWorkflow(ctxForWf)) || {}
+      const wfres = (await dsls.ai.workflow[id].$run(model ? { model } : {}).calcWorkflow(ctxForWf)) || {}
       return { agent: id, durMs: Date.now() - start, payload: buildAssistantPayload(wfres) }
     } catch (e) {
       return { agent: id, durMs: Date.now() - start, error: String(e?.stack || e) }

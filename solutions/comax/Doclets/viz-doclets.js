@@ -15,7 +15,7 @@ Doclet('vizCatalog', {
 INLINE VISUALIZATION WIDGETS
 You can answer with text AND inline interactive widgets (charts/plots/tables). Choose the widget whose purpose matches the question, then pass the right params. Every widget gets {title, optional subtitle, optional highlight, optional valueFormat: 'int'|'$'|'%'|'compact'}. Pick the SMALLEST set of widgets that answers the question (usually one).
 
-For flow-elem<workflow>finalAnswer/finalAnswerFromReport, widgets are DECLARATIVE specs: charts use nameCol/valueCol and tables use columns; do not pass data/rows/series/items because the runtime materializes the render shape from the kept rows. The render shapes below describe what VizWidget consumes after materialization or what drill SQL aliases should return.
+For flow-elem<ai>finalAnswer/finalAnswerFromReport, widgets are DECLARATIVE specs: charts use nameCol/valueCol and tables use columns; do not pass data/rows/series/items because the runtime materializes the render shape from the kept rows. The render shapes below describe what VizWidget consumes after materialization or what drill SQL aliases should return.
 
 PART-TO-WHOLE (composition of a single total):
 - pie    {kind:'pie', data:[{name,value}], donut?:true} — share of a total across few categories (<=8).
@@ -84,24 +84,24 @@ Pick the drill that answers the natural next question: a time cell (day/hour hea
 Doclet('vizOutputFormat', {
   impl: `
 WIDGET ANSWER OUTPUT FORMAT
-When a chart helps, the FINAL flow element is flow-elem<workflow>finalAnswer/finalAnswerFromReport. Do not build the final object with jqSingle. text/narrative are clean markdown; widgets is an array of declarative specs (charts: nameCol/valueCol; table: columns); every main widget SHOULD add drill (see DRILL-DOWN) so clicks open a side plot; followUps are 2-4 grounded next questions.
+When a chart helps, the FINAL flow element is flow-elem<ai>finalAnswer/finalAnswerFromReport. Do not build the final object with jqSingle. text/narrative are clean markdown; widgets is an array of declarative specs (charts: nameCol/valueCol; table: columns); every main widget SHOULD add drill (see DRILL-DOWN) so clicks open a side plot; followUps are 2-4 grounded next questions.
 
 Backbone:
 \`\`\`javascript
-{$: 'flow-elem<workflow>flow', elems: [
-  {$: 'flow-elem<workflow>setCtxData',
+{$: 'flow-elem<ai>flow', elems: [
+  {$: 'flow-elem<ai>setCtxData',
     goal: 'Compute the rows',
     value: {$: 'data<common>duckDbSql', sql: 'SELECT name, value FROM ... ORDER BY value DESC LIMIT 8'},
     postCondition: {$: 'boolean<common>jqBoolean', exp: 'type == "array"'}
   },
-  {$: 'flow-elem<workflow>setCtxVar', goal: 'Keep rows', varName: 'rows',
+  {$: 'flow-elem<ai>setCtxVar', goal: 'Keep rows', varName: 'rows',
     value: {$: 'data<common>jqSingle', exp: '.'}
   },
-  {$: 'flow-elem<workflow>setCtxVar', goal: 'Write the answer', varName: 'answer',
+  {$: 'flow-elem<ai>setCtxVar', goal: 'Write the answer', varName: 'answer',
     value: {$: 'data<common>llmSummary', summaryCategories: 'dataInsights', evaluation: 'Answer with SHORT_ANSWER as one sentence and LONG_ANSWER as 3-4 concise sentences, with key numbers in **bold** and every number to 2 decimals; if rows are empty, say no matching data was found.'},
     postCondition: {$: 'boolean<common>jqBoolean', exp: '(type == "string" and length > 0) or (.text | type == "string" and length > 0)'}
   },
-  {$: 'flow-elem<workflow>finalAnswer',
+  {$: 'flow-elem<ai>finalAnswer',
     goal: 'Return the explorable answer',
     sql: 'SELECT name, value FROM ... ORDER BY value DESC LIMIT 8',
     narrative: '{0.name} leads with {0.value:$}.',

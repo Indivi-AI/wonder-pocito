@@ -10,7 +10,7 @@ const {
   tgp: { TgpType, TgpTypeModifier, Component },
   test: { Logger, logger: { domainLogger } }
 } = dsls
-TgpType('workflow', 'workflow')
+TgpType('workflow', 'ai')
 
 const {
   common: { Data },
@@ -27,12 +27,12 @@ Object.assign(jb.workflowUtils ||= {}, {
   seedClarifiedVars, lastFencedBlock
 })
 
-const Mpi = TgpType('mpi', 'workflow', { typescript: '{ model, prompt, instructions }'} )
-const FlowElem = TgpType('flow-elem', 'workflow', {typescript: 'async ctx => ctx'})
+const Mpi = TgpType('mpi', 'ai', { typescript: '{ model, prompt, instructions }'} )
+const FlowElem = TgpType('flow-elem', 'ai', {typescript: 'async ctx => ctx'})
 const enrichCtxByLlmFlow = Component('enrichCtxByLlmFlow', {
   type: 'ctx-enricher<tgp>',
-  moreTypes: 'flow-elem<workflow>',
-  params: [{id: 'flow', type: 'flow-elem<workflow>', dynamic: true, mandatory: true}],
+  moreTypes: 'flow-elem<ai>',
+  params: [{id: 'flow', type: 'flow-elem<ai>', dynamic: true, mandatory: true}],
   impl: (ctx, {}, {flow}) => flow(ctx)
 })
 const VerifiedReport2 = TgpTypeModifier('VerifiedReport2', { verifiedReport2: true, dsl: 'common', type: 'data' })
@@ -119,13 +119,13 @@ async function parseFlowCode(code, workflowLogger, ctx) {
           catch(e2) { workflowLogger.error({t: 'element fix parse error', lineNo, error: e2.stack}, {fixedCode: fix.fixedCode}, {ctx}) }
         }
         if (fix?.needsRegeneration)
-          return { $: 'flow-elem<workflow>setCtxData', goal: `Parse error at line ${lineNo}`,
+          return { $: 'flow-elem<ai>setCtxData', goal: `Parse error at line ${lineNo}`,
             value: { $: 'data<common>jqSingle', exp: `{error: "parse error", needsRegeneration: true}` } }
-        return { $: 'flow-elem<workflow>setCtxData', goal: `Parse error at line ${lineNo}: ${e.stack}`,
+        return { $: 'flow-elem<ai>setCtxData', goal: `Parse error at line ${lineNo}: ${e.stack}`,
           value: { $: 'data<common>jqSingle', exp: `{error: "parse error: ${e.stack.replace(/"/g, '\\"')}"}` } }
       }
     }))
-    return { $: 'flow-elem<workflow>flow', elems: parsedElems }
+    return { $: 'flow-elem<ai>flow', elems: parsedElems }
   }
 }
 
@@ -141,12 +141,12 @@ Component('runLLMFlowScript', {
       workflowLogger.workflowTrace.splice(0)
       workflowLogger.info({t: 'runLLMFlowScript started', codeLength: code.length}, {}, {ctx})
       const profile = await parseFlowCode(code, workflowLogger, ctx)
-      coreUtils.resolveProfileTypes(profile,{expectedType: 'flow-elem<workflow>', tgpModel: jb})
+      coreUtils.resolveProfileTypes(profile,{expectedType: 'flow-elem<ai>', tgpModel: jb})
       resolveCompRefs(profile)
       const resultCtx = await ctx.run(enrichCtxByLlmFlow(profile))
 
       // debug info for studio
-      const { text: llmGeneratedCode, actionMap } = coreUtils.prettyPrintWithPositions(profile, {type: 'flow-elem<workflow>'})
+      const { text: llmGeneratedCode, actionMap } = coreUtils.prettyPrintWithPositions(profile, {type: 'flow-elem<ai>'})
       const elemsPos = actionMap.filter(e=>e.action.match(/begin!~elems~[0-9]+$/)).map(x=>x.from)
       const posOf = (i, prop) => {
         const begin = actionMap.find(e=>e.action == `begin!~elems~${i}~${prop}`)
@@ -397,7 +397,7 @@ async function repairElement(inputCtx, logger, diagnostics, hardError, { acceptF
 function canonicalElemCode(code) { // fixes differing only in escaping collapse to the same canonical form, exposing no-op fixes
   try {
     const profile = parseElem(code)
-    coreUtils.resolveProfileTypes(profile, { expectedType: 'flow-elem<workflow>', tgpModel: jb })
+    coreUtils.resolveProfileTypes(profile, { expectedType: 'flow-elem<ai>', tgpModel: jb })
     resolveCompRefs(profile)
     return coreUtils.prettyPrint(profile)
   } catch { return code }
@@ -405,7 +405,7 @@ function canonicalElemCode(code) { // fixes differing only in escaping collapse 
 async function tryRunFixedElement(fixedCode, ctx, logger, acceptFix) { // todo: merge with repairElement
   try {
     const profile = parseElem(fixedCode)
-    coreUtils.resolveProfileTypes(profile, { expectedType: 'flow-elem<workflow>', tgpModel: jb })
+    coreUtils.resolveProfileTypes(profile, { expectedType: 'flow-elem<ai>', tgpModel: jb })
     resolveCompRefs(profile)
     const res = await ctx.run(profile)
     const resData = res instanceof coreUtils.Ctx ? res.data : res
@@ -596,7 +596,7 @@ Mpi('mpi', {
 
 Guidance('flowSample', {
   params: [
-    {id: 'flow', type: 'flow-elem<workflow>', dynamic: true},
+    {id: 'flow', type: 'flow-elem<ai>', dynamic: true},
   ]
 })
 

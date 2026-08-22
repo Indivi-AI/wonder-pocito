@@ -24,10 +24,10 @@ const resolveWurls = async (sql, ctx) => {
   return wurls.reduce(async (accP, u) => (await accP).split(u).join(await wresolve(u, ctx)), Promise.resolve(sql))
 }
 
-// browser → room lambda: ship a profile to <roomWUrl>/lambda/<name> (the roomLambda db-driver-interceptor carries auth + transport).
+// browser → room lambda: ship a profile to <roomWUrl>/lambdas/<name> (the roomLambda db-driver-interceptor carries auth + transport).
 // 5xx = transport/infra (cold container, 503) → one retry; comp-level errors ride status 200 and pass through untouched
 export const runViaRoomLambda = async (ctx, name, profile, retry = 1) => {
-  const res = await wfetch2(`${ctx.vars.roomWUrl}/lambda/${name}`, { method: 'post', body: { profile, serverTimeout: 180000 } }, ctx).catch(() => null)
+  const res = await wfetch2(`${ctx.vars.roomWUrl}/lambdas/${name}`, { method: 'post', body: { profile, serverTimeout: 180000 } }, ctx).catch(() => null)
   if ((!res || res.status >= 500) && retry) return runViaRoomLambda(ctx, name, profile, retry - 1)
   const out = res && await res.json()
   return out ?? { error: `lambda ${name} failed: ${res?.status}` }
@@ -97,10 +97,10 @@ Doclet('llmSqlDataComponent', {
     guidance: [
       example(`
 // two-stage recovery: deterministic discovery, then a runtime-informed query
-{$: 'flow-elem<workflow>setCtxData', goal: 'Discover matching products',
+{$: 'flow-elem<ai>setCtxData', goal: 'Discover matching products',
   value: {$: 'data<common>duckDbSql', sql: "SELECT C, trim(Nm) AS name FROM read_parquet('<root>/Prt.parquet') WHERE Nm LIKE '%פילדלפיה%'"}},
-{$: 'flow-elem<workflow>setCtxVar', goal: 'Keep matches', varName: 'matchedProducts', value: {$: 'data<common>jqSingle', exp: '.'}},
-{$: 'flow-elem<workflow>setCtxData', goal: 'Informed final query',
+{$: 'flow-elem<ai>setCtxVar', goal: 'Keep matches', varName: 'matchedProducts', value: {$: 'data<common>jqSingle', exp: '.'}},
+{$: 'flow-elem<ai>setCtxData', goal: 'Informed final query',
   value: {$: 'data<common>llmSql', task: 'answer the original question for the EXACT product ids found in matchedProducts; GROUP BY the matched product name'},
   postCondition: {$: 'boolean<common>jqBoolean', exp: 'type == "array"'}}
 `),
@@ -119,7 +119,7 @@ Doclet('duckDbSqlDataComponent', {
   impl: dataComp('duckDbSql', {
     guidance: [
       example(`
-{$: 'flow-elem<workflow>setCtxData',
+{$: 'flow-elem<ai>setCtxData',
   goal: 'Run analytics SQL',
   value: {$: 'data<common>duckDbSql',
     sql: "SELECT campaign_name, count(*) AS sessions FROM read_parquet('signedRoom://schematics/usersRO/crm/sessions_answers_auto.parquet') GROUP BY campaign_name ORDER BY sessions DESC LIMIT 20"},
