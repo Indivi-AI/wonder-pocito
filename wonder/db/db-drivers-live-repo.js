@@ -8,7 +8,7 @@ const {
     'db-driver': { dbDriver }
   }
 } = dsls
-const { wget, wput, wappend, whead, wlist } = ns
+const { authToken, authMethod, wget, wput, wappend, whead, wlist } = ns
 
 const testMemory = globalThis.testMemory = globalThis.testMemory || {}
 const nodeFilePath = async path => (await import('path')).resolve(globalThis.__repoRoot || process.cwd(), 'files', path)
@@ -78,37 +78,6 @@ PutMethod('wput.nodeFS', {
   }
 })
 
-AppendMethod('wappend.getAndPutNoCheck', {
-  params: [
-    {id: 'get', type: 'get-method', dynamic: true,  byName: true},
-    {id: 'put', type: 'put-method', dynamic: true}
-  ],
-  impl: async (ctx, {dbLogger, opts, method}, {get, put}) => {
-    try {      
-      let existing = method == 'PATCH' ? {} : []
-      try {
-        const resp = await get(ctx)
-        if (resp.status != 404) {
-          const res = await resp.json()
-          existing = res || existing
-        }
-      } catch (error) {
-        dbLogger?.error?.({t: 'wappend.getAndPutNoCheck get failed'}, {}, {ctx, error})
-        return errorResultByException(error)
-      }
-      
-      const bodyData = opts.body
-      
-      const merged = method == 'PATCH' ? {...existing, ...bodyData} : [...existing, ...bodyData]
-      await put(ctx.setVars({opts: {...opts, body: merged }}))
-      return successResult
-    } catch (error) {
-      dbLogger?.error?.({t: `wappend.getAndPutNoCheck put failed`}, {}, {ctx, error})
-      return errorResultByException(error)
-    }
-  }
-})
-
 DbDriver('FS.browser', {
   impl: dbDriver({
     whenAndWhyToUse: `in general we prefer our local file system db (saved in git) to be used when we develop.
@@ -116,7 +85,7 @@ DbDriver('FS.browser', {
     designConcerns: 'The local express server supports GCS compatible GET and PUT methods to write under {REPO_ROOT}/files/',
     get: wget.viaBucketApi(),
     put: wput.viaBucketApi(),
-    append: wappend.getAndPutNoCheck({ get: wget.viaBucketApi(), put: wput.viaBucketApi() }),
+    append: wappend.bucketSingleWriterGetPut(),
     filePathUrl: '%$localhostServer%/files/%$path%'
   })
 })
@@ -127,7 +96,7 @@ DbDriver('FS.node', {
     designConcerns: 'direct file system access for node lambdas and workflows in dev mode',
     get: wget.nodeFS(),
     put: wput.nodeFS(),
-    append: wappend.getAndPutNoCheck({ get: wget.nodeFS(), put: wput.nodeFS() }),
+    append: wappend.singleWriterGetPut({ get: wget.nodeFS(), put: wput.nodeFS() }),
     filePathUrl: (ctx, { path }) => nodeFilePath(path)
   })
 })
@@ -138,21 +107,23 @@ DbDriver('GCS.browser.liveRepo', {
     designConcerns: 'security issues. our developers needs to know the roomId',
     get: wget.viaBucketApi(),
     put: wput.viaBucketApi(),
-    append: wappend.getAndPutNoCheck({ get: wget.viaBucketApi(), put: wput.viaBucketApi() }),
-    list: wlist.viaGoogleBucketApi(),
+    append: wappend.bucketSingleWriterGetPut(),
+    list: wlist.viaBucketApi(),
     filePathUrl: (ctx,{path, bucketName}) => `${storagePrefix}/${bucketName}/${path}`
   })
 })
 
 DbDriver('GCS.node.gcpIdentity.liveRepo', {
   impl: dbDriver({
-    whenAndWhyToUse: 'faster than GCS SDK when testing from local machine outside GCP. uses HTTP for GET/PUT, SDK for POST/PATCH generation locking',
-    designConcerns: 'SDK is slow outside GCP for simple operations (933ms vs 183ms HTTP). Use HTTP for GET/PUT, SDK for POST/PATCH atomic operations',
+    whenAndWhyToUse: 'HTTP GCS access from a local Node process using its minted GCP access token.',
+    designConcerns: 'Single-writer live repository; all storage operations use authenticated HTTP.',
+    authToken: authToken.gcpAccessToken(),
+    authMethod: authMethod.bearer(),
     get: wget.viaBucketApi(),
     put: wput.viaBucketApi(),
-    append: wappend.GcsJSApiWithGenerationCheck(),
+    append: wappend.bucketSingleWriterGetPut(),
     head: whead.viaBucketApi(),
-    storageApi: true,
+    list: wlist.viaBucketApi(),
     filePathUrl: (ctx,{path, bucketName}) => `${storagePrefix}/${bucketName}/${path}`
   })
 })
@@ -163,7 +134,7 @@ DbDriver('fsmem.browser.liveRepo', {
     designConcerns: 'in test run, any writes should be written to memory (under ctx.vars.testSessionId) and when read later should be served from there. no mix between tests',
     get: wget.wrapWithMem(wget.viaBucketApi()),
     put: wput.intoMem(),
-    append: wappend.getAndPutNoCheck({ get: wget.wrapWithMem(wget.viaBucketApi()), put: wput.intoMem() }),
+    append: wappend.singleWriterGetPut({ get: wget.wrapWithMem(wget.viaBucketApi()), put: wput.intoMem() }),
     filePathUrl: '%$localhostServer%/files/%$path%'
   })
 })
@@ -174,7 +145,7 @@ DbDriver('fsmem.node', {
     designConcerns: 'in test run, any writes should be written to memory (under ctx.vars.testSessionId) and when read later should be served from there. no mix between tests',
     get: wget.wrapWithMem(wget.nodeFS()),
     put: wput.intoMem(),
-    append: wappend.getAndPutNoCheck({ get: wget.wrapWithMem(wget.nodeFS()), put: wput.intoMem() }),
+    append: wappend.singleWriterGetPut({ get: wget.wrapWithMem(wget.nodeFS()), put: wput.intoMem() }),
     filePathUrl: (ctx, { path }) => nodeFilePath(path)
   })
 })
@@ -244,13 +215,15 @@ ListMethod('wlist.viaRunBash', {
 
 DbDriver('GCS.node.gcpIdentity.liveRepo.logs', {
   impl: dbDriver({
-    whenAndWhyToUse: 'For accessing logs bucket using gsutil CLI tool, ideal for server environments with gsutil installed',
-    designConcerns: 'Uses gsutil cat command for direct access to logs bucket, handles both JSON and raw text files',
+    whenAndWhyToUse: 'Authenticated HTTP access to the live-repository logs bucket.',
+    designConcerns: 'Single-writer log repository; gsutil remains only for the specialized read path.',
+    authToken: authToken.gcpAccessToken(),
+    authMethod: authMethod.bearer(),
     get: wget.viaGsUtil(),
-    put: wput.GcsJSApi(),
-    append: wappend.GcsJSApiWithGenerationCheck(),
-    list: wlist.GcsJSApi(),
-    storageApi: true,
+    put: wput.viaBucketApi(),
+    append: wappend.bucketSingleWriterGetPut(),
+    head: whead.viaBucketApi(),
+    list: wlist.viaBucketApi(),
     filePathUrl: (ctx, { path, bucketName }) => `${storagePrefix}/${bucketName}/${path}`
   })
 })
@@ -261,7 +234,7 @@ DbDriver('GCS.browser.liveRepo.logs', {
     designConcerns: 'Uses gsutil cat command for direct access to logs bucket, handles both JSON and raw text files',
     get: wget.viaGsUtil(),
     put: wput.viaBucketApi(),
-    append: wappend.GcsJSApiWithGenerationCheck(),
+    append: wappend.appendMultiUser(),
     list: wlist.viaRunBash(),
     filePathUrl: (ctx, { path, bucketName }) => `${storagePrefix}/${bucketName}/${path}`
   })
@@ -269,12 +242,15 @@ DbDriver('GCS.browser.liveRepo.logs', {
 
 DbDriver('GCS.node.gcpIdentity.liveRepo.allowStreaming', {
   impl: dbDriver({
-    whenAndWhyToUse: 'Streaming read for large files from localhost node using gsutil cp + stream-json',
+    whenAndWhyToUse: 'Streaming reads for large live-repository files from local Node.',
+    designConcerns: 'Single-writer repository; gsutil is limited to streaming reads and all other storage operations use authenticated HTTP.',
+    authToken: authToken.gcpAccessToken(),
+    authMethod: authMethod.bearer(),
     get: wget.viaGsUtilStreaming(),
-    put: wput.GcsJSApi(),
-    append: wappend.GcsJSApiWithGenerationCheck(),
-    head: whead.GcsJSApi(),
-    storageApi: true,
+    put: wput.viaBucketApi(),
+    append: wappend.bucketSingleWriterGetPut(),
+    head: whead.viaBucketApi(),
+    list: wlist.viaBucketApi(),
     filePathUrl: (ctx, { path, bucketName }) => `${storagePrefix}/${bucketName}/${path}`
   })
 })

@@ -12,14 +12,16 @@ Scope('signedRoom', {
 DbDriver('signedRoom', {
   impl: dbDriver({
     whenAndWhyToUse: 'Private signedRoom:// content using short-lived signed URLs.',
-    designConcerns: 'GET, PUT and HEAD use signed URLs. List uses authenticated GCS.',
+    designConcerns: 'GET, PUT and HEAD use signed URLs; listing uses a separately authenticated GCS HTTP request.',
     authToken: authToken.anonymous(),
     authMethod: authMethod.none(),
+    listAuthToken: authToken.gcpAccessToken(),
+    listAuthMethod: authMethod.bearer(),
     get: wget.viaBucketApi(),
     put: wput.viaBucketApi(),
-    append: wappend.getAndPut(),
+    append: wappend.bucketSingleWriterGetPut(),
     head: whead.viaBucketApi(),
-    list: wlist.GcsJSApi(),
+    list: wlist.viaBucketApi(),
     filePathUrl: (ctx, { path }) => getCachedSignedUrl(ctx, path, (ctx.vars.method || 'GET').toUpperCase())
   })
 })

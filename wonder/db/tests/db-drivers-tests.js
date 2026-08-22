@@ -1,7 +1,7 @@
 import { dsls, coreUtils, jb } from '@jb6/core'
 import '@wonder/db/db-drivers.js'
 
-const { wfetch2, wresolve, wcachePopulate, getDBDriver } = jb.wonderUtils
+const { wfetch2, wresolve, wresolveInfo, wcachePopulate, getDBDriver } = jb.wonderUtils
 import '@jb6/testing'
 import '@jb6/common'
 import '@jb6/jq'
@@ -83,9 +83,9 @@ Test('dbDriverTests.fs-mem.browser.localhost.append.newFile', {
 })
 
 Test('dbDriverTests.gcs.node.prod.patch', {
-  nodeOnly: true,
   description: 'slow in tests',
-  impl: dbDriverPatchTest('room:gcs//buyPhone/items?user=Buyer', 'node-prod')
+  nodeOnly: true,
+  impl: dbDriverPatchTest('room:gcs//buyPhone/items-%$testSessionId%?user=Buyer', 'node-prod')
 })
 
 Test('dbDriverTests.gcs.browser.localhost.patch', {
@@ -188,6 +188,31 @@ Test('dbDriverTests.resolveLocations', {
   })
 })
 
+Test('dbDriverTests.resolveCodeLocations', {
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: async ctx => {
+      const info = async url => {
+        const { db, fullyResolvedWUrl, resolved, isWUrl, isLocal } = await wresolveInfo(url, ctx)
+        return { db, fullyResolvedWUrl, resolved, isWUrl, isLocal }
+      }
+      return { result: await Promise.all([
+        info('clientCode:cloudflare//runtime/react.js'),
+        info('clientCode:gcs//applets/v1/wonder/ui.js'),
+        info('lambdaCode:gcs//v1.tar.gz')
+      ]) }
+    },
+    expectedResult: equals('%result%', asIs([
+      { db: 'cloudflare', fullyResolvedWUrl: 'clientCode:cloudflare//runtime/react.js',
+        resolved: 'https://jb6-cdn.pages.dev/react.js', isWUrl: true, isLocal: false },
+      { db: 'gcs', fullyResolvedWUrl: 'clientCode:gcs//applets/v1/wonder/ui.js',
+        resolved: 'https://storage.googleapis.com/wonder-code-packages/applets/v1/wonder/ui.js', isWUrl: true, isLocal: false },
+      { db: 'gcs', fullyResolvedWUrl: 'lambdaCode:gcs//v1.tar.gz',
+        resolved: 'https://storage.googleapis.com/wonder-code-packages/lambda/v1.tar.gz', isWUrl: true, isLocal: false }
+    ]))
+  })
+})
+
 // wcachePopulate → cache an object at its canonical wcache path, transport chosen by scheme (signed URL for signedRoom,
 // SA/public for gcs). Both testSignedRoom and testPublicRoom hold usersRO/sales-large.json; populate each, assert non-empty.
 Test('dbDriverTests.wcachePopulate', {
@@ -206,33 +231,6 @@ Test('dbDriverTests.wcachePopulate', {
     setup: testUser(),
     timeout: 20000,
     logger: 'authLogger,dbLogger'
-  })
-})
-
-// rawFileViaWfetch2 → media/binary wUrl over wfetch2: PUT a 1x1 png to both rooms, then GET auto-follows the 302 to
-// real bytes (size>0) and HEAD returns 200 + Content-Location (the resolved url). No extension-keyed url-in-body anymore.
-Test('dbDriverTests.rawFileViaWfetch2', {
-  nodeOnly: true,
-  impl: dataTest({
-    calculate: async ctx => {
-      const dbCtx = ctx.setVars({ db: 'gcs', forceGCS: false, onLiveRepo: true, hasGcpIdentity: true })
-      const body = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64').toString('base64')
-      const at = async url => {
-        await wfetch2(url, { body, method: 'PUT' }, dbCtx)
-        const get = await wfetch2(url, { method: 'GET' }, dbCtx)
-        const bytes = get?.ok ? (await get.arrayBuffer()).byteLength : 0
-        const head = await wfetch2(url, { method: 'HEAD' }, dbCtx)
-        return bytes > 0 && !!head?.headers?.get?.('Content-Location')
-      }
-      return { result: [
-        await at('signedRoom://testSignedRoom/usersRW/assets/test-media.png'),
-        await at('room://testPublicRoom/usersRW/assets/test-media.png')
-      ], ...coreUtils.harvestLogs(dbCtx) }
-    },
-    expectedResult: equals('%result%', [true,true]),
-    setup: testUser(),
-    timeout: 20000,
-    logger: 'dbLogger'
   })
 })
 
@@ -455,5 +453,32 @@ Test('dbDriverTests.liveStagingPreservesUserIdentity', {
     setup: testUser(),
     timeout: 12000,
     logger: 'authLogger'
+  })
+})
+Test('dbDriverTests.rawFile.publicRoom', {
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: async (ctx, {testSessionId}) => {
+      const dbCtx = ctx.setVars({ db: 'gcs', forceGCS: false, onLiveRepo: true, hasGcpIdentity: true })
+      const url = `room://testPublicRoom/usersRW/assets/test-media-${testSessionId}.png`
+      const body = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+      const put = await wfetch2(url, { body, method: 'PUT' }, dbCtx)
+      const get = await wfetch2(url, { method: 'GET' }, dbCtx)
+      const bytes = get?.ok ? (await get.arrayBuffer()).byteLength : 0
+      const head = await wfetch2(url, { method: 'HEAD' }, dbCtx)
+      return {
+        result: {
+          put: put?.status,
+          get: get?.status,
+          bytes,
+          head: head?.status,
+          contentLocation: !!head?.headers?.get?.('Content-Location')
+        },
+        ...coreUtils.harvestLogs(dbCtx)
+      }
+    },
+    expectedResult: equals('%result%', asIs({put: 200, get: 200, bytes: 70, head: 200, contentLocation: true})),
+    timeout: 20000,
+    logger: 'dbLogger'
   })
 })

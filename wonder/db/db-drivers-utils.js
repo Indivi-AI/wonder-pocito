@@ -28,7 +28,7 @@ async function wresolve(url, _ctx, method = 'GET') {
 }
 
 async function wresolveInfo(url, _ctx, method = 'GET') {
-  if (!/^\w+:\/\//.test(url))
+  if (!/^\w+:(?:[^/]+)?\/\//.test(url))
     return { url, db: null, fullyResolvedWUrl: url, rangeUrl: url, resolved: url, isWUrl: false, isLocal: true }   // bare disk path (csv/parquet) — not a wUrl, read as-is
   const db = extractFromUrl(url, _ctx)?.db ?? _ctx.vars.db ?? 'gcs'
   const resolved = await wresolve(url, _ctx, method)
@@ -36,6 +36,33 @@ async function wresolveInfo(url, _ctx, method = 'GET') {
   const isLocal = resolved != null && !/^https?:\/\//.test(resolved)   // wresolve returns a directly-readable path (fs or repo-relative mirror) for local; an https url for remote
   return { url, db, fullyResolvedWUrl, rangeUrl: coreUtils.isNode ? resolved : fullyResolvedWUrl,
     resolved, isWUrl: resolved != null, isLocal, needsWcache: resolved != null && !isLocal }
+}
+
+async function wputMany(items, ctx) {
+  const dbLogger = ctx.vars.dbLogger, batchId = formatTimeWithRandom(), batchStarted = Date.now()
+  const bytesOf = body => typeof body === 'string' ? new TextEncoder().encode(body).byteLength : body?.byteLength ?? body?.size ?? null
+  const totalBytes = items.reduce((sum, { body }) => sum + (bytesOf(body) || 0), 0)
+  let completed = 0, failedCount = 0
+  dbLogger?.info?.({ t: 'wputMany start', batchId, files: items.length, totalBytes }, {}, { ctx })
+  const results = await Promise.all(items.map(async ({ url, body, headers }, index) => {
+    const started = Date.now(), bytes = bytesOf(body)
+    const fileCtx = ctx.setVars({ wputBatchId: batchId, wputIndex: index })
+    dbLogger?.info?.({ t: 'wput file start', batchId, index, files: items.length, bytes,
+      contentType: headers?.['content-type'], startOffsetMs: started - batchStarted }, { url }, { ctx: fileCtx })
+    const response = await jb.wonderUtils.wfetch2(url, { method: 'PUT', body, headers }, fileCtx)
+    completed++
+    if (!response?.ok) failedCount++
+    dbLogger?.info?.({ t: 'wput file end', batchId, index, status: response?.status, statusText: response?.statusText,
+      ok: !!response?.ok, bytes, fileMs: Date.now() - started, endOffsetMs: Date.now() - batchStarted,
+      completed, failed: failedCount }, { url }, { ctx: fileCtx })
+    return { index, url, response }
+  }))
+  const failed = results.filter(({ response }) => !response?.ok)
+  const failedItems = failed.map(({ index, url, response }) => ({ index, url,
+    status: response?.status, statusText: response?.statusText }))
+  dbLogger?.info?.({ t: 'wputMany end', batchId, files: items.length, succeeded: items.length - failed.length,
+    failed: failed.length, totalBytes, batchMs: Date.now() - batchStarted }, { failedItems }, { ctx })
+  return { ok: !failed.length, responses: results.map(({ response }) => response), failed: failedItems }
 }
 
 async function wcachePopulate(wUrl, _ctx, { validate = false } = {}) {
@@ -175,8 +202,8 @@ const bustCdnCache = url => url.includes('X-Goog-Signature') ? url : `${url}${ur
 const gcsStorage = ctx => auth.gcpStorage(ctx)
 
 Logger('dbLogger', {
-  impl: domainLogger('db', 'driverId,db,method,fileName,status,statusText', {
-    addToR2: 'url,filePathUrl,filePath,opts,curl'
+  impl: domainLogger('db', 'driverId,db,method,fileName,status,statusText,wputBatchId,wputIndex', {
+    addToR2: 'url,filePathUrl,filePath,curl'
   })
 })
 
@@ -287,7 +314,7 @@ const rawFileUtils = (text, binary) => {
 
 const wcachePath = (bucketName, path) => `${wcacheRoot()}/${bucketName}/${path}`
 
-Object.assign(jb.wonderUtils, { formatDay, formatTimeWithRandom, wresolve, wresolveInfo, wcachePopulate,
+Object.assign(jb.wonderUtils, { formatDay, formatTimeWithRandom, wresolve, wresolveInfo, wputMany, wcachePopulate,
   saveRoomBigLog2, prefetchSignedUrls, getIdToken, getAccessToken,
   storagePrefix, wonderBucketName, successResult, errorResultByException, notFoundResult,
   calcPath, extractFromUrl, wonderRepoRoot, bustCdnCache, paginateGcsList, gcsStorage,

@@ -12,7 +12,7 @@ const localhostServer = ctx => ctx.vars.localhostServer || globalThis.process?.e
 const runtimeDb = ctx => ctx.vars.db || (!coreUtils.isNode && new URLSearchParams(globalThis.location?.search || '').get('db'))
 const gcsProxyBase = ctx => ctx.vars.wonderServiceBase || globalThis.location?.origin
   || globalThis.process?.env?.WONDER_SERVICE_URL || 'https://wonder-lambda-me-west1.indivi.ai'
-const { wresolve, successResult, errorResultByException, notFoundResult, bustCdnCache, gcsStorage, paginateGcsList, calcPath,
+const { wresolve, successResult, errorResultByException, notFoundResult, bustCdnCache, paginateGcsList, calcPath,
   extractFromUrl, wonderRepoRoot, isLocalFile, rawFileUtils, wcachePath } = wonderUtils
 
 Data('wFetch', {
@@ -136,18 +136,79 @@ Scope('waContact', {
   })
 })
 
-const ObjectStore = TgpType('object-store', 'wonder', { typescript: '{ categories, enrichCtx(ctx): Ctx }' })
+const RevisionProtocol = TgpType('revision-protocol', 'wonder', {
+  typescript: '{ responseHeader, enrichHeaders(headers, {expectedRevision,createOnly}), conflictStatuses, isConflict(response) }'
+})
+const revisionProtocol = RevisionProtocol('revisionProtocol', {
+  params: [
+    {id: 'responseHeader', as: 'string', mandatory: true},
+    {id: 'matchHeader', as: 'string', mandatory: true},
+    {id: 'createOnlyHeader', as: 'string', mandatory: true},
+    {id: 'createOnlyValue', as: 'string', mandatory: true},
+    {id: 'conflictStatuses', as: 'array', mandatory: true}
+  ],
+  impl: (ctx, {}, {responseHeader, matchHeader, createOnlyHeader, createOnlyValue, conflictStatuses}) => ({
+    responseHeader,
+    conflictStatuses,
+    isConflict: response => conflictStatuses.includes(response?.status),
+    enrichHeaders: (headers, {expectedRevision, createOnly} = {}) => {
+      const enriched = new Headers(headers)
+      if (createOnly) enriched.set(createOnlyHeader, createOnlyValue)
+      else if (expectedRevision != null) enriched.set(matchHeader, expectedRevision)
+      return enriched
+    }
+  })
+})
+
+const List = TgpType('list', 'wonder', {
+  typescript: '(ctx: Ctx) => Promise<{name,updated?,size?,isDir?}[]>'
+})
+
+// list
+List('list.gcs', {
+  impl: () => async ctx => {
+    const { dbLogger, bucketEndpoint, bucketName, path, authToken, authMethod } = ctx.vars
+    const t0 = Date.now()
+    const { items, dirs, pages, status, result } = await paginateGcsList(async pageToken => {
+      const pageQuery = pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ''
+      const url = `${bucketEndpoint}/storage/v1/b/${bucketName}/o?delimiter=%2F&prefix=${encodeURIComponent(path)}&maxResults=5000${pageQuery}`
+      const res = await fetch(await authMethod.enrichRequest(new Request(url), authToken, ctx))
+      const page = res.ok ? await res.json() : { items: [], prefixes: [] }
+      return { ...page, status: res.status }
+    })
+    dbLogger?.info?.({ t: 'list.gcs', prefix: path, items: items.length,
+      dirs: dirs.length, pages, ms: Date.now() - t0, status }, {}, { ctx })
+    return result
+  }
+})
+const { list } = ns
+
+const ObjectStore = TgpType('object-store', 'wonder', {
+  typescript: '{ categories, enrichCtx(ctx): Ctx, list?: ListRT, revisionProtocol?: RevisionProtocolRT }'
+})
 const objectStore = ObjectStore('objectStore', {
   params: [
     {id: 'categories', as: 'array'},
-    {id: 'enrichCtx', type: 'ctx-enricher<tgp>', dynamic: true, defaultValue: sameCtx()}
+    {id: 'enrichCtx', type: 'ctx-enricher<tgp>', dynamic: true, defaultValue: sameCtx()},
+    {id: 'list', type: 'list<wonder>'},
+    {id: 'revisionProtocol', type: 'revision-protocol<wonder>'}
   ],
   impl: (ctx, {}, store) => store
 })
 
 ObjectStore('gcs', {
-  impl: objectStore({ categories: ['bucket', 'google', 'gcs'],
-    enrichCtx: Var('bucketEndpoint', 'https://storage.googleapis.com') })
+  impl: objectStore({
+    categories: ['bucket', 'google', 'gcs'],
+    enrichCtx: Var('bucketEndpoint', 'https://storage.googleapis.com'),
+    list: list.gcs(),
+    revisionProtocol: revisionProtocol({
+      responseHeader: 'x-goog-generation',
+      matchHeader: 'x-goog-if-generation-match',
+      createOnlyHeader: 'x-goog-if-generation-match',
+      createOnlyValue: '0',
+      conflictStatuses: [412]
+    })
+  })
 })
 
 ObjectStore('fs', { impl: objectStore({ categories: ['fs'] }) })
@@ -201,12 +262,13 @@ const dbDriver = Component('dbDriver', {
     {id: 'designConcerns', as: 'text'},
     {id: 'authToken', type: 'auth-token', dynamic: true},
     {id: 'authMethod', type: 'auth-method', dynamic: true},
+    {id: 'listAuthToken', type: 'auth-token', dynamic: true},
+    {id: 'listAuthMethod', type: 'auth-method', dynamic: true},
     {id: 'get', type: 'get-method', dynamic: true},
     {id: 'put', type: 'put-method', dynamic: true},
     {id: 'append', type: 'append-method', dynamic: true},
     {id: 'head', type: 'head-method', dynamic: true},
     {id: 'list', type: 'list-method', dynamic: true},
-    {id: 'storageApi', type: 'boolean<common>'},
     {id: 'filePathUrl', dynamic: true}
   ]
 })
@@ -234,7 +296,7 @@ async function getDBDriver(url, ctx) {
     return coreUtils.globalsOfType(dsls.wonder['db-driver']).find(d => d.id === 'wcache')
 
   const categories = {
-    [host]: true, [dbNormalized]: true,
+    [host]: true, [dbNormalized]: true, [scopeId?.toLowerCase()]: true,
     ...Object.fromEntries((store?.categories || []).map(category => [category.toLowerCase(), true])),
     ...(onLiveRepo && {liverepo: true}),
     ...(hasGcp && {gcpidentity: true}),
@@ -313,7 +375,7 @@ async function wfetch2(_url, opts, _ctx) {
   const safeEnrichCtxProfile = enrichCtxProfile && JSON.parse(JSON.stringify(enrichCtxProfile, (key, value) => key === 'val' ? undefined : value))
   const storeVarNames = Object.keys(storeCtx.vars).filter(name => !(name in ctx.vars))
   const overriddenStoreVars = Object.keys(ctx.vars).filter(name => storeCtx.vars[name] !== ctx.vars[name])
-  ctx = storeCtx.setVars({ ...ctx.vars, db,
+  ctx = storeCtx.setVars({ ...ctx.vars, db, list: store?.list, revisionProtocol: store?.revisionProtocol,
     categories: { ...Object.fromEntries((store?.categories || []).map(category => [category, true])), ...ctx.vars.categories } })
   dbLogger?.info?.({ t: 'Object store resolved', db, source: ctx.vars.forceGCS ? 'forceGCS' : explicitDb ? 'wUrl'
     : _ctx.vars.db ? 'ctx.vars.db' : runtimeDbValue ? 'runtimeDb' : 'default', categories: store?.categories || [],
@@ -344,29 +406,14 @@ async function wfetch2(_url, opts, _ctx) {
 
   let _gp = Date.now(); const _gms = () => { const d = Date.now() - _gp; _gp = Date.now(); return d }
   let curl = null
-  let gcsFile = null, filePath = null
+  let filePath = null
   const filePathUrl = isList ? null : await driver.filePathUrl(ctx.setVars({ path, bucketName, method: opts.method }))
   if (filePathUrl?.ok === false) return filePathUrl
   if (filePathUrl) curl = `curl "${filePathUrl}"`
   const filePathUrlMs = _gms()
 
-  const postCtx = preCtx.setVars({ filePathUrl })
-  for (const i of interceptors.filter(i=>i.post.profile)) {
-    const res = await i.post(postCtx)
-    if (res) {
-      if (res.status != 302) return res
-      const followed = await fetch(bustCdnCache(res.headers.get('Location')))
-      dbLogger?.info?.({ t: `${i.id} GET → 302 → fetched bytes direct from GCS`, interceptor: i.id, method: driverMethod,
-        status: followed.status, bytes: followed.headers.get('content-length') }, { url, location: res.headers.get('Location') }, { ctx })
-      return followed
-    }
-  }
-
-  const postInterceptorsMs = _gms()
   const driverParts = driver.id.split('.')
 
-  if (driver.storageApi)
-    gcsFile = (await (ctx.vars.nativeGcsAuth ? auth.gcpStorage(ctx, { native: true }) : gcsStorage(ctx))).bucket(bucketName).file(path)
   if (driverParts.includes('FS') && driverParts.includes('node')) {
     const { resolve } = await import('path')
     filePath = resolve(await wonderRepoRoot(), `files/${path}`)
@@ -374,13 +421,27 @@ async function wfetch2(_url, opts, _ctx) {
   }
   const transportSetupMs = _gms()
 
-  const driverCtx = ctx.setVars({ ...extracted, bucketName, filePath, gcsFile, curl, path, filePathUrl,
-    driverId: driver.id, fileName, opts, method: opts.method, driver })
-  const authToken = driver.authToken.profile ? await driver.authToken(driverCtx) : { value: null, expired: () => false }
-  const authMethod = driver.authMethod.profile ? await driver.authMethod(driverCtx) : { enrichRequest: fetchReq => fetchReq }
+  const driverCtx = ctx.setVars({ ...extracted, bucketName, filePath, curl, path, filePathUrl,
+    driverId: driver.id, driverMethod, fileName, opts, method: opts.method, driver })
+  const authTokenProvider = driverMethod === 'list' && driver.listAuthToken.profile ? driver.listAuthToken : driver.authToken
+  const authMethodProvider = driverMethod === 'list' && driver.listAuthMethod.profile ? driver.listAuthMethod : driver.authMethod
+  const authToken = authTokenProvider.profile ? await authTokenProvider(driverCtx) : { value: null, expired: () => false }
+  const authMethod = authMethodProvider.profile ? await authMethodProvider(driverCtx) : { enrichRequest: fetchReq => fetchReq }
   const ctxToUse = driverCtx.setVars({ authToken, authMethod })
-  dbLogger?.info?.({ t: 'bucket auth ready', authToken: driver.authToken.profile?.$?.id || 'anonymous',
-    authMethod: driver.authMethod.profile?.$?.id || 'none', expired: authToken.expired(),
+  const postCtx = ctxToUse
+  for (const i of interceptors.filter(i=>i.post.profile)) {
+    const res = await i.post(postCtx)
+    if (res) {
+      if (res.status != 302) return res
+      const followed = await fetch(await authMethod.enrichRequest(new Request(bustCdnCache(res.headers.get('Location'))), authToken, ctxToUse))
+      dbLogger?.info?.({ t: `${i.id} GET → 302 → fetched raw bytes`, interceptor: i.id, method: driverMethod,
+        status: followed.status, bytes: followed.headers.get('content-length') }, { url, location: res.headers.get('Location') }, { ctx: ctxToUse })
+      return followed
+    }
+  }
+  const postInterceptorsMs = _gms()
+  dbLogger?.info?.({ t: 'bucket auth ready', authToken: authTokenProvider.profile?.$?.id || 'anonymous',
+    authMethod: authMethodProvider.profile?.$?.id || 'none', expired: authToken.expired(),
     endpoint: ctx.vars.bucketEndpoint, region: ctx.vars.bucketRegion }, {}, { ctx: ctxToUse })
   etlStatus?.(`${driverMethod.toUpperCase()} ${driver.id} ${path}`)
   dbLogger?.info?.({ t: 'running driver profile', filePathUrlMs, postInterceptorsMs, transportSetupMs }, {}, { ctx: ctxToUse })
@@ -414,27 +475,6 @@ async function wfetch2(_url, opts, _ctx) {
 
 Object.assign(wonderUtils, { getDBDriver, wfetch2 })
 
-HeadMethod('whead.GcsJSApi', {
-  impl: async (ctx, { dbLogger, gcsFile }) => {
-    try {
-      const _t0 = Date.now()
-      const [metadata] = await gcsFile.getMetadata()
-      const lastModified = metadata.updated
-      const size = Number(metadata.size || 0)
-      dbLogger?.info?.({ t: 'GCS HEAD', lastModified, size, getMetadataMs: Date.now() - _t0 }, {}, { ctx })
-      return { ok: true, status: 200, headers: {
-          get: (h) => ({ 'last-modified': lastModified, 'content-length': size }[h.toLowerCase()]) },
-        text: async () => null, json: async () => null
-      }
-    } catch (error) {
-      if (error.code === 404)
-        return notFoundResult
-      coreUtils.logException(error, 'GCS HEAD failed', { ctx })
-      return errorResultByException(error)
-    }
-  }
-})
-
 HeadMethod('whead.viaBucketApi', {
   impl: async (ctx, { filePathUrl, dbLogger, authToken, authMethod }) => {
     const fetchReq = new Request(bustCdnCache(filePathUrl), { headers: { range: 'bytes=0-0' } })
@@ -446,34 +486,6 @@ HeadMethod('whead.viaBucketApi', {
     const size = (response.headers.get('content-range') || '').split('/')[1] || response.headers.get('content-length')
     return { ok: true, status: 200, headers: { get: h => ({ 'last-modified': response.headers.get('last-modified'),
       'content-length': size }[h.toLowerCase()] ?? response.headers.get(h)) }, text: async () => null, json: async () => null }
-  }
-})
-
-GetMethod('wget.GcsJSApi', {
-  impl: async (ctx, { dbLogger, gcsFile }) => {
-    try {
-      const [buf] = await gcsFile.download()
-      const txt = buf.toString('utf8')
-      dbLogger?.info?.({ t: 'GCS GET result', status: 200, bytes: txt.length }, { txt: txt.slice(0, 20000) }, { ctx })
-      return {
-        ok: true, status: 200, text: async () => txt, json: async () => {
-          try {
-            const data = JSON.parse(txt)
-            return data.content ?? data
-          } catch (error) {
-            coreUtils.logException(error, 'GCS GET json parse failed', { ctx, txt })
-            return errorResultByException(error)
-          }
-        }
-      }
-    } catch (error) {
-      if (error.code === 404) {
-        dbLogger?.info?.({ t: 'GCS GET 404' }, {}, { ctx })
-        return notFoundResult
-      }
-      coreUtils.logException(error, 'GCS GET failed', { ctx })
-      return errorResultByException(error)
-    }
   }
 })
 
@@ -531,36 +543,6 @@ PutMethod('wput.viaGcsProxy', {
   }
 })
 
-PutMethod('wput.GcsJSApi', {
-  impl: async (ctx, { dbLogger, opts, gcsFile, bucketName, path, etlLogger }) => {
-    const etlStatus = t => etlLogger?.status?.(t)
-    try {
-      const jsonStr = JSON.stringify(opts.headers?.['x-wonder-json'] === 'as-is' ? opts.body : { content: opts.body })
-      const totalBytes = Buffer.byteLength(jsonStr)
-      const mb = (totalBytes / 1e6).toFixed(1)
-      dbLogger?.info?.({ t: 'wput.GcsJSApi start', bucketName, path, bytes: totalBytes }, {}, { ctx })
-      const stream = gcsFile.createWriteStream({ contentType: 'application/json', resumable: totalBytes > 5e6 })
-      const CHUNK = 256 * 1024
-      await new Promise((resolve, reject) => {
-        stream.on('error', reject)
-        stream.on('finish', resolve)
-        const writeNext = (i) => {
-          if (i >= jsonStr.length) return stream.end()
-          const ok = stream.write(jsonStr.slice(i, i + CHUNK))
-          etlStatus?.(`uploading ${path} ${Math.round(Math.min(i + CHUNK, jsonStr.length) / totalBytes * 100)}% of ${mb}MB`)
-          ok ? writeNext(i + CHUNK) : stream.once('drain', () => writeNext(i + CHUNK))
-        }
-        writeNext(0)
-      })
-      dbLogger?.info?.({ t: 'wput.GcsJSApi', status: 200, bytes: totalBytes }, {}, { ctx })
-      return successResult
-    } catch (error) {
-      coreUtils.logException(error, 'wput.GcsJSApi failed', { ctx, bucketName, path })
-      return errorResultByException(error)
-    }
-  }
-})
-
 PutMethod('wput.viaBucketApi', {
   impl: async (ctx, { filePathUrl, dbLogger, opts, authToken, authMethod }) => {
     const jsonStr = JSON.stringify(opts.headers?.['x-wonder-json'] === 'as-is' ? opts.body : { content: opts.body })
@@ -584,120 +566,48 @@ PutMethod('wput.viaBucketApi', {
 })
 
 // append-method
-AppendMethod('wappend.GcsJSApiWithGenerationCheck', {
-  impl: async (ctx, { dbLogger, opts, gcsFile, curl, method }) => {
-    if (!gcsFile) {
-      dbLogger?.error?.({ t: `wappend.GcsJSApiWithGenerationCheck - null gcsFile object`}, { curl}, { ctx })
-      return errorResultByException('null gcsFile object')
-    }
-    const emptyObj = method == 'PATCH' ? {} : []
-    const newItems = opts.body
-
-    const maxRetries = 5
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      let existing = emptyObj, generation = 0
-
+AppendMethod('wappend.singleWriterGetPut', {
+  params: [
+    {id: 'get', type: 'get-method', dynamic: true,  byName: true},
+    {id: 'put', type: 'put-method', dynamic: true}
+  ],
+  impl: async (ctx, {dbLogger, opts, method}, {get, put}) => {
+    try {      
+      let existing = method == 'PATCH' ? {} : []
       try {
-        const [metadata] = await gcsFile.getMetadata()
-        generation = Number(metadata?.generation || 0)
-
-        const [buf] = await gcsFile.download()
-        const txt = buf.toString('utf8')
-        existing = txt ? JSON.parse(txt).content : existing
-        dbLogger?.info?.({ t: `wappend.GcsJSApiWithGenerationCheck GET`, itemsCount: Object.keys(existing).length, attempt }, { curl }, { ctx })
-      } catch (error) {
-        if (error.code !== 404) coreUtils.logException(error, 'wappend.GcsJSApiWithGenerationCheck read failed', { ctx, attempt, generation, curl })
-        generation = 0
-      }
-      const merged = method == 'PATCH' ? { ...existing, ...newItems } : [...existing, ...newItems]
-
-      try {
-        const body = JSON.stringify({ content: merged }, null, 2)
-        await gcsFile.save(body, { contentType: 'application/json', resumable: body.length > 5e6, preconditionOpts: { ifGenerationMatch: generation || 0 } })
-        dbLogger?.info?.({ t: `wappend.GcsJSApiWithGenerationCheck SAVE`, itemsCount: merged.length, attempt }, { newItems }, { ctx })
-        return successResult
-      } catch (error) {
-        if ((error.code == 409 || error.code == 412) && attempt < maxRetries - 1) {
-          dbLogger?.warning?.({ t: `wappend.GcsJSApiWithGenerationCheck generation mismatch - retrying`, attempt, generation }, {}, { ctx })
-        } else {
-          coreUtils.logException(error, 'wappend.GcsJSApiWithGenerationCheck failed permanently', { ctx, attempt })
-          return errorResultByException(error)
+        const resp = await get(ctx)
+        if (resp.status != 404) {
+          const res = await resp.json()
+          existing = res || existing
         }
+      } catch (error) {
+        dbLogger?.error?.({t: 'wappend.singleWriterGetPut get failed'}, {}, {ctx, error})
+        return errorResultByException(error)
       }
-    }
-    dbLogger?.error?.({ t: `wappend.GcsJSApiWithGenerationCheck failed after max retries`, attempt }, {}, { ctx, error })
-    return {
-      ok: false, status: 500, text: async () => `wappend.GcsJSApiWithGenerationCheck failed after max retries`,
-      json: async () => ({ error: `wappend.GcsJSApiWithGenerationCheck failed after max retries` })
-    }
-  }
-})
-
-AppendMethod('wappend.getAndPut', {
-  impl: async (ctx, { dbLogger, opts, path, bucketName, driver, authToken, authMethod }) => {
-    const method = (opts.method || 'POST').toUpperCase()
-    const newItems = opts.body
-    try {
-      const urlOf = operation => driver.filePathUrl(ctx.setVars({ path, bucketName, method: operation }))
-      const getReq = new Request(await urlOf('GET'), { headers: { 'Content-Type': 'application/json' } })
-      const res = await fetch(await authMethod.enrichRequest(getReq, authToken, ctx))
-      const existing = res.ok ? (await res.json()).content : (method === 'PATCH' ? {} : [])
-      dbLogger?.info?.({ t: 'wappend.getAndPut read', status: res.status,
-        existingItems: Array.isArray(existing) ? existing.length : Object.keys(existing).length }, {}, { ctx })
-      const merged = method === 'PATCH' ? { ...existing, ...newItems } : [...existing, ...newItems]
-      const putReq = new Request(await urlOf('PUT'), {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: merged })
-      })
-      const putRes = await fetch(await authMethod.enrichRequest(putReq, authToken, ctx))
-      if (!putRes.ok) {
-        dbLogger?.error?.({ t: 'wappend.getAndPut PUT failed', status: putRes.status }, {}, { ctx })
-        return putRes
-      }
-      dbLogger?.info?.({ t: 'wappend.getAndPut success',
-        items: Array.isArray(merged) ? merged.length : Object.keys(merged).length }, {}, { ctx })
+      
+      const bodyData = opts.body
+      
+      const merged = method == 'PATCH' ? {...existing, ...bodyData} : [...existing, ...bodyData]
+      await put(ctx.setVars({opts: {...opts, body: merged }}))
       return successResult
     } catch (error) {
-      coreUtils.logException(error, 'wappend.getAndPut failed', { ctx })
+      dbLogger?.error?.({t: `wappend.singleWriterGetPut put failed`}, {}, {ctx, error})
       return errorResultByException(error)
     }
   }
 })
 
-ListMethod('wlist.GcsJSApi', {
-  impl: async (ctx, { dbLogger, bucketName, path }) => {
-    const t0 = Date.now()
-    const bucket = (await gcsStorage(ctx)).bucket(bucketName)
-    const { items, dirs, pages, result } = await paginateGcsList(async pageToken => {
-      const [files, nextQuery, apiResp] = await bucket.getFiles({ prefix: path, delimiter: '/', autoPaginate: false, maxResults: 5000, pageToken })
-      return {
-        items: files.map(f => ({ name: f.name, updated: f.metadata?.updated, size: f.metadata?.size })),
-        prefixes: apiResp?.prefixes || [],
-        nextPageToken: nextQuery?.pageToken
-      }
-    })
-    dbLogger?.info?.({ t: 'wlist.GcsJSApi', prefix: path, items: items.length, dirs: dirs.length, pages, ms: Date.now() - t0 }, {}, { ctx })
-    return result
+ListMethod('wlist.viaBucketApi', {
+  impl: async (ctx, { dbLogger, list }) => {
+    if (typeof list !== 'function') {
+      dbLogger?.error?.({ t: 'wlist.viaBucketApi missing ObjectStore.list' }, {}, { ctx })
+      return []
+    }
+    return list(ctx)
   }
 })
 
-ListMethod('wlist.viaGoogleBucketApi', {
-  impl: async (ctx, { dbLogger, bucketName, path, authToken, authMethod }) => {
-    const t0 = Date.now()
-    const { items, dirs, pages, status, result } = await paginateGcsList(async pageToken => {
-      const pageQuery = pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ''
-      const endpoint = ctx.vars.bucketEndpoint || storagePrefix
-      const url = `${endpoint}/storage/v1/b/${bucketName}/o?delimiter=%2F&prefix=${encodeURIComponent(path)}&maxResults=5000${pageQuery}`
-      const res = await fetch(await authMethod.enrichRequest(new Request(url), authToken, ctx))
-      const data = res.ok ? await res.json() : { items: [], prefixes: [] }
-      return { ...data, status: res.status }
-    })
-    dbLogger?.info?.({ t: 'wlist.viaGoogleBucketApi', prefix: path, items: items.length,
-      dirs: dirs.length, pages, ms: Date.now() - t0, status }, {}, { ctx })
-    return result
-  }
-})
-
-// Same as viaGoogleBucketApi but routes through /gcs-proxy on the same origin to bypass CORS in browser iframes.
+// Same result contract as list.gcs but routes through /gcs-proxy on the same origin to bypass CORS in browser iframes.
 ListMethod('wlist.viaGcsProxy', {
   impl: async (ctx, { dbLogger, bucketName, path }) => {
     const t0 = Date.now()
@@ -714,19 +624,24 @@ ListMethod('wlist.viaGcsProxy', {
   }
 })
 
-const { authToken, authMethod, wget, wput, wappend, whead, wlist } = ns
+const { authToken, authMethod, whead, wlist, wappend, wget, wput } = ns
+
+AppendMethod('wappend.bucketSingleWriterGetPut', {
+  impl: wappend.singleWriterGetPut({ get: wget.viaBucketApi(), put: wput.viaBucketApi() }),
+})
 
 DbDriver('GCS.node.gcpIdentity', {
   impl: dbDriver({
-    whenAndWhyToUse: 'Fastest path: node with GCP credentials (ADC/SA/metadata). Uses @google-cloud/storage SDK directly.',
-    designConcerns: 'implement with @google-cloud/storage and not http because it is faster and supports generation check',
-    get: wget.GcsJSApi(),
-    put: wput.GcsJSApi(),
-    append: wappend.GcsJSApiWithGenerationCheck(),
-    head: whead.GcsJSApi(),
-    list: wlist.GcsJSApi(),
-    storageApi: true,
-    filePathUrl: (ctx, { path, bucketName }) => `${storagePrefix}/${bucketName}/${path}`
+    whenAndWhyToUse: 'Node GCS access with a minted OAuth token over the HTTP API.',
+    designConcerns: 'one authenticated HTTP transport for every object operation; no storage SDK',
+    authToken: authToken.gcpAccessToken(),
+    authMethod: authMethod.bearer(),
+    get: wget.viaBucketApi(),
+    put: wput.viaBucketApi(),
+    append: wappend.bucketSingleWriterGetPut(),
+    head: whead.viaBucketApi(),
+    list: wlist.viaBucketApi(),
+    filePathUrl: '%$bucketEndpoint%/%$bucketName%/%$path%'
   })
 })
 
@@ -738,7 +653,7 @@ DbDriver('GCS.node.publicGCS', {
     get: wget.viaBucketApi(),
     put: wput.viaBucketApi(),
     head: whead.viaBucketApi(),
-    list: wlist.viaGoogleBucketApi(),
+    list: wlist.viaBucketApi(),
     filePathUrl: (ctx, { path, bucketName }) => `${storagePrefix}/${bucketName}/${path}`
   })
 })
@@ -752,7 +667,7 @@ DbDriver('GCS.browser', {
     get: wget.viaBucketApi(),
     put: wput.viaBucketApi(),
     head: whead.viaBucketApi(),
-    list: wlist.viaGoogleBucketApi(),
+    list: wlist.viaBucketApi(),
     filePathUrl: (ctx, { path, bucketName }) => `${storagePrefix}/${bucketName}/${path}`
   })
 })
@@ -764,9 +679,9 @@ DbDriver('bucket.google.public', {
     authMethod: authMethod.none(),
     get: wget.viaBucketApi(),
     put: wput.viaBucketApi(),
-    append: wappend.getAndPut(),
+    append: wappend.bucketSingleWriterGetPut(),
     head: whead.viaBucketApi(),
-    list: wlist.viaGoogleBucketApi(),
+    list: wlist.viaBucketApi(),
     filePathUrl: '%$bucketEndpoint%/%$bucketName%/%$path%'
   })
 })
@@ -778,9 +693,9 @@ DbDriver('bucket.google.identity', {
     authMethod: authMethod.bearer(),
     get: wget.viaBucketApi(),
     put: wput.viaBucketApi(),
-    append: wappend.getAndPut(),
+    append: wappend.bucketSingleWriterGetPut(),
     head: whead.viaBucketApi(),
-    list: wlist.viaGoogleBucketApi(),
+    list: wlist.viaBucketApi(),
     filePathUrl: '%$bucketEndpoint%/%$bucketName%/%$path%'
   })
 })
@@ -821,13 +736,15 @@ DbDriver('wcache', {
 
 DbDriver('GCS.node.gcpIdentity.logs', {
   impl: dbDriver({
-    whenAndWhyToUse: 'write logs on cloud; list also supported (read of object content not supported)',
-    designConcerns: 'object read is not supported, but listing prefixes is safe and useful (e.g. for date-partitioned discovery via a trailing-slash GET)',
+    whenAndWhyToUse: 'Write and list cloud logs through authenticated GCS HTTP APIs.',
+    designConcerns: 'Object reads remain unsupported; this is a single-writer log repository.',
+    authToken: authToken.gcpAccessToken(),
+    authMethod: authMethod.bearer(),
     get: (ctx, { dbLogger }) => { dbLogger?.info?.({ t: 'GCS.node.gcpIdentity.logs can not read biglogs in cloud. only in localhost' }, {}, { ctx }) },
-    put: wput.GcsJSApi(),
-    append: wappend.GcsJSApiWithGenerationCheck(),
-    list: wlist.GcsJSApi(),
-    storageApi: true,
+    put: wput.viaBucketApi(),
+    append: wappend.bucketSingleWriterGetPut(),
+    head: whead.viaBucketApi(),
+    list: wlist.viaBucketApi(),
     filePathUrl: (ctx, { path, bucketName }) => `${storagePrefix}/${bucketName}/${path}`
   })
 })
@@ -898,40 +815,27 @@ DbDriverInterceptor('rawFile', {
         // a text format missing from rawText would fall to base64 and CORRUPT (e.g. jsonl mangled as base64 before it was classified text).
         dbLogger?.info?.({ t: 'rawFile PUT', contentType, bytes, streamed: isFile, encoding: isFile ? 'stream' : isTextMime(contentType) ? 'utf8' : 'base64' }, {}, { ctx })
         const uploadStarted = Date.now()
-        let status = 200
-        if (!coreUtils.isNode) {
-          const res = await fetch(filePathUrl, { method: 'PUT', headers: { 'content-type': contentType }, body: sendBody })
-          status = res.status
-          if (!res.ok) throw new Error(`rawFile PUT failed: ${res.status} ${await res.text()}`)
-        } else {
-          const { request } = await import('undici')
-          const { channel } = await import('diagnostics_channel')
-          const accessToken = await auth.gcpAccessToken(ctx, { method: 'PUT' }), accessTokenMs = Date.now() - uploadStarted
-          const requestStarted = Date.now(), phases = {}, subscriptions = [], mark = phase => message => {
-            if (!phases.request || !message.request || message.request === phases.request || phase === 'request') {
-              phases[phase] = phase === 'request' ? message.request : Date.now() - requestStarted
-            }
+        const { authToken, authMethod } = ctx.vars
+        try {
+          const request = new Request(filePathUrl, { method: 'PUT', headers: { 'content-type': contentType }, body: sendBody })
+          const response = await fetch(await authMethod.enrichRequest(request, authToken, ctx))
+          const responseBody = await response.text(), uploadMs = Date.now() - uploadStarted
+          dbLogger?.info?.({ t: 'rawFile PUT transport', driverId: ctx.vars.driverId,
+            uploadMs, status: response.status, statusText: response.statusText }, {}, { ctx })
+          if (!response.ok) {
+            dbLogger?.error?.({ t: 'rawFile PUT failed', uploadMs, status: response.status,
+              statusText: response.statusText, bytes }, { responseBody }, { ctx })
+            return { ok: false, status: response.status, statusText: response.statusText,
+              text: async () => responseBody, json: async () => ({ error: responseBody }) }
           }
-          ;['request:create', 'client:beforeConnect', 'client:connected', 'request:bodySent', 'request:headers', 'request:trailers'].forEach(name => {
-            const ch = channel(`undici:${name}`), handler = mark(name.split(':').at(-1))
-            ch.subscribe(handler); subscriptions.push([ch, handler])
-          })
-          let responseBody
-          try {
-            const response = await request(`${storagePrefix}/${bucketName}/${path}`, { method: 'PUT',
-              headers: { authorization: `Bearer ${accessToken}`, 'content-type': contentType }, body: sendBody })
-            status = response.statusCode
-            responseBody = await response.body.text()
-          } finally {
-            subscriptions.forEach(([ch, handler]) => ch.unsubscribe(handler))
-          }
-          delete phases.request
-          dbLogger?.info?.({ t: 'rawFile PUT transport', transport: 'GcsHttpApi', accessTokenMs,
-            ...phases, totalMs: Date.now() - requestStarted, status }, {}, { ctx })
-          if (status >= 400) throw new Error(`rawFile PUT failed: ${status} ${responseBody}`)
+          dbLogger?.info?.({ t: 'rawFile PUT done', uploadMs, status: response.status, bytes }, {}, { ctx })
+          return successResult
+        } catch (error) {
+          coreUtils.logException(error, 'rawFile PUT transport failed', { ctx, filePathUrl })
+          dbLogger?.error?.({ t: 'rawFile PUT transport failed', uploadMs: Date.now() - uploadStarted,
+            bytes, error: error.message }, {}, { ctx })
+          return errorResultByException(error)
         }
-        dbLogger?.info?.({ t: 'rawFile PUT done', uploadMs: Date.now() - uploadStarted, status, bytes }, {}, { ctx })
-        return successResult
       }
     }
   })
@@ -952,4 +856,75 @@ DbDriverInterceptor('jqPath', {
       return { ok: true, status: 200, text: async () => JSON.stringify(result), json: async () => result }
     }
   })
+})
+AppendMethod('wappend.appendMultiUser', {
+  description: 'Conflict-safe HTTP read, merge, conditional write, and retry using ObjectStore.revisionProtocol.',
+  params: [
+    {id: 'maxAttempts', as: 'number', defaultValue: 5}
+  ],
+  impl: async (ctx, { dbLogger, opts, path, bucketName, driver, authToken, authMethod, revisionProtocol }, { maxAttempts }) => {
+    if (!revisionProtocol) {
+      dbLogger?.error?.({ t: 'appendMultiUser missing revisionProtocol', driverId: driver.id }, {}, { ctx })
+      return { ok: false, status: 500, statusText: 'object store has no revision protocol',
+        text: async () => '', json: async () => ({ error: 'object store has no revision protocol' }) }
+    }
+    const method = (opts.method || 'POST').toUpperCase()
+    const newItems = opts.body
+    const urlOf = operation => driver.filePathUrl(ctx.setVars({ path, bucketName, method: operation }))
+    const started = Date.now()
+    dbLogger?.info?.({ t: 'appendMultiUser start', maxAttempts,
+      addedItems: Array.isArray(newItems) ? newItems.length : Object.keys(newItems || {}).length }, {}, { ctx })
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const getRequest = new Request(await urlOf('GET'), { headers: { accept: 'application/json' } })
+        const getResponse = await fetch(await authMethod.enrichRequest(getRequest, authToken, ctx))
+        const exists = getResponse.status !== 404
+        if (!getResponse.ok && exists) {
+          dbLogger?.error?.({ t: 'appendMultiUser read failed', attempt,
+            status: getResponse.status, statusText: getResponse.statusText }, {}, { ctx })
+          return getResponse
+        }
+        const expectedRevision = exists ? getResponse.headers.get(revisionProtocol.responseHeader) : null
+        if (exists && expectedRevision == null) {
+          dbLogger?.error?.({ t: 'appendMultiUser missing response revision', attempt,
+            responseHeader: revisionProtocol.responseHeader }, {}, { ctx })
+          return { ok: false, status: 500, statusText: 'object response has no revision',
+            text: async () => '', json: async () => ({ error: 'object response has no revision' }) }
+        }
+        const current = exists ? (await getResponse.json()).content : method === 'PATCH' ? {} : []
+        const merged = method === 'PATCH' ? { ...current, ...newItems } : [...current, ...newItems]
+        dbLogger?.info?.({ t: 'appendMultiUser read', attempt, exists, expectedRevision,
+          existingItems: Array.isArray(current) ? current.length : Object.keys(current).length }, {}, { ctx })
+
+        const headers = revisionProtocol.enrichHeaders({ 'content-type': 'application/json' },
+          { expectedRevision, createOnly: !exists })
+        const putRequest = new Request(await urlOf('PUT'), {
+          method: 'PUT', headers, body: JSON.stringify({ content: merged })
+        })
+        const putResponse = await fetch(await authMethod.enrichRequest(putRequest, authToken, ctx))
+        const responseBody = await putResponse.text()
+        if (revisionProtocol.isConflict(putResponse)) {
+          dbLogger?.warning?.({ t: 'appendMultiUser conflict', attempt, expectedRevision,
+            status: putResponse.status, retry: attempt < maxAttempts }, {}, { ctx })
+          if (attempt < maxAttempts) continue
+        }
+        if (!putResponse.ok) {
+          dbLogger?.error?.({ t: 'appendMultiUser write failed', attempt, status: putResponse.status,
+            statusText: putResponse.statusText }, { responseBody }, { ctx })
+          return { ok: false, status: putResponse.status, statusText: putResponse.statusText,
+            text: async () => responseBody, json: async () => ({ error: responseBody }) }
+        }
+        dbLogger?.info?.({ t: 'appendMultiUser done', attempt,
+          items: Array.isArray(merged) ? merged.length : Object.keys(merged).length,
+          appendMs: Date.now() - started }, {}, { ctx })
+        return successResult
+      } catch (error) {
+        coreUtils.logException(error, 'appendMultiUser failed', { ctx, attempt })
+        dbLogger?.error?.({ t: 'appendMultiUser failed', attempt,
+          appendMs: Date.now() - started, error: error.message }, {}, { ctx })
+        return errorResultByException(error)
+      }
+    }
+  }
 })

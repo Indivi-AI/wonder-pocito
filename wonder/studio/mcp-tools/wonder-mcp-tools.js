@@ -2,7 +2,7 @@ import { dsls, coreUtils, jb } from '@jb6/core'
 import '@wonder/db/db-drivers.js'
 import '@wonder/db/tests/gmail-test-users.js'
 
-const { wfetch2, wresolve, getAccessToken } = jb.wonderUtils
+const { wfetch2, wresolveInfo, wputMany } = jb.wonderUtils
 import '@jb6/common'
 import '@jb6/mcp'
 import '@jb6/react'
@@ -93,7 +93,6 @@ Tool('runWorkflow', {
   })
 })
 
-const CDN_BUCKET = 'wonder-code-packages'
 const lambdaTraversalBlockers = /\/(lib|static-wasm|lang-service)\//
 const lambdaTestEntry = /\/(tests?\/|[^/]*-tests?\.js$)/
 
@@ -104,17 +103,18 @@ const toAbsolute = (u, baseDir, path) => {
   return prefix ? path.join(baseDir, repoScopes[prefix], u.slice(prefix.length + 1)) : path.join(baseDir, u.replace(/^\//, ''))
 }
 
-export async function uploadCompDependencies(urlsToLoad, onVersion) {
+export async function uploadCompDependencies(urlsToLoad) {
   const timer = phaseTimer()   // full timeline of the real bundle+upload work (inside the cli child), not the mcp round-trip
   const path = await import('path')
   const fsp = await import('fs/promises')
   const esbuild = await import('esbuild')
-  const { Pool } = await import('undici')
   timer.phase('imports')
 
   const baseDir = await coreUtils.calcRepoRoot()
   const db = process.env.STORAGE_PROVIDER || 'gcs'
-  const dbCtx = new coreUtils.Ctx().setVars({ db, ...(db === 'minio' && { bucketEndpoint: process.env.MINIO_ENDPOINT }) })
+  const dbCtx = coreUtils.ensureLoggers(['dbLogger'], {ctx: new coreUtils.Ctx().setVars({
+    db, ...(db === 'minio' && { bucketEndpoint: process.env.MINIO_ENDPOINT })
+  })})
 
   const sourceFiles = urlsToLoad.split(',').map(f => f.trim()).filter(Boolean)
   if (!sourceFiles.length) throw new Error('no source files')
@@ -161,41 +161,29 @@ export async function uploadCompDependencies(urlsToLoad, onVersion) {
   const d = new Date()
   const appletV = `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
     + `-${Math.random().toString(36).slice(2,6)}`
+  const clientCodeBase = `clientCode://applets/${appletV}/`
+  const { fullyResolvedWUrl: clientCodeWUrl } = await wresolveInfo(clientCodeBase, dbCtx, 'PUT')
   timer.phase('versions')
   const ctypeOf = f => /\.mjs$|\.js$/.test(f) ? 'text/javascript' : /\.wasm$/.test(f) ? 'application/wasm'
     : /\.css$/.test(f) ? 'text/css' : /\.json$/.test(f) ? 'application/json' : 'application/octet-stream'
   const bodies = await Promise.all(inputs.map(f => fsp.readFile(path.resolve(baseDir, f))))
-  if (dbCtx.vars.db === 'minio') {
-    const put = async (f, body) => {
-      const res = await fetch(encodeURI(await wresolve(`codePackages://shared/${appletV}/${relForUpload(f)}`, dbCtx, 'PUT')),
-        { method: 'PUT', headers: { 'content-type': ctypeOf(f) }, body })
-      if (!res.ok) throw new Error(`PUT ${relForUpload(f)} → ${res.status}`)
-    }
-    await Promise.all([onVersion?.({ appletV, dbCtx }), ...inputs.map((f, i) => put(f, bodies[i]))])
-    timer.phase('upload')
-    return { appletV, fileCount: inputs.length, totalBytes: bodies.reduce((sum, body) => sum + body.length, 0),
-      uploadMs: timer.totalMs, timeline: timer.timeline }
-  }
-  const resolved = await wresolve(`codePackages://shared/${appletV}/${relForUpload(inputs[0])}`, dbCtx, 'PUT')
-  const [, bucket, prefix] = resolved.match(/storage\.googleapis\.com\/([^/]+)\/(.*)$/)   // prefix = shared/<appletV>/<rel[0]>
-  const gcsPrefix = prefix.slice(0, prefix.length - relForUpload(inputs[0]).length)        // strip rel[0] → shared/<appletV>/
-  const token = await getAccessToken(dbCtx, { method: 'PUT' })
-  const auth = { authorization: `Bearer ${token}` }
-  const pool = new Pool('https://storage.googleapis.com', { connections: inputs.length + 1, pipelining: 1, keepAliveTimeout: 60000 })
-  const put = async (f, body) => {
-    const r = await pool.request({ method: 'PUT', path: `/${bucket}/${encodeURI(gcsPrefix + relForUpload(f))}`, headers: { ...auth, 'content-type': ctypeOf(f) }, body })
-    await r.body.dump()
-    if (r.statusCode >= 400) throw new Error(`PUT ${relForUpload(f)} → ${r.statusCode}`)
-  }
-  try { await Promise.all([onVersion?.({ appletV, dbCtx }), ...inputs.map((f, i) => put(f, bodies[i]))]) } finally { await pool.close() }
+  const uploadResult = await wputMany(inputs.map((file, index) => ({
+    url: `${clientCodeBase}${relForUpload(file)}`,
+    body: bodies[index],
+    headers: { 'content-type': ctypeOf(file) }
+  })), dbCtx)
   timer.phase('upload')
 
-  return { appletV, fileCount: inputs.length, totalBytes: bodies.reduce((sum, body) => sum + body.length, 0),
-    uploadMs: timer.totalMs, timeline: timer.timeline }
+  const uploadLogs = coreUtils.harvestLogs(dbCtx, ['dbLogger'])
+  if (!uploadResult.ok) return { error: 'client code upload failed', failed: uploadResult.failed,
+    appletV, clientCodeWUrl, timeline: timer.timeline, ...uploadLogs }
+
+  return { appletV, clientCodeWUrl, fileCount: inputs.length, totalBytes: bodies.reduce((sum, body) => sum + body.length, 0),
+    uploadMs: timer.totalMs, timeline: timer.timeline, ...uploadLogs }
 }
 
 // Primitive: bundle entry (node flavor) → full source closure (admin + public + jb6 sources, no /lib/),
-// tar.gz + upload to lambdas/<lambdaV>.tar.gz. Returns lambdaV = MMDD-HHMM-<gitSha>[-<rand>].
+// tar.gz + upload to lambdaCode://<lambdaV>.tar.gz. Returns lambdaV = MMDD-HHMM-<gitSha>[-<rand>].
 // Exported so it runs in a jb-cli child (host realm) via runCliInContext, not inside the MCP VM.
 export async function uploadLambdaCompDependencies(entryPath) {
   const timer = phaseTimer()   // full timeline of the real bundle+tar+upload work
@@ -203,7 +191,6 @@ export async function uploadLambdaCompDependencies(entryPath) {
   const fsp = await import('fs/promises')
   const esbuild = await import('esbuild')
   const { execSync } = await import('child_process')
-  const { Pool } = await import('undici')
   const tar = await import('tar')
   timer.phase('imports')
 
@@ -220,11 +207,13 @@ export async function uploadLambdaCompDependencies(entryPath) {
     + `-${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`
   const dirtySuffix = Math.random().toString(36).slice(2, 8)
   const lambdaV = isDirty ? `${datePart}-${gitSha}-${entryHash}-${dirtySuffix}` : `${gitSha}-${entryHash}`
+  const lambdaCodeUrl = `lambdaCode://${lambdaV}.tar.gz`
+  const { fullyResolvedWUrl: lambdaCodeWUrl } = await wresolveInfo(lambdaCodeUrl, dbCtx, 'PUT')
   const runtimeBase = `/tmp/code/${lambdaV}`
   if (!isDirty) {   // rebuild-on-change: clean sha already uploaded ⇒ skip esbuild/stage/tar/PUT
-    const head = await wfetch2(`codePackages://lambdas/${lambdaV}.tar.gz`, { method: 'HEAD' }, dbCtx).catch(() => null)
+    const head = await wfetch2(lambdaCodeWUrl, { method: 'HEAD' }, dbCtx).catch(() => null)
     timer.phase('reuseCheck')
-    if (head?.ok) return { lambdaV, reused: true, gitSha, isDirty, runtimeBase,
+    if (head?.ok) return { lambdaV, lambdaCodeWUrl, reused: true, gitSha, isDirty, runtimeBase,
       uploadMs: timer.totalMs, timeline: timer.timeline,
       description: `version ${gitSha} built ${head.headers?.get('last-modified') || 'unknown date'}` }
   }
@@ -343,31 +332,18 @@ register('./loader.mjs', import.meta.url)
   })
   timer.phase('tarGzip')
 
-  // Upload the tar directly to the selected bucket backend.
-  const resolved = await wresolve(`codePackages://lambdas/${lambdaV}.tar.gz`, dbCtx, 'PUT')
-  if (dbCtx.vars.db === 'minio') {
-    const res = await fetch(encodeURI(resolved), { method: 'PUT', headers: { 'content-type': 'application/gzip' }, body: tarBuffer })
-    if (!res.ok) throw new Error(`PUT ${lambdaV}.tar.gz → ${res.status}`)
-  } else {
-    const [, bucket, key] = resolved.match(/storage\.googleapis\.com\/([^/]+)\/(.*)$/)
-    const token = await getAccessToken(dbCtx, { method: 'PUT' })
-    const pool = new Pool('https://storage.googleapis.com', { keepAliveTimeout: 60000 })
-    try {
-      const r = await pool.request({ method: 'PUT', path: `/${bucket}/${encodeURI(key)}`,
-        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/gzip' }, body: tarBuffer })
-      await r.body.dump()
-      if (r.statusCode >= 400) throw new Error(`PUT ${lambdaV}.tar.gz → ${r.statusCode}`)
-    } finally { await pool.close() }
-  }
+  const upload = await wfetch2(lambdaCodeWUrl, { method: 'PUT', body: tarBuffer,
+    headers: { 'content-type': 'application/gzip' } }, dbCtx)
+  if (!upload.ok) throw new Error(`PUT ${lambdaCodeWUrl} → ${upload.status}`)
   await fsp.rm(stageRoot, { recursive: true, force: true })
   timer.phase('upload')
 
-  return { lambdaV, fileCount: inputs.length, tarBytes: tarBuffer.length, gitSha, isDirty, runtimeBase,
+  return { lambdaV, lambdaCodeWUrl, fileCount: inputs.length, tarBytes: tarBuffer.length, gitSha, isDirty, runtimeBase,
     importGraph: Object.fromEntries([...importGraph].map(([from, to]) => [from, [...to].join(',')])), uploadMs: timer.totalMs, timeline: timer.timeline }
 }
 
 Tool('uploadAdHokSnippetForAdmin', {
-  description: 'Upload an admin entry with its full Node-side dependency closure to GCS. POST a TGP profile to /admin-run-snippet/<lambdaV> to execute.',
+  description: 'Upload an admin entry with its full Node-side dependency closure. POST a TGP profile to /admin-run-snippet/<lambdaV> to execute.',
   params: [
     {id: 'entryPath', as: 'string'}
   ],
@@ -382,9 +358,9 @@ await coreUtils.writeServiceResult(await uploadLambdaCompDependencies(${JSON.str
     await coreUtils.calcJb6RepoRootAndImportMapsInCli()
     const { result, error } = await coreUtils.runCliInContext(script, { importMapsInCli: jb.coreRegistry.importMapsInCli })
     if (error) return JSON.stringify({ error })
-    const { lambdaV, fileCount, tarBytes, gitSha, isDirty, reused, description, uploadMs, timeline } = result
+    const { lambdaV, lambdaCodeWUrl, fileCount, tarBytes, gitSha, isDirty, reused, description, uploadMs, timeline } = result
     return JSON.stringify({
-      lambdaV, fileCount, tarBytes, gitSha, isDirty, reused: !!reused, uploadMs, timeline, ...(description && { description }),
+      lambdaV, lambdaCodeWUrl, fileCount, tarBytes, gitSha, isDirty, reused: !!reused, uploadMs, timeline, ...(description && { description }),
       localUrl:   `http://localhost:3000/admin-run-snippet/${lambdaV}`,
       stagingUrl: `https://w-staging.indivi.ai/admin-run-snippet/${lambdaV}`,
       prodUrl:    `https://wonder.indivi.ai/admin-run-snippet/${lambdaV}`
@@ -437,12 +413,14 @@ await coreUtils.writeServiceResult({ ...packageInfo, dir })
           return JSON.stringify({error: String(failure), stderr, textToParse, compFullId, roomWUrl, entryPath, compPath,
             mcpMs: timer.totalMs, mcpTimeline: timer.timeline})
         }
-        const def = {lambdaV: result.lambdaV, entryPath: compPath, entryCompFullId: compFullId, dir: result.dir, roomWUrl}
+        const def = {lambdaV: result.lambdaV, lambdaCodeWUrl: result.lambdaCodeWUrl,
+          entryPath: compPath, entryCompFullId: compFullId, dir: result.dir, roomWUrl}
         const defPath = `${roomWUrl}/lambdas/${lambdaId}.json`
         await wfetch2(defPath, {method: 'PUT', body: def, headers: { 'x-wonder-json': 'as-is' }}, ctx)
         timer.phase('writeManifest')
         ctx.vars.mcpLogger?.info?.({t: 'upload room lambda done', compFullId, entryPath, compPath,
-          userEmail: ctx.vars.userEmail, tarBytes: result.tarBytes, uploadMs: result.uploadMs,
+          lambdaCodeWUrl: result.lambdaCodeWUrl, userEmail: ctx.vars.userEmail,
+          tarBytes: result.tarBytes, uploadMs: result.uploadMs,
           mcpMs: timer.totalMs, mcpTimeline: timer.timeline}, {}, {ctx})
         return JSON.stringify({...result, lambdaId, defPath, def,
           runUrl: `https://w-staging.indivi.ai/${route}/${roomId}/${lambdaId}`,
@@ -486,16 +464,18 @@ try {
     await coreUtils.calcJb6RepoRootAndImportMapsInCli()
     const cliCtx = coreUtils.ensureLoggers(['cliLogger', 'cliLineLogger'], {ctx})
     const { result, error } = await coreUtils.runCliInContext(script, { ctx: cliCtx, importMapsInCli: jb.coreRegistry.importMapsInCli })
-    if (error || result?.error) return JSON.stringify({ error: result?.error || error, cliLog: coreUtils.harvestLogs(cliCtx, ['cliLineLogger']).cliLineLogger })
-    const {appletV, cmpId} = result, imageName = ogImageLocalPath?.split('/').pop()
+    if (error || result?.error) return JSON.stringify({ ...result, error: result?.error || error,
+      cliLog: coreUtils.harvestLogs(cliCtx, ['cliLineLogger']).cliLineLogger })
+    const {appletV, clientCodeWUrl, cmpId} = result, imageName = ogImageLocalPath?.split('/').pop()
     const imageUrl = imageName && `${roomWUrl}/applets/${cmpId}/${imageName}`
     const og = Object.fromEntries(Object.entries({ogTitle, ogDescription, ogImage: imageUrl || ogImage}).filter(([, v]) => v))
     await Promise.all([
       imageName && wfetch2(imageUrl, {method: 'PUT', body: ogImageLocalPath, headers: {'x-wonder-body': 'localFile'}}, ctx),
       wfetch2(`${roomWUrl}/applets/${cmpId}.json`, {method: 'PUT', headers: {'x-wonder-json': 'as-is'},
-        body: {cmpId, urlsToLoad: entryPath, appletV, roomWUrl, entryCompFullId, ...(Object.keys(og).length && {og})}}, ctx)
+        body: {cmpId, urlsToLoad: entryPath, appletV, clientCodeWUrl, roomWUrl,
+          entryCompFullId, ...(Object.keys(og).length && {og})}}, ctx)
     ])
-    ctx.vars.mcpLogger?.info?.({t: 'upload room applet done', roomWUrl, cmpId, appletV,
+    ctx.vars.mcpLogger?.info?.({t: 'upload room applet done', roomWUrl, cmpId, appletV, clientCodeWUrl,
       fileCount: result.fileCount, totalBytes: result.totalBytes, uploadMs: result.uploadMs, timeline: result.timeline}, {}, {ctx})
     return JSON.stringify({...result, imageUrl, defPath: `${roomWUrl}/applets/${cmpId}.json`,
       entryUrl: `https://w-staging.indivi.ai/${route}/${resolvedRoomId}/applet/${cmpId}`})
@@ -528,15 +508,15 @@ const save = (url, obj) => jb.wonderUtils.wfetch2(url, { method: 'PUT', body: ob
 
 const lambdas = await defsIn('lambdas')
 const lambdaResults = await Promise.all(lambdas.map(async ({ name, url, def }) => {
-  const from = def.lambdaV || def.fullAdHocV
+  const from = def.lambdaCodeWUrl || def.lambdaV || def.fullAdHocV
   try {
     const {entryPath} = def
     if (!entryPath) return { name, from, error: 're-upload lambda to add entryPath' }
     await import(entryPath)   // register the comp so getCompField resolves permissionByPath
-    const { lambdaV, reused } = await uploadLambdaCompDependencies(entryPath)
+    const { lambdaV, lambdaCodeWUrl, reused } = await uploadLambdaCompDependencies(entryPath)
     const [dir] = coreUtils.getCompField(def.entryCompFullId, 'permissionByPath')
-    await save(url, { lambdaV, entryPath, entryCompFullId: def.entryCompFullId, dir, roomWUrl })
-    return { name, entryPath, dir, from, to: lambdaV, changed: from !== lambdaV, reused: !!reused,
+    await save(url, { lambdaV, lambdaCodeWUrl, entryPath, entryCompFullId: def.entryCompFullId, dir, roomWUrl })
+    return { name, entryPath, dir, from, to: lambdaCodeWUrl, changed: from !== lambdaCodeWUrl, reused: !!reused,
       runUrl: \`https://w-staging.indivi.ai/\${signed ? 'run-signed-room-lambda' : 'run-room-lambda'}/${resolvedRoomId}/\${name}\` }
   } catch (e) { coreUtils.logException(e, 'updateLambdasAndApplets lambda',
     { roomId: '${resolvedRoomId}', name, from }); return { name, from, error: e.stack || String(e) } }
@@ -544,12 +524,14 @@ const lambdaResults = await Promise.all(lambdas.map(async ({ name, url, def }) =
 
 const applets = await defsIn('applets')
 const appletResults = await Promise.all(applets.map(async ({ name, url, def }) => {
-  const from = def.appletV
+  const from = def.clientCodeWUrl || def.appletV
   try {
     await import(def.urlsToLoad)   // register the comp
-    const { appletV, fileCount } = await uploadCompDependencies(def.urlsToLoad)
-    await save(url, { ...def, appletV, roomWUrl })
-    return { name, entryPath: def.urlsToLoad, fileCount, from, to: appletV, changed: from !== appletV,
+    const uploadResult = await uploadCompDependencies(def.urlsToLoad)
+    if (uploadResult.error) return { name, from, error: uploadResult.error, failed: uploadResult.failed }
+    const { appletV, clientCodeWUrl, fileCount } = uploadResult
+    await save(url, { ...def, appletV, clientCodeWUrl, roomWUrl })
+    return { name, entryPath: def.urlsToLoad, fileCount, from, to: clientCodeWUrl, changed: from !== clientCodeWUrl,
       entryUrl: \`https://w-staging.indivi.ai/\${signed ? 'signed-room' : 'room'}/${resolvedRoomId}/applet/\${name}\` }
   } catch (e) { coreUtils.logException(e, 'updateLambdasAndApplets applet',
     { roomId: '${resolvedRoomId}', name, from }); return { name, from, error: e.stack || String(e) } }

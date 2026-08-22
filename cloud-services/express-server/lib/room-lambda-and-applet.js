@@ -17,10 +17,9 @@ import { promises as fsp, existsSync } from 'fs'
 import { spawn } from 'child_process'
 
 const STORAGE_PROVIDER = process.env.STORAGE_PROVIDER || 'gcs'
-const FRONTEND_URL = process.env.WONDER_CDN_URL || 'https://jb6-cdn.pages.dev'
 const STORAGE_URL = process.env.WONDER_STORAGE_URL || 'https://storage.googleapis.com'
-const CODE_PACKAGES_URL = `${STORAGE_URL}/wonder-code-packages`
 const CLIENT_STORAGE_ENV = { WONDER_STORAGE_PROVIDER: STORAGE_PROVIDER, WONDER_STORAGE_URL: STORAGE_URL }
+const CLIENT_RUNTIME_WURL = 'clientCode:cloudflare//runtime/'
 const jb6Pkgs = ['core','common','react','rx','jq','llm-guide','mcp','testing','repo','lang-service',
   'probe-studio']
 const json = express.json({ limit: '1mb' })
@@ -32,7 +31,7 @@ const APPLET_HOST_HTML = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wonder Workspace</title>
 <link rel="icon" type="image/svg+xml" href="_FAVICON_">
-<link rel="apple-touch-icon" href="${FRONTEND_URL}/images/icon/icon-180x180.png">
+<link rel="apple-touch-icon" href="_APPLE_TOUCH_ICON_">
 _OG_TAGS_
 <style>
 html,body{height:100%;margin:0;padding:0}
@@ -72,7 +71,8 @@ const ctx = reactUtils.extendCtxWithUrl().setVars({ react: reactUtils, db: globa
 const uiSource = appletSpec.liveRepo
   ? 'live-repo (localhost /jb6_packages, /wonder, /solution, /indiviai)'
   : 'appletV snapshot ' + appletSpec.appletV + ' (bucket share, NOT live-repo) - edit-to-live needs uploadRoomApplet'
-ctx.vars.roomLogger?.info?.({ t: 'serve applet page', roomWUrl, cmpId, urlsToLoad, appletV: appletSpec.appletV, uiSource }, {}, { ctx })
+ctx.vars.roomLogger?.info?.({ t: 'serve applet page', roomWUrl, cmpId, urlsToLoad,
+  appletV: appletSpec.appletV, clientCodeWUrl: appletSpec.clientCodeWUrl, uiSource }, {}, { ctx })
 document.getElementById('loading')?.remove()
 // the lambda runner is gated per-user (runs AS the caller) ⇒ an anonymous applet silently gets no data. force login first (into #root).
 // ensureLogin also completes the OAuth redirect (GOT_CODE) and returns true, so the host page renders the applet.
@@ -86,20 +86,20 @@ await runAutomation(cmpCtx)
 
 // link-preview branding: crawlers run no JS, so the shared applet card is chosen server-side. Resolved per-field, first-defined-wins:
 // applet.og (applets/<name>.json) → room admin/branding.json → wonder.html defaults (wonder.svg favicon, "Wonder" title/og:image).
-const OG_DEFAULTS = {
-  favicon: `${FRONTEND_URL}/images/wonder.svg`,
-  ogImage: `${FRONTEND_URL}/images/wonder.svg`,
+const ogDefaults = runtimeBase => ({
+  favicon: `${runtimeBase}images/wonder.svg`,
+  ogImage: `${runtimeBase}images/wonder.svg`,
   ogTitle: 'Wonder Workspace',
   ogDescription: 'A Wonder workspace applet',
   ogType: 'website'
-}
-const mergeBranding = (...srcs) => Object.assign({}, OG_DEFAULTS, ...srcs.map(s => s && Object.fromEntries(Object.entries(s).filter(([, v]) => v != null))))
+})
+const mergeBranding = (defaults, ...srcs) => Object.assign({}, defaults, ...srcs.map(s => s && Object.fromEntries(Object.entries(s).filter(([, v]) => v != null))))
 const ogTags = b => [
   ['og:title', b.ogTitle], ['og:description', b.ogDescription], ['og:image', b.ogImage], ['og:type', b.ogType], ['og:url', b.ogUrl],
   ['og:image:width', '1200'], ['og:image:height', '630'], ['twitter:card', 'summary_large_image']
 ].filter(([, c]) => c).map(([p, c]) => `<meta property="${p}" content="${c}">`).join('')
 
-// serveAppletPage: turn an appletSpec ({cmpId, urlsToLoad, roomWUrl, appletV, og}) into the inline page. appletV = the share
+// serveAppletPage: turn an appletSpec ({cmpId, urlsToLoad, roomWUrl, appletV, clientCodeWUrl, og}) into the inline page. appletV = the share
 // snapshot id. jb6 + wonder SOURCE comes from the share; versioned React runtime files use the additive CDN directory.
 // localImports = dev live-repo importmap (no upload).
 export async function serveAppletPage(spec, res, localImports) {
@@ -107,20 +107,23 @@ export async function serveAppletPage(spec, res, localImports) {
     'Cross-Origin-Opener-Policy': 'same-origin',
     'Cross-Origin-Embedder-Policy': 'credentialless'
   })
-  const shareId = spec.appletV
-  const shareBase = `${CODE_PACKAGES_URL}/shared/${shareId}`
-  const imports = localImports ? localImports : shareId ? {
+  const codeCtx = new coreUtils.Ctx()
+  const runtimeBase = await jb.wonderUtils.wresolve(CLIENT_RUNTIME_WURL, codeCtx, 'GET')
+  if (!localImports && !spec.clientCodeWUrl) throw new Error(`applet ${spec.cmpId} has no clientCodeWUrl; publish it again`)
+  const shareBase = localImports ? '' : (await jb.wonderUtils.wresolve(spec.clientCodeWUrl, codeCtx, 'GET')).replace(/\/$/, '')
+  const imports = localImports ? localImports : spec.clientCodeWUrl ? {
     ...Object.fromEntries(jb6Pkgs.flatMap(p => [
       [`@jb6/${p}`, `${shareBase}/jb6/${p}/index.js`], [`@jb6/${p}/`, `${shareBase}/jb6/${p}/`]])),
-    '@jb6/react/lib/': 'https://jb6-cdn.pages.dev/',
+    '@jb6/react/lib/': runtimeBase,
     '@wonder/': `${shareBase}/wonder/`, '@solution/': `${shareBase}/solutions/`, '@indiviai/': `${shareBase}/indiviai/`
   } : {}
   const { og = [], ...clientSpec } = spec   // og = raw branding sources (room, applet), server-only — not shipped to the client
-  const branding = mergeBranding(...og)
+  const branding = mergeBranding(ogDefaults(runtimeBase), ...og)
   const html = APPLET_HOST_HTML
     .replace('_IMPORT_MAP_', JSON.stringify({ imports }))
     .replace('_APPLET_SPEC_', JSON.stringify({ ...clientSpec, liveRepo: !!localImports }))
     .replace('_FAVICON_', branding.favicon)
+    .replace('_APPLE_TOUCH_ICON_', `${runtimeBase}images/icon/icon-180x180.png`)
     .replace('_OG_TAGS_', ogTags(branding))
   res.set('Content-Type', 'text/html').send(html)
 }
@@ -161,7 +164,7 @@ const runRoute = (withProgress, gated) => async (req, res) => {
     const routeAt = performance.now(), routeAtEpoch = Date.now()
     const job = await gated(req, res)
     if (!job) return
-    if (!withProgress) return respond(res, await run(job.lambdaV, job.source, req.body.serverTimeout))
+    if (!withProgress) return respond(res, await run(job.lambdaV, job.lambdaCodeWUrl, job.source, req.body.serverTimeout))
     res.setHeader('Content-Type', 'text/event-stream'); res.setHeader('Cache-Control', 'no-cache'); res.setHeader('Connection', 'keep-alive')
     res.flushHeaders?.()
     const send = msg => res.write(`data: ${JSON.stringify(msg)}\n\n`)
@@ -169,7 +172,7 @@ const runRoute = (withProgress, gated) => async (req, res) => {
     coreUtils.eventEmitter.on('progress', onProgress)
     try {
       const runAt = performance.now(), runAtEpoch = Date.now()
-      const result = await run(job.lambdaV, job.source, req.body.serverTimeout), serializeAt = performance.now()
+      const result = await run(job.lambdaV, job.lambdaCodeWUrl, job.source, req.body.serverTimeout), serializeAt = performance.now()
       const done = JSON.stringify({ type: 'done', result })
       send({ type: 'timing', gateMs: runAt - routeAt, runMs: serializeAt - runAt,
         serializeMs: performance.now() - serializeAt, resultBytes: Buffer.byteLength(done),
@@ -182,18 +185,20 @@ const runRoute = (withProgress, gated) => async (req, res) => {
 }
 
 const TIMED_OUT = Symbol('timedOut')
-const run = async (lambdaV, source, serverTimeout) => {
+const run = async (lambdaV, lambdaCodeWUrl, source, serverTimeout) => {
   const ctx = await coreUtils.ensureLoggers((source.logger || '').split(',').filter(Boolean))
   Object.entries(source.gateLogs || {}).forEach(([name, channels]) => Object.entries(channels).forEach(([channel, entries]) =>
     ctx.vars[name]?.[channel]?.push(...entries)))
   const roomLogger = ctx.vars.roomLogger
   if (source.gate) roomLogger?.info?.({ event: 'gate', ...source.gate }, {}, { ctx })   // runs-as-user + permissionByPath decision, harvestable
-  roomLogger?.info?.({ event: 'run version', lambdaV, uptimeMs: process.uptime() * 1000 }, {}, { ctx })   // small uptime ⇒ cold container
+  roomLogger?.info?.({ event: 'run version', lambdaV, lambdaCodeWUrl,
+    uptimeMs: process.uptime() * 1000 }, {}, { ctx })   // small uptime ⇒ cold container
   const timeout = serverTimeout && new Promise(ok => setTimeout(() => ok(TIMED_OUT), serverTimeout))
   const t0 = Date.now()
-  const imports = await sourceImports(lambdaV, source, ctx)
+  const imports = await sourceImports(lambdaV, lambdaCodeWUrl, source, ctx)
   const extractMs = Date.now() - t0
-  roomLogger?.info?.({ event: source.userVars?.isLocalHost ? 'live-repo imports (localhost, no snapshot)' : 'extract tar', lambdaV, extractMs }, {}, { ctx })
+  roomLogger?.info?.({ event: source.userVars?.isLocalHost ? 'live-repo imports (localhost, no snapshot)' : 'extract tar',
+    lambdaV, lambdaCodeWUrl, extractMs }, {}, { ctx })
   const res = await Promise.race([runProfile(imports, source, ctx), timeout].filter(Boolean))
   if (res === TIMED_OUT) return { result: 'serverTimeout', logs: coreUtils.harvestLogs(ctx) }
   roomLogger?.info?.({ event: 'server run done', lambdaV, extractMs, runMs: Date.now() - t0 - extractMs }, {}, { ctx })   // $source carries machine:pid
@@ -221,6 +226,7 @@ export function setupRoomLambdaAndApplet(app) {
     if (!who && !anon) { res.status(401).json({ error: 'login required' }); return null }
     const defAt = performance.now(), lambda = await readDef(roomWUrl, `lambdas/${name}.json`), defMs = performance.now() - defAt
     if (!lambda) { res.status(500).json({ error: `no lambda ${name} in ${roomId}` }); return null }
+    if (!lambda.lambdaCodeWUrl) { res.status(500).json({ error: `lambda ${name} has no lambdaCodeWUrl; publish it again` }); return null }
     if (lambda.roomWUrl && lambda.roomWUrl !== roomWUrl) { res.status(409).json({ error: `lambda room mismatch: ${lambda.roomWUrl}` }); return null }
     // 2. authorize read access to the lambda's declared dir against the room ACL (a lambda reads-to-execute). anon ⇒ public 'authenticated' role.
     const effRole = anon ? 'authenticated' : role, email = who?.email || 'anonymous'
@@ -228,7 +234,7 @@ export function setupRoomLambdaAndApplet(app) {
     if (denied) { res.status(403).json({ error: `forbidden: ${lambda.dir} for role ${effRole} for user ${email}` }); return null }
     // roomWUrl tells signedRoom:// reads which signed-room policy applies.
     const isLocalHost = req.hostname === 'localhost'
-    return { lambdaV: lambda.lambdaV, source: {                                         // 3. run AS THE USER (or anon SA)
+    return { lambdaV: lambda.lambdaV, lambdaCodeWUrl: lambda.lambdaCodeWUrl, source: {   // 3. run AS THE USER (or anon SA)
       // profile = the call; packedCtx = the caller's ctx slice (stripCtx, logger-free).
       // logger = active logger names, revived server-side. The server overlays the TRUSTED identity.
       gate: { roomId, name, email, role: effRole, dir: lambda.dir, denied, anon,
@@ -261,7 +267,8 @@ export function setupRoomLambdaAndApplet(app) {
       const ogUrl = `${req.hostname === 'localhost' ? 'http' : 'https'}://${req.get('host')}${req.path}`
       const og = [await readDef(roomWUrl, 'admin/branding.json'), applet.og, { ogUrl }]
       const spec = { cmpId: applet.cmpId, urlsToLoad: applet.urlsToLoad, roomWUrl,
-        appletV: applet.appletV, noAuth: process.env.WONDER_AUTH_MODE === 'none' && !signed, og }
+        appletV: applet.appletV, clientCodeWUrl: applet.clientCodeWUrl,
+        noAuth: process.env.WONDER_AUTH_MODE === 'none' && !signed, og }
       await serveAppletPage(spec, res)
     } catch (e) { console.error('[room-applet] error', e); res.status(500).json({ error: e.stack }) }
   }
@@ -271,35 +278,37 @@ export function setupRoomLambdaAndApplet(app) {
 
 // localhost dev: run the caller's profile against the LIVE repo (discover its minimal imports) — no snapshot,
 // so flow/comp edits take effect with no uploadRoomLambda. staging/prod: run the published lambdaV tarball.
-async function sourceImports(lambdaV, source, ctx) {
+async function sourceImports(lambdaV, lambdaCodeWUrl, source, ctx) {
   if (source.userVars?.isLocalHost && source.profile) {
     const { liveRepoSourceImports } = await import('./room-lambda-and-applet-live-repo.js')
     const imp = await liveRepoSourceImports(source.profile, ctx)
     if (!imp.error) return imp
     ctx.vars.roomLogger?.info?.({ event: 'live-repo discover failed → snapshot fallback', error: imp.error }, {}, { ctx })
   }
-  const dir = await ensureExtracted(lambdaV)
+  const dir = await ensureExtracted(lambdaV, lambdaCodeWUrl, { ctx })
   return { importsStr: "await import('./index.js')", projectDir: dir, importMapsInCli: `${dir}/importmap.mjs` }
 }
 
-export async function ensureExtracted(lambdaV, { root = '/tmp/code', fetchTar = fetchLambdaTar } = {}) {
-  const dir = `${root}/${lambdaV}`, key = `${root}:${lambdaV}`
+export async function ensureExtracted(lambdaV, lambdaCodeWUrl, { root = '/tmp/code', fetchTar = fetchLambdaTar, ctx = new coreUtils.Ctx() } = {}) {
+  const store = jb.wonderUtils.extractFromUrl(lambdaCodeWUrl, ctx)?.db || 'default'
+  const dir = `${root}/${store}-${lambdaV}`, key = `${root}:${lambdaCodeWUrl}`
   if (existsSync(`${dir}/index.js`)) return dir
-  if (!extractionPromises.has(key)) extractionPromises.set(key, extractLambda(lambdaV, dir, root, fetchTar).finally(() => extractionPromises.delete(key)))
+  if (!extractionPromises.has(key)) extractionPromises.set(key,
+    extractLambda(lambdaV, lambdaCodeWUrl, dir, root, fetchTar, ctx).finally(() => extractionPromises.delete(key)))
   return extractionPromises.get(key)
 }
 
-async function fetchLambdaTar(lambdaV) {
-  const res = await fetch(`${CODE_PACKAGES_URL}/lambdas/${lambdaV}.tar.gz`)
-  if (!res.ok) throw new Error(`lambda package ${lambdaV}: ${res.status}`)
+async function fetchLambdaTar(lambdaCodeWUrl, ctx) {
+  const res = await jb.wonderUtils.wfetch2(lambdaCodeWUrl, { method: 'GET' }, ctx)
+  if (!res.ok) throw new Error(`lambda package ${lambdaCodeWUrl}: ${res.status}`)
   return Buffer.from(await res.arrayBuffer())
 }
 
-async function extractLambda(lambdaV, dir, root, fetchTar) {
+async function extractLambda(lambdaV, lambdaCodeWUrl, dir, root, fetchTar, ctx) {
   await fsp.mkdir(root, { recursive: true })
   const tmp = await fsp.mkdtemp(`${root}/${lambdaV}-`), tarPath = `${tmp}.tar.gz`
   try {
-    await fsp.writeFile(tarPath, await fetchTar(lambdaV))
+    await fsp.writeFile(tarPath, await fetchTar(lambdaCodeWUrl, ctx))
     await new Promise((ok, fail) => spawn('tar', ['-xzf', tarPath, '-C', tmp]).on('close', c => c === 0 ? ok() : fail(new Error(`tar ${c}`))))
     if (existsSync(dir) && !existsSync(`${dir}/index.js`)) await fsp.rm(dir, { recursive: true, force: true })
     await fsp.rename(tmp, dir).catch(e => { if (!existsSync(`${dir}/index.js`)) throw e })

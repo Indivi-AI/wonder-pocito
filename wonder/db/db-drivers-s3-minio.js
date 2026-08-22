@@ -1,24 +1,9 @@
 import { dsls, ns } from '@jb6/core'
 import '@wonder/db/db-drivers-core.js'
 
-const { tgp: { 'ctx-enricher': { Var } }, wonder: { ObjectStore, AuthToken, AuthMethod, ListMethod, DbDriver,
-  'object-store': { objectStore }, 'db-driver': { dbDriver } } } = dsls
-const { authToken, authMethod, wget, wput, wappend, whead, wlist } = ns
-ObjectStore('amazon', {
-  impl: objectStore({
-    categories: ['bucket','s3','amazon'],
-    enrichCtx: [
-      Var('bucketEndpoint', 'https://s3.il-central-1.amazonaws.com'),
-      Var('bucketRegion', 'il-central-1')
-    ]
-  })
-})
-ObjectStore('minio', {
-  impl: objectStore(['bucket','s3','minio'], [
-    Var('bucketEndpoint', 'http://127.0.0.1:9000'),
-    Var('bucketRegion', 'us-east-1')
-  ])
-})
+const { tgp: { 'ctx-enricher': { Var } }, wonder: { ObjectStore, AuthToken, AuthMethod, List, DbDriver,
+  'object-store': { objectStore }, 'revision-protocol': { revisionProtocol }, 'db-driver': { dbDriver } } } = dsls
+const { authToken, authMethod, list, wget, wput, wappend, whead, wlist } = ns
 AuthToken('authToken.awsCredentials', {
   impl: async ctx => {
     if (!globalThis.process) return { value: null, expired: () => false }
@@ -69,8 +54,9 @@ AuthMethod('authMethod.awsSigV4', {
     }
   })
 })
-ListMethod('wlist.viaS3BucketApi', {
-  impl: async (ctx, { dbLogger, bucketName, path, authToken, authMethod }) => {
+List('list.s3', {
+  impl: () => async ctx => {
+    const { dbLogger, bucketName, path, authToken, authMethod } = ctx.vars
     const endpoint = (ctx.vars.bucketEndpoint || 'https://s3.amazonaws.com').replace(/\/$/, '')
     const decodeXml = text => text.replace(/&(?:amp|lt|gt|quot|apos);/g,
       entity => ({ '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&apos;': "'" })[entity])
@@ -90,9 +76,45 @@ ListMethod('wlist.viaS3BucketApi', {
           size: Number(valueOf(match[1], 'Size')) || 0 })
       continuationToken = valueOf(xml, 'NextContinuationToken') || null
     } while (continuationToken)
-    dbLogger?.info?.({ t: 'wlist.viaS3BucketApi', prefix: path, items: result.length }, {}, { ctx })
+    dbLogger?.info?.({ t: 'list.s3', prefix: path, items: result.length }, {}, { ctx })
     return result
   }
+})
+
+ObjectStore('amazon', {
+  impl: objectStore({
+    categories: ['bucket','s3','amazon'],
+    enrichCtx: [
+      Var('bucketEndpoint', 'https://s3.il-central-1.amazonaws.com'),
+      Var('bucketRegion', 'il-central-1')
+    ],
+    list: list.s3(),
+    revisionProtocol: revisionProtocol({
+      responseHeader: 'etag',
+      matchHeader: 'if-match',
+      createOnlyHeader: 'if-none-match',
+      createOnlyValue: '*',
+      conflictStatuses: [409, 412]
+    })
+  })
+})
+
+ObjectStore('minio', {
+  impl: objectStore({
+    categories: ['bucket','s3','minio'],
+    enrichCtx: [
+      Var('bucketEndpoint', 'http://127.0.0.1:9000'),
+      Var('bucketRegion', 'us-east-1')
+    ],
+    list: list.s3(),
+    revisionProtocol: revisionProtocol({
+      responseHeader: 'etag',
+      matchHeader: 'if-match',
+      createOnlyHeader: 'if-none-match',
+      createOnlyValue: '*',
+      conflictStatuses: [412]
+    })
+  })
 })
 
 DbDriver('bucket.amazon', {
@@ -102,9 +124,9 @@ DbDriver('bucket.amazon', {
     authMethod: authMethod.awsSigV4(),
     get: wget.viaBucketApi(),
     put: wput.viaBucketApi(),
-    append: wappend.getAndPut(),
+    append: wappend.bucketSingleWriterGetPut(),
     head: whead.viaBucketApi(),
-    list: wlist.viaS3BucketApi(),
+    list: wlist.viaBucketApi(),
     filePathUrl: '%$bucketEndpoint%/%$bucketName%/%$path%'
   })
 })
@@ -116,9 +138,9 @@ DbDriver('bucket.minio', {
     authMethod: authMethod.none(),
     get: wget.viaBucketApi(),
     put: wput.viaBucketApi(),
-    append: wappend.getAndPut(),
+    append: wappend.bucketSingleWriterGetPut(),
     head: whead.viaBucketApi(),
-    list: wlist.viaS3BucketApi(),
+    list: wlist.viaBucketApi(),
     filePathUrl: '%$bucketEndpoint%/%$bucketName%/%$path%'
   })
 })
