@@ -1,11 +1,11 @@
 import { dsls, ns } from '@jb6/core'
 import '@wonder/db/db-drivers-core.js'
 
-const { tgp: { 'ctx-enricher': { Var } }, wonder: { DbBackend, AuthToken, AuthMethod, ListMethod, DbDriver,
-  'db-backend': { dbBackend }, 'db-driver': { dbDriver } } } = dsls
+const { tgp: { 'ctx-enricher': { Var } }, wonder: { ObjectStore, AuthToken, AuthMethod, ListMethod, DbDriver,
+  'object-store': { objectStore }, 'db-driver': { dbDriver } } } = dsls
 const { authToken, authMethod, wget, wput, wappend, whead, wlist } = ns
-DbBackend('amazon', {
-  impl: dbBackend({
+ObjectStore('amazon', {
+  impl: objectStore({
     categories: ['bucket','s3','amazon'],
     enrichCtx: [
       Var('bucketEndpoint', 'https://s3.il-central-1.amazonaws.com'),
@@ -13,8 +13,8 @@ DbBackend('amazon', {
     ]
   })
 })
-DbBackend('minio', {
-  impl: dbBackend(['bucket','s3','minio'], [
+ObjectStore('minio', {
+  impl: objectStore(['bucket','s3','minio'], [
     Var('bucketEndpoint', 'http://127.0.0.1:9000'),
     Var('bucketRegion', 'us-east-1')
   ])

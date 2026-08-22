@@ -18,8 +18,8 @@ async function wresolve(url, _ctx, method = 'GET') {
   const dbLogger = _ctx.vars.dbLogger
   let ctx = _ctx.setVars({ url, method, dbLogger, localhostServer: localhostServer(_ctx) })
   const extracted = extractFromUrl(url, ctx), db = extracted.db || ctx.vars.db || 'gcs'
-  const backend = dsls.wonder['db-backend'][db.replace(/-/g, '')]?.$runWithCtx(ctx)
-  if (backend?.enrichCtx) ctx = await backend.enrichCtx(ctx)
+  const store = dsls.wonder['object-store'][db.replace(/-/g, '')]?.$runWithCtx(ctx)
+  if (store?.enrichCtx) ctx = await store.enrichCtx(ctx)
   const { fileName } = extracted
   const ext = (url.endsWith('/') || fileName?.includes('.')) ? '' : '.json'
   const path = await calcPath(ctx, extracted) + ext

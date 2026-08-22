@@ -136,23 +136,23 @@ Scope('waContact', {
   })
 })
 
-const DbBackend = TgpType('db-backend', 'wonder', { typescript: '{ categories, enrichCtx(ctx): Ctx }' })
-const dbBackend = DbBackend('dbBackend', {
+const ObjectStore = TgpType('object-store', 'wonder', { typescript: '{ categories, enrichCtx(ctx): Ctx }' })
+const objectStore = ObjectStore('objectStore', {
   params: [
     {id: 'categories', as: 'array'},
     {id: 'enrichCtx', type: 'ctx-enricher<tgp>', dynamic: true, defaultValue: sameCtx()}
   ],
-  impl: (ctx, {}, backend) => backend
+  impl: (ctx, {}, store) => store
 })
 
-DbBackend('gcs', {
-  impl: dbBackend({ categories: ['bucket', 'google', 'gcs'],
+ObjectStore('gcs', {
+  impl: objectStore({ categories: ['bucket', 'google', 'gcs'],
     enrichCtx: Var('bucketEndpoint', 'https://storage.googleapis.com') })
 })
 
-DbBackend('fs', { impl: dbBackend({ categories: ['fs'] }) })
-DbBackend('fsmem', { impl: dbBackend({ categories: ['fsmem'] }) })
-DbBackend('wcache', { impl: dbBackend({ categories: ['wcache'] }) })
+ObjectStore('fs', { impl: objectStore({ categories: ['fs'] }) })
+ObjectStore('fsmem', { impl: objectStore({ categories: ['fsmem'] }) })
+ObjectStore('wcache', { impl: objectStore({ categories: ['wcache'] }) })
 
 const AuthToken = TgpType('auth-token', 'wonder', { typescript: '{ value, expired() }' })
 const AuthMethod = TgpType('auth-method', 'wonder', { typescript: '{ enrichRequest(fetchReq, authToken, ctx): fetchReq }' })
@@ -228,14 +228,14 @@ async function getDBDriver(url, ctx) {
   const db = extracted.db || ctx.vars.db || (isPublicBucket ? 'gcs' : dbFromCtx) || 'gcs'
   const dbNormalized = forceGCS ? 'gcs' : db === 'local' ? 'fs' : db.replace(/-/g, '')
   const scopeId = extracted?.scope?.id
-  const backend = dsls.wonder['db-backend'][dbNormalized]?.$runWithCtx(ctx)
+  const store = dsls.wonder['object-store'][dbNormalized]?.$runWithCtx(ctx)
 
   if (dbNormalized === 'wcache')
     return coreUtils.globalsOfType(dsls.wonder['db-driver']).find(d => d.id === 'wcache')
 
   const categories = {
     [host]: true, [dbNormalized]: true,
-    ...Object.fromEntries((backend?.categories || []).map(category => [category.toLowerCase(), true])),
+    ...Object.fromEntries((store?.categories || []).map(category => [category.toLowerCase(), true])),
     ...(onLiveRepo && {liverepo: true}),
     ...(hasGcp && {gcpidentity: true}),
     ...(isPublicBucket && {publicgcs: true, public: true}),
@@ -307,17 +307,17 @@ async function wfetch2(_url, opts, _ctx) {
   const explicitDb = /^\w+:[^/]+\/\//.test(url), runtimeDbValue = runtimeDb(ctx)
   const rawDb = extracted.db || runtimeDbValue || 'gcs'
   const db = ctx.vars.forceGCS ? 'gcs' : rawDb === 'local' ? 'fs' : rawDb.replace(/-/g, '')
-  const backend = dsls.wonder['db-backend'][db]?.$runWithCtx(ctx)
-  const backendCtx = backend?.enrichCtx ? await backend.enrichCtx(ctx) : ctx
-  const enrichCtxProfile = coreUtils.tgpProfileToJson(backend?.enrichCtx.profile)
+  const store = dsls.wonder['object-store'][db]?.$runWithCtx(ctx)
+  const storeCtx = store?.enrichCtx ? await store.enrichCtx(ctx) : ctx
+  const enrichCtxProfile = coreUtils.tgpProfileToJson(store?.enrichCtx.profile)
   const safeEnrichCtxProfile = enrichCtxProfile && JSON.parse(JSON.stringify(enrichCtxProfile, (key, value) => key === 'val' ? undefined : value))
-  const backendVarNames = Object.keys(backendCtx.vars).filter(name => !(name in ctx.vars))
-  const overriddenBackendVars = Object.keys(ctx.vars).filter(name => backendCtx.vars[name] !== ctx.vars[name])
-  ctx = backendCtx.setVars({ ...ctx.vars, db,
-    categories: { ...Object.fromEntries((backend?.categories || []).map(category => [category, true])), ...ctx.vars.categories } })
-  dbLogger?.info?.({ t: 'DB backend resolved', db, source: ctx.vars.forceGCS ? 'forceGCS' : explicitDb ? 'wUrl'
-    : _ctx.vars.db ? 'ctx.vars.db' : runtimeDbValue ? 'runtimeDb' : 'default', categories: backend?.categories || [],
-    enrichCtxProfile: safeEnrichCtxProfile, backendVarNames, overriddenBackendVars }, {}, { ctx })
+  const storeVarNames = Object.keys(storeCtx.vars).filter(name => !(name in ctx.vars))
+  const overriddenStoreVars = Object.keys(ctx.vars).filter(name => storeCtx.vars[name] !== ctx.vars[name])
+  ctx = storeCtx.setVars({ ...ctx.vars, db,
+    categories: { ...Object.fromEntries((store?.categories || []).map(category => [category, true])), ...ctx.vars.categories } })
+  dbLogger?.info?.({ t: 'Object store resolved', db, source: ctx.vars.forceGCS ? 'forceGCS' : explicitDb ? 'wUrl'
+    : _ctx.vars.db ? 'ctx.vars.db' : runtimeDbValue ? 'runtimeDb' : 'default', categories: store?.categories || [],
+    enrichCtxProfile: safeEnrichCtxProfile, storeVarNames, overriddenStoreVars }, {}, { ctx })
   const { scope, roomId, userId, fileName, bucketName } = extracted
   // REST-standard: GET on a collection (trailing '/') = list; on a resource = get. No '.json' ext for a dir prefix.
   const isList = url.endsWith('/') && (opts.method || 'GET').toUpperCase() === 'GET'
