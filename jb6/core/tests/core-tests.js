@@ -19,10 +19,58 @@ const {
   },
   test: { Test,
     test: { dataTest }
-  }
+  },
+  mcp: { 'loggers-result': { loggerResult } }
 } = dsls
 const { prettyPrintComp, prettyPrint, getCompField, enrichCtxWithDataContext } = coreUtils
 const { math } = ns
+
+const loggerResultCoercion = Data('coreTest.loggerResultCoercion', {
+  params: [
+    {id: 'logger', type: 'loggers-result<mcp>'}
+  ],
+  impl: (ctx, {}, {logger}) => logger
+})
+
+Test('loggerResultTest.names', {
+  impl: dataTest(
+    loggerResultCoercion('ui,xxLogger'),
+    equals(asIs([{logger: 'uiLogger'}, {logger: 'xxLogger'}]))
+  )
+})
+
+Test('loggerResultTest.jqFilters', {
+  impl: dataTest(
+    loggerResultCoercion(`ui:{.a, .b},xx:{map({id, text})}`),
+    equals(asIs([
+      {logger: 'uiLogger', jqFilter: '.a, .b'},
+      {logger: 'xxLogger', jqFilter: 'map({id, text})'}
+    ]))
+  )
+})
+
+Test('loggerResultTest.quotedBraces', {
+  impl: dataTest(
+    loggerResult(`ui:{select(.text == "}, {")},xx`),
+    equals(asIs([
+      {logger: 'uiLogger', jqFilter: 'select(.text == "}, {")'},
+      {logger: 'xxLogger'}
+    ]))
+  )
+})
+
+Test('loggerResultTest.syntaxError', {
+  impl: dataTest({
+    calculate: () => {
+      try {
+        return loggerResult.$run('ui:{.uiLog')
+      } catch (error) {
+        return error.message
+      }
+    },
+    expectedResult: equals(`logger result syntax error at 10: unterminated jq filter, '}' expected`)
+  })
+})
 
 Const('peopleWithChildren', [
   {

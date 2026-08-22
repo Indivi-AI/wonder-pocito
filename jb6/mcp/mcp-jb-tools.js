@@ -1,5 +1,6 @@
 import { dsls, coreUtils } from '@jb6/core'
 import '@jb6/common'
+import '@jb6/jq'
 import '@jb6/llm-guide/guide-generator.js'
 import '@jb6/core/misc/import-map-services.js'
 import '@jb6/react'
@@ -99,36 +100,25 @@ Tool('formatAndValidateTgpComp', {
 })
 
 Tool('safeEditTgpComp', {
-  description: 'Validate and TGP-format a component, replacing it or appending a new component at the end of location',
+  description: 'Validate and TGP-format a profile, replace it at an existing tgpPath, and optionally probe the changed element immediately',
   params: [
-    {id: 'compText', as: 'string', asIs: true, mandatory: true},
-    {id: 'fullCompId', as: 'string', asIs: true},
-    {id: 'location', as: 'string', asIs: true},
-    {id: 'existingCompText', as: 'string', asIs: true}
+    {id: 'tgpPath', as: 'string', asIs: true, mandatory: true, description: 'type<dsl>id[~path]; array: ~+0 prepend, ~+ append, ~0+ after first, ~!3 delete, ~![3-5] delete range'},
+    {id: 'profileText', as: 'string', asIs: true, description: 'New profile; ignored for delete'},
+    {id: 'existingProfileText', as: 'string', asIs: true, description: 'Current source; WS ignored; empty/* skips check; ignored for array insert/delete'},
+    {id: 'livePreview', as: 'string', asIs: true, description: `optional JSON string: {result?: 'in'|'out'|'all', runner?: 'node', loggers?: {loggerName: true|jq}, probePath?, circuit?}; defaults to the edited path, inferred circuit, node, and out`}
   ],
-  impl: mcpTool(async (ctx, {}, {compText, fullCompId, location, existingCompText}) => {
+  impl: mcpTool(async (ctx, {}, {tgpPath, profileText, existingProfileText, livePreview}) => {
     try {
       await import('@jb6/lang-service')
-      const repoRoot = await coreUtils.calcRepoRoot()
-      const tgpModel = await coreUtils.calcTgpModelData({entryPointPaths: await coreUtils.resolveDeveloperEntryPoint(ctx)}, ctx)
-      const newLocation = location && {path: location}, current = fullCompId && coreUtils.compByFullId(fullCompId, tgpModel)
-      const {comp, compId, compDef, error} = jb.langServiceUtils.calcProfileActionMap(compText, {tgpModel, filePath: newLocation?.path, ctx})
-      if (!comp || error || comp.syntaxError) throw new Error(error?.syntaxError || error || comp?.syntaxError || 'Invalid TGP component')
-      if (fullCompId && compId != fullCompId) throw new Error(`component id mismatch: expected '${fullCompId}', found '${compId}'`)
-      const isNew = !current, sourceLocation = current?.$location || newLocation
-      if (isNew && !location) throw new Error('location is mandatory for a new component')
-      if (!isNew && !fullCompId) throw new Error(`component '${compId}' already exists`)
-      const {readFile, writeFile} = await import('fs/promises')
-      const {importMap, staticMappings} = await coreUtils.calcImportData({forRepo: repoRoot})
-      const path = coreUtils.resolveWithImportMap(sourceLocation.path, importMap, staticMappings) || sourceLocation.path
-      const source = await readFile(path, 'utf8'), formatted = coreUtils.prettyPrintComp(comp,
-        {tgpModel, filePath: path, initialPath: compId, compDef})
-      const from = isNew ? source.length : jb.langServiceUtils.lineColToOffset(source, sourceLocation)
-      const to = isNew ? from : jb.langServiceUtils.lineColToOffset(source, sourceLocation.to)
-      if (existingCompText != null && existingCompText != '*' && source.slice(from, to) != existingCompText) throw new Error('existingCompText mismatch')
-      const inserted = isNew ? `${from && source[from - 1] != '\n' ? '\n' : ''}${formatted}\n` : formatted
-      await writeFile(path, source.slice(0, from) + inserted + source.slice(to))
-      return JSON.stringify({fullCompId: compId, path, created: isNew, formatted: formatted != compText, formattedTgpComp: formatted})
+      const previewOptions = livePreview && JSON.parse(livePreview)
+      const host = jb.langServiceUtils.localFsHost({ctx})
+      jb.ext.tgpTextEditor = {host}
+      const result = await dsls.common.data['langService.calcTgpCompChange'].$runWithCtx(ctx, {tgpPath, profileText, existingProfileText})
+      await jb.langServiceUtils.applyCompChange({edit: result.compChange, path: result.path, expectedSource: result.source}, {ctx})
+      if (host.applyError()) throw host.applyError()
+      if (!previewOptions) return result.formattedTgpProfile
+      const preview = await coreUtils.runProbePreview(previewOptions.probePath || result.resultTgpPath || tgpPath, previewOptions)
+      return JSON.stringify({formattedTgpProfile: result.formattedTgpProfile, livePreview: preview}, null, 2)
     } catch (error) {
       return JSON.stringify({error: error.message || String(error)})
     }
@@ -262,7 +252,9 @@ Returns { done, errors, logs, html?, timeline }.`,
     await coreUtils.ensureImportMapsInCli() // needed for external repos with import maps
     if (seedLocalStorage) {
       await import('@jb6/lang-service')
-      const { result, error } = await coreUtils.runSnippetCli({ profileText: `{$: 'data<common>${seedLocalStorage}'}` })
+      const { result, error } = await coreUtils.runSnippetCli({ profileText: `{$: 'data<common>${seedLocalStorage}'}`,
+        ctxEnricher: {$: 'ctx-enricher<tgp>setVars', obj: {$: 'data<common>asIs',
+          val: {localhostServer: new URL(url).origin, seedNonce: Date.now()}}} })
       if (error) return {error: `seedLocalStorage '${seedLocalStorage}' failed: ${error}`}
       seed = result
     }

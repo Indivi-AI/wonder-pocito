@@ -9,7 +9,7 @@ const {
     data: { asIs, calcCompTextAndCursor }
   },
   test: { Test,
-    test: { completionActionTest, completionOptionsTest, dataTest }
+    test: { calcTgpCompArrayChangeTest, calcTgpCompChangeTest, completionActionTest, completionOptionsTest, dataTest }
   }
 } = dsls
 const { langService } = ns
@@ -773,6 +773,36 @@ Test('langServiceTest.deleteEdits', {
         cursorPos: {line: 1, col: 39},
         hash: 2054365702
     }))
+  })
+})
+
+Test('calcTgpCompArrayChangeTest.prepend', {
+  impl: calcTgpCompArrayChangeTest('test<test>coreTest.HelloWorld~impl~calculate~operators~+0', `join('prepend')`, {
+    expectedResult: ({data}) => data == `[join('prepend'), '%%', join('')]`
+  })
+})
+
+Test('calcTgpCompArrayChangeTest.append', {
+  impl: calcTgpCompArrayChangeTest('test<test>coreTest.HelloWorld~impl~calculate~operators~+', `join('append')`, {
+    expectedResult: ({data}) => data == `['%%', join(''), join('append')]`
+  })
+})
+
+Test('calcTgpCompArrayChangeTest.insertAfter', {
+  impl: calcTgpCompArrayChangeTest('test<test>coreTest.HelloWorld~impl~calculate~operators~0+', `join('insert')`, {
+    expectedResult: ({data}) => data == `['%%', join('insert'), join('')]`
+  })
+})
+
+Test('calcTgpCompArrayChangeTest.deleteOne', {
+  impl: calcTgpCompArrayChangeTest('test<test>coreTest.HelloWorld~impl~calculate~operators~!0', {
+    expectedResult: equals(`[join('')]`)
+  })
+})
+
+Test('calcTgpCompArrayChangeTest.deleteRange', {
+  impl: calcTgpCompArrayChangeTest('test<test>coreTest.HelloWorld~impl~calculate~operators~![0-1]', {
+    expectedResult: equals('[]')
   })
 })
 

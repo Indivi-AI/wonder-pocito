@@ -2,7 +2,7 @@ import { coreUtils, dsls } from '@jb6/core'
 import { update } from '../lib/immutable.js'
 
 const { jb, resolveCompArgs, prettyPrint, prettyPrintComp, isPrimitiveValue, logError, calcPath, compByFullId, parentPath, unique, calcHash, splitDslType, calcExpectedDslsSection } = coreUtils
-const { calcCompProps, cloneProfile, deltaFileContent, provideCompletionItems, filePosOfPath, getPosOfPath, tgpEditorHost, tgpModelForLangService } = jb.langServiceUtils
+const { calcCompProps, cloneProfile, closestComp, deltaFileContent, provideCompletionItems, filePosOfPath, getPosOfPath, tgpEditorHost, tgpModelForLangService } = jb.langServiceUtils
 const { calcTgpModelData } = coreUtils
 
 const {
@@ -152,6 +152,147 @@ Data('langService.calcCompProps', {
     {id: 'compTextAndCursor', defaultValue: '%%'}
   ],
   impl: (ctx, {}, { compTextAndCursor }) => calcCompProps(compTextAndCursor, ctx)
+})
+
+Data('langService.calcTgpCompChange', {
+  description: 'Calculate a safe TGP component source change for MCP before applying it through tgpEditorHost',
+  params: [
+    {id: 'tgpPath', as: 'string', asIs: true, mandatory: true},
+    {id: 'profileText', as: 'text', asIs: true, mandatory: true},
+    {id: 'existingProfileText', as: 'text', asIs: true, mandatory: true}
+  ],
+  impl: async (ctx, {}, {tgpPath, profileText, existingProfileText}) => {
+    const ownerCompId = tgpPath.split('~')[0], innerPath = tgpPath.split('~').slice(1)
+    const runtimeTgpModel = new tgpModelForLangService(jb)
+    const runtimeComp = compByFullId(ownerCompId, runtimeTgpModel)
+    const tgpModel = runtimeComp ? runtimeTgpModel : new tgpModelForLangService(
+      await calcTgpModelData({entryPointPaths: await coreUtils.resolveDeveloperEntryPoint(ctx)}, ctx))
+    ctx.vars.langServiceLogger?.info?.({t: 'calc tgp comp change model', ownerCompId,
+      source: runtimeComp ? 'runtime' : 'discovery'}, {}, {ctx})
+    const insertionToken = innerPath.at(-1)
+    const insertAtMatch = insertionToken?.match(/^\+(\d+)$/)
+    const insertAfterMatch = insertionToken?.match(/^(\d+)\+$/)
+    const arrayInsertion = insertionToken == '+' || !!insertAtMatch || !!insertAfterMatch
+    const deleteAtMatch = insertionToken?.match(/^!(\d+)$/)
+    const deleteRangeMatch = insertionToken?.match(/^!\[(\d+)-(\d+)\]$/)
+    const arrayDeletion = !!deleteAtMatch || !!deleteRangeMatch
+    const arrayMutation = arrayInsertion || arrayDeletion
+    const arrayInnerPath = arrayMutation ? innerPath.slice(0, -1) : null
+    const arrayTgpPath = arrayMutation ? [ownerCompId, ...arrayInnerPath].join('~') : null
+    const skipExistingCheck = !existingProfileText || existingProfileText == '*'
+    const firstNonWhitespaceDiff = (currentValue, expectedValue) => {
+      const current = currentValue.replace(/\s/g, ''), expected = expectedValue.replace(/\s/g, '')
+      let offset = 0
+      while (current[offset] == expected[offset] && offset < current.length && offset < expected.length) offset++
+      if (offset == current.length && offset == expected.length) return
+      const contextFrom = Math.max(0, offset - 30), contextTo = offset + 31
+      const pointer = ' '.repeat(offset - contextFrom) + '^'
+      return `existingProfileText mismatch at non-whitespace offset ${offset}\ncurrent  ${current.slice(contextFrom, contextTo)}\nexpected ${expected.slice(contextFrom, contextTo)}\n         ${pointer}`
+    }
+    const current = compByFullId(ownerCompId, tgpModel)
+    if (!current) throw new Error(`component '${ownerCompId}' not found`)
+    const sourceLocation = current.$location
+    const {importMap, staticMappings} = runtimeComp ? {} : await coreUtils.calcImportData({forRepo: await coreUtils.calcRepoRoot()})
+    const path = runtimeComp ? sourceLocation.path
+      : coreUtils.resolveWithImportMap(sourceLocation.path, importMap, staticMappings) || sourceLocation.path
+    const source = await tgpEditorHost().readSource(path, {staticMappings, ctx})
+    const sourceComp = sourceLocation.to ? null : closestComp(source, +sourceLocation.line - 1, sourceLocation.col || 0, path)
+    const compLocation = sourceComp?.compPos || sourceLocation
+    const currentText = sourceComp?.compText || source.slice(jb.langServiceUtils.lineColToOffset(source, sourceLocation),
+      jb.langServiceUtils.lineColToOffset(source, sourceLocation.to))
+    const compProps = jb.langServiceUtils.calcProfileActionMap(currentText, {tgpModel, filePath: path, ctx})
+    if (!compProps.comp || compProps.error || compProps.comp.syntaxError)
+      throw new Error(compProps.error?.syntaxError || compProps.error || compProps.comp?.syntaxError || 'Invalid current TGP component')
+
+    let proposedProfile
+    if (arrayDeletion) {
+      const arrayElementPath = `${arrayTgpPath}~0`
+      if (!tgpModel.paramDef(arrayElementPath)?.type?.includes('[]'))
+        throw new Error(`array deletion requires an array parameter at '${arrayTgpPath}'`)
+    } else if (innerPath.length) {
+      const profileTgpPath = arrayInsertion ? `${arrayTgpPath}~0` : tgpPath
+      const paramType = tgpModel.paramType(profileTgpPath)
+      const expectedType = paramType?.startsWith('$asParent')
+        ? profileTgpPath.split('~').length == 2 ? compProps.comp.$dslType : tgpModel.compOfPath(parentPath(profileTgpPath))?.$dslType
+        : paramType
+      if (!expectedType) throw new Error(`can not resolve expected type at '${tgpPath}'`)
+      if (arrayInsertion && !tgpModel.paramDef(profileTgpPath)?.type?.includes('[]'))
+        throw new Error(`array insertion requires an array parameter at '${arrayTgpPath}'`)
+      const parsedProfile = jb.langServiceUtils.calcProfileActionMap(profileText, {tgpType: expectedType, tgpModel, filePath: path, ctx})
+      if (!parsedProfile.comp || parsedProfile.error || parsedProfile.comp.syntaxError)
+        throw new Error(parsedProfile.error?.syntaxError || parsedProfile.error || parsedProfile.comp?.syntaxError || 'Invalid TGP profile')
+      proposedProfile = parsedProfile.comp
+      if (!arrayInsertion && !skipExistingCheck) {
+        const exactAction = compProps.actionMap.find(({action}) => action == `function!${tgpPath}`)
+        const begin = compProps.actionMap.find(({action}) => action == `begin!${tgpPath}`)
+        const end = compProps.actionMap.find(({action}) => action == `end!${tgpPath}`)
+        const currentProfileText = exactAction ? currentText.slice(exactAction.from, exactAction.to)
+          : begin && end ? currentText.slice(begin.from, end.to) : null
+        if (currentProfileText == null) throw new Error(`source span not found for '${tgpPath}'`)
+        const mismatch = firstNonWhitespaceDiff(currentProfileText, existingProfileText)
+        if (mismatch) throw new Error(mismatch)
+      }
+    } else {
+      const parsedComp = jb.langServiceUtils.calcProfileActionMap(profileText, {tgpModel, filePath: path, ctx})
+      if (!parsedComp.comp || parsedComp.error || parsedComp.comp.syntaxError)
+        throw new Error(parsedComp.error?.syntaxError || parsedComp.error || parsedComp.comp?.syntaxError || 'Invalid TGP component')
+      if (parsedComp.compId != ownerCompId)
+        throw new Error(`component id mismatch: expected '${ownerCompId}', found '${parsedComp.compId}'`)
+      proposedProfile = parsedComp.comp
+      const mismatch = skipExistingCheck ? null : firstNonWhitespaceDiff(currentText, existingProfileText)
+      if (mismatch) throw new Error(mismatch)
+    }
+
+    const opOnComp = {}
+    let resultTgpPath = tgpPath
+    if (arrayInsertion) {
+      const currentArrayValue = calcPath(compProps.comp, arrayInnerPath)
+      const currentItems = currentArrayValue == null ? [] : Array.isArray(currentArrayValue) ? currentArrayValue : [currentArrayValue]
+      const insertionIndex = insertionToken == '+' ? currentItems.length
+        : insertAtMatch ? +insertAtMatch[1] : +insertAfterMatch[1] + 1
+      if (insertionIndex < 0 || insertionIndex > currentItems.length)
+        throw new Error(`array insertion index ${insertionIndex} is out of range 0..${currentItems.length}`)
+      const insertedItems = [...currentItems.slice(0, insertionIndex), proposedProfile, ...currentItems.slice(insertionIndex)]
+      const insertedValue = currentArrayValue == null && insertedItems.length == 1 ? proposedProfile : insertedItems
+      calcPath(opOnComp, arrayInnerPath, {$set: insertedValue})
+      resultTgpPath = `${arrayTgpPath}~${insertionIndex}`
+    } else if (arrayDeletion) {
+      const currentArrayValue = calcPath(compProps.comp, arrayInnerPath)
+      const currentItems = currentArrayValue == null ? [] : Array.isArray(currentArrayValue) ? currentArrayValue : [currentArrayValue]
+      const deleteFrom = deleteAtMatch ? +deleteAtMatch[1] : +deleteRangeMatch[1]
+      const deleteTo = deleteAtMatch ? deleteFrom : +deleteRangeMatch[2]
+      if (deleteFrom < 0 || deleteTo < deleteFrom || deleteTo >= currentItems.length)
+        throw new Error(`array deletion range ${deleteFrom}-${deleteTo} is out of range 0..${currentItems.length - 1}`)
+      const remainingItems = [...currentItems.slice(0, deleteFrom), ...currentItems.slice(deleteTo + 1)]
+      const remainingValue = Array.isArray(currentArrayValue) ? remainingItems : remainingItems[0] ?? null
+      calcPath(opOnComp, arrayInnerPath, {$set: remainingValue})
+      resultTgpPath = arrayTgpPath
+    } else if (innerPath.length) {
+      calcPath(opOnComp, innerPath, {$set: proposedProfile})
+    }
+    const newComp = innerPath.length ? update(compProps.comp, opOnComp) : proposedProfile
+    resolveCompArgs(newComp, {tgpModel})
+    const formattedTgpComp = prettyPrintComp(newComp,
+      {initialPath: ownerCompId, tgpModel, filePath: path, compDef: compProps.compDef})
+    const formattedTgpProfile = innerPath.length
+      ? prettyPrint(arrayDeletion ? calcPath(newComp, arrayInnerPath) ?? [] : calcPath(newComp, resultTgpPath.split('~').slice(1)),
+          {initialPath: resultTgpPath, tgpModel, filePath: path})
+      : formattedTgpComp
+    const arrayResultTgpPath = arrayMutation ? arrayTgpPath : ''
+    const arrayResult = arrayMutation ? calcPath(newComp, arrayInnerPath) ?? [] : null
+    const formattedArrayTgpProfile = arrayMutation
+      ? prettyPrint(arrayResult, {initialPath: arrayResultTgpPath, tgpModel, filePath: path})
+      : ''
+    return {
+      path,
+      source,
+      compChange: deltaFileContent(currentText, formattedTgpComp, compLocation),
+      formattedTgpProfile,
+      resultTgpPath,
+      formattedArrayTgpProfile,
+      arrayResultTgpPath
+    }
+  }
 })
 
 Data('langService.editAndCursorOfCompletionItem', {

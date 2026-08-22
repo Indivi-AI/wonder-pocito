@@ -140,10 +140,8 @@ Test('mcpTest.safeEditRequiresLocationForCreate', {
   HeavyTest: true,
   nodeOnly: true,
   impl: dataTest({
-    calculate: async () => (await safeEditTgpComp.$run({
-      compText: `Test('mcpTest.safeCreateCandidate', { impl: dataTest({ expectedResult: true }) })`
-    })).content[0].text,
-    expectedResult: contains('location is mandatory for a new component'),
+    calculate: async () => (await safeEditTgpComp.$run({tgpPath: 'test<test>notThere', profileText: 'true'})).content[0].text,
+    expectedResult: contains(`component 'test<test>notThere' not found`),
     timeout: 5000
   })
 })
@@ -154,13 +152,13 @@ Test('mcpTest.playwrightHarvest', {
   impl: mcpToolTest({
     tool: 'playwrightHarvest',
     args: asIs({
-      url: 'http://localhost:8083/packages/testing/tests.html?test=reactTest.buttonToClick&logger=uiLogger',
-      automation: `{"$":"ui-action<react>click","buttonText":"Click me"}`,
-      seedLocalStorage: 'mockAuthSeed',
-      domSelector: 'body'
+        url: 'http://localhost:8083/packages/testing/tests.html?test=reactTest.buttonToClick&logger=uiLogger',
+        automation: '{"$":"ui-action<react>click","buttonText":"Full comp via MCP"}',
+        seedLocalStorage: 'mockAuthSeed',
+        domSelector: 'body'
     }),
-    expectedResult: and(contains('Clicked!'), contains('<button>'), notContains('harvestError')),
-    timeout: 10000
+    timeout: 10000,
+    expectedResult: and(contains('Clicked!'), contains('<button>'), notContains('harvestError'))
   })
 })
 

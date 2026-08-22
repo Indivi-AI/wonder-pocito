@@ -13,6 +13,7 @@ function activeDoc() { return openDocs[jb.workspaceRegistry.activeUri] }
 
 jb.ext.tgpTextEditor = { host: {
         type: 'jbWorkspace',
+        readSource: (path, {staticMappings} = {}) => openDocs[path]?.text ?? coreUtils.fetchByEnv(path, staticMappings),
         async applyEdit(edit,{docUri, ctx} = {}) {
             const { lineColToOffset } = jb.langServiceUtils
             const _docUri = docUri || activeUri()

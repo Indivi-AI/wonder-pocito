@@ -12,19 +12,51 @@ const parseWithFallback = (src, opts, filePath) => { try { return parse(src, opt
   logError(`acorn strict failed, using acorn-loose (may mis-parse) at ${filePath || '?'}: ${e.message}`); return parseLoose(src, opts) } }
 
 export const langServiceUtils = jb.langServiceUtils = { closestComp, calcProfileActionMap, deltaFileContent, filePosOfPath, getPosOfPath,
-    lineColToOffset, offsetToLineCol, tgpEditorHost, applyCompChange, importJb6File, parseWithFallback }
+    lineColToOffset, offsetToLineCol, tgpEditorHost, localFsHost, applyCompChange, importJb6File, parseWithFallback }
 
 function tgpEditorHost() {
     return jb.ext.tgpTextEditor.host
 }
 
+function localFsHost({ctx} = {}) {
+    let error
+    return {
+        type: 'localFs',
+        async readSource(path) {
+            return (await import('fs/promises')).readFile(path, 'utf8')
+        },
+        async applyEdit(compChange, {path, expectedSource, ctx: applyCtx} = {}) {
+            try {
+                const {readFile, writeFile} = await import('fs/promises')
+                const sourceBeforeChange = await readFile(path, 'utf8')
+                if (sourceBeforeChange != expectedSource) throw new Error('source changed before applying compChange')
+                const from = lineColToOffset(sourceBeforeChange, compChange.range.start)
+                const to = lineColToOffset(sourceBeforeChange, compChange.range.end)
+                const sourceAfterChange = sourceBeforeChange.slice(0, from) + compChange.newText + sourceBeforeChange.slice(to)
+                await writeFile(path, sourceAfterChange)
+                const logCtx = applyCtx || ctx
+                logCtx?.vars?.langServiceLogger?.info?.({t: 'local fs compChange applied', path, range: compChange.range,
+                    newTextLength: compChange.newText.length}, {}, {ctx: logCtx})
+            } catch (e) {
+                error = e
+                throw e
+            }
+        },
+        async saveDoc() {},
+        async selectRange() {},
+        async execCommand() {},
+        log(message) { ctx?.vars?.langServiceLogger?.error?.({t: 'local fs host error', message}, {}, {ctx}) },
+        applyError: () => error
+    }
+}
+
 async function applyCompChange(editAndCursor, {ctx} = {}) {
     const host = tgpEditorHost()
-    const { edit, cursorPos } = editAndCursor
+    const { edit, cursorPos, ...editOptions } = editAndCursor
     if (!edit) return
     try {
         await host.saveDoc()
-        await host.applyEdit(edit,{ctx})
+        await host.applyEdit(edit,{...editOptions, ctx})
         await host.saveDoc()
         if (cursorPos) {
             await host.selectRange(cursorPos,{ctx})

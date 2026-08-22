@@ -76,7 +76,7 @@ ${origin ? `<base href="${origin}/">` : ''}
 
     for (const file of ${urlsJson}) await import(file)
 
-    let ctx = new coreUtils.Ctx().setVars({react: reactUtils, isLocalHost: true, categories: {sandboxed: true}, localhostServer: origin || 'http://localhost:3000'})
+    let ctx = new coreUtils.Ctx().setVars({react: reactUtils, isLocalHost: true, dbCategories: {sandboxed: true}, localhostServer: origin || 'http://localhost:3000'})
     const root = reactUtils.createRoot(document.getElementById('show'))
     let compArgs = null
     const render = async (args) => {

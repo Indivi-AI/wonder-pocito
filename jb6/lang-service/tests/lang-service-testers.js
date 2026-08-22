@@ -5,7 +5,7 @@ import { ns, dsls, coreUtils } from '@jb6/core'
 import './mock-workspace.js'
 import '@jb6/core/misc/import-map-services.js'
 
-const { jb, resolveProfileArgs, prettyPrintWithPositions, calcTgpModelData, resolveProfileTypes, sortedArraysDiff, objectDiff, delay, runSnippetCli, prettyPrint } = coreUtils
+const { jb, asJbComp, resolveProfileArgs, prettyPrintWithPositions, calcTgpModelData, resolveProfileTypes, sortedArraysDiff, objectDiff, delay, proxyByFullId, runSnippetCli, prettyPrint, splitDslType } = coreUtils
 const { tgpEditorHost, tgpModelForLangService, offsetToLineCol, applyCompChange, calcProfileActionMap} = jb.langServiceUtils 
 
 const {
@@ -194,6 +194,45 @@ Test('actionMapTest', {
     },
     includeTestRes: true,
     timeout: 1000
+  })
+})
+
+Test('calcTgpCompChangeTest', {
+  params: [
+    {id: 'tgpPath', as: 'string', asIs: true, mandatory: true},
+    {id: 'profileText', as: 'text', asIs: true},
+    {id: 'existingProfileText', as: 'text', asIs: true},
+    {id: 'expectedResult', type: 'boolean<common>', dynamic: true}
+  ],
+  impl: dataTest({
+    calculate: async (ctx, {}, {tgpPath, profileText, existingProfileText}) =>
+      (await dsls.common.data['langService.calcTgpCompChange']
+        .$runWithCtx(ctx, {tgpPath, profileText, existingProfileText})).formattedTgpProfile,
+    expectedResult: '%$expectedResult()%',
+    timeout: 10000
+  })
+})
+
+Test('calcTgpCompArrayChangeTest', {
+  params: [
+    {id: 'tgpPath', as: 'string', asIs: true, mandatory: true},
+    {id: 'profileText', as: 'text', asIs: true},
+    {id: 'expectedResult', type: 'boolean<common>', dynamic: true}
+  ],
+  impl: dataTest({
+    calculate: async (ctx, {}, {tgpPath, profileText}) => {
+      const ownerComp = proxyByFullId(tgpPath.split('~')[0])
+      const {id, $dslType} = ownerComp[asJbComp]
+      const [type, dsl] = splitDslType($dslType)
+      try {
+        return (await dsls.common.data['langService.calcTgpCompChange']
+          .$runWithCtx(ctx, {tgpPath, profileText, existingProfileText: ''})).formattedArrayTgpProfile
+      } finally {
+        jb.dsls[dsl][type][id] = ownerComp
+      }
+    },
+    expectedResult: '%$expectedResult()%',
+    timeout: 10000
   })
 })
 

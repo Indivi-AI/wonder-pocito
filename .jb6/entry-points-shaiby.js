@@ -1,6 +1,7 @@
 import '@wonder/studio/mcp-tools/wonder-mcp-tools.js'
 import '@wonder/ai/category-dsl-tests.js'
 import '@wonder/ai/verified-report-tests.js'
+import '@wonder/ai/evals-agno-tests.js'
 import '@wonder/bi/tests/bi-tests.js'
 import '@wonder/db/tests/db-drivers-tests.js'
 import '@wonder/db/tests/signed-room-db-driver-tests.js'

@@ -9,6 +9,71 @@ const {
 } = jb.dsls
 
 const Logger = TgpType('logger', 'test')
+const LoggersResult = TgpType('loggers-result', 'mcp', {
+  coerce: exp => typeof exp == 'string' ? loggerResult(exp) : exp
+})
+
+const loggerResult = LoggersResult('loggerResult', {
+  params: [
+    {id: 'exp', as: 'string', asIs: true, mandatory: true}
+  ],
+  impl: (ctx, {}, {exp}) => {
+    const loggerResults = []
+    let offset = 0
+    while (offset < exp.length) {
+      skipWhitespace()
+      const nameFrom = offset
+      while (offset < exp.length && !/[,\s:]/.test(exp[offset])) offset++
+      const name = exp.slice(nameFrom, offset)
+      if (!name) syntaxError('logger name expected')
+      skipWhitespace()
+      let jqFilter
+      if (exp[offset] == ':') {
+        offset++
+        skipWhitespace()
+        jqFilter = readJqFilter()
+        skipWhitespace()
+      }
+      loggerResults.push({logger: name.endsWith('Logger') ? name : `${name}Logger`, ...(jqFilter != null && {jqFilter})})
+      if (offset == exp.length) break
+      if (exp[offset] != ',') syntaxError("',' expected")
+      offset++
+      if (!exp.slice(offset).trim()) syntaxError('logger name expected after comma')
+    }
+    return loggerResults
+
+    function readJqFilter() {
+      if (exp[offset] != '{') syntaxError("'{' expected before jq filter")
+      const filterFrom = ++offset
+      let depth = 1, quote = '', escaped = false
+      while (offset < exp.length) {
+        const char = exp[offset++]
+        if (escaped) {
+          escaped = false
+        } else if (char == '\\') {
+          escaped = true
+        } else if (quote) {
+          if (char == quote) quote = ''
+        } else if (char == '"' || char == "'") {
+          quote = char
+        } else if (char == '{') {
+          depth++
+        } else if (char == '}' && --depth == 0) {
+          return exp.slice(filterFrom, offset - 1).trim()
+        }
+      }
+      syntaxError("unterminated jq filter, '}' expected")
+    }
+
+    function skipWhitespace() {
+      while (/\s/.test(exp[offset] || '')) offset++
+    }
+
+    function syntaxError(message) {
+      throw new Error(`logger result syntax error at ${offset}: ${message}`)
+    }
+  }
+})
 
 // URL params reserved by view boot — modules add their own here so URL params can be cleanly partitioned into ctx vars.
 jb.coreRegistry.urlReservedParams = jb.coreRegistry.urlReservedParams || {}
