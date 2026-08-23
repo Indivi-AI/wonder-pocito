@@ -111,8 +111,10 @@ DbDriverInterceptor('roomLambda', {
       if (driverMethod !== 'append' || !fileName?.startsWith('lambdas/')) return null
       const name = fileName.slice('lambdas/'.length)
       try {
-      // lambdaHost: explicit override; else browser uses page origin and node uses staging.
-      const base = ctx.vars.lambdaHost || globalThis.window?.location?.origin || 'https://w-staging.indivi.ai'
+      // lambdaHost: explicit override; else browser uses page origin and node uses WONDER_SERVICE_URL (on-prem) or staging.
+      // node may carry a jsdom window (react tooling) - isNode decides, not window presence.
+      const base = ctx.vars.lambdaHost || (!coreUtils.isNode && globalThis.window?.location?.origin)
+        || globalThis.process?.env?.WONDER_SERVICE_URL || 'https://w-staging.indivi.ai'
       const roomWUrl = ctx.vars.roomWUrl.includes('://') ? ctx.vars.roomWUrl : `room://${ctx.vars.roomWUrl}`
       const route = roomWUrl.startsWith('signedRoom://') ? 'run-signed-room-lambda' : 'run-room-lambda'
       const authAt = performance.now()

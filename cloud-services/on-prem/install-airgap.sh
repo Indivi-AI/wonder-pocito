@@ -20,6 +20,7 @@ else
   [[ ! -e "$DEST" ]] || { echo "Destination exists and is not a Git checkout: $DEST" >&2; exit 1; }
   git clone "$KIT/wonder.bundle" "$DEST"
 fi
+git -C "$DEST" config user.email onprem@airgap   # developerEntryPoint resolves .jb6/entry-points-{gitUser}.js from this
 tar -C "$DEST" -xzf "$KIT/node_modules.tar.gz"
 "$ENGINE" load -i "$KIT/wonder-image.tar.gz"
 "$ENGINE" tag "$WONDER_SOURCE_IMAGE" "$WONDER_IMAGE"

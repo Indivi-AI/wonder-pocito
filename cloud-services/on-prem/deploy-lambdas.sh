@@ -13,6 +13,7 @@ SECRET_ARGS=(--from-literal=STORAGE_PROVIDER=minio --from-literal="MINIO_ENDPOIN
   --from-literal="WONDER_STORAGE_URL=${MINIO_PUBLIC_ENDPOINT%/}" --from-literal="WONDER_CDN_URL=${MINIO_PUBLIC_ENDPOINT%/}/wonder-code-packages/cdn"
   --from-literal=WONDER_AUTH_MODE=none --from-literal=CORS_ALLOW_ALL=true
   --from-literal="S3_STORAGE_CLASS=${S3_STORAGE_CLASS:-STANDARD_IA}" --from-literal="S3_USE_PATH_STYLE=${S3_USE_PATH_STYLE:-true}")
+[[ -z "${WONDER_SERVICE_URL:-}" ]] || SECRET_ARGS+=(--from-literal="WONDER_SERVICE_URL=$WONDER_SERVICE_URL")   # in-cluster lambda->lambda calls
 if [[ -n "${WONDER_ENV_FILE:-}" ]]; then
   while IFS= read -r entry || [[ -n "$entry" ]]; do
     [[ -z "$entry" || "$entry" == \#* ]] || SECRET_ARGS+=(--from-literal="$entry")

@@ -376,10 +376,10 @@ Tool('uploadRoomLambda', {
     text: async (ctx, {}, {compFullId, roomWUrl}) => {
       const timer = phaseTimer()
       try {
-        const entryPath = await coreUtils.resolveDeveloperEntryPoint(ctx)
+        let comp = coreUtils.compByFullId(compFullId), entryPath = comp && comp.$location.path
         timer.phase('entryPath')
-        let comp = coreUtils.compByFullId(compFullId)
-        if (!comp) {
+        if (!comp) {   // unregistered comp - only then fall back to the developer entry point (keyed on git user.email; absent on-prem)
+          entryPath = await coreUtils.resolveDeveloperEntryPoint(ctx)
           await import(entryPath)
           timer.phase('entryImport')
           comp = coreUtils.compByFullId(compFullId)
