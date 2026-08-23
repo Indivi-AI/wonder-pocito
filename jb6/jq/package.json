@@ -1,0 +1,18 @@
+{
+  "name": "@jb6/jq",
+  "version": "1.260813.0",
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./*.js": "./*.js"
+  },
+  "scripts": {},
+  "dependencies": {
+    "@jb6/core": "1.260813.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Artwaresoft/jb6.git",
+    "directory": "packages/jq"
+  }
+}

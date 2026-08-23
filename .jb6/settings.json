@@ -1,0 +1,4 @@
+{
+  "jb6Dirs": ["wonder", "solutions"],
+  "developerEntryPoint": "./.jb6/entry-points-{gitUser}.js"
+}

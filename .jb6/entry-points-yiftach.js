@@ -1,0 +1,8 @@
+import '@wonder/ai/category-dsl-tests.js'
+import '@wonder/ai/verified-report-tests.js'
+import '@wonder/db/tests/db-drivers-tests.js'
+import '@wonder/db/etl/etl-tests.js'
+import '@wonder/db/tests/room-tests.js'
+import '@wonder/db/tests/room-applet-tests.js'
+import '@wonder/db/tests/signed-room-applet-tests.js'
+import './entry-points-pocito.js'

@@ -1,0 +1,6 @@
+import '@jb6/mcp/mcp-jb-tools.js'
+import '../solutions/pocito/wonder-platform/wonder-platform-tests.js'
+import '../solutions/pocito/wonder-platform/wonder-platform-agent-tests.js'
+import '../solutions/pocito/wonder-platform/wonder-platform-minimax-v2-tests.js'
+import '../solutions/pocito/react-comp-examples/react-comp-examples-tests.js'
+import '../solutions/pocito/platform-v0/platform-v0-tests.js'

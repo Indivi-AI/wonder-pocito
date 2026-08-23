@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script type="importmap">JB_IMPORT_MAP</script>
+
+<style>
+  html, body { height: 100%; margin: 0; padding: 0; }
+  .cm-editor { height: 100%; font-size: 12px; border: 1px solid #ddd; }
+</style>
+</head>
+  
+<body>
+  <div id="show" style="height: 100vh;"></div>
+
+  <script type="module">
+import { dsls, coreUtils } from '@jb6/core'
+//import '@jb6/core/misc/import-map-services.js'
+import '@jb6/probe-studio/probe-studio.js'
+import '@jb6/react/codemirror-utils.js'
+import '@jb6/react/lib/tailwindcss-3.4.17.js'
+
+const { common: { data: { jq }}} = dsls
+
+const urlParams = new URLSearchParams(window.location.search)
+
+const { importMapsInCli, imports, staticMappings} = JB_IMPORT_MAP
+
+//const projectRoot = await coreUtils.calcRepoRoot()
+let filePath = urlParams.get('filePath') // we get the filePath from vscode ext and it is relative to the repo root
+const filePathAsUrl = filePath.indexOf('/packages/') == 0 ? filePath.replace(/^\/packages/,'@jb6'): filePath
+
+const urlsToLoad = coreUtils.unique([filePathAsUrl, '@jb6/probe-studio/probe-studio.js', '@jb6/probe-studio/studio-common-comps.js'])
+
+coreUtils.runProbeStudio({importMapsInCli, imports, staticMappings, topElem: show, urlsToLoad})
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+FROM node:24.3
+WORKDIR /usr/src/app
+
+RUN apt-get update && apt-get install -y \
+    fonts-liberation fonts-noto-core fontconfig wget unzip \
+    --no-install-recommends && rm -rf /var/lib/apt/lists/*
+
+RUN wget https://github.com/rsms/inter/releases/download/v4.0/Inter-4.0.zip -O /tmp/inter.zip \
+    && unzip /tmp/inter.zip -d /tmp/inter \
+    && mkdir -p /usr/share/fonts/truetype/inter \
+    && cp /tmp/inter/extras/ttf/*.ttf /usr/share/fonts/truetype/inter/ \
+    && fc-cache -f -v \
+    && rm -rf /tmp/inter /tmp/inter.zip
+
+ENV IN_DOCKER=true
+
+COPY package.json package-lock.json ./
+RUN npm ci

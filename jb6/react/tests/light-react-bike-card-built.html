@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta property="og:title" content="Your Hybrid Bikes">
+<meta property="og:description" content="Personalized bike recommendations">
+
+<title>Bikes For You</title>
+<style>*{margin:0;padding:0;box-sizing:border-box} body{display:flex;justify-content:center} body{background:#f4f3ef}</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="module">
+// LightReactComp — minimal reactive runtime for static product pages
+// No React, no virtual DOM, no diffing. Just DOM creation + setState reactivity.
+
+const state = {}
+const comps = {}
+let _rerender = null
+
+function setState(key, value) {
+  state[key] = value
+  if (_rerender) _rerender()
+  else document.querySelectorAll('[data-show-when]').forEach(el => {
+    try { el.style.display = evaluate(el.dataset.showWhen) ? '' : 'none' } catch(e) {}
+  })
+}
+
+const evaluate = expr => Function(...Object.keys(state), `return (${expr})`)(...Object.values(state))
+
+function h(tag, props = {}, ...children) {
+  const el = document.createElement(tag)
+  children = children.flat(Infinity).filter(x => x != null && x !== false)
+  for (const [k, v] of Object.entries(props || {})) {
+    if (k === 'style' && typeof v === 'object')
+      Object.assign(el.style, v)
+    else if (k.startsWith('on') && typeof v === 'function')
+      el.addEventListener(k.slice(2).toLowerCase(), v)
+    else if (k.startsWith('data-'))
+      el.setAttribute(k, v)
+    else if (k === 'className')
+      el.className = v
+    else
+      el.setAttribute(k, v)
+  }
+  for (const child of children)
+    el.append(typeof child === 'object' ? child : document.createTextNode(String(child)))
+  return el
+}
+
+// dynamic: true support — wrap param value as deferred function
+function resolveParams(paramDefs, values, ctx) {
+  return Object.fromEntries(paramDefs.map(p => [p.id,
+    p.dynamic ? (dynamicCtx) => {
+      const mergedCtx = dynamicCtx ? { ...ctx, data: dynamicCtx.data ?? ctx.data, vars: { ...ctx.vars, ...dynamicCtx.vars } } : ctx
+      const raw = values[p.id] ?? p.defaultValue
+      return typeof raw === 'function' ? raw(mergedCtx) : coerce(p, raw)
+    } : coerce(p, values[p.id] ?? p.defaultValue)
+  ]))
+}
+
+function coerce(param, value) {
+  if (value == null) return param.as === 'string' ? '' : param.as === 'number' ? null : param.as === 'array' ? [] : value
+  if (param.as === 'string') return '' + value
+  if (param.as === 'number') return Number(value)
+  if (param.as === 'boolean') return !!value && value !== 'false'
+  if (param.as === 'array') return Array.isArray(value) ? value : [value]
+  return value
+}
+
+function LightReactComp(id, { params = [], impl }) {
+  comps[id] = { params, impl }
+}
+
+function lightComp({ hFunc, componentDidMount }) {
+  const impl = hFunc
+  impl.componentDidMount = componentDidMount
+  return impl
+}
+
+function mount(compId, targetEl, props = {}) {
+  const comp = comps[compId]
+  if (!comp) throw new Error(`LightReactComp '${compId}' not found`)
+  _rerender = () => {
+    const ctx = { data: props, vars: { h, setState, state } }
+    const resolvedArgs = resolveParams(comp.params, {}, ctx)
+    const dom = comp.impl(ctx, ctx.vars, resolvedArgs)(props)
+    targetEl.innerHTML = ''
+    targetEl.append(dom)
+    if (comp.impl.componentDidMount) comp.impl.componentDidMount(ctx, { ...ctx.vars, topElem: dom })
+  }
+  _rerender()
+}
+
+
+
+
+
+
+const teal = '#4FE3C1', dark = '#171717', accent = '#E8573A'
+const font = { fontFamily: 'Assistant, sans-serif' }
+
+const bikes = [
+  {
+    name: 'Marin Fairfax 1', price: 1799, compareAt: 2090,
+    img: 'https://cdn.shopify.com/s/files/1/2975/2358/files/2_1c7c9461-1477-4729-b24c-b43103b6f481.jpg?v=1772922480',
+    matchScore: 95, tags: ['🎯 Best Match', '✅ Under Budget'],
+    forYou: 'Your ideal city ride — award-winning build quality that will last years of daily riding.',
+    pitches: ['21 gears for the versatility you miss from MTB days', 'Award-winning durability — built to last']
+  },
+  {
+    name: 'RL Mika 8 Pro', price: 2250, compareAt: null,
+    img: 'https://cdn.shopify.com/s/files/1/2975/2358/files/1_1_a2aadbe7-bb3b-468b-97ea-2ef90d7bdde5.jpg?v=1772929988',
+    matchScore: 87, tags: ['🏙️ Urban Comfort'],
+    forYou: 'If comfort is king, the wide tires and hydraulic brakes make every commute effortless.',
+    pitches: ['Wide tires eat TLV potholes for breakfast', 'Hydraulic brakes = zero hand fatigue']
+  },
+  {
+    name: 'Giant Escape 3', price: 1450, compareAt: 1690,
+    img: 'https://cdn.shopify.com/s/files/1/2975/2358/files/2_1c7c9461-1477-4729-b24c-b43103b6f481.jpg?v=1772922480',
+    matchScore: 78, tags: ['💰 Budget Pick', '🚴 Lightweight'],
+    forYou: 'Great entry-level hybrid — lightweight aluminum frame perfect for casual weekend rides.',
+    pitches: ['Lightweight frame for easy handling', 'Reliable Shimano drivetrain']
+  }
+]
+
+LightReactComp('bikeCards', {
+  impl: lightComp({
+    hFunc: (_ctx, { h, setState, state }) => () => {
+      if (state.openIdx === undefined) state.openIdx = 0
+      const scoreColor = s => s >= 90 ? teal : s >= 80 ? '#f0b429' : accent
+      const scoreLabel = s => s >= 90 ? 'Great Fit' : s >= 80 ? 'Good Fit' : 'Worth a Look'
+
+      return h('div', { style: { ...font, background: '#f4f3ef', minHeight: '100vh', maxWidth: '430px', margin: '0 auto' } },
+        // Header
+        h('div', { style: { background: dark, padding: '16px 18px 14px', borderRadius: '0 0 20px 20px' } },
+          h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
+            h('div', {},
+              h('div', { style: { color: teal, fontSize: '9px', fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase' } }, 'Picked For You'),
+              h('div', { style: { color: '#fff', fontSize: '19px', fontWeight: 900, marginTop: '2px' } }, 'Your Hybrid Bikes')),
+            h('img', { src: 'https://bikesonline.co.il/cdn/shop/files/logo.png', style: { height: '20px', objectFit: 'contain', opacity: '0.6' } })),
+          h('div', { style: { display: 'flex', gap: '6px', marginTop: '12px', flexWrap: 'wrap' } },
+            ...['🏙️ City Use', '📏 5\'9"', '💰 Under ₪3,000', '🚵 Ex-MTB'].map(tag =>
+              h('span', { style: { fontSize: '10px', fontWeight: 700, color: teal, background: 'rgba(79,227,193,.12)', borderRadius: '8px', padding: '4px 10px', border: '1px solid rgba(79,227,193,.2)' } }, tag)))),
+
+        // Cards
+        h('div', { style: { padding: '14px 12px 24px', display: 'flex', flexDirection: 'column', gap: '12px' } },
+          ...bikes.map((b, i) => {
+            const isBest = b.matchScore >= 90, isOpen = state.openIdx === i
+            const sale = b.compareAt ? Math.round((b.compareAt - b.price) / b.compareAt * 100) : 0
+            const sc = scoreColor(b.matchScore)
+
+            return h('div', { style: { background: '#fff', borderRadius: '18px', overflow: 'hidden',
+              border: isBest ? `2px solid ${teal}` : '1px solid #e8e6e1',
+              boxShadow: isBest ? '0 4px 24px rgba(79,227,193,.15)' : '0 1px 4px rgba(0,0,0,.04)' } },
+
+              // Best match ribbon
+              ...(isBest ? [h('div', { style: { background: teal, padding: '5px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
+                h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
+                  h('span', {}, '🎯'), h('span', { style: { fontSize: '11px', fontWeight: 800, color: dark } }, 'BEST MATCH FOR YOU')),
+                h('div', { style: { fontSize: '12px', fontWeight: 900, color: dark } }, b.matchScore + '%'))] : []),
+
+              // Card row — clickable
+              h('div', { style: { display: 'flex', cursor: 'pointer' }, onClick: () => setState('openIdx', isOpen ? -1 : i) },
+                h('div', { style: { width: '110px', minHeight: '110px', background: '#f4f3ef', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' } },
+                  h('img', { src: b.img + '&width=400', style: { width: '88%', height: '88%', objectFit: 'contain' } }),
+                  ...(sale ? [h('div', { style: { position: 'absolute', top: '7px', left: '7px', background: accent, borderRadius: '6px', padding: '2px 7px', fontSize: '10px', fontWeight: 800, color: '#fff' } }, `-${sale}%`)] : [])),
+                h('div', { style: { flex: 1, padding: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: '0' } },
+                  h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' } },
+                    h('div', { style: { fontSize: '14px', fontWeight: 800, color: dark, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 } }, b.name),
+                    ...(!isBest ? [h('div', { style: { flexShrink: 0, display: 'flex', alignItems: 'center', gap: '4px', background: sc + '18', borderRadius: '8px', padding: '3px 8px' } },
+                      h('span', { style: { fontSize: '12px', fontWeight: 900, color: sc } }, b.matchScore + '%'),
+                      h('span', { style: { fontSize: '9px', fontWeight: 700, color: sc, opacity: '0.8' } }, scoreLabel(b.matchScore)))] : [])),
+                  h('div', { style: { display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '4px' } },
+                    h('span', { style: { fontSize: '18px', fontWeight: 900, color: isBest ? teal : dark } }, '₪' + b.price.toLocaleString()),
+                    ...(b.compareAt ? [h('span', { style: { fontSize: '12px', color: '#ccc', textDecoration: 'line-through' } }, '₪' + b.compareAt.toLocaleString())] : [])),
+                  h('div', { style: { display: 'flex', gap: '4px', marginTop: '7px', flexWrap: 'wrap' } },
+                    ...b.tags.map(t => h('span', { style: { fontSize: '10px', fontWeight: 700, color: dark, background: 'rgba(79,227,193,.07)', border: '1px solid rgba(79,227,193,.22)', borderRadius: '7px', padding: '3px 8px' } }, t))))),
+
+              // Expanded section
+              ...(isOpen ? [h('div', { style: { borderTop: '1px solid #e8e6e1' } },
+                h('div', { style: { padding: '12px 14px', background: 'rgba(79,227,193,.07)', borderBottom: '1px solid rgba(79,227,193,.22)', display: 'flex', alignItems: 'flex-start', gap: '8px' } },
+                  h('span', { style: { fontSize: '16px', flexShrink: 0, marginTop: '1px' } }, '💡'),
+                  h('div', {},
+                    h('div', { style: { fontSize: '11px', fontWeight: 800, color: dark, marginBottom: '3px' } }, 'Why This Fits You'),
+                    h('div', { style: { fontSize: '12px', lineHeight: '1.55', color: '#555' } }, b.forYou))),
+                h('div', { style: { padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '6px' } },
+                  ...b.pitches.map(p => h('div', { style: { display: 'flex', alignItems: 'flex-start', gap: '8px' } },
+                    h('div', { style: { width: '4px', height: '4px', borderRadius: '50%', background: teal, flexShrink: 0, marginTop: '7px' } }),
+                    h('div', { style: { fontSize: '12px', lineHeight: '1.5', color: '#666', fontWeight: 600 } }, p)))),
+                h('div', { style: { padding: '2px 14px 14px' } },
+                  h('a', { href: '#', style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', borderRadius: '14px', padding: '14px', textAlign: 'center', cursor: 'pointer', fontSize: '14px', fontWeight: 800, textDecoration: 'none',
+                    background: isBest ? teal : dark, color: isBest ? dark : '#fff' } },
+                    isBest ? '🎯 This Is My Pick — Tell Me More' : 'Ask Me About This Bike 💬')))] : []))
+          })))
+    }
+  })
+})
+
+mount('bikeCards', document.getElementById('app'))
+
+</script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="https://jb6-cdn.pages.dev/images/wonder-tests.svg">
+  <style>
+    .test-button { opacity: 0 }
+    .test-button:hover { opacity: 1 }
+  </style>
+  <script type="importmap">JB_IMPORT_MAP</script>
+  <script type="module">
+    const query = name => new URLSearchParams(location.search).get(name)
+    const { coreUtils } = await import('@jb6/core')
+    await import('@jb6/lang-service')
+    const { runTests } = await import('@jb6/testing')
+    const { browserSpy } = await import('@jb6/core/utils/browser-spy.js')
+
+    const { staticMappings } = JSON.parse(document.querySelector('[type="importmap"]').textContent)
+    const developerEntryPoint = await coreUtils.resolveDeveloperEntryPoint()
+    const mapping = staticMappings.find(({ diskPath }) => developerEntryPoint.startsWith(diskPath))
+    await import(query('modulePath') || developerEntryPoint.replace(mapping.diskPath, mapping.urlPath))
+    browserSpy.initSpyByUrl()
+    const automation = query('automation')
+    await runTests({
+      specificTest: query('test'),
+      notPattern: query('not'),
+      ...Object.fromEntries(['pattern', 'take', 'includeHeavy'].map(name => [name, query(name) || query(name) != null])),
+      showOnly: query('showOnly') != null || automation != null
+    })
+    if (automation != null) {
+      const { reactUtils } = await import('@jb6/react')
+      await import('@jb6/react/automation.js')
+      await reactUtils.startAutomation(new coreUtils.Ctx().setVars(window.jbLoggers || {}), window)
+    }
+  </script>
+</head>
+<body>
+  <div id="remoteTests"></div>
+  <div id="mem"></div>
+  <div id="testElem"></div>
+  <div id="show"></div>
+</body>
+</html>

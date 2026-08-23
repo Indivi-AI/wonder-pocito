@@ -1,0 +1,15 @@
+{
+  "name": "@jb6/server-utils",
+  "version": "1.260813.0",
+  "description": "Server-side utilities (import-map, serveRpc, etc) for JB6",
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./*.js": "./*.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.1.0",
+    "express": "^4.18.2"
+  }
+}

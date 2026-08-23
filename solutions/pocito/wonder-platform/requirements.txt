@@ -1,0 +1,5 @@
+agno==2.9.0
+boto3==1.40.18
+fastapi[standard]==0.141.1
+openai==3.3.1
+pyyaml==6.0.3

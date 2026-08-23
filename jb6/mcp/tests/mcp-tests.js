@@ -1,0 +1,175 @@
+import { dsls, ns, coreUtils } from '@jb6/core'
+import './mcp-testers.js'
+
+const {
+  tgp: { Const},
+  test: { Test,
+    test: { dataTest, mcpToolTest, mcpHttpTest, mcpUiResourceTest, mcpReactTest }
+  },
+  common: { Data, Action, Boolean,
+    data: { pipe, pipeline, asIs, tgpModel, keys, join, filter }, 
+    boolean: { equals, contains, notContains, and, not },
+    prop: { prop },
+  },
+  mcp: { tool: { formatAndValidateTgpComp, safeEditTgpComp } },
+} = dsls
+const { json } = ns
+
+Test('mcpTest.scrambleText', {
+  HeavyTest: true,
+  impl: mcpHttpTest('scrambleText', asIs({texts: 'hello world##test text'}), {
+    expectedResult: equals('=QGby92dg8GbsVGa##\n0hXZ0BCdzVGd')
+  })
+})
+
+// Test('mcpTest.compileTailwindCSS', {
+//   HeavyTest: true,
+//   impl: mcpToolTest('compileTailwindCSS', asIs({html: '<div class="p-6"></div>'}), {
+//     expectedResult: contains('padding: calc(var(--spacing) * 6')
+//   })
+// })
+
+// Test('mcpTest.compileTailwindCSSChart', {
+//   HeavyTest: true,
+//   impl: mcpToolTest('compileTailwindCSS', asIs({html: `<div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-6">
+//   <h2 class="text-2xl font-bold text-center mb-6">TITLE HERE</h2>
+//   <div class="space-y-4">
+//     <!-- Bars go here -->
+//   </div>
+// </div>`}), {
+//     expectedResult: contains('padding: calc(var(--spacing) * 6')
+//   })
+// })
+
+Test('wonderMcpTest.wonderWorkflow', {
+  HeavyTest: true,
+  doNotRunInTests: true,
+  impl: mcpToolTest('wonderWorkflow', asIs({userMessage: 'say hello'}), {
+    repoRoot: '/home/shaiby/projects/wonder',
+    jb6PackagesRoot: '/home/shaiby/projects/wonder/jb6',
+    importMapsInCli: './public/core/nodejs-importmap.js',
+    expectedResult: contains('ello')
+  })
+})
+
+Test('wonderMcpTest.snippet', {
+  HeavyTest: true,
+  doNotRunInTests: true,
+  impl: mcpToolTest({
+    tool: 'runTgpSnippet',
+    args: asIs({
+        profileText: `{$: 'data<common>pipeline', source: {$: 'data<common>asIs',
+          val: [{name: 'Homer'}, {name: 'Bart'}]}, operators: ['%name%', {$: 'data<common>join', separator: ','}]}`
+    }),
+    mcpUrl: 'http://localhost:3000/mcp',
+    expectedResult: contains('Homer')
+  })
+})
+
+Test('mcpTest.snippet', {
+  HeavyTest: true,
+  impl: mcpToolTest({
+    tool: 'runTgpSnippet',
+    args: asIs({
+        profileText: `{$: 'data<common>pipeline', source: {$: 'data<common>asIs',
+          val: [{name: 'Homer'}, {name: 'Bart'}]}, operators: ['%name%', {$: 'data<common>join', separator: ','}]}`
+    }),
+    expectedResult: contains('Homer')
+  })
+})
+
+Test('mcpTest.probe', {
+  HeavyTest: true,
+  impl: mcpToolTest({
+    tool: 'runProbe',
+    args: asIs({ probePath: 'test<test>coreTest.HelloWorld~impl~calculate~operators~0' }),
+    expectedResult: contains('hello world')
+  })
+})
+
+Test('mcpTest.snippetWithLogger', {
+  HeavyTest: true,
+  impl: mcpToolTest({
+    tool: 'runTgpSnippet',
+    args: asIs({
+        profileText: `{$: 'data<common>pipeline', source: [1,2,3], operators: [{$: 'data<common>count'}]}`,
+        logger: 'langServiceLogger'
+    }),
+    expectedResult: contains('langServiceLog')
+  })
+})
+
+Test('mcpTest.probeWithLogger', {
+  HeavyTest: true,
+  impl: mcpToolTest({
+    tool: 'runProbe',
+    args: asIs({ probePath: 'test<test>coreTest.HelloWorld~impl~calculate~operators~0', logger: 'langServiceLogger' }),
+    expectedResult: contains('langServiceLog')
+  })
+})
+
+Test('mcpTest.formatCompNotFound', {
+  HeavyTest: true,
+  impl: dataTest({
+    calculate: async () => (await formatAndValidateTgpComp.$run({fullCompId: 'test<test>notThere', logger: 'langServiceLogger'})).content[0].text,
+    expectedResult: and(contains(`fullCompId 'test<test>notThere' not found`), contains('formatCompError')),
+    timeout: 5000
+  })
+})
+
+Test('mcpTest.formatComp', {
+  HeavyTest: true,
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: async () => (await formatAndValidateTgpComp.$run({
+      fullCompId: 'test<test>mcpTest.formatCompNotFound', logger: 'langServiceLogger'
+    })).content[0].text,
+    expectedResult: and(contains('mcpTest.formatCompNotFound'), contains('"t": "formatComp"')),
+    timeout: 5000
+  })
+})
+
+Test('mcpTest.prettyPrintCompDef', {
+  impl: dataTest({
+    calculate: () => coreUtils.prettyPrintComp(formatAndValidateTgpComp, {tgpModel: jb}),
+    expectedResult: contains(`Tool('formatAndValidateTgpComp'`)
+  })
+})
+
+Test('mcpTest.safeEditRequiresLocationForCreate', {
+  HeavyTest: true,
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: async () => (await safeEditTgpComp.$run({tgpPath: 'test<test>notThere', profileText: 'true'})).content[0].text,
+    expectedResult: contains(`component 'test<test>notThere' not found`),
+    timeout: 5000
+  })
+})
+
+Test('mcpTest.playwrightHarvest', {
+  HeavyTest: true,
+  doNotRunInTests: true,
+  impl: mcpToolTest({
+    tool: 'playwrightHarvest',
+    args: asIs({
+        url: 'http://localhost:8083/packages/testing/tests.html?test=reactTest.buttonToClick&logger=uiLogger',
+        automation: '{"$":"ui-action<react>click","buttonText":"Full comp via MCP"}',
+        seedLocalStorage: 'mockAuthSeed',
+        domSelector: 'body'
+    }),
+    timeout: 10000,
+    expectedResult: and(contains('Clicked!'), contains('<button>'), notContains('harvestError'))
+  })
+})
+
+Test('mcpReactTest.helloMcp', {
+  HeavyTest: true,
+  doNotRunInTests: true,
+  impl: mcpUiResourceTest('helloMcp', contains('html'))
+})
+
+Test('mcpReactTest.helloMcp.react', {
+  HeavyTest: true,
+  doNotRunInTests: true,
+  impl: mcpReactTest('helloMcp', ()=>({ textToShowAfter: '--hello mcp--' }))
+})

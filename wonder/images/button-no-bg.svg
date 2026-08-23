@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 width="100%" viewBox="0 0 1024 1024" enable-background="new 0 0 1024 1024" xml:space="preserve">
+<defs>
+    <linearGradient id="buttonGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#4F46E5"/>
+        <stop offset="100%" style="stop-color:#7C3AED"/>
+    </linearGradient>
+</defs>
+<path fill="#E7E5E3" opacity="1.000000" stroke="none" 
+	d="M225.981445,201.981659 
+	C225.981445,201.981659 225.977966,201.893295 225.433640,202.036270 
+	C225.253479,202.350464 225.073318,202.664642 224.967575,202.989105" />
+<circle cx="512" cy="512" r="450" fill="url(#buttonGradient)" filter="drop-shadow(0px 8px 24px rgba(0, 0, 0, 0.15))" />
+<path fill="#FFFFFF" d="M512,362 L512,662 M362,512 L662,512" stroke="#FFFFFF" stroke-width="60" stroke-linecap="round"/>
+</svg> 

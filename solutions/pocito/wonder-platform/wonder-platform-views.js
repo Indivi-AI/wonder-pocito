@@ -1,0 +1,6 @@
+import './wonder-platform-navigation.js'
+import './wonder-platform-catalog.js'
+import './wonder-platform-resource-editor.js'
+import './wonder-platform-workspace.js'
+import './wonder-platform-chat.js'
+import './wonder-platform-evaluation.js'
