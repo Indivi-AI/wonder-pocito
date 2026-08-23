@@ -16,10 +16,10 @@ import '@wonder/db/db-drivers.js'
 import { promises as fsp, existsSync } from 'fs'
 import { spawn } from 'child_process'
 
-const STORAGE_PROVIDER = process.env.STORAGE_PROVIDER || 'gcs'
-const STORAGE_URL = process.env.WONDER_STORAGE_URL || 'https://storage.googleapis.com'
-const CODE_PACKAGES_URL = `${STORAGE_URL}/wonder-code-packages`
-const CLIENT_STORAGE_ENV = { WONDER_STORAGE_PROVIDER: STORAGE_PROVIDER, WONDER_STORAGE_URL: STORAGE_URL }
+const { storageEnvVars } = jb.wonderUtils
+const storageProvider = () => process.env.STORAGE_PROVIDER || 'gcs'
+const storageUrl = () => process.env.WONDER_STORAGE_URL
+  || (storageProvider() === 'minio' && process.env.MINIO_ENDPOINT) || 'https://storage.googleapis.com'
 const CLIENT_RUNTIME_WURL = 'clientCode:cloudflare//runtime/'
 const jb6Pkgs = ['core','common','react','rx','jq','llm-guide','mcp','testing','repo','lang-service',
   'probe-studio']
@@ -43,7 +43,7 @@ z-index:9999;font-family:system-ui;color:#666;font-size:14px}
 </style>
 </head><body>
 <div id="loading">Loading...</div>
-<script>Object.assign(globalThis, ${JSON.stringify(CLIENT_STORAGE_ENV)})</script>
+<script>Object.assign(globalThis, _CLIENT_ENV_)</script>
 <script type="importmap">_IMPORT_MAP_</script>
 <div id="root" style="height:100vh"></div>
 <script type="module">
@@ -108,7 +108,7 @@ export async function serveAppletPage(spec, res, localImports) {
     'Cross-Origin-Opener-Policy': 'same-origin',
     'Cross-Origin-Embedder-Policy': 'credentialless'
   })
-  const codeCtx = new coreUtils.Ctx()
+  const codeCtx = new coreUtils.Ctx().setVars(storageEnvVars({ forBrowser: true }))   // resolved urls are fetched by the BROWSER - public endpoint
   const runtimeBase = await jb.wonderUtils.wresolve(CLIENT_RUNTIME_WURL, codeCtx, 'GET')
   if (!localImports && !spec.clientCodeWUrl) throw new Error(`applet ${spec.cmpId} has no clientCodeWUrl; publish it again`)
   const shareBase = localImports ? '' : (await jb.wonderUtils.wresolve(spec.clientCodeWUrl, codeCtx, 'GET')).replace(/\/$/, '')
@@ -121,6 +121,7 @@ export async function serveAppletPage(spec, res, localImports) {
   const { og = [], ...clientSpec } = spec   // og = raw branding sources (room, applet), server-only — not shipped to the client
   const branding = mergeBranding(ogDefaults(runtimeBase), ...og)
   const html = APPLET_HOST_HTML
+    .replace('_CLIENT_ENV_', JSON.stringify({ WONDER_STORAGE_PROVIDER: storageProvider(), WONDER_STORAGE_URL: storageUrl() }))
     .replace('_IMPORT_MAP_', JSON.stringify({ imports }))
     .replace('_APPLET_SPEC_', JSON.stringify({ ...clientSpec, liveRepo: !!localImports }))
     .replace('_FAVICON_', branding.favicon)
@@ -133,7 +134,7 @@ export async function serveAppletPage(spec, res, localImports) {
 // Definitions live in the public bucket for public rooms and in the private bucket for signed rooms.
 export async function readDef(roomWUrl, path) {
   const def = roomWUrl.startsWith('signedRoom://') ? await readJson(`${roomWUrl.split('://')[1]}/${path}`)
-    : await jb.wonderUtils.wfetch2(`${roomWUrl}/${path}`, { method: 'GET' }, new coreUtils.Ctx()).then(r => r.ok ? r.json() : null, () => null)
+    : await jb.wonderUtils.wfetch2(`${roomWUrl}/${path}`, { method: 'GET' }, new coreUtils.Ctx().setVars(storageEnvVars())).then(r => r.ok ? r.json() : null, () => null)
   return def?.content ?? def
 }
 
@@ -242,8 +243,8 @@ export function setupRoomLambdaAndApplet(app) {
       gateLogs: gateLogs(),
       profile: req.body?.profile || { $: lambda.entryCompFullId }, packedCtx: req.body?.packedCtx, logger: req.body?.logger,
       userVars: {
-        roomId, roomWUrl, ...(who && { idToken: who.token }), userEmail: email,
-        hasGcpIdentity: STORAGE_PROVIDER === 'gcs', isLocalHost, isStaging: !isLocalHost && req.hostname?.includes('staging')
+        roomId, roomWUrl, ...(who && { idToken: who.token }), userEmail: email, ...storageEnvVars(),
+        hasGcpIdentity: storageProvider() === 'gcs', isLocalHost, isStaging: !isLocalHost && req.hostname?.includes('staging')
       }
     } }
   }
@@ -298,7 +299,7 @@ export async function ensureExtracted(lambdaV, { root = '/tmp/code', fetchTar = 
 }
 
 async function fetchLambdaTar(lambdaV) {
-  const res = await fetch(`${CODE_PACKAGES_URL}/lambdas/${lambdaV}.tar.gz`)
+  const res = await fetch(`${storageUrl()}/wonder-code-packages/lambdas/${lambdaV}.tar.gz`)
   if (!res.ok) throw new Error(`lambda package ${lambdaV}: ${res.status}`)
   return Buffer.from(await res.arrayBuffer())
 }

@@ -1,46 +1,44 @@
-# Air-gapped OpenShift + MinIO
+# Wonder on-prem — env + local server
 
-Wonder uses these four buckets:
+One machine: this checkout, node 24, and a reachable MinIO. No Kubernetes.
 
-- `indiviai-wonder`
-- `indiviai-wonder-protected`
-- `wonder-code-packages`
-- `logs-bucket-me-west1`
+## One-time MinIO setup
 
-For the current unsigned deployment, allow anonymous `s3:*` access to each bucket and its objects. MinIO CORS must allow all origins.
-If `mc` and bucket-admin credentials are available, `deploy-buckets.sh` applies this policy. Otherwise configure it in S3 Browser.
+Create buckets `indiviai-wonder` and `wonder-code-packages` and allow anonymous read+write on both
+(S3 Browser, or `mc anonymous set public <alias>/<bucket>`). MinIO CORS must allow the server origin
+(the default `MINIO_API_CORS_ALLOW_ORIGIN=*` is fine).
 
-Outside the air gap, commit the desired revision and create the transfer kit:
+## Configure and run
 
 ```sh
-npm run airgapped-export -- ../wonder-kit
+cp cloud-services/express-server/.env.onprem.template cloud-services/express-server/.env.onprem
+vi cloud-services/express-server/.env.onprem   # usually only MINIO_ENDPOINT needs a real value
+npm ci                                         # once
+npm run onprem                                 # WONDER_ENV=onprem -> loads .env.onprem; server + MCP at http://localhost:3000
 ```
 
-The air-gap image omits DuckDB. Transfer the resulting directory, verify `SHA256SUMS`, restore `wonder.bundle`, and load the image.
+`WONDER_ENV` is the switch for which env file the local server loads: `dev` (default) loads `.env.dev`,
+`onprem` loads `.env.onprem` — same folder, same mechanism.
 
-In the selected OpenShift project, push the image to the internal registry and deploy it:
+## Use
+
+Applets serve live from the checkout, no login: `http://localhost:3000/room/<roomId>/applet/<name>`
+
+Smoke-test storage over MinIO, then publish, via MCP:
 
 ```sh
-cd /mnt/users/yiftach/wonder
-export WONDER_IMAGE=image-registry.openshift-image-registry.svc:5000/PROJECT/wonder:VERSION
-export MINIO_ENDPOINT=https://minio.internal
-export MINIO_PUBLIC_ENDPOINT=https://minio.internal
-export KUBE_CLI=oc
-bash cloud-services/on-prem/deploy-cdn.sh
-bash cloud-services/on-prem/deploy-lambdas.sh
-oc expose service/wonder-public
-oc get route wonder-public
+curl -s -X POST http://localhost:3000/mcp -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"tools/call",
+  "params":{"name":"wFetch","arguments":{"url":"room://demo/usersRW/hello.json","method":"PUT","body":{"hello":"on-prem"}}}}'
+curl -s -X POST http://localhost:3000/mcp -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":2,"method":"tools/call",
+  "params":{"name":"wFetch","arguments":{"url":"room://demo/usersRW/hello.json"}}}'
+curl -s -X POST http://localhost:3000/mcp -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":3,"method":"tools/call",
+  "params":{"name":"uploadRoomApplet","arguments":{"roomId":"demo","entryCompFullId":"react-comp<react>YOUR_APPLET"}}}'
 ```
 
-`deploy-lambdas.sh` uses the current project unless `NAMESPACE` is set. It deploys one unsigned public service with all-origin CORS.
-No MinIO credentials are passed to the runtime because all four buckets are anonymous.
+If the checkout has no team git identity, run `git config user.email onprem@airgap` once
+(maps the MCP dev tools to `.jb6/entry-points-onprem.js`).
 
-Run the on-prem MCP publisher from the restored checkout:
+## Getting the repo across
 
-```sh
-export WONDER_SERVICE_URL=https://ROUTE_HOST
-export WONDER_IMAGE=image-registry.openshift-image-registry.svc:5000/PROJECT/wonder:VERSION
-bash cloud-services/on-prem/run-mcp.sh /mnt/users/yiftach/wonder
-```
-
-Use the canonical `uploadRoomApplet` MCP tool; `STORAGE_PROVIDER=minio` routes it to the on-prem buckets.
+`npm run airgapped-export -- ../wonder-kit` (outside) builds a transfer kit: `wonder.bundle` (git bundle),
+the runtime image, matching linux `node_modules`, and `SHA256SUMS` to verify after the copy.
