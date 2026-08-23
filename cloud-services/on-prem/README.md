@@ -39,7 +39,10 @@ curl -s -X POST http://localhost:3000/mcp -H 'Content-Type: application/json' -d
 
 Everything is env; the images carry code and deps only — no `.env` is ever baked. One `docker-compose.yml` runs the
 outside sim, the site box, and mirrors what OpenShift deploys; every site fact (host, ports, endpoints, keys, storage
-class) lives in `.env.site` (copy from `.env.site.template`, gitignored).
+class) lives in `.env.site` (copy from `.env.site.template`, gitignored). All communication — browsers and
+service-to-service alike — crosses the host at `SITE_HOST:<published port>`; there is no internal docker network, so
+nothing can depend on an address browsers cannot reach (presigned S3 urls included). Containers resolve `SITE_HOST`
+back to the host via docker's `host-gateway`; on OpenShift, cluster DNS and routes provide the same name.
 
 Build outside and pack for whitening:
 
@@ -49,18 +52,20 @@ cloud-services/on-prem/build-images.sh           # app layers, built with --netw
 docker save wonder-server:<tag> marketplace-server:<tag> "$LLM_LITE_IMAGE" "$MINIO_IMAGE" | gzip > wonder-onprem-images.tar.gz
 ```
 
-Whiten the tar plus this directory. On the site: `docker load`, fill `.env.site`, then:
+Whiten the tar plus this directory. On the site the stack is wonder + marketplace + llm-lite only — storage is the
+site's **global MinIO**, set as `MINIO_ENDPOINT` in `.env.site` (browser-reachable URL). `docker load`, fill
+`.env.site`, then:
 
 ```sh
-docker compose --env-file .env.site --profile local-minio up -d    # external minio: set MINIO_ENDPOINT and drop the profile
+docker compose --env-file .env.site up -d
 ./sim-check.sh
 ```
 
 Outside sim — identical, plus the air-gap overlay (no egress for app services; llm-lite alone reaches the real LLM,
-playing the site's internal endpoint) and a hosts alias so the browser origin is never localhost:
+playing the site's internal endpoint). Set `SITE_HOST` to the machine's own hostname (`hostname`) — any machine, any
+name; add an `/etc/hosts` entry only for a made-up name. Never localhost: it masks host/origin/CORS bugs.
 
 ```sh
-echo "127.0.0.1 g-force" | sudo tee -a /etc/hosts
 docker compose --env-file .env.site -f docker-compose.yml -f compose.airgap.yml --profile local-minio up -d
 ./sim-check.sh
 ```

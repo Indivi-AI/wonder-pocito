@@ -1,10 +1,11 @@
 name: wonder-onprem
-# One file for every network. All values come from .env.site (compose --env-file .env.site ...); nothing site-specific lives here.
-# Outside sim adds compose.airgap.yml (blocks egress for app services, grants it to llm-lite which plays the site LLM endpoint).
+# One file for every network; all values interpolate from .env.site; nothing site-specific lives here.
+# THE RULE: every call - browser AND service-to-service - crosses the host through a published port
+# (SITE_HOST:x, mapped x->y into the container). There is deliberately NO internal docker network or DNS,
+# so nothing can accidentally depend on an address browsers cannot reach (e.g. presigned S3 urls stay valid).
+# Containers resolve SITE_HOST to the host via host-gateway; on OpenShift the cluster DNS/route plays that role.
 
 networks:
-  appnet:
-    internal: true
   edge: {}
 
 volumes:
@@ -16,36 +17,37 @@ services:
     image: wonder-server:${IMAGE_TAG}
     restart: unless-stopped
     ports: ["${WONDER_PUBLISHED_PORT}:${WONDER_PORT}"]
-    networks: [appnet, edge]
+    networks: [edge]
+    extra_hosts: ["${SITE_HOST}:host-gateway"]
     environment:
       PORT: ${WONDER_PORT}
       STORAGE_PROVIDER: minio
       WONDER_AUTH_MODE: none
       WONDER_SERVICE_URL: http://127.0.0.1:${WONDER_PORT}
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
-      WONDER_STORAGE_URL: ${SITE_SCHEME}://${SITE_HOST}:${MINIO_PUBLISHED_PORT}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-${SITE_SCHEME}://${SITE_HOST}:${MINIO_PUBLISHED_PORT}}
       MARKETPLACE_API_URL: ${SITE_SCHEME}://${SITE_HOST}:${MARKETPLACE_PUBLISHED_PORT}
       LLM_PROXY_URL: ${SITE_SCHEME}://${SITE_HOST}:${WONDER_PUBLISHED_PORT}/llmProxy
-      LLM_PROXY_TARGET: http://llm-lite:4000
+      LLM_PROXY_TARGET: ${SITE_SCHEME}://${SITE_HOST}:${LLM_LITE_PUBLISHED_PORT}
       LLM_PROXY_KEY: ${LLM_PROXY_KEY}
 
   marketplace:
     image: marketplace-server:${IMAGE_TAG}
     restart: unless-stopped
     ports: ["${MARKETPLACE_PUBLISHED_PORT}:${AGENT_OS_PORT}"]
-    networks: [appnet, edge]
+    networks: [edge]
+    extra_hosts: ["${SITE_HOST}:host-gateway"]
     volumes: [marketplace-runtime:/data]
     environment:
       AGENT_OS_HOST: 0.0.0.0
       AGENT_OS_PORT: ${AGENT_OS_PORT}
       MARKETPLACE_DATA_DIR: /data
-      MARKETPLACE_S3_ENDPOINT: ${MINIO_ENDPOINT}
+      MARKETPLACE_S3_ENDPOINT: ${MINIO_ENDPOINT:-${SITE_SCHEME}://${SITE_HOST}:${MINIO_PUBLISHED_PORT}}
       MARKETPLACE_S3_ACCESS_KEY: ${S3_ACCESS_KEY}
       MARKETPLACE_S3_SECRET_KEY: ${S3_SECRET_KEY}
       MARKETPLACE_S3_BUCKET: ${MARKETPLACE_S3_BUCKET}
       MARKETPLACE_S3_STORAGE_CLASS: ${MARKETPLACE_S3_STORAGE_CLASS}
       CORS_ALLOWED_ORIGINS: ${SITE_SCHEME}://${SITE_HOST}:${WONDER_PUBLISHED_PORT}
-      OPENAI_BASE_URL: http://llm-lite:4000/v1
+      OPENAI_BASE_URL: ${SITE_SCHEME}://${SITE_HOST}:${LLM_LITE_PUBLISHED_PORT}/v1
       OPENAI_API_KEY: ${LLM_PROXY_KEY}
       OPENAI_MODEL: ${OPENAI_MODEL}
       MARKETPLACE_MODEL_FACTORY: ${MARKETPLACE_MODEL_FACTORY}
@@ -53,7 +55,8 @@ services:
   llm-lite:
     image: ${LLM_LITE_IMAGE}
     restart: unless-stopped
-    networks: [appnet]
+    ports: ["${LLM_LITE_PUBLISHED_PORT}:4000"]
+    networks: [edge]
     command: ["--config", "/etc/litellm/config.yaml", "--port", "4000"]
     volumes: ["./llm-lite-config.yaml:/etc/litellm/config.yaml:ro"]
     environment:
@@ -67,7 +70,7 @@ services:
     restart: unless-stopped
     command: server /data --console-address :9001
     ports: ["${MINIO_PUBLISHED_PORT}:9000"]
-    networks: [appnet, edge]
+    networks: [edge]
     volumes: [minio-data:/data]
     environment:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY}

@@ -1,6 +1,6 @@
 # Outside-sim overlay: docker compose --env-file .env.site -f docker-compose.yml -f compose.airgap.yml --profile local-minio up -d
-# edge loses masquerade so wonder/marketplace/minio cannot reach the internet (published ports still work);
-# llm-lite alone gets real egress, playing the on-prem internal LLM endpoint.
+# edge loses masquerade so wonder/marketplace/minio cannot reach the internet (published ports and
+# container->host-gateway traffic still work); llm-lite alone gets real egress, playing the on-prem internal LLM endpoint.
 networks:
   edge:
     driver_opts:
@@ -9,4 +9,4 @@ networks:
 
 services:
   llm-lite:
-    networks: [appnet, egress]
+    networks: [edge, egress]
