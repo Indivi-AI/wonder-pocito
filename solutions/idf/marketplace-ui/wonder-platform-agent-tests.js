@@ -55,7 +55,7 @@ Test('wonderPlatform.agentWUrlAgno', {
       const {createServer} = await import('node:http')
       const server = createServer((request, response) => {
         response.setHeader('content-type', 'application/json')
-        response.end(JSON.stringify({content: `${request.method} ${request.url} room=${'x-wonder-room' in request.headers}`,
+        response.end(JSON.stringify({content: `${request.method} ${request.url} room=${request.headers['x-wonder-room']}`,
           run_id: 'run-1', status: 'COMPLETED'}))
       })
       await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
@@ -71,7 +71,7 @@ Test('wonderPlatform.agentWUrlAgno', {
       equals('%result/harness%', 'agno'),
       equals('%result/run_id%', 'run-1'),
       equals('%result/sessionId%', 'session-1'),
-      contains('/agents/agent-a/runs room=false', { allText: '%result/content%' }),
+      contains('/agents/agent-a/runs room=room-a', { allText: '%result/content%' }),
       equals('%agentLogger/agentLog/0/t%', 'agentWUrl')
     ),
     timeout: 10000,

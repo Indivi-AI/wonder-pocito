@@ -8,6 +8,8 @@ import os
 import re
 import shutil
 import sys
+from collections import defaultdict
+from contextvars import ContextVar
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path, PurePosixPath
@@ -26,10 +28,12 @@ from botocore.config import Config as BotoConfig
 from botocore.exceptions import ClientError
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 ROOT = Path(__file__).parent
-SCOPE = 'marketplace'
+DEFAULT_ROOM = 'marketplace'
+ROOM_CONTEXT = ContextVar('room', default=DEFAULT_ROOM)
 logger = logging.getLogger(__name__)
 
 
@@ -349,7 +353,7 @@ class MarketplaceRepository:
     def read_artifact(self, room, kind, name, artifact):
         return self.objects.get(self.object_key(room, kind, name, artifact['version'], artifact['path']))
 
-    def artifacts(self, room, kind, name, version, payload, current=None):
+    def artifacts(self, room, kind, version, payload, current=None):
         current, writes = dict(current or {}), {}
         if kind == 'skill':
             if 'skill_md' in payload:
@@ -417,7 +421,7 @@ class MarketplaceRepository:
         key = self.resource_key(room, kind, name, 'manifest.json')
         if self.objects.list(key):
             raise HTTPException(409, f'{kind}/{name} already exists')
-        data['_artifacts'] = self.artifacts(room, kind, name, 1, data)
+        data['_artifacts'] = self.artifacts(room, kind, 1, data)
         try:
             self.write_json(key, {'data': data, 'version': 1, 'created_at': timestamp, 'updated_at': timestamp}, if_absent=True)
         except FileExistsError:
@@ -434,7 +438,7 @@ class MarketplaceRepository:
         changes.pop('id', None)
         merged = previous | changes
         merged['id'] = name
-        merged['_artifacts'] = self.artifacts(room, kind, name, version, merged, previous.get('_artifacts'))
+        merged['_artifacts'] = self.artifacts(room, kind, version, merged, previous.get('_artifacts'))
         self.write_json(self.resource_key(room, kind, name, f"versions/{row['version']:08d}.json"), row)
         self.write_json(self.resource_key(room, kind, name, 'manifest.json'),
           {'data': merged, 'version': version, 'created_at': row['created_at'], 'updated_at': timestamp})
@@ -518,19 +522,22 @@ class MarketplaceRepository:
         except json.JSONDecodeError:
             raise HTTPException(422, f'user/{uid} is corrupt')
 
-    def agent_names(self, room):
-        return [key.split('/')[2] for key in self.manifest_keys(room, 'agent')]
+    def agent_names(self, room=None):
+        keys = self.manifest_keys(room, 'agent') if room else self.objects.list('')
+        return sorted({parts[2] for key in keys if len(parts := key.split('/')) == 4
+          and parts[1] == 'agents' and parts[3] == 'manifest.json'})
 
 
 class MarketplaceAgentRuntime:
     def __init__(self, repo, runtime_dir, model_factory=None):
         self.repo, self.runtime_dir = repo, Path(runtime_dir)
         self.db = InMemoryDb()
+        self.room_dbs = defaultdict(InMemoryDb)
         self.model_factory = model_factory or self.openai_model
 
     def openai_model(self, manifest):
         model = manifest.get('config', {}).get('backend_config', {}).get('model') or os.getenv('OPENAI_MODEL', 'gpt-5-mini')
-        return OpenAIResponses(id=model)
+        return OpenAIResponses(id=model, api_key=os.getenv('OPENAI_API_KEY'), base_url=os.getenv('OPENAI_BASE_URL'))
 
     def delete(self, room, kind, name):
         path = self.runtime_dir / safe_name(room) / f'{kind}s' / safe_name(name)
@@ -596,7 +603,8 @@ class MarketplaceAgentRuntime:
         skill_names.update(config.get('skills', []))
         tool_names.update(config.get('tools', []))
         skills = Skills([LocalSkills(str(self.materialize_skill(room, item)), validate=False) for item in sorted(skill_names)])
-        return Agent(id=name, name=manifest['display_name'], model=self.model_factory(manifest), db=self.db,
+        return Agent(id=name, name=manifest['display_name'], model=self.model_factory(manifest),
+          db=self.room_dbs[room],
           tools=[self.tool(room, item) for item in sorted(tool_names)], skills=skills,
           instructions=[config['system_prompt']], markdown=True, telemetry=False)
 
@@ -618,6 +626,18 @@ def create_app(data_dir=None, model_factory=None):
       'http://localhost:3000,http://127.0.0.1:3000,http://localhost:8083,http://127.0.0.1:8083').split(',')
     base.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=['*'], allow_headers=['*'])
 
+    @base.middleware('http')
+    async def bind_room(request, call_next):
+        try:
+            room = safe_name(request.headers.get('x-wonder-room', DEFAULT_ROOM))
+        except ValueError as error:
+            return JSONResponse({'detail': str(error)}, status_code=422)
+        token = ROOM_CONTEXT.set(room)
+        try:
+            return await call_next(request)
+        finally:
+            ROOM_CONTEXT.reset(token)
+
     @base.get('/healthz', tags=['health'])
     def healthz():
         return {'status': 'ok', 'object_store': 'ok' if repo.objects.healthy() else 'unreachable'}
@@ -629,38 +649,39 @@ def create_app(data_dir=None, model_factory=None):
     def register_agent(name):
         if not any(item.id == name for item in factories):
             factories.append(AgentFactory(id=name, db=runtime.db,
-              factory=lambda ctx, agent_name=name: runtime.agent(SCOPE, agent_name)))
+              factory=lambda ctx, agent_name=name: runtime.agent(ROOM_CONTEXT.get(), agent_name)))
 
     def routes(kind, create_model, update_model):
         plural = f'{kind}s'
 
         async def list_resources():
-            return repo.list(SCOPE, kind)
+            return repo.list(ROOM_CONTEXT.get(), kind)
 
         async def create_resource(payload: create_model):
-            result = repo.create(SCOPE, kind, payload.model_dump())
+            result = repo.create(ROOM_CONTEXT.get(), kind, payload.model_dump())
             register_agent(result['id']) if kind == 'agent' else None
             return result
 
         async def get_resource(id: str, request: Request):
             include_assets = kind == 'skill' and request.query_params.get('includeAssets', '').lower() == 'true'
-            return repo.get(SCOPE, kind, id, include_assets=include_assets)
+            return repo.get(ROOM_CONTEXT.get(), kind, id, include_assets=include_assets)
 
         async def update_resource(id: str, payload: update_model):
-            return repo.update(SCOPE, kind, id, payload.model_dump(exclude_unset=True))
+            return repo.update(ROOM_CONTEXT.get(), kind, id, payload.model_dump(exclude_unset=True))
 
         async def delete_resource(id: str):
-            repo.delete(SCOPE, kind, id)
-            runtime.delete(SCOPE, kind, id) if kind in {'skill', 'tool'} else None
-            if kind == 'agent' and id not in repo.agent_names(SCOPE):
+            room = ROOM_CONTEXT.get()
+            repo.delete(room, kind, id)
+            runtime.delete(room, kind, id) if kind in {'skill', 'tool'} else None
+            if kind == 'agent' and id not in repo.agent_names():
                 factories[:] = [item for item in factories if item.id != id]
             return Response(status_code=204)
 
         async def list_versions(id: str):
-            return repo.versions(SCOPE, kind, id)
+            return repo.versions(ROOM_CONTEXT.get(), kind, id)
 
         async def read_version(id: str, n: int):
-            return repo.version(SCOPE, kind, id, n)
+            return repo.version(ROOM_CONTEXT.get(), kind, id, n)
 
         labels = {verb: f'{verb}_{kind}_api_v1_{plural}' for verb in ('create', 'get', 'update', 'delete')}
         base.add_api_route(f'/api/v1/{plural}/', list_resources, methods=['GET'], operation_id=f'list_{plural}_api_v1_{plural}__get')
@@ -681,7 +702,7 @@ def create_app(data_dir=None, model_factory=None):
         routes(kind, *pair)
 
     def raw_file(kind, prefix, path, binary=False):
-        content, mime_type = repo.file(SCOPE, kind, safe_name(path[0]), f'{prefix}{safe_path(path[1])}')
+        content, mime_type = repo.file(ROOM_CONTEXT.get(), kind, safe_name(path[0]), f'{prefix}{safe_path(path[1])}')
         return Response(content, media_type=mime_type or 'application/octet-stream' if binary else 'text/plain')
 
     @base.get('/api/v1/tools/{id}/code/{path:path}', tags=['tools'],
@@ -716,30 +737,31 @@ def create_app(data_dir=None, model_factory=None):
     @base.get('/api/v1/plugins/{id}/references', tags=['plugins'],
       operation_id='check_plugin_references_api_v1_plugins__id__references_get')
     def plugin_references(id: str):
-        return repo.references(SCOPE, 'plugin', id)
+        return repo.references(ROOM_CONTEXT.get(), 'plugin', id)
 
     @base.get('/api/v1/agents/{id}/references', tags=['agents'],
       operation_id='check_agent_references_api_v1_agents__id__references_get')
     def agent_references(id: str):
-        return repo.references(SCOPE, 'agent', id)
+        return repo.references(ROOM_CONTEXT.get(), 'agent', id)
 
     @base.get('/api/v1/audit/{resource_type}/{resource_id}', tags=['audit'],
       operation_id='list_audit_events_api_v1_audit__resource_type___resource_id__get')
     def audit(resource_type: Literal['tool', 'skill', 'plugin', 'agent'], resource_id: str):
-        return repo.audits(SCOPE, resource_type, resource_id)
+        return repo.audits(ROOM_CONTEXT.get(), resource_type, resource_id)
 
     @base.post('/api/v1/users/', status_code=201, tags=['users'])
     def create_user(payload: CreateUser):
-        return repo.create_user(SCOPE, payload.model_dump())
+        return repo.create_user(ROOM_CONTEXT.get(), payload.model_dump())
 
     base.add_api_route('/api/v1/users', create_user, methods=['POST'], status_code=201, include_in_schema=False)
 
     @base.get('/api/v1/users/{uid}', tags=['users'])
     def get_user(uid: str):
-        return repo.get_user(SCOPE, uid)
+        return repo.get_user(ROOM_CONTEXT.get(), uid)
 
     def presigned(key, method, expires, content_type=None):
-        result = {'url': repo.objects.presign(key, method, expires, content_type), 'method': method, 'expires_in': expires}
+        result = {'url': repo.objects.presign(f'{ROOM_CONTEXT.get()}/{key}', method, expires, content_type),
+          'method': method, 'expires_in': expires}
         return result | ({'headers': {'Content-Type': content_type}} if content_type else {})
 
     @base.post('/api/v1/presign/download', tags=['presign'])
@@ -750,7 +772,7 @@ def create_app(data_dir=None, model_factory=None):
     def presign_upload(payload: UploadRequest):
         return presigned(payload.key, 'PUT', payload.expires_in, payload.content_type)
 
-    for name in repo.agent_names(SCOPE):
+    for name in repo.agent_names():
         register_agent(name)
     agent_os = AgentOS(name='Wonder Marketplace', agents=factories, db=runtime.db, base_app=base,
       cors_allowed_origins=origins, on_route_conflict='preserve_base_app', telemetry=False)

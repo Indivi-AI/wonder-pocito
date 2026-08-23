@@ -1,16 +1,18 @@
 # Marketplace server
 
-`marketplace_server.py` serves the reconstructed single-scope marketplace API and Agno AgentOS on port 7777. Room routing stays in Wonder's
-WURL layer and is not part of the current marketplace HTTP API.
+`marketplace_server.py` serves the marketplace API and Agno AgentOS on port 7777. Wonder derives `x-wonder-room` from the request wUrl;
+direct clients may send the bare room ID themselves. Omitting the header preserves the default `marketplace` room.
+
+Resource manifests use a stable semantic `id` such as `uiRenderingSkill` in URLs and relationships, plus one editable `display_name` for UI.
 
 Copy `.env.example` to `.env`, configure the OpenAI-compatible provider, then run `./start-marketplace.sh`. All marketplace state lives in
 MinIO/S3 — manifests, version snapshots, audit events, users, and artifacts are
-objects in one bucket; there is no sqlite. Start the local MinIO with `npm run start-min-io`. Defaults: `MARKETPLACE_S3_BUCKET=wonder-marketplace`,
+room-prefixed objects in one bucket; there is no sqlite. Start the local MinIO with `npm run start-min-io`. Defaults: `MARKETPLACE_S3_BUCKET=wonder-marketplace`,
 `MARKETPLACE_S3_ENDPOINT=http://127.0.0.1:9000`, `MARKETPLACE_S3_ACCESS_KEY=wonder`, `MARKETPLACE_S3_SECRET_KEY=wonder-minio-local`.
-Presigned upload/download URLs point at MinIO. `MARKETPLACE_DATA_DIR` only hosts the runtime materialization of skills and tools, and agent
-chat sessions use Agno's in-memory db, so both reset without data loss. `AGENT_OS_PORT` and `CORS_ALLOWED_ORIGINS` are optional.
+Presigned upload/download URLs point at room-prefixed MinIO keys. `MARKETPLACE_DATA_DIR` only hosts runtime materialization, and each room's
+agent chat sessions use a separate Agno in-memory db, so both reset without data loss. `AGENT_OS_PORT` and `CORS_ALLOWED_ORIGINS` are optional.
 
-Skills are materialized into Agno `LocalSkills`, including their assets. `GET /api/v1/skills/{name}?includeAssets=true` returns assets with
+Skills are materialized into Agno `LocalSkills`, including their assets. `GET /api/v1/skills/{id}?includeAssets=true` returns assets with
 `content_b64`; normal reads return metadata only.
 
 Code tools are trusted server code. Put `file.py:function` in `dedicated_tool_config.entrypoint`; without it, the loader uses `run` or the only

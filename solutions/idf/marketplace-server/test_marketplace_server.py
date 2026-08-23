@@ -52,7 +52,7 @@ class MarketplaceServerTest(unittest.TestCase):
         schema = self.client.get('/openapi.json').json()
         contract = json.loads((Path(__file__).parent / 'marketplace-openapi.json').read_text())
         self.assertEqual(schema, contract)
-        self.assertNotIn('x-wonder-room', json.dumps(schema).lower())
+        self.assertIn('x-wonder-room', json.dumps(schema).lower())
         expected = {(method.upper(), path) for path, methods in contract['paths'].items() for method in methods}
         actual = {(method, route.path.replace('{path:path}', '{path}')) for route in self.client.app.routes
           for method in getattr(route, 'methods', set())}
@@ -112,12 +112,35 @@ class MarketplaceServerTest(unittest.TestCase):
         user = self.request('POST', '/api/v1/users/', json={'username': 'reviewer'}).json()
         self.assertEqual(self.request('GET', f"/api/v1/users/{user['uid']}").json()['username'], 'reviewer')
         upload = self.request('POST', '/api/v1/presign/upload', json={'key': 'uploads/a.txt', 'content_type': 'text/plain'}).json()
-        self.assertIn(f'/{self.objects.bucket}/uploads/a.txt', upload['url'])
+        self.assertIn(f'/{self.objects.bucket}/marketplace/uploads/a.txt', upload['url'])
         put = httpx.put(upload['url'], content=b'PRESIGNED-OK', headers=upload['headers'])
         self.assertEqual(put.status_code, 200, put.text)
-        self.assertEqual(self.objects.get('uploads/a.txt'), b'PRESIGNED-OK')
+        self.assertEqual(self.objects.get('marketplace/uploads/a.txt'), b'PRESIGNED-OK')
         download = self.request('POST', '/api/v1/presign/download', json={'key': 'uploads/a.txt'}).json()
         self.assertEqual(httpx.get(download['url']).content, b'PRESIGNED-OK')
+
+    def test_rooms_isolate_resources_users_presigned_files_and_agents(self):
+        room_headers = lambda room: {'x-wonder-room': room}
+        for room, fact in [('room-a', 'ROOM_A_FACT'), ('room-b', 'ROOM_B_FACT')]:
+            skill = self.skill()
+            skill['skill_md'] = fact
+            agent = self.agent()
+            agent['config']['plugins'], agent['config']['skills'] = [], ['roomFactsSkill']
+            self.assertEqual(self.request('POST', '/api/v1/skills/', headers=room_headers(room), json=skill).status_code, 201)
+            self.assertEqual(self.request('POST', '/api/v1/agents/', headers=room_headers(room), json=agent).status_code, 201)
+        self.assertEqual(self.request('GET', '/api/v1/skills/roomFactsSkill').status_code, 404)
+        self.assertEqual(self.request('GET', '/api/v1/skills/roomFactsSkill',
+          headers=room_headers('room-a')).json()['skill_md'], 'ROOM_A_FACT')
+        user = self.request('POST', '/api/v1/users/', headers=room_headers('room-a'), json={'username': 'room-user'}).json()
+        self.assertEqual(self.request('GET', f"/api/v1/users/{user['uid']}", headers=room_headers('room-b')).status_code, 404)
+        upload = self.request('POST', '/api/v1/presign/upload', headers=room_headers('room-a'), json={'key': 'uploads/a.txt'}).json()
+        self.assertIn(f'/{self.objects.bucket}/room-a/uploads/a.txt', upload['url'])
+        for room, fact in [('room-a', 'ROOM_A_FACT'), ('room-b', 'ROOM_B_FACT')]:
+            run = self.request('POST', '/agents/roomAgent/runs', headers=room_headers(room), data={
+              'message': 'What is the room fact?', 'session_id': room, 'user_id': 'tester', 'stream': 'false'})
+            self.assertEqual(run.status_code, 200, run.text)
+            self.assertIn(fact, run.json()['content'])
+        self.assertEqual(self.request('GET', '/api/v1/skills/', headers=room_headers('bad/room')).status_code, 422)
 
     def test_corrupt_stored_events_are_skipped_and_users_return_422(self):
         user = self.request('POST', '/api/v1/users/', json={'username': 'corrupt'}).json()

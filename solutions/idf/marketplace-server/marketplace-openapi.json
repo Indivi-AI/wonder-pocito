@@ -2,7 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "marketplace",
-    "version": "0.1.0"
+    "version": "0.1.0",
+    "description": "Requests are scoped by the x-wonder-room header; omitting it uses the marketplace room."
   },
   "paths": {
     "/healthz": {
@@ -94,22 +95,22 @@
         }
       }
     },
-    "/api/v1/tools/{name}": {
+    "/api/v1/tools/{id}": {
       "get": {
         "tags": [
           "tools"
         ],
         "summary": "Get Tool",
-        "description": "Get a single tool config (id+tags synthesized). 404 if missing.",
-        "operationId": "get_tool_api_v1_tools__name__get",
+        "description": "Get a single tool config by id. 404 if missing.",
+        "operationId": "get_tool_api_v1_tools__id__get",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           }
         ],
@@ -144,15 +145,15 @@
         ],
         "summary": "Update Tool",
         "description": "Partial update. Snapshots the prior state (incl. code bytes), bumps version, audits.",
-        "operationId": "update_tool_api_v1_tools__name__put",
+        "operationId": "update_tool_api_v1_tools__id__put",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           }
         ],
@@ -197,15 +198,15 @@
         ],
         "summary": "Delete Tool",
         "description": "Unpublish + wipe. 204 on success; 404 if the config did not exist.",
-        "operationId": "delete_tool_api_v1_tools__name__delete",
+        "operationId": "delete_tool_api_v1_tools__id__delete",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           }
         ],
@@ -226,22 +227,22 @@
         }
       }
     },
-    "/api/v1/tools/{name}/code/{path}": {
+    "/api/v1/tools/{id}/code/{path}": {
       "get": {
         "tags": [
           "tools"
         ],
         "summary": "Get Tool Code",
         "description": "Read a tool source file. 404 if the object is missing.",
-        "operationId": "get_tool_code_api_v1_tools__name__code__path__get",
+        "operationId": "get_tool_code_api_v1_tools__id__code__path__get",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           },
           {
@@ -278,22 +279,22 @@
         }
       }
     },
-    "/api/v1/tools/{name}/versions": {
+    "/api/v1/tools/{id}/versions": {
       "get": {
         "tags": [
           "tools"
         ],
         "summary": "List Tool Versions",
         "description": "List every snapshot config for the tool, ascending by version.",
-        "operationId": "list_tool_versions_api_v1_tools__name__versions_get",
+        "operationId": "list_tool_versions_api_v1_tools__id__versions_get",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           }
         ],
@@ -326,22 +327,22 @@
         }
       }
     },
-    "/api/v1/tools/{name}/versions/{n}": {
+    "/api/v1/tools/{id}/versions/{n}": {
       "get": {
         "tags": [
           "tools"
         ],
         "summary": "Read Tool Version",
-        "description": "Read a specific version's config snapshot (id+tags stripped). 404 if missing.",
-        "operationId": "read_tool_version_api_v1_tools__name__versions__n__get",
+        "description": "Read a specific version's config snapshot. 404 if missing.",
+        "operationId": "read_tool_version_api_v1_tools__id__versions__n__get",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           },
           {
@@ -445,22 +446,22 @@
         }
       }
     },
-    "/api/v1/skills/{name}": {
+    "/api/v1/skills/{id}": {
       "get": {
         "tags": [
           "skills"
         ],
         "summary": "Get Skill",
-        "description": "Get a single skill manifest by display_name. 404 if missing.",
-        "operationId": "get_skill_api_v1_skills__name__get",
+        "description": "Get a single skill manifest by id. 404 if missing.",
+        "operationId": "get_skill_api_v1_skills__id__get",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           }
         ],
@@ -495,15 +496,15 @@
         ],
         "summary": "Update Skill",
         "description": "Partial update. Snapshots the prior state, bumps version, audits.",
-        "operationId": "update_skill_api_v1_skills__name__put",
+        "operationId": "update_skill_api_v1_skills__id__put",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           }
         ],
@@ -548,15 +549,15 @@
         ],
         "summary": "Delete Skill",
         "description": "Unpublish + wipe. 204 on success; 404 if the manifest did not exist.",
-        "operationId": "delete_skill_api_v1_skills__name__delete",
+        "operationId": "delete_skill_api_v1_skills__id__delete",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           }
         ],
@@ -577,22 +578,22 @@
         }
       }
     },
-    "/api/v1/skills/{name}/SKILL.md": {
+    "/api/v1/skills/{id}/SKILL.md": {
       "get": {
         "tags": [
           "skills"
         ],
         "summary": "Get Skill Md",
         "description": "Read the SKILL.md document. 404 if missing.",
-        "operationId": "get_skill_md_api_v1_skills__name__SKILL_md_get",
+        "operationId": "get_skill_md_api_v1_skills__id__SKILL_md_get",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           }
         ],
@@ -620,22 +621,22 @@
         }
       }
     },
-    "/api/v1/skills/{name}/assets/{path}": {
+    "/api/v1/skills/{id}/assets/{path}": {
       "get": {
         "tags": [
           "skills"
         ],
         "summary": "Get Skill Asset",
         "description": "Read a skill asset as raw bytes (binary-safe). 404 if missing.",
-        "operationId": "get_skill_asset_api_v1_skills__name__assets__path__get",
+        "operationId": "get_skill_asset_api_v1_skills__id__assets__path__get",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           },
           {
@@ -670,22 +671,22 @@
         }
       }
     },
-    "/api/v1/skills/{name}/versions": {
+    "/api/v1/skills/{id}/versions": {
       "get": {
         "tags": [
           "skills"
         ],
         "summary": "List Skill Versions",
         "description": "List every snapshot manifest for the skill, ascending by version.",
-        "operationId": "list_skill_versions_api_v1_skills__name__versions_get",
+        "operationId": "list_skill_versions_api_v1_skills__id__versions_get",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           }
         ],
@@ -718,22 +719,22 @@
         }
       }
     },
-    "/api/v1/skills/{name}/versions/{n}": {
+    "/api/v1/skills/{id}/versions/{n}": {
       "get": {
         "tags": [
           "skills"
         ],
         "summary": "Read Skill Version",
         "description": "Read a specific version's manifest snapshot. 404 if missing.",
-        "operationId": "read_skill_version_api_v1_skills__name__versions__n__get",
+        "operationId": "read_skill_version_api_v1_skills__id__versions__n__get",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           },
           {
@@ -837,22 +838,22 @@
         }
       }
     },
-    "/api/v1/plugins/{name}": {
+    "/api/v1/plugins/{id}": {
       "get": {
         "tags": [
           "plugins"
         ],
         "summary": "Get Plugin",
         "description": "Get a single plugin manifest. 404 if missing.",
-        "operationId": "get_plugin_api_v1_plugins__name__get",
+        "operationId": "get_plugin_api_v1_plugins__id__get",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           }
         ],
@@ -887,15 +888,15 @@
         ],
         "summary": "Update Plugin",
         "description": "Partial update. Snapshots the prior state, bumps version, audits.",
-        "operationId": "update_plugin_api_v1_plugins__name__put",
+        "operationId": "update_plugin_api_v1_plugins__id__put",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           }
         ],
@@ -940,15 +941,15 @@
         ],
         "summary": "Delete Plugin",
         "description": "Unpublish + wipe. 204 on success; 404 if the manifest did not exist.",
-        "operationId": "delete_plugin_api_v1_plugins__name__delete",
+        "operationId": "delete_plugin_api_v1_plugins__id__delete",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           }
         ],
@@ -969,22 +970,22 @@
         }
       }
     },
-    "/api/v1/plugins/{name}/config.yaml": {
+    "/api/v1/plugins/{id}/config.yaml": {
       "get": {
         "tags": [
           "plugins"
         ],
         "summary": "Get Plugin Config",
         "description": "Read the config.yaml document. 404 if missing.",
-        "operationId": "get_plugin_config_api_v1_plugins__name__config_yaml_get",
+        "operationId": "get_plugin_config_api_v1_plugins__id__config_yaml_get",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           }
         ],
@@ -1012,22 +1013,22 @@
         }
       }
     },
-    "/api/v1/plugins/{name}/README.md": {
+    "/api/v1/plugins/{id}/README.md": {
       "get": {
         "tags": [
           "plugins"
         ],
         "summary": "Get Plugin Readme",
         "description": "Read the README.md document. 404 if missing.",
-        "operationId": "get_plugin_readme_api_v1_plugins__name__README_md_get",
+        "operationId": "get_plugin_readme_api_v1_plugins__id__README_md_get",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           }
         ],
@@ -1055,22 +1056,22 @@
         }
       }
     },
-    "/api/v1/plugins/{name}/references": {
+    "/api/v1/plugins/{id}/references": {
       "get": {
         "tags": [
           "plugins"
         ],
         "summary": "Check Plugin References",
         "description": "Check existence of every tool/skill referenced by the plugin. 404 if missing.",
-        "operationId": "check_plugin_references_api_v1_plugins__name__references_get",
+        "operationId": "check_plugin_references_api_v1_plugins__id__references_get",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           }
         ],
@@ -1100,22 +1101,22 @@
         }
       }
     },
-    "/api/v1/plugins/{name}/versions": {
+    "/api/v1/plugins/{id}/versions": {
       "get": {
         "tags": [
           "plugins"
         ],
         "summary": "List Plugin Versions",
         "description": "List every snapshot manifest for the plugin, ascending by version.",
-        "operationId": "list_plugin_versions_api_v1_plugins__name__versions_get",
+        "operationId": "list_plugin_versions_api_v1_plugins__id__versions_get",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           }
         ],
@@ -1148,22 +1149,22 @@
         }
       }
     },
-    "/api/v1/plugins/{name}/versions/{n}": {
+    "/api/v1/plugins/{id}/versions/{n}": {
       "get": {
         "tags": [
           "plugins"
         ],
         "summary": "Read Plugin Version",
         "description": "Read a specific version's manifest snapshot. 404 if missing.",
-        "operationId": "read_plugin_version_api_v1_plugins__name__versions__n__get",
+        "operationId": "read_plugin_version_api_v1_plugins__id__versions__n__get",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           },
           {
@@ -1267,22 +1268,22 @@
         }
       }
     },
-    "/api/v1/agents/{name}": {
+    "/api/v1/agents/{id}": {
       "get": {
         "tags": [
           "agents"
         ],
         "summary": "Get Agent",
         "description": "Get a single agent manifest. 404 if missing.",
-        "operationId": "get_agent_api_v1_agents__name__get",
+        "operationId": "get_agent_api_v1_agents__id__get",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           }
         ],
@@ -1317,15 +1318,15 @@
         ],
         "summary": "Update Agent",
         "description": "Partial update. Snapshots the prior state, bumps version, audits.",
-        "operationId": "update_agent_api_v1_agents__name__put",
+        "operationId": "update_agent_api_v1_agents__id__put",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           }
         ],
@@ -1370,15 +1371,15 @@
         ],
         "summary": "Delete Agent",
         "description": "Unpublish + wipe. 204 on success; 404 if the manifest did not exist.",
-        "operationId": "delete_agent_api_v1_agents__name__delete",
+        "operationId": "delete_agent_api_v1_agents__id__delete",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           }
         ],
@@ -1399,22 +1400,22 @@
         }
       }
     },
-    "/api/v1/agents/{name}/config.yaml": {
+    "/api/v1/agents/{id}/config.yaml": {
       "get": {
         "tags": [
           "agents"
         ],
         "summary": "Get Agent Config",
         "description": "Read the config.yaml document. 404 if missing.",
-        "operationId": "get_agent_config_api_v1_agents__name__config_yaml_get",
+        "operationId": "get_agent_config_api_v1_agents__id__config_yaml_get",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           }
         ],
@@ -1442,22 +1443,22 @@
         }
       }
     },
-    "/api/v1/agents/{name}/references": {
+    "/api/v1/agents/{id}/references": {
       "get": {
         "tags": [
           "agents"
         ],
         "summary": "Check Agent References",
         "description": "Check existence of every plugin/tool/skill/sub-agent. 404 if missing.",
-        "operationId": "check_agent_references_api_v1_agents__name__references_get",
+        "operationId": "check_agent_references_api_v1_agents__id__references_get",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           }
         ],
@@ -1487,22 +1488,22 @@
         }
       }
     },
-    "/api/v1/agents/{name}/versions": {
+    "/api/v1/agents/{id}/versions": {
       "get": {
         "tags": [
           "agents"
         ],
         "summary": "List Agent Versions",
         "description": "List every snapshot manifest for the agent, ascending by version.",
-        "operationId": "list_agent_versions_api_v1_agents__name__versions_get",
+        "operationId": "list_agent_versions_api_v1_agents__id__versions_get",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           }
         ],
@@ -1535,22 +1536,22 @@
         }
       }
     },
-    "/api/v1/agents/{name}/versions/{n}": {
+    "/api/v1/agents/{id}/versions/{n}": {
       "get": {
         "tags": [
           "agents"
         ],
         "summary": "Read Agent Version",
         "description": "Read a specific version's manifest snapshot. 404 if missing.",
-        "operationId": "read_agent_version_api_v1_agents__name__versions__n__get",
+        "operationId": "read_agent_version_api_v1_agents__id__versions__n__get",
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Name"
+              "title": "Id"
             }
           },
           {
@@ -1677,14 +1678,14 @@
         }
       }
     },
-    "/api/v1/audit/{resource_type}/{resource_name}": {
+    "/api/v1/audit/{resource_type}/{resource_id}": {
       "get": {
         "tags": [
           "audit"
         ],
         "summary": "List Audit Events",
-        "description": "List every audit event for `resource_name` of `resource_type`, sorted by ts ascending.\n\nReturns an empty list when the resource has no events (or doesn't exist). Per-event deserialization errors are swallowed by the storage layer so one corrupt event does not 500 the entire audit read.",
-        "operationId": "list_audit_events_api_v1_audit__resource_type___resource_name__get",
+        "description": "List audit events for resource_id/resource_type; corrupt events are skipped and missing resources return an empty list.",
+        "operationId": "list_audit_events_api_v1_audit__resource_type___resource_id__get",
         "parameters": [
           {
             "name": "resource_type",
@@ -1702,12 +1703,12 @@
             }
           },
           {
-            "name": "resource_name",
+            "name": "resource_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Resource Name"
+              "title": "Resource Id"
             }
           }
         ],
@@ -1873,7 +1874,7 @@
           }
         },
         "title": "AgentConfig",
-        "description": "The agent payload previously split across system_prompt.md and config.yaml.\n\nReference lists live here as flat string ids; the manifest stays pure metadata. extra=\"allow\" keeps the schema forward-compatible."
+        "description": "Agent execution config. Reference lists contain semantic resource ids; extra fields are allowed for forward compatibility."
       },
       "AssetInput": {
         "type": "object",
@@ -1923,7 +1924,7 @@
           }
         },
         "title": "BackendConfig",
-        "description": "Backend harness selection plus extensible backend fields.\n\nextra=\"allow\" lets future fields (model name, temperature, etc.) be handled without breaking deserialization of existing config.yaml files."
+        "description": "Backend harness settings. Extra fields are allowed for model-specific configuration."
       },
       "CodeFile": {
         "type": "object",
@@ -1943,31 +1944,27 @@
           }
         },
         "title": "CodeFile",
-        "description": "One source file attached to a tool. The user supplies already-wrapped tool code; the marketplace stores it under tools/{id}/code/{path} byte-for-byte with no transformation."
+        "description": "Tool source stored byte-for-byte under tools/{id}/code/{path}."
       },
       "CreateAgent": {
         "type": "object",
         "additionalProperties": false,
         "required": [
+          "id",
           "display_name",
           "description",
           "config"
         ],
         "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Stable semantic identifier used in API paths and references"
+          },
           "display_name": {
             "type": "string",
-            "title": "Display Name"
-          },
-          "hebrew_display_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Hebrew Display Name"
+            "title": "Display Name",
+            "description": "Human-readable display name"
           },
           "description": {
             "type": "string",
@@ -2007,25 +2004,21 @@
         "type": "object",
         "additionalProperties": false,
         "required": [
+          "id",
           "display_name",
           "description",
           "config"
         ],
         "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Stable semantic identifier used in API paths and references"
+          },
           "display_name": {
             "type": "string",
-            "title": "Display Name"
-          },
-          "hebrew_display_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Hebrew Display Name"
+            "title": "Display Name",
+            "description": "Human-readable display name"
           },
           "description": {
             "type": "string",
@@ -2065,24 +2058,20 @@
         "type": "object",
         "additionalProperties": false,
         "required": [
+          "id",
           "display_name",
           "description"
         ],
         "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Stable semantic identifier used in API paths and references"
+          },
           "display_name": {
             "type": "string",
-            "title": "Display Name"
-          },
-          "hebrew_display_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Hebrew Display Name"
+            "title": "Display Name",
+            "description": "Human-readable display name"
           },
           "description": {
             "type": "string",
@@ -2148,25 +2137,21 @@
         "type": "object",
         "additionalProperties": false,
         "required": [
+          "id",
           "display_name",
           "description",
           "tool_type"
         ],
         "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Stable semantic identifier used in API paths and references"
+          },
           "display_name": {
             "type": "string",
-            "title": "Display Name"
-          },
-          "hebrew_display_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Hebrew Display Name"
+            "title": "Display Name",
+            "description": "Human-readable display name"
           },
           "description": {
             "type": "string",
@@ -2340,12 +2325,23 @@
           "kick_graphql"
         ],
         "title": "ToolType",
-        "description": "How a tool is invoked by the agent runtime. code replaces the prior function/api/mcp/dedicated split; dedicated runtime types carry typed dedicated_tool_config."
+        "description": "Agent runtime invocation type; dedicated types use dedicated_tool_config."
       },
       "UpdateAgent": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
           "display_name": {
             "anyOf": [
               {
@@ -2356,17 +2352,6 @@
               }
             ],
             "title": "Display Name"
-          },
-          "hebrew_display_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Hebrew Display Name"
           },
           "description": {
             "anyOf": [
@@ -2417,12 +2402,23 @@
           }
         },
         "title": "UpdateAgent",
-        "description": "Partial update — only fields explicitly set overwrite the stored manifest/config."
+        "description": "Partial update \u2014 only fields explicitly set overwrite the stored manifest/config."
       },
       "UpdatePlugin": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
           "display_name": {
             "anyOf": [
               {
@@ -2433,17 +2429,6 @@
               }
             ],
             "title": "Display Name"
-          },
-          "hebrew_display_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Hebrew Display Name"
           },
           "description": {
             "anyOf": [
@@ -2505,12 +2490,23 @@
           }
         },
         "title": "UpdatePlugin",
-        "description": "Partial update — only fields explicitly set overwrite the stored manifest/config."
+        "description": "Partial update \u2014 only fields explicitly set overwrite the stored manifest/config."
       },
       "UpdateSkill": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
           "display_name": {
             "anyOf": [
               {
@@ -2521,17 +2517,6 @@
               }
             ],
             "title": "Display Name"
-          },
-          "hebrew_display_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Hebrew Display Name"
           },
           "description": {
             "anyOf": [
@@ -2618,12 +2603,23 @@
           }
         },
         "title": "UpdateSkill",
-        "description": "Partial update — only fields explicitly set overwrite the stored manifest/config."
+        "description": "Partial update \u2014 only fields explicitly set overwrite the stored manifest/config."
       },
       "UpdateTool": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
           "display_name": {
             "anyOf": [
               {
@@ -2634,17 +2630,6 @@
               }
             ],
             "title": "Display Name"
-          },
-          "hebrew_display_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Hebrew Display Name"
           },
           "description": {
             "anyOf": [
@@ -2741,7 +2726,7 @@
           }
         },
         "title": "UpdateTool",
-        "description": "Partial update — only fields explicitly set overwrite the stored config. code_files is a write-only side effect and is never persisted in config.json. dedicated_tool_config is only revalidated if tool_type is also supplied."
+        "description": "Partial update. Explicit fields overwrite stored data; code_files are written separately and tool config is revalidated with tool_type."
       },
       "UploadRequest": {
         "type": "object",

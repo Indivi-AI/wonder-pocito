@@ -49,6 +49,7 @@ Data('wonderPlatformAgentWUrlResponse', {
       : `/agents/${encodeURIComponent(agentId)}/runs`
     const headers = new Headers(opts.headers || {})
     headers.delete('content-type')
+    headers.set('x-wonder-room', ctx.vars.roomId)
     let body, sessionId
     if (method == 'POST') {
       const input = opts.body || {}
@@ -114,6 +115,7 @@ Data('wonderPlatformWUrlResponse', {
     const isJson = hasBody && typeof body == 'object' && !isForm && !(body instanceof ArrayBuffer) && !(body instanceof Blob)
     const headers = new Headers(opts.headers || {})
     if (isJson) headers.set('Content-Type', 'application/json')
+    headers.set('x-wonder-room', ctx.vars.roomId)
     const apiBase = (baseUrl || globalThis.MARKETPLACE_API_URL || globalThis.process?.env?.MARKETPLACE_API_URL
       || 'http://localhost:7777').replace(/\/$/, '')
     const response = await fetch(`${apiBase}${apiPath}${query}`, {

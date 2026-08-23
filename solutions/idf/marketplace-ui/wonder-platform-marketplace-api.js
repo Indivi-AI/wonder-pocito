@@ -67,7 +67,11 @@ Data('wonderPlatformMarketplaceCall', {
 const { wonderPlatformMarketplaceCall } = dsls.common.data
 
 Data('wonderPlatformMarketplaceManifest', {
-  params: [{id: 'resource', as: 'string'}, {id: 'item', as: 'object'}, {id: 'operation', as: 'string', defaultValue: 'create'}],
+  params: [
+    {id: 'resource', as: 'string'},
+    {id: 'item', as: 'object'},
+    {id: 'operation', as: 'string', defaultValue: 'create'}
+  ],
   impl: ({}, {}, {resource, item, operation}) => {
     const base = {id: item.id, display_name: item.name || item.id,
       description: item.apiDescription || item.desc || '', hebrew_description: item.desc || null, tags: item.tags || []}
@@ -86,7 +90,10 @@ Data('wonderPlatformMarketplaceManifest', {
 })
 
 Data('wonderPlatformMarketplaceItem', {
-  params: [{id: 'resource', as: 'string'}, {id: 'item', as: 'object'}],
+  params: [
+    {id: 'resource', as: 'string'},
+    {id: 'item', as: 'object'}
+  ],
   impl: ({}, {}, {resource, item}) => {
     const config = item.config || {}, id = item.id, name = item.display_name || id
     return {...item, _marketplace: true, id, name, mark: name?.slice(0, 2), desc: item.hebrew_description || item.description || '',

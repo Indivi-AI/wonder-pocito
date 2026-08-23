@@ -452,7 +452,7 @@ Test('wonderPlatform.marketplaceWUrlInterceptor', {
         response.setHeader('content-type', 'application/json')
         response.end(JSON.stringify({
           path: request.url,
-          hasRoomHeader: 'x-wonder-room' in request.headers,
+          room: request.headers['x-wonder-room'],
           method: request.method,
           body: JSON.parse(Buffer.concat(chunks).toString() || 'null')
         }))
@@ -462,7 +462,7 @@ Test('wonderPlatform.marketplaceWUrlInterceptor', {
         const result = await dsls.common.data.wonderPlatformMarketplaceRequest.$runWithCtx(ctx, {
           method: 'PUT',
           wUrl: 'room://tenant-x/skills/skill-a?includeAssets=true',
-          body: {skill_md: 'single scope'},
+          body: {skill_md: 'room scoped'},
           baseUrl: `http://127.0.0.1:${server.address().port}`
         })
         return {result, ...coreUtils.harvestLogs(ctx)}
@@ -472,9 +472,9 @@ Test('wonderPlatform.marketplaceWUrlInterceptor', {
     },
     expectedResult: equals('%result%', asIs({
         path: '/api/v1/skills/skill-a?includeAssets=true',
-        hasRoomHeader: false,
+        room: 'tenant-x',
         method: 'PUT',
-        body: {skill_md: 'single scope'}
+        body: {skill_md: 'room scoped'}
     })),
     timeout: 10000,
     logger: 'marketplaceLogger'
@@ -541,11 +541,11 @@ Test('wonderPlatform.workspaceSavesOnlyFromButton', {
       waitForText('אנליסט הוכחת קיום'),
       click('אנליסט הוכחת קיום'),
       waitForText('חיבורי הפלאגין'),
-      wonderPlatformSetControl({placeholder: 'שם הפלאגין', value: 'טיוטה שלא נשמרה'}),
+      wonderPlatformSetControl({selector: '[aria-label="display_name"]', value: 'טיוטה שלא נשמרה'}),
       click('aria-label="חזרה לפלאגינים"'),
       waitForText('אנליסט הוכחת קיום'),
       click('אנליסט הוכחת קיום'),
-      wonderPlatformSetControl({placeholder: 'שם הפלאגין', value: 'פלאגין שנשמר'}),
+      wonderPlatformSetControl({selector: '[aria-label="display_name"]', value: 'פלאגין שנשמר'}),
       click('aria-label="שמירת סביבת עבודה"'),
       waitForText('נשמר'),
       click('aria-label="חזרה לפלאגינים"'),
@@ -611,8 +611,8 @@ Test('wonderPlatform.marketplaceUiAgentE2e', {
       waitForText('פלאגין חדש'),
       click('מיומנויות'),
       click('מיומנות חדשה'),
-      wonderPlatformSetControl('hebrew_display_name', { value: 'E2E Skill' }),
-      wonderPlatformSetControl('display_name', { value: 'e2e-skill' }),
+      wonderPlatformSetControl('display_name', { value: 'E2E Skill' }),
+      wonderPlatformSetControl('id', { value: 'e2eSkill' }),
       wonderPlatformSetControl('SKILL.md', {
         value: '# E2E Skill\n\nThe verification phrase is E2E_SKILL_FACT_731. Return it when asked.'
       }),
@@ -621,8 +621,8 @@ Test('wonderPlatform.marketplaceUiAgentE2e', {
       click('כלים'),
       waitForText('כלי ממארז Flow'),
       click('כלי ממארז Flow'),
-      wonderPlatformSetControl('hebrew_display_name', { value: 'E2E Tool' }),
-      wonderPlatformSetControl('display_name', { value: 'e2e-tool' }),
+      wonderPlatformSetControl('display_name', { value: 'E2E Tool' }),
+      wonderPlatformSetControl('id', { value: 'e2eTool' }),
       wonderPlatformSetControl('json_schema', {
         value: '{"type":"object","properties":{"name":{"type":"string"}}}'
       }),
@@ -638,8 +638,8 @@ Test('wonderPlatform.marketplaceUiAgentE2e', {
       click('פלאגינים'),
       waitForText('פלאגין חדש'),
       click('פלאגין חדש'),
-      wonderPlatformSetControl('display_name', { value: 'e2e-plugin' }),
-      wonderPlatformSetControl({ placeholder: 'שם הפלאגין', value: 'E2E Plugin' }),
+      wonderPlatformSetControl('id', { value: 'e2ePlugin' }),
+      wonderPlatformSetControl({ selector: '[aria-label="display_name"]', value: 'E2E Plugin' }),
       wonderPlatformClickInSection('מיומנויות', 'הוספה'),
       waitForText('E2E Skill'),
       click('E2E Skill'),
@@ -656,8 +656,8 @@ Test('wonderPlatform.marketplaceUiAgentE2e', {
       waitForText('סאב-אייג׳נט חדש'),
       click('סאב-אייג׳נט חדש'),
       waitForText('README (creation only)'),
-      wonderPlatformSetControl({ placeholder: 'שם הסאב-אייג׳נט', value: 'E2E Agent' }),
-      wonderPlatformSetControl('display_name', { value: 'e2e-agent' }),
+      wonderPlatformSetControl({ selector: '[aria-label="display_name"]', value: 'E2E Agent' }),
+      wonderPlatformSetControl('id', { value: 'e2eAgent' }),
       wonderPlatformSetControl('system_prompt', {
         value: 'Use the attached plugin. Return its skill fact and exact tool result.'
       }),
@@ -685,7 +685,7 @@ Test('wonderPlatform.marketplaceUiAgentE2e', {
 })
 CtxEnricher('wonderPlatformMarketplaceE2eSetup', {
   impl: async ctx => {
-    await Promise.all(['agents/e2e-agent', 'plugins/e2e-plugin', 'skills/e2e-skill', 'tools/e2e-tool'].map(path =>
+    await Promise.all(['agents/e2eAgent', 'plugins/e2ePlugin', 'skills/e2eSkill', 'tools/e2eTool'].map(path =>
       fetch(`http://localhost:7777/api/v1/${path}`, {method: 'DELETE'})))
     return ctx
   }
