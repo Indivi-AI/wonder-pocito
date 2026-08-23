@@ -42,14 +42,16 @@ ReactComp('wonderPlatform', {
     })}
   ],
   impl: comp({
-    hFunc: (ctx, {react: {h, hh, useEffect, useState}},
+    hFunc: (ctx, {react: {h, hh, useEffect, useRef, useState}},
       {roomWUrl, marketplaceBaseUrl, agentOsBaseUrl, agentOsToken, loadRepo, saveRepo, upsert, loadSkill, listSkills, publishSkill,
         marketplaceCall, marketplaceDetail, manifest, runAgent}) => () => {
       const repositoryRoomWUrl = ctx.vars.roomWUrl || roomWUrl, marketplaceUrl = ctx.vars.marketplaceBaseUrl || marketplaceBaseUrl
       const agentUrl = ctx.vars.agentOsBaseUrl || agentOsBaseUrl, token = ctx.vars.agentOsToken || agentOsToken
       const config = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx), [view, setView] = useState('plugins')
       const [repo, setRepo] = useState(), [loadError, setLoadError] = useState(), [search, setSearch] = useState('')
-      const [workspace, setWorkspace] = useState()
+      const [workspace, setWorkspaceState] = useState()
+      const workspaceItem = useRef(), saveChain = useRef(Promise.resolve())
+      const setWorkspace = value => { workspaceItem.current = value?.item; setWorkspaceState(value) }
       const [editors, setEditors] = useState([]), [picker, setPicker] = useState(), [report, setReport] = useState()
       const [conversationId, setConversationId] = useState('c1'), [message, setMessage] = useState(''), [busy, setBusy] = useState(false)
       const [runningSet, setRunningSet] = useState(''), [notice, setNotice] = useState('')
@@ -92,13 +94,18 @@ ReactComp('wonderPlatform', {
       const createItem = resource => ['plugins', 'subagents'].includes(resource)
         ? (setWorkspace({resource, item: blank(resource)}), setView('workspace'))
         : setEditors([{resource, item: blank(resource), createLabel: config.resources[resource]?.create}])
-      const saveWorkspace = async item => {
-        const saved = await saveItem(workspace.resource, {...item, originalId: workspace.item.originalId})
-        setWorkspace({...workspace, item: {...saved, originalId: saved.id}}); flash('נשמר אוטומטית'); return saved
+      const saveWorkspace = patch => {
+        const run = saveChain.current.then(async () => {
+          const base = {...workspaceItem.current, ...patch, originalId: workspaceItem.current.originalId}
+          const saved = await saveItem(workspace.resource, base)
+          setWorkspace({...workspace, item: {...saved, originalId: saved.id}}); flash('נשמר אוטומטית'); return saved
+        })
+        saveChain.current = run.catch(() => {})
+        return run
       }
       const deleteWorkspace = async () => {
         if (repo.marketplace) await marketplaceCall(ctx.setVars({operation: 'delete', resource: workspace.resource,
-          name: workspace.item.originalId || workspace.item.id, roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))
+          name: workspaceItem.current.originalId || workspaceItem.current.id, roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))
         await persistRepo({...repo, [workspace.resource]: repo[workspace.resource].filter(item => item.id != workspace.item.id)})
         openView(workspace.resource)
       }
@@ -139,11 +146,11 @@ ReactComp('wonderPlatform', {
           if (active.attachTo.draftOnly) {
             await persistRepo(child.repo); active.attachTo.attach([...new Set([...active.attachTo.selected, child.saved.id])]); return setEditors(rest)
           }
-          let parent = upsert(ctx.setVars({repo: child.repo, resource: workspace.resource, item: {...workspace.item,
-            originalId: workspace.item.originalId,
-            [field]: [...new Set([...(workspace.item[field] || []), child.saved.id])]}}))
+          let parent = upsert(ctx.setVars({repo: child.repo, resource: workspace.resource, item: {...workspaceItem.current,
+            originalId: workspaceItem.current.originalId,
+            [field]: [...new Set([...(workspaceItem.current[field] || []), child.saved.id])]}}))
           if (repo.marketplace) parent = upsert(ctx.setVars({repo: child.repo, resource: workspace.resource,
-            item: await saveRemote(workspace.resource, {...parent.saved, originalId: workspace.item.originalId})}))
+            item: await saveRemote(workspace.resource, {...parent.saved, originalId: workspaceItem.current.originalId})}))
           await persistRepo(parent.repo); setWorkspace({...workspace, item: {...parent.saved, originalId: parent.saved.id}}); setEditors(rest)
         } else {
           const skillResult = active.resource == 'skills' && !repo.marketplace && await publishEditedSkill(active.item)

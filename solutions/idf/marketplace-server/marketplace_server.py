@@ -21,6 +21,7 @@ from agno.models.openai import OpenAIResponses
 from agno.os import AgentOS
 from agno.skills import LocalSkills, Skills
 from agno.tools.function import Function
+from botocore.config import Config as BotoConfig
 from botocore.exceptions import ClientError
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -255,13 +256,20 @@ class S3ObjectStore:
         self.client = client or boto3.client('s3', endpoint_url=os.getenv('MARKETPLACE_S3_ENDPOINT', 'http://127.0.0.1:9000'),
           aws_access_key_id=os.getenv('MARKETPLACE_S3_ACCESS_KEY', 'wonder'),
           aws_secret_access_key=os.getenv('MARKETPLACE_S3_SECRET_KEY', 'wonder-minio-local'),
-          region_name=os.getenv('MARKETPLACE_S3_REGION', 'us-east-1'))
+          region_name=os.getenv('MARKETPLACE_S3_REGION', 'us-east-1'),
+          config=BotoConfig(connect_timeout=5, read_timeout=20, retries={'max_attempts': 3, 'mode': 'standard'}))
+        self.client.meta.events.register('before-send.s3.*', self.drop_expect_header)
         try:
             self.client.head_bucket(Bucket=self.bucket)
         except ClientError as error:
             if error.response.get('Error', {}).get('Code') not in {'404', 'NoSuchBucket'}:
                 raise
             self.client.create_bucket(Bucket=self.bucket)
+
+    def drop_expect_header(self, request, **kwargs):
+        """A zero-byte PUT with Expect: 100-continue desyncs MinIO keep-alive and stalls the next PUT for 30 seconds."""
+        if 'Expect' in request.headers:
+            del request.headers['Expect']
 
     def put(self, key, content, content_type=None, if_absent=False):
         try:
@@ -401,7 +409,8 @@ class MarketplaceRepository:
         try:
             self.write_json(key, {'data': data, 'version': 1, 'created_at': timestamp, 'updated_at': timestamp}, if_absent=True)
         except FileExistsError:
-            raise HTTPException(409, f'{kind}/{name} already exists')
+            if self.row(room, kind, name).get('data') != data:
+                raise HTTPException(409, f'{kind}/{name} already exists')
         self.audit(room, kind, name, 'create', 1, data, timestamp)
         return self.get(room, kind, name)
 
