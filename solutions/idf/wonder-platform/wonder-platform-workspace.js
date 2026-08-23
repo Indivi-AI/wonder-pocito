@@ -1,12 +1,13 @@
 import { dsls } from '@jb6/core'
 import '@jb6/react'
 import './wonder-platform-domain.js'
+import './wonder-platform-agent-results.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
 ReactComp('wonderPlatformWorkspace', {
   impl: comp({
-    hFunc: (ctx, {react: {h, useEffect, useState}}) => props => {
+    hFunc: (ctx, {react: {h, hh, useEffect, useState}}) => props => {
       const {workspace, repo, back, saveWorkspace, openPicker, openEditor, runTarget, runEval} = props
       const {classes, labels} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx), [draft, setDraft] = useState({...workspace.item})
       const [panelOpen, setPanelOpen] = useState(true), [tab, setTab] = useState('test'), [testInput, setTestInput] = useState('')
@@ -28,7 +29,7 @@ ReactComp('wonderPlatformWorkspace', {
         setRuns(items => [...items, pending]); setTestInput('')
         try {
           const result = await runTarget(text, draft)
-          setRuns(items => items.map(run => run.id == id ? {...run, ...result, output: result.text, status: result.status,
+          setRuns(items => items.map(run => run.id == id ? {...run, ...result, output: result.text || result.output, status: result.status || 'הושלם',
             trace: [...semanticTrace, ...(result.runtimeSteps || [])]} : run))
         } catch (error) {
           setRuns(items => items.map(run => run.id == id ? {...run, status: 'נכשל', output: String(error.message || error)} : run))
@@ -70,8 +71,8 @@ ReactComp('wonderPlatformWorkspace', {
             'div:flex items-center gap-2 rounded-lg bg-[#f7f9f8] px-3 py-2', {key: `${step.kind}-${step.id || stepIndex}`},
             h(`span:${classes.chip}`, {}, step.kind), h('span:flex-1 text-xs', {}, step.title), step.id && step.resource != 'tools' && h(
               'button:text-xs text-[#2f6b4b]', {onClick: () => openEditor(step.resource, repo[step.resource].find(item => item.id == step.id))}, 'עריכה')))),
-          run.output && h('div', {}, h('b:text-[10px] text-[#8b948f]', {}, 'פלט ההרצה'),
-            h('p:mt-1 whitespace-pre-wrap text-sm leading-6', {}, run.output)))))) : h('div:grid min-h-64 place-items-center text-center text-sm text-[#8b948f]', {},
+          run.output && hh(ctx, dsls.react['react-comp'].wonderPlatformAgentResult, {result: run})))))
+        : h('div:grid min-h-64 place-items-center text-center text-sm text-[#8b948f]', {},
           h('div', {}, h('L:PlayCircle', {size: 28, className: 'mx-auto mb-3'}), `נסה את ${targetLabel} תוך כדי בנייה`))),
       h('div:border-t border-[#e2e7e4] bg-white p-3', {}, h('div:flex items-end gap-2 rounded-xl border border-[#dfe5e1] p-2', {},
         h('textarea:min-h-12 flex-1 resize-none p-2 text-sm outline-none', {value: testInput, placeholder: `נסה את ${targetLabel}…`,
@@ -79,7 +80,7 @@ ReactComp('wonderPlatformWorkspace', {
             (event.preventDefault(), sendTest(testInput)), 'data-testid': 'workspace-test-input'}),
         h('button:grid h-9 w-9 place-items-center rounded-full bg-[#2f6b4b] text-white disabled:opacity-40', {disabled: !testInput.trim(),
           onClick: () => sendTest(testInput), 'aria-label': 'הרצה'}, h('L:ArrowUp', {size: 15}))),
-      h('p:mt-2 text-[10px] text-[#9aa19d]', {}, 'כל שליחה היא הרצה עצמאית של AgentOS, ללא זיכרון שיחה')))
+      h('p:mt-2 text-[10px] text-[#9aa19d]', {}, 'כל שליחה היא הרצה עצמאית ב-harness שהוגדר לסוכן')))
       const shownRun = evaluationRun || repo.evalRuns.filter(run => run.evaluationId == evaluationId && run.targetId == draft.id)
         .sort((a, b) => b.startedAt - a.startedAt)[0]
       const evalRow = (row, index) => h('article:rounded-xl border border-[#dfe5e1] bg-white p-3', {key: index},
@@ -138,10 +139,14 @@ ReactComp('wonderPlatformWorkspace', {
             'textarea:mt-3 min-h-32 w-full resize-y rounded-xl border border-[#e2e7e4] bg-[#f6f8f7] p-3 text-sm', {
               value: draft.readme || '', onInput: event => setDraft({...draft, readme: event.target.value})})),
         workspace.resource == 'subagents' && h(`section:${classes.card}`, {},
-          h('b:text-sm', {}, 'BackendConfig'), h('select:mt-3 w-full rounded-xl border border-[#e2e7e4] bg-[#f6f8f7] p-3 text-sm', {
-            value: draft.backendConfig?.harness_type || 'deepagents', onChange: event => persist({...draft,
-              backendConfig: {...draft.backendConfig, harness_type: event.target.value}})}, h('option', {value: 'deepagents'}, 'deepagents'),
-          h('option', {value: 'claude'}, 'claude'))), h(`section:${classes.card}`, {}, h('b:text-sm', {}, 'סט אבלואציה מקושר'),
+          h('b:text-sm', {}, 'Execution harness'), h('select:mt-3 w-full rounded-xl border border-[#e2e7e4] bg-[#f6f8f7] p-3 text-sm', {
+            value: draft.backendConfig?.harness || 'agno', onChange: event => persist({...draft,
+              backendConfig: {...draft.backendConfig, harness: event.target.value}})}, h('option', {value: 'agno'}, 'Agno · AgentOS'),
+          h('option', {value: 'llmflow'}, 'LLM Flow')), (draft.backendConfig?.harness || 'agno') == 'agno' && h('div:mt-4', {},
+            h('b:text-sm', {}, 'AgentOS backend'), h('select:mt-3 w-full rounded-xl border border-[#e2e7e4] bg-[#f6f8f7] p-3 text-sm', {
+              value: draft.backendConfig?.harness_type || 'deepagents', onChange: event => persist({...draft,
+                backendConfig: {...draft.backendConfig, harness_type: event.target.value}})}, h('option', {value: 'deepagents'}, 'deepagents'),
+            h('option', {value: 'claude'}, 'claude')))), h(`section:${classes.card}`, {}, h('b:text-sm', {}, 'סט אבלואציה מקושר'),
         h('select:mt-3 w-full rounded-xl border border-[#e2e7e4] bg-[#f6f8f7] p-3 text-sm', {value: draft.evaluationId || '',
           onChange: event => persist({...draft, evaluationId: event.target.value})}, h('option', {value: ''}, 'ללא סט מקושר'),
         repo.evaluations.map(item => h('option', {key: item.id, value: item.id}, item.name))), lastRun && h('div:mt-3 flex items-center justify-between text-xs ' +

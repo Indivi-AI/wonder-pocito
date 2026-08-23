@@ -6,7 +6,7 @@ import './wonder-platform-repository.js'
 import './wonder-platform-views.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
-const { wonderPlatformAgentOsRun, wonderPlatformListSkills, wonderPlatformLoadSkill, wonderPlatformMarketplaceCall,
+const { wonderPlatformRunAgent, wonderPlatformListSkills, wonderPlatformLoadSkill, wonderPlatformMarketplaceCall,
   wonderPlatformMarketplaceDetail, wonderPlatformMarketplaceManifest, wonderPlatformMarketplaceRepository,
   wonderPlatformPublishSkill, wonderPlatformSaveRepository, wonderPlatformUpsert } = dsls.common.data
 
@@ -33,11 +33,12 @@ ReactComp('wonderPlatform', {
       baseUrl: '%$marketplaceBaseUrl%'
     })},
     {id: 'manifest', dynamic: true, defaultValue: wonderPlatformMarketplaceManifest('%$resource%', '%$item%', { operation: '%$operation%' })},
-    {id: 'runAgent', dynamic: true, defaultValue: wonderPlatformAgentOsRun('%$text%', '%$target%', {
+    {id: 'runAgent', dynamic: true, defaultValue: wonderPlatformRunAgent('%$text%', '%$target%', {
       sessionId: '%$sessionId%',
       roomWUrl: '%$roomWUrl%',
       baseUrl: '%$agentOsBaseUrl%',
-      token: '%$agentOsToken%'
+      token: '%$agentOsToken%',
+      repo: '%$repo%'
     })}
   ],
   impl: comp({
@@ -160,7 +161,7 @@ ReactComp('wonderPlatform', {
         setEditors(editors.slice(0, -1))
       }
       const runTarget = (text, target, sessionId = `${target.id}-${Date.now()}`) => runAgent(ctx.setVars({text, target, sessionId,
-        roomWUrl: repositoryRoomWUrl, agentOsBaseUrl: agentUrl, agentOsToken: token}))
+        roomWUrl: repositoryRoomWUrl, agentOsBaseUrl: agentUrl, agentOsToken: token, repo}))
       const runEval = async (evaluation, targetResource, target) => {
         const startedAt = Date.now(), id = `eval-${startedAt}`, started = new Date(startedAt).toLocaleString('he-IL', {
           dateStyle: 'short', timeStyle: 'short'}), pending = {id, evaluationId: evaluation.id, targetResource, targetId: target.id,
@@ -193,10 +194,10 @@ ReactComp('wonderPlatform', {
         await updateConversation(pending)
         try {
           const result = await runTarget(text, plugin, conversation.id)
-          const reportIds = result.reportIds.filter(id => repo.reports.some(report => report.id == id))
+          const reportIds = (result.reportIds || []).filter(id => repo.reports.some(report => report.id == id))
           const steps = [...dsls.common.data.wonderPlatformTrace.$runWithCtx(ctx, {repo, target: plugin}), ...(result.runtimeSteps || [])]
-          await updateConversation({...pending, messages: [...pending.messages, {id: `m-${Date.now() + 1}`, role: 'agent', text: result.text,
-            reportIds, followUps: result.followUps, runId: result.runId, opikUrl: result.opikUrl, status: result.status, duration: result.duration, steps}]})
+          await updateConversation({...pending, messages: [...pending.messages, {...result, id: `m-${Date.now() + 1}`, role: 'agent',
+            text: result.text || result.output, reportIds, steps}]})
         } catch (error) {
           await updateConversation({...pending, messages: [...pending.messages, {id: `m-${Date.now() + 1}`, role: 'agent',
             text: String(error.message || error), status: 'נכשל', steps: []}]})

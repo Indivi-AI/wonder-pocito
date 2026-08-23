@@ -11,7 +11,8 @@ const {
     wonderPlatformLoadTargetSkills, wonderPlatformMarketplaceCall, wonderPlatformMarketplaceItem, wonderPlatformMarketplaceManifest,
     wonderPlatformNormalize, wonderPlatformPublishSkill, wonderPlatformSeed, wonderPlatformUpsert, wonderPlatformAgentOsRun },
     boolean: { and, contains, equals } },
-  react: { ReactComp, UiAction, 'react-comp': { comp, wonderPlatform }, 'ui-action': { actions, click, waitForText } },
+  react: { ReactComp, UiAction, 'react-comp': { comp, wonderPlatform },
+    'ui-action': { actions, click, waitForText } },
   test: { Test, test: { dataTest, reactTest } },
   ai: { Workflow }
 } = dsls
@@ -381,10 +382,22 @@ Test('wonderPlatform.marketplaceToolEditor', {
 })
 
 Test('wonderPlatform.marketplaceAgentWorkspace', {
-  impl: reactTest(dsls.react['react-comp'].wonderPlatformMarketplaceTestApp(),
-    and(contains('BackendConfig'), contains('deepagents'), contains('פלאגינים'), contains('סאב-אייג׳נטים')), {
-      userActions: actions(waitForText('פלאגין ראיות'), click('סאב-אייג׳נטים'), waitForText('סוכן ראיות'), click('סוכן ראיות'),
-        waitForText('BackendConfig'))})
+  impl: reactTest({
+    testedComp: {$: 'react-comp<react>wonderPlatformMarketplaceTestApp'},
+    expectedResult: and(
+      contains('Execution harness'),
+      contains('Agno · AgentOS'),
+      contains('פלאגינים'),
+      contains('סאב-אייג׳נטים')
+    ),
+    userActions: actions(
+      waitForText('פלאגין ראיות'),
+      click('סאב-אייג׳נטים'),
+      waitForText('סוכן ראיות'),
+      click('סוכן ראיות'),
+      waitForText('Execution harness')
+    )
+  })
 })
 
 Test('wonderPlatform.marketplaceAgentCreate', {

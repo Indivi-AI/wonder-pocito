@@ -1,6 +1,6 @@
 import { dsls, coreUtils } from '@jb6/core'
 import '@jb6/react'
-import '@wonder/ui/applet.js'
+import '@wonder/applets/applet.js'
 import './comax-v2-agent.js'
 
 const { react: { ReactComp, 'react-comp': reactComps, 'react-metadata': { applet } } } = dsls
@@ -42,7 +42,8 @@ ReactComp('comaxAiApplet', {
         h('header:border-b-2 border-[#61A60E] bg-white px-5 py-3', {},
           h('div:max-w-3xl mx-auto flex items-center justify-between', {},
             h('div', {}, h('strong:text-lg', {}, 'Comax AI'), h('div:text-xs text-gray-500', {}, 'דוחות מאומתים')),
-            h('button:w-10 h-10 rounded-full hover:bg-gray-100', { onClick: () => setMessages([]), title: 'צ׳אט חדש' }, h('L:SquarePen', { size: 18 })))),
+            h('button:w-10 h-10 rounded-full hover:bg-gray-100',
+              { onClick: () => setMessages([]), title: 'צ׳אט חדש' }, h('L:SquarePen', { size: 18 })))),
         h('section:overflow-y-auto overflow-x-hidden', { ref: list },
           h('div:max-w-3xl min-h-full mx-auto p-5 flex flex-col gap-4', {}, messages.length ? messages.map(message)
             : h('div:my-auto text-center', {}, h('h1:text-3xl font-semibold', {}, 'מה נרצה לגלות היום?'),
@@ -51,7 +52,8 @@ ReactComp('comaxAiApplet', {
             working && h('div:text-sm text-gray-500', {}, progress))),
         h('footer:border-t bg-white p-4', {}, h('form:max-w-3xl mx-auto flex gap-2', { onSubmit: event => (event.preventDefault(), send()) },
           h('input:flex-1 min-w-0 rounded-2xl border px-4 py-3', { value: text, onInput: event => setText(event.target.value), placeholder: 'שאלו על העסק...' }),
-          h('button:w-12 rounded-full bg-[#61A60E] text-white disabled:bg-gray-200', { disabled: working || !text.trim(), 'aria-label': 'שליחה' }, h('L:ArrowUp', { size: 18 })))),
+          h('button:w-12 rounded-full bg-[#61A60E] text-white disabled:bg-gray-200',
+            { disabled: working || !text.trim(), 'aria-label': 'שליחה' }, h('L:ArrowUp', { size: 18 })))),
         details && h('aside:fixed inset-y-0 left-0 z-50 w-full max-w-2xl overflow-y-auto bg-white p-5 shadow-2xl', {},
           h('button:mb-4 w-9 h-9 rounded-full hover:bg-gray-100', { onClick: () => setDetails() }, h('L:X', { size: 18 })),
           details.viewId ? hh(ctx, reactComps[details.viewId], { rows: details.rows, openDetails: setDetails })

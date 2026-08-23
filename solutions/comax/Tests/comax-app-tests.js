@@ -2,11 +2,7 @@ import { dsls, jb, coreUtils } from '@jb6/core'
 import '@jb6/common'
 import '@jb6/testing'
 import '@jb6/react/tests/react-testers.js'
-<<<<<<< HEAD
-import '@wonder/bi/viz/viz-index.js'
-=======
 import '@wonder/ui/viz/viz-index.js'
->>>>>>> origin/master
 import { salesHomeData } from '../App/comaxApp.js'
 import '../App/dashboards.js'
 import '../Comps/human-feedback-preview.js'

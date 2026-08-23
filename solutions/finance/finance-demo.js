@@ -1,9 +1,9 @@
 import { dsls, jb, coreUtils } from '@jb6/core'
 import '@jb6/common'
 import '@jb6/react'
-import '@wonder/ui/applet.js'
+import '@wonder/applets/applet.js'
 import '@wonder/ai/duckdb-sql-step.js'
-import '@wonder/bi/viz/viz-index.js'
+import '@wonder/ui/viz/viz-index.js'
 import './finance-analytics.js' // registers the financeAnalytics workflow (Ask AI) + the runFinanceAnalytics/runFinanceReport* lambdas
 import '@wonder/db/room-lambda-client.js' // invokeSnippetInContext + roomLambda interceptor (?engine=lambda fallback)
 import '@wonder/db/db-drivers-utils.js'

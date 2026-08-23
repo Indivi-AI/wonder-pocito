@@ -1,15 +1,11 @@
 import { dsls, jb, coreUtils } from '@jb6/core'
 import '@jb6/common'
 import '@jb6/react'
-import '@wonder/ui/applet.js'
+import '@wonder/applets/applet.js'
 import '@wonder/ai/report-step.js'
 import '../Reports/comax-reports.js'
 import '../Reports/index.js'
-<<<<<<< HEAD
-import '@wonder/bi/viz/viz-index.js'
-=======
 import '@wonder/ui/viz/viz-index.js'
->>>>>>> origin/master
 import '../Agents/dashboards-edit-agent.js'
 import '@wonder/db/db-drivers.js'
 const { wfetch2, wresolve } = jb.wonderUtils
@@ -471,7 +467,12 @@ ReactComp('Dashboards', {
       },
     enrichCtx: async (
       ctx,
-      { roomWUrl = ctx.vars.roomWUrl || DEFAULT_ROOM, reportsRoot = ctx.vars.reportsRoot || REPORTS_ROOT, reports = ctx.vars.reports, initialDashboard = ctx.vars.initialDashboard },
+      {
+        roomWUrl = ctx.vars.roomWUrl || DEFAULT_ROOM,
+        reportsRoot = ctx.vars.reportsRoot || REPORTS_ROOT,
+        reports = ctx.vars.reports,
+        initialDashboard = ctx.vars.initialDashboard,
+      },
     ) => {
       registerDashboardComps()
       const preview = ctx.vars.skipDashboardRoom && !initialDashboard,

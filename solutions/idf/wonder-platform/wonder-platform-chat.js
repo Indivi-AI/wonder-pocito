@@ -1,6 +1,7 @@
 import { dsls } from '@jb6/core'
 import '@jb6/react'
 import './wonder-platform-domain.js'
+import './wonder-platform-agent-results.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
@@ -64,15 +65,11 @@ ReactComp('wonderPlatformChat', {
             `מעקב הרצה · ${item.steps?.length || 0} שלבים · ${item.status || 'הושלם'}`), h('div:border-t border-[#edf0ee] p-3', {},
             (item.steps || []).map((step, index) => h('div:flex items-center gap-2 py-1 text-xs', {key: index},
               h('span:rounded-full border px-2 py-0.5 text-[10px]', {}, step.kind), step.title || step.name)))),
-          h('div:rounded-2xl border border-[#e3e7e4] bg-white p-5 shadow-sm', {'data-message-role': 'agent'},
-            h('div:mb-3 text-xs font-semibold text-[#3c5548]', {}, 'תשובת הסוכן'), h('div:whitespace-pre-wrap text-sm leading-7', {}, item.text),
-            item.runId && h('div:mt-3 text-[10px] text-[#a3a9a6]', {}, `AgentOS run · ${item.runId}`), (item.followUps || []).length > 0 && h(
-              'div:mt-4 flex flex-wrap gap-2', {}, item.followUps.map(text => h('button:rounded-full border border-[#cfe0d5] bg-[#edf6f0] ' +
-                'px-3 py-1.5 text-xs text-[#315e46]', {key: text, onClick: () => setMessage(text)}, text)))),
+          hh(ctx, dsls.react['react-comp'].wonderPlatformAgentResult, {result: item, setMessage}),
           (item.reportIds || []).map(id => hh(ctx, dsls.react['react-comp'].wonderPlatformVerifiedReport, {
             key: id, report: repo.reports.find(report => report.id == id)})))), busy && h(
           'div:flex items-center gap-2 rounded-2xl border border-[#e3e7e4] bg-white p-5 text-sm text-[#758078]', {},
-          h('L:Loader2', {size: 16, className: 'animate-spin'}), 'AgentOS מריץ את הפלאגין…'))),
+          h('L:Loader2', {size: 16, className: 'animate-spin'}), 'הסוכן פועל…'))),
         hh(ctx, dsls.react['react-comp'].wonderPlatformChatComposer, {repo, conversation, message, setMessage, busy, send, updateConversation})),
         h('aside:hidden w-[260px] shrink-0 overflow-y-auto border-r border-[#e4e8e5] bg-white p-4 lg:block', {},
           h('button:w-full rounded-xl border border-[#cfe0d5] bg-[#edf6f0] py-2.5 text-sm font-semibold text-[#315e46]', {

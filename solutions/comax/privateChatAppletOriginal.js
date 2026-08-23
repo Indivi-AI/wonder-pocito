@@ -5,16 +5,6 @@ const { createShortUrl, formatTimeWithRandom, shareHandler, wAppend, wGet, wPut 
 import '@wonder/applets/applet.js'
 import './Agents/analytics-agent.js' // registers the basicAnalytics workflow (run in-browser; its duckDbSql offloads duckdb to /run-bash)
 import './nostalgy/reports-based-agent.js'
-<<<<<<< HEAD
-import './Agents/reports-template-agent.js' // registers reportsTemplateAnalytics (LLM fills slots, runtime owns the report flow)
-import './Agents/fast-report-agent.js' // registers fast-report (quick report widgets + delayed LLM summary)
-import './nostalgy/structured-reports-template-agent.js' // registers structuredReportsTemplateAnalytics (summary + collapsed report sections)
-import './Agents/parallel-agent.js' // registers the comaxAgentPanel workflow (runs both agents in parallel + judge)
-import './nostalgy/retrieval-analytics-agent.js' // registers the retrievalAnalytics workflow (RAG over verified-questions.md)
-import './Agents/agentic-agents.js' // registers verifiedAnalytics (critic loop) + agenticAnalytics (replan-tailed flow)
-import './Agents/agents-repo.js' // Data('comaxAnalyticsAgents') — the selectable-agents repo
-import '@wonder/bi/viz/viz-index.js' // VizWidget + all inline chart widgets the assistant can emit
-=======
 import './Agents/reports-template-agent.js'   // registers reportsTemplateAnalytics (LLM fills slots, runtime owns the report flow)
 import './Agents/fast-report-agent.js'   // registers fast-report (quick report widgets + delayed LLM summary)
 import './nostalgy/structured-reports-template-agent.js'   // registers structuredReportsTemplateAnalytics (summary + collapsed report sections)
@@ -23,7 +13,6 @@ import './nostalgy/retrieval-analytics-agent.js'   // registers the retrievalAna
 import './Agents/agentic-agents.js'   // registers verifiedAnalytics (critic loop) + agenticAnalytics (replan-tailed flow)
 import './Agents/agents-repo.js'   // Data('comaxAnalyticsAgents') — the selectable-agents repo
 import '@wonder/ui/viz/viz-index.js'   // VizWidget + all inline chart widgets the assistant can emit
->>>>>>> origin/master
 import { comaxDrillQuestion, comaxFixDrillSql } from './Comps/drill-helpers.js'
 import { comaxLogo, comaxFontCss } from './Comps/comax-brand.js'
 

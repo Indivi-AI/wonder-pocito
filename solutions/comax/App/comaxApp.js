@@ -2,21 +2,11 @@ import { dsls, coreUtils, jb } from '@jb6/core'
 import '@wonder/db/db-drivers-utils.js'
 import '@wonder/ui/ui-utils.js'
 const { createShortUrl, formatTimeWithRandom, shareHandler, wAppend, wGet, wPut } = jb.wonderUtils
-<<<<<<< HEAD
-import '@wonder/ui/applet.js'
-import '@wonder/db/room-lambda-client.js'   // roomLambda db-driver-interceptor - routes the <roomWUrl>/lambdas/<name> POSTs of the remote duckDbSql hook
-import '../Agents/analytics-agent.js'   // registers the basicAnalytics workflow (run in-browser; its duckDbSql offloads duckdb to /run-bash)
-import { PROMOTION_ACTION_QUESTION } from '../Agents/reports-template-agent.js'
-import '../Agents/fast-report-agent.js'   // registers fast-report (quick report widgets + delayed LLM summary)
-import '../Agents/agents-repo.js'   // Data('comaxAnalyticsAgents') — the selectable-agents repo
-import '@wonder/bi/viz/viz-index.js'   // VizWidget + all inline chart widgets the assistant can emit
-=======
 import '@wonder/applets/applet.js'
 import '@wonder/db/room-lambda-client.js'   // roomLambda db-driver-interceptor - routes the <roomWUrl>/lambdas/<name> POSTs of the remote duckDbSql hook
 import '../comax-v2-agent.js'
 import '../Agents/agents-repo.js'   // Data('comaxAnalyticsAgents') — the selectable-agents repo
 import '@wonder/ui/viz/viz-index.js'   // VizWidget + all inline chart widgets the assistant can emit
->>>>>>> origin/master
 import './dashboards.js'
 import { comaxDrillQuestion, comaxFixDrillSql } from '../Comps/drill-helpers.js'
 import { runViaRoomLambda } from '@wonder/ai/duckdb-sql-step.js'
