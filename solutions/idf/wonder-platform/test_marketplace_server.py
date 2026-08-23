@@ -2,10 +2,11 @@ import json
 import os
 import tempfile
 import unittest
+import uuid
 from pathlib import Path
 from unittest.mock import patch
-from urllib.parse import urlsplit
 
+import httpx
 from fastapi.testclient import TestClient
 
 from marketplace_e2e_model import model_factory
@@ -15,11 +16,17 @@ from marketplace_server import create_app
 class MarketplaceServerTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
+        self.env = patch.dict(os.environ, {'MARKETPLACE_S3_BUCKET': f'marketplace-test-{uuid.uuid4().hex[:12]}'})
+        self.env.start()
         self.client = TestClient(create_app(self.temp.name, model_factory))
+        self.objects = self.client.app.state.marketplace_repo.objects
         self.examples = json.loads((Path(__file__).parent / 'marketplace-api-examples.json').read_text())
 
     def tearDown(self):
         self.client.close()
+        self.objects.delete_prefix('')
+        self.objects.client.delete_bucket(Bucket=self.objects.bucket)
+        self.env.stop()
         self.temp.cleanup()
 
     def request(self, method, path, **kwargs):
@@ -89,25 +96,28 @@ class MarketplaceServerTest(unittest.TestCase):
         readme = self.request('GET', '/api/v1/plugins/room-plugin/README.md')
         self.assertEqual(readme.text, '# Bundle')
         self.assertTrue(readme.headers['content-type'].startswith('text/plain'))
+        self.assertEqual(self.request('DELETE', '/api/v1/tools/number-tool').status_code, 204)
+        self.assertEqual(self.request('GET', '/api/v1/tools/number-tool').status_code, 404)
+        self.assertEqual(self.objects.list('marketplace/tools/number-tool/'), [])
+        self.assertEqual([event['action'] for event in self.request('GET', '/api/v1/audit/tool/number-tool').json()],
+          ['create', 'update', 'delete'])
+        self.assertFalse(self.request('GET', '/api/v1/plugins/room-plugin/references').json()['valid'])
 
-    def test_users_and_real_local_presign(self):
+    def test_users_and_real_minio_presign(self):
         user = self.request('POST', '/api/v1/users/', json={'username': 'reviewer'}).json()
         self.assertEqual(self.request('GET', f"/api/v1/users/{user['uid']}").json()['username'], 'reviewer')
         upload = self.request('POST', '/api/v1/presign/upload', json={'key': 'uploads/a.txt', 'content_type': 'text/plain'}).json()
-        path = urlsplit(upload['url'])
-        self.assertEqual(path.path, '/api/v1/objects/uploads/a.txt')
-        self.assertEqual(self.client.put(f'{path.path}?{path.query}', content=b'PRESIGNED-OK').status_code, 204)
+        self.assertIn(f'/{self.objects.bucket}/uploads/a.txt', upload['url'])
+        put = httpx.put(upload['url'], content=b'PRESIGNED-OK', headers=upload['headers'])
+        self.assertEqual(put.status_code, 200, put.text)
+        self.assertEqual(self.objects.get('uploads/a.txt'), b'PRESIGNED-OK')
         download = self.request('POST', '/api/v1/presign/download', json={'key': 'uploads/a.txt'}).json()
-        path = urlsplit(download['url'])
-        self.assertEqual(self.client.get(f'{path.path}?{path.query}').content, b'PRESIGNED-OK')
+        self.assertEqual(httpx.get(download['url']).content, b'PRESIGNED-OK')
 
     def test_corrupt_stored_events_are_skipped_and_users_return_422(self):
         user = self.request('POST', '/api/v1/users/', json={'username': 'corrupt'}).json()
-        repo = self.client.app.state.marketplace_repo
-        with repo.connect() as db:
-            db.execute("INSERT INTO audit(room,kind,name,action,version,data,ts) VALUES (?,?,?,?,?,?,?)",
-              ('marketplace', 'skill', 'missing', 'create', 1, '{', '2026-01-01'))
-            db.execute('UPDATE users SET data=? WHERE uid=?', ('{', user['uid']))
+        self.objects.put('marketplace/audit/skill/missing/00000000.json', b'{')
+        self.objects.put(f"marketplace/users/{user['uid']}.json", b'{')
         self.assertEqual(self.request('GET', '/api/v1/audit/skill/missing').json(), [])
         self.assertEqual(self.request('GET', f"/api/v1/users/{user['uid']}").status_code, 422)
 

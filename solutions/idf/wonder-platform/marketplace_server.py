@@ -296,45 +296,39 @@ class S3ObjectStore:
         except Exception:
             return False
 
-    def presign(self, key, method, expires, base_url, content_type=None):
+    def presign(self, key, method, expires, content_type=None):
         operation = 'get_object' if method == 'GET' else 'put_object'
         params = {'Bucket': self.bucket, 'Key': key} | ({'ContentType': content_type} if content_type else {})
         return self.client.generate_presigned_url(operation, Params=params, ExpiresIn=expires)
 
 
 class MarketplaceRepository:
-    def __init__(self, db_path, objects):
-        self.db_path, self.objects = Path(db_path), objects
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self.init()
+    """All state lives in the object store: rows are JSON objects shaped {data, version, created_at, updated_at}."""
 
-    def connect(self):
-        db = sqlite3.connect(self.db_path)
-        db.row_factory = sqlite3.Row
-        return db
+    def __init__(self, objects):
+        self.objects = objects
 
-    def init(self):
-        with self.connect() as db:
-            db.executescript('''
-              CREATE TABLE IF NOT EXISTS resources(room TEXT, kind TEXT, name TEXT, version INTEGER, data TEXT,
-                created_at TEXT, updated_at TEXT, PRIMARY KEY(room, kind, name));
-              CREATE TABLE IF NOT EXISTS versions(room TEXT, kind TEXT, name TEXT, version INTEGER, data TEXT, ts TEXT,
-                PRIMARY KEY(room, kind, name, version));
-              CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY, room TEXT, kind TEXT, name TEXT, action TEXT,
-                version INTEGER, data TEXT, ts TEXT);
-              CREATE TABLE IF NOT EXISTS users(room TEXT, uid TEXT, data TEXT, PRIMARY KEY(room, uid));
-            ''')
+    def read_json(self, key):
+        return json.loads(self.objects.get(key).decode())
+
+    def write_json(self, key, value, if_absent=False):
+        self.objects.put(key, json.dumps(value, ensure_ascii=False).encode(), 'application/json', if_absent)
+
+    def resource_key(self, room, kind, name, path):
+        return f'{safe_name(room)}/{kind}s/{safe_name(name)}/{path}'
 
     def row(self, room, kind, name):
-        safe_name(name)
-        with self.connect() as db:
-            row = db.execute('SELECT * FROM resources WHERE room=? AND kind=? AND name=?', (room, kind, name)).fetchone()
-        if not row:
+        try:
+            return self.read_json(self.resource_key(room, kind, name, 'manifest.json'))
+        except FileNotFoundError:
             raise HTTPException(404, f'{kind}/{name} not found')
-        return row
+
+    def manifest_keys(self, room, kind):
+        prefix = f'{safe_name(room)}/{kind}s/'
+        return [key for key in self.objects.list(prefix) if key.endswith('/manifest.json') and key.count('/') == 3]
 
     def object_key(self, room, kind, name, version, path):
-        return f'{safe_name(room)}/{kind}s/{safe_name(name)}/v{version}/{safe_path(path)}'
+        return self.resource_key(room, kind, name, f'v{version}/{safe_path(path)}')
 
     def read_artifact(self, room, kind, name, artifact):
         return self.objects.get(self.object_key(room, kind, name, artifact['version'], artifact['path']))
@@ -365,12 +359,10 @@ class MarketplaceRepository:
         return current
 
     def public(self, room, kind, row, include_assets=False, include_code=False):
-        data = json.loads(row['data']) if isinstance(row, sqlite3.Row) else dict(row)
+        data = dict(row['data'])
         artifacts, result = data.pop('_artifacts', {}), data
-        keys = row.keys() if isinstance(row, sqlite3.Row) else row
-        created = row['created_at'] if 'created_at' in keys else row['ts']
-        updated = row['updated_at'] if 'updated_at' in keys else row['ts']
-        result |= {'id': result['display_name'], 'version': row['version'], 'created_at': created, 'updated_at': updated}
+        result |= {'id': result['display_name'], 'version': row['version'],
+          'created_at': row['created_at'], 'updated_at': row['updated_at']}
         if kind == 'skill':
             skill = artifacts.get('SKILL.md')
             result['skill_md'] = self.read_artifact(room, kind, result['display_name'], skill).decode() if skill else ''
@@ -394,9 +386,7 @@ class MarketplaceRepository:
         return result | ({'content': self.read_artifact(room, kind, name, item).decode()} if content else {})
 
     def list(self, room, kind):
-        with self.connect() as db:
-            rows = db.execute('SELECT * FROM resources WHERE room=? AND kind=? ORDER BY name', (room, kind)).fetchall()
-        return [self.public(room, kind, row) for row in rows]
+        return [self.public(room, kind, self.read_json(key)) for key in self.manifest_keys(room, kind)]
 
     def get(self, room, kind, name, include_assets=False, include_code=False):
         return self.public(room, kind, self.row(room, kind, name), include_assets, include_code)
@@ -404,72 +394,63 @@ class MarketplaceRepository:
     def create(self, room, kind, payload):
         data, timestamp = dict(payload), now()
         name = data['display_name']
-        with self.connect() as db:
-            if db.execute('SELECT 1 FROM resources WHERE room=? AND kind=? AND name=?', (room, kind, name)).fetchone():
-                raise HTTPException(409, f'{kind}/{name} already exists')
+        key = self.resource_key(room, kind, name, 'manifest.json')
+        if self.objects.list(key):
+            raise HTTPException(409, f'{kind}/{name} already exists')
         data['_artifacts'] = self.artifacts(room, kind, name, 1, data)
         try:
-            with self.connect() as db:
-                db.execute('INSERT INTO resources VALUES (?,?,?,?,?,?,?)',
-                  (room, kind, name, 1, json.dumps(data, ensure_ascii=False), timestamp, timestamp))
-                self.audit(db, room, kind, name, 'create', 1, data, timestamp)
-        except sqlite3.IntegrityError:
+            self.write_json(key, {'data': data, 'version': 1, 'created_at': timestamp, 'updated_at': timestamp}, if_absent=True)
+        except FileExistsError:
             raise HTTPException(409, f'{kind}/{name} already exists')
+        self.audit(room, kind, name, 'create', 1, data, timestamp)
         return self.get(room, kind, name)
 
     def update(self, room, kind, name, changes):
         row, timestamp = self.row(room, kind, name), now()
-        previous, version = json.loads(row['data']), row['version'] + 1
+        previous, version = row['data'], row['version'] + 1
         if changes.get('display_name') not in {None, name}:
             raise HTTPException(422, 'display_name cannot rename a resource')
         changes.pop('display_name', None)
         merged = previous | changes
         merged['display_name'] = name
         merged['_artifacts'] = self.artifacts(room, kind, name, version, merged, previous.get('_artifacts'))
-        with self.connect() as db:
-            db.execute('INSERT INTO versions VALUES (?,?,?,?,?,?)',
-              (room, kind, name, row['version'], row['data'], timestamp))
-            db.execute('UPDATE resources SET version=?, data=?, updated_at=? WHERE room=? AND kind=? AND name=?',
-              (version, json.dumps(merged, ensure_ascii=False), timestamp, room, kind, name))
-            self.audit(db, room, kind, name, 'update', version, changes, timestamp)
+        self.write_json(self.resource_key(room, kind, name, f"versions/{row['version']:08d}.json"), row)
+        self.write_json(self.resource_key(room, kind, name, 'manifest.json'),
+          {'data': merged, 'version': version, 'created_at': row['created_at'], 'updated_at': timestamp})
+        self.audit(room, kind, name, 'update', version, changes, timestamp)
         return self.get(room, kind, name)
 
     def delete(self, room, kind, name):
-        row, timestamp = self.row(room, kind, name), now()
-        with self.connect() as db:
-            db.execute('DELETE FROM resources WHERE room=? AND kind=? AND name=?', (room, kind, name))
-            db.execute('DELETE FROM versions WHERE room=? AND kind=? AND name=?', (room, kind, name))
-            self.audit(db, room, kind, name, 'delete', row['version'], {}, timestamp)
-        self.objects.delete_prefix(f'{room}/{kind}s/{name}/')
+        row = self.row(room, kind, name)
+        self.audit(room, kind, name, 'delete', row['version'], {}, now())
+        self.objects.delete_prefix(self.resource_key(room, kind, name, ''))
 
-    def audit(self, db, room, kind, name, action, version, data, timestamp):
-        db.execute('INSERT INTO audit(room,kind,name,action,version,data,ts) VALUES (?,?,?,?,?,?,?)',
-          (room, kind, name, action, version, json.dumps(data, ensure_ascii=False), timestamp))
+    def audit_prefix(self, room, kind, name):
+        return f'{safe_name(room)}/audit/{kind}/{safe_name(name)}/'
+
+    def audit(self, room, kind, name, action, version, data, timestamp):
+        prefix = self.audit_prefix(room, kind, name)
+        event = {'action': action, 'version': version, 'data': data, 'ts': timestamp}
+        self.write_json(f'{prefix}{len(self.objects.list(prefix)):08d}.json', event)
 
     def audits(self, room, kind, name):
-        with self.connect() as db:
-            rows = db.execute('SELECT action,version,data,ts FROM audit WHERE room=? AND kind=? AND name=? ORDER BY id',
-              (room, kind, name)).fetchall()
         events = []
-        for row in rows:
+        for key in self.objects.list(self.audit_prefix(room, kind, name)):
             try:
-                events.append({**dict(row), 'data': json.loads(row['data'])})
+                events.append(self.read_json(key))
             except json.JSONDecodeError:
                 pass
         return events
 
     def versions(self, room, kind, name):
         self.row(room, kind, name)
-        with self.connect() as db:
-            rows = db.execute('SELECT * FROM versions WHERE room=? AND kind=? AND name=? ORDER BY version',
-              (room, kind, name)).fetchall()
-        return [self.public(room, kind, row, include_assets=True, include_code=True) for row in rows]
+        keys = self.objects.list(self.resource_key(room, kind, name, 'versions/'))
+        return [self.public(room, kind, self.read_json(key), include_assets=True, include_code=True) for key in keys]
 
     def version(self, room, kind, name, version):
-        with self.connect() as db:
-            row = db.execute('SELECT * FROM versions WHERE room=? AND kind=? AND name=? AND version=?',
-              (room, kind, name, version)).fetchone()
-        if not row:
+        try:
+            row = self.read_json(self.resource_key(room, kind, name, f'versions/{version:08d}.json'))
+        except FileNotFoundError:
             raise HTTPException(404, f'{kind}/{name} version {version} not found')
         result = self.public(room, kind, row, include_assets=True, include_code=True)
         if kind == 'tool':
@@ -478,8 +459,7 @@ class MarketplaceRepository:
         return result
 
     def file(self, room, kind, name, path):
-        row = self.row(room, kind, name)
-        item = json.loads(row['data']).get('_artifacts', {}).get(safe_path(path))
+        item = self.row(room, kind, name)['data'].get('_artifacts', {}).get(safe_path(path))
         if not item:
             raise HTTPException(404, f'{kind}/{name}/{path} not found')
         try:
@@ -502,32 +482,30 @@ class MarketplaceRepository:
         return {'valid': all(item['exists'] for item in checked), 'references': checked,
           'missing': [item for item in checked if not item['exists']]}
 
+    def user_key(self, room, uid):
+        return f'{safe_name(room)}/users/{safe_name(uid)}.json'
+
     def create_user(self, room, payload):
-        uid, data = os.urandom(16).hex(), dict(payload)
-        data |= {'uid': uid, 'created_at': now()}
-        with self.connect() as db:
-            db.execute('INSERT INTO users VALUES (?,?,?)', (room, uid, json.dumps(data, ensure_ascii=False)))
+        data = dict(payload) | {'uid': os.urandom(16).hex(), 'created_at': now()}
+        self.write_json(self.user_key(room, data['uid']), data)
         return data
 
     def get_user(self, room, uid):
-        with self.connect() as db:
-            row = db.execute('SELECT data FROM users WHERE room=? AND uid=?', (room, uid)).fetchone()
-        if not row:
-            raise HTTPException(404, f'user/{uid} not found')
         try:
-            return json.loads(row['data'])
+            return self.read_json(self.user_key(room, uid))
+        except FileNotFoundError:
+            raise HTTPException(404, f'user/{uid} not found')
         except json.JSONDecodeError:
             raise HTTPException(422, f'user/{uid} is corrupt')
 
-    def agent_names(self):
-        with self.connect() as db:
-            return [row['name'] for row in db.execute("SELECT DISTINCT name FROM resources WHERE kind='agent'")]
+    def agent_names(self, room):
+        return [key.split('/')[2] for key in self.manifest_keys(room, 'agent')]
 
 
 class MarketplaceAgentRuntime:
-    def __init__(self, repo, runtime_dir, db_path, model_factory=None):
+    def __init__(self, repo, runtime_dir, model_factory=None):
         self.repo, self.runtime_dir = repo, Path(runtime_dir)
-        self.db = SqliteDb(db_file=str(db_path))
+        self.db = InMemoryDb()
         self.model_factory = model_factory or self.openai_model
 
     def openai_model(self, manifest):
@@ -603,12 +581,6 @@ class MarketplaceAgentRuntime:
           instructions=[config['system_prompt']], markdown=True, telemetry=False)
 
 
-def object_store(data_dir):
-    if os.getenv('MARKETPLACE_OBJECT_STORE', 'file') == 's3':
-        return S3ObjectStore()
-    return FileObjectStore(data_dir / 'objects', os.getenv('MARKETPLACE_LOCAL_SIGNING_SECRET', 'wonder-marketplace-local'))
-
-
 def configured_model_factory():
     path = os.getenv('MARKETPLACE_MODEL_FACTORY')
     if not path:
@@ -619,8 +591,8 @@ def configured_model_factory():
 
 def create_app(data_dir=None, model_factory=None):
     data_dir = Path(data_dir or os.getenv('MARKETPLACE_DATA_DIR', ROOT / '.marketplace-data'))
-    repo = MarketplaceRepository(data_dir / 'marketplace.db', object_store(data_dir))
-    runtime = MarketplaceAgentRuntime(repo, data_dir / 'runtime', data_dir / 'agentos.db', model_factory or configured_model_factory())
+    repo = MarketplaceRepository(S3ObjectStore())
+    runtime = MarketplaceAgentRuntime(repo, data_dir / 'runtime', model_factory or configured_model_factory())
     base = FastAPI(title='marketplace', version='0.1.0')
     origins = os.getenv('CORS_ALLOWED_ORIGINS',
       'http://localhost:3000,http://127.0.0.1:3000,http://localhost:8083,http://127.0.0.1:8083').split(',')
@@ -660,7 +632,7 @@ def create_app(data_dir=None, model_factory=None):
         async def delete_resource(name: str):
             repo.delete(SCOPE, kind, name)
             runtime.delete(SCOPE, kind, name) if kind in {'skill', 'tool'} else None
-            if kind == 'agent' and name not in repo.agent_names():
+            if kind == 'agent' and name not in repo.agent_names(SCOPE):
                 factories[:] = [item for item in factories if item.id != name]
             return Response(status_code=204)
 
@@ -746,33 +718,19 @@ def create_app(data_dir=None, model_factory=None):
     def get_user(uid: str):
         return repo.get_user(SCOPE, uid)
 
-    def presigned(request, key, method, expires, content_type=None):
-        result = {'url': repo.objects.presign(key, method, expires,
-          str(request.base_url).rstrip('/'), content_type), 'method': method, 'expires_in': expires}
+    def presigned(key, method, expires, content_type=None):
+        result = {'url': repo.objects.presign(key, method, expires, content_type), 'method': method, 'expires_in': expires}
         return result | ({'headers': {'Content-Type': content_type}} if content_type else {})
 
     @base.post('/api/v1/presign/download', tags=['presign'])
-    def presign_download(payload: DownloadRequest, request: Request):
-        return presigned(request, payload.key, 'GET', payload.expires_in)
+    def presign_download(payload: DownloadRequest):
+        return presigned(payload.key, 'GET', payload.expires_in)
 
     @base.post('/api/v1/presign/upload', tags=['presign'])
-    def presign_upload(payload: UploadRequest, request: Request):
-        return presigned(request, payload.key, 'PUT', payload.expires_in, payload.content_type)
+    def presign_upload(payload: UploadRequest):
+        return presigned(payload.key, 'PUT', payload.expires_in, payload.content_type)
 
-    @base.api_route('/api/v1/objects/{key:path}', methods=['GET', 'PUT'], include_in_schema=False)
-    async def local_object(key: str, request: Request, expires: int, signature: str):
-        if not isinstance(repo.objects, FileObjectStore) or expires < int(datetime.now().timestamp()) or not hmac.compare_digest(
-          signature, repo.objects.signature(key, request.method, expires)):
-            raise HTTPException(403, 'invalid or expired object signature')
-        if request.method == 'PUT':
-            repo.objects.put(key, await request.body(), request.headers.get('content-type'))
-            return Response(status_code=204)
-        try:
-            return Response(repo.objects.get(key), media_type='application/octet-stream')
-        except FileNotFoundError:
-            raise HTTPException(404, 'object not found')
-
-    for name in repo.agent_names():
+    for name in repo.agent_names(SCOPE):
         register_agent(name)
     agent_os = AgentOS(name='Wonder Marketplace', agents=factories, db=runtime.db, base_app=base,
       cors_allowed_origins=origins, on_route_conflict='preserve_base_app', telemetry=False)
@@ -783,10 +741,7 @@ def create_app(data_dir=None, model_factory=None):
     return app
 
 
-app = create_app()
-
-
 if __name__ == '__main__':
     import uvicorn
 
-    uvicorn.run('marketplace_server:app', host='127.0.0.1', port=int(os.getenv('AGENT_OS_PORT', '7777')), reload=False)
+    uvicorn.run(create_app(), host='127.0.0.1', port=int(os.getenv('AGENT_OS_PORT', '7777')))
