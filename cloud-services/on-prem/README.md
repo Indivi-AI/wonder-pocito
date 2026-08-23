@@ -1,46 +1,62 @@
-# Air-gapped OpenShift + MinIO
+# Air-gapped OpenShift/Kubernetes + MinIO
 
-Wonder uses these four buckets:
+All configuration lives in **one file**: copy `onprem.env.template` to `onprem.env`, fill it, and every
+on-prem script picks it up automatically (already-exported shell variables win over the file;
+`ONPREM_ENV_FILE=/path` points the scripts at a file elsewhere). `onprem.env` holds credentials — it is
+gitignored and must never be committed.
 
-- `indiviai-wonder`
-- `indiviai-wonder-protected`
-- `wonder-code-packages`
-- `logs-bucket-me-west1`
+Wonder uses four buckets — `indiviai-wonder`, `indiviai-wonder-protected`, `wonder-code-packages`,
+`logs-bucket-me-west1`. `deploy-buckets.sh` creates them with anonymous `s3:*` policies and seeds the CDN.
+MinIO CORS must allow the Wonder origin (`MINIO_API_CORS_ALLOW_ORIGIN=*` is fine).
 
-For the current unsigned deployment, allow anonymous `s3:*` access to each bucket and its objects. MinIO CORS must allow all origins.
-If `mc` and bucket-admin credentials are available, `deploy-buckets.sh` applies this policy. Otherwise configure it in S3 Browser.
-
-Outside the air gap, commit the desired revision and create the transfer kit:
+## 1. Outside the air gap - build the transfer kit
 
 ```sh
+git status            # must be clean
 npm run airgapped-export -- ../wonder-kit
 ```
 
-The air-gap image omits DuckDB. Transfer the resulting directory, verify `SHA256SUMS`, restore `wonder.bundle`, and load the image.
+The kit contains `wonder.bundle`, the runtime image, matching `node_modules`, the install/run scripts,
+`onprem-env.sh` and `onprem.env.template`. Transfer it on approved media and verify `SHA256SUMS`.
 
-In the selected OpenShift project, push the image to the internal registry and deploy it:
-
-```sh
-cd /mnt/users/yiftach/wonder
-export WONDER_IMAGE=image-registry.openshift-image-registry.svc:5000/PROJECT/wonder:VERSION
-export MINIO_ENDPOINT=https://minio.internal
-export MINIO_PUBLIC_ENDPOINT=https://minio.internal
-export KUBE_CLI=oc
-bash cloud-services/on-prem/deploy-cdn.sh
-bash cloud-services/on-prem/deploy-lambdas.sh
-oc expose service/wonder-public
-oc get route wonder-public
-```
-
-`deploy-lambdas.sh` uses the current project unless `NAMESPACE` is set. It deploys one unsigned public service with all-origin CORS.
-No MinIO credentials are passed to the runtime because all four buckets are anonymous.
-
-Run the on-prem MCP publisher from the restored checkout:
+## 2. Inside - fill the template once
 
 ```sh
-export WONDER_SERVICE_URL=https://ROUTE_HOST
-export WONDER_IMAGE=image-registry.openshift-image-registry.svc:5000/PROJECT/wonder:VERSION
-bash cloud-services/on-prem/run-mcp.sh /mnt/users/yiftach/wonder
+cp wonder-kit/onprem.env.template wonder-kit/onprem.env   # edit: endpoints, WONDER_IMAGE, WONDER_SERVICE_URL, admin keys
 ```
 
-Use the canonical `uploadRoomApplet` MCP tool; `STORAGE_PROVIDER=minio` routes it to the on-prem buckets.
+## 3. Inside - install
+
+With the kube context selected and the internal registry logged in:
+
+```sh
+bash wonder-kit/install-airgap.sh wonder-kit /opt/wonder
+```
+
+This verifies checksums, restores the checkout to `/opt/wonder` (git identity pinned to `onprem` so the
+MCP tools work), copies `onprem.env` into the checkout, unpacks `node_modules`, pushes the image, creates
+buckets + CDN, and deploys the `wonder-public` service with `WONDER_AUTH_MODE=none` (all rooms public,
+applets run anonymously).
+
+Expose the service at the host you wrote in `WONDER_SERVICE_URL`:
+
+```sh
+oc expose service/wonder-public --hostname=<WONDER_SERVICE_URL host>
+curl -k $WONDER_SERVICE_URL/health        # {"status":"ok","mode":"public"}
+```
+
+## 4. Inside - run the MCP publisher
+
+```sh
+bash wonder-kit/run-mcp.sh /opt/wonder    # MCP at http://localhost:3000/mcp
+```
+
+Publish with the canonical tools — `STORAGE_PROVIDER=minio` (set by the script) routes everything to MinIO:
+`uploadRoomApplet({roomId, entryCompFullId})`, `uploadRoomLambda({compFullId, roomWUrl})`, `wFetch` for data.
+Applets serve at `$WONDER_SERVICE_URL/room/<roomId>/applet/<name>`.
+
+## Updating
+
+New code: re-export outside, transfer, `git -C /opt/wonder fetch kit/wonder.bundle <branch> && git -C /opt/wonder reset --hard FETCH_HEAD`,
+re-run `install-airgap.sh` (env file is already in place), then `updateLambdasAndApplets({roomId})`.
+Data changes need no redeploy — just `wFetch` writes.

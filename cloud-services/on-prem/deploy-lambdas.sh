@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/onprem-env.sh"
 
 : "${WONDER_IMAGE:?Set WONDER_IMAGE to the image in the client registry}"
 : "${MINIO_ENDPOINT:?Set the MinIO endpoint reachable from Kubernetes}"

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/onprem-env.sh"
 
 ROOT="${1:-${WONDER_ROOT:-$PWD}}"
 ENGINE="${CONTAINER_ENGINE:-docker}"

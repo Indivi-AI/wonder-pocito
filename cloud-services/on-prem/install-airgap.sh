@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/onprem-env.sh"
 
 KIT="${1:?Usage: install-airgap.sh KIT_DIR [REPO_DIR]}"
 DEST="${2:-${WONDER_ROOT:-$PWD/wonder}}"
@@ -21,6 +22,7 @@ else
   git clone "$KIT/wonder.bundle" "$DEST"
 fi
 git -C "$DEST" config user.email onprem@airgap   # developerEntryPoint resolves .jb6/entry-points-{gitUser}.js from this
+[[ ! -f "$ONPREM_ENV_FILE" ]] || cp "$ONPREM_ENV_FILE" "$DEST/cloud-services/on-prem/onprem.env"   # checkout scripts stay self-configured
 tar -C "$DEST" -xzf "$KIT/node_modules.tar.gz"
 "$ENGINE" load -i "$KIT/wonder-image.tar.gz"
 "$ENGINE" tag "$WONDER_SOURCE_IMAGE" "$WONDER_IMAGE"

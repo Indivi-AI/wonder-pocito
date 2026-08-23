@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/onprem-env.sh"
 
 : "${MINIO_ENDPOINT:?Set MINIO_ENDPOINT}"
 : "${MINIO_ACCESS_KEY:?Set MINIO_ACCESS_KEY}"
