@@ -42,7 +42,7 @@ async function wresolveInfo(url, _ctx, method = 'GET') {
 const storageEnvVars = ({ forBrowser } = {}) => {
   const env = globalThis.process?.env || {}
   if (env.STORAGE_PROVIDER !== 'minio') return {}
-  const bucketEndpoint = forBrowser ? env.WONDER_STORAGE_URL : env.MINIO_ENDPOINT || env.WONDER_STORAGE_URL
+  const bucketEndpoint = forBrowser ? env.WONDER_STORAGE_URL || env.MINIO_ENDPOINT : env.MINIO_ENDPOINT || env.WONDER_STORAGE_URL
   return { db: 'minio', ...(bucketEndpoint && { bucketEndpoint }), ...(env.WONDER_CDN_URL && { clientCodeEndpoint: env.WONDER_CDN_URL }) }
 }
 

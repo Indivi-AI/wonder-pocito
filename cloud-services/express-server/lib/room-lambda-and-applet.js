@@ -18,7 +18,8 @@ import { spawn } from 'child_process'
 
 const { storageEnvVars } = jb.wonderUtils
 const storageProvider = () => process.env.STORAGE_PROVIDER || 'gcs'
-const storageUrl = () => process.env.WONDER_STORAGE_URL || 'https://storage.googleapis.com'
+const storageUrl = () => process.env.WONDER_STORAGE_URL
+  || (storageProvider() === 'minio' && process.env.MINIO_ENDPOINT) || 'https://storage.googleapis.com'
 const CLIENT_RUNTIME_WURL = 'clientCode:cloudflare//runtime/'
 const jb6Pkgs = ['core','common','react','rx','jq','llm-guide','mcp','testing','repo','lang-service',
   'probe-studio']

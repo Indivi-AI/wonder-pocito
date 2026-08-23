@@ -29,10 +29,8 @@ CID="$("$ENGINE" create --platform "$PLATFORM" "$BASE_IMAGE")"
 tar -C "$TMP" -czf "$OUT/node_modules.tar.gz" node_modules
 "$ENGINE" rm "$CID" >/dev/null
 CID=''
-cp "$ROOT/cloud-services/on-prem/install-airgap.sh" "$ROOT/cloud-services/on-prem/run-mcp.sh" \
-  "$ROOT/cloud-services/on-prem/onprem-env.sh" "$ROOT/cloud-services/on-prem/onprem.env.template" "$OUT"
 printf 'WONDER_COMMIT=%q\nWONDER_SOURCE_IMAGE=%q\nWONDER_PLATFORM=%q\n' "$REV" "$SOURCE_IMAGE" "$PLATFORM" > "$OUT/manifest.env"
-FILES=(wonder.bundle wonder-image.tar.gz node_modules.tar.gz install-airgap.sh run-mcp.sh onprem-env.sh onprem.env.template manifest.env)
+FILES=(wonder.bundle wonder-image.tar.gz node_modules.tar.gz manifest.env)
 if command -v sha256sum >/dev/null; then (cd "$OUT" && sha256sum "${FILES[@]}" > SHA256SUMS)
 else (cd "$OUT" && shasum -a 256 "${FILES[@]}" > SHA256SUMS); fi
 echo "Air-gap kit: $OUT"
