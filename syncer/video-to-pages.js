@@ -1,14 +1,24 @@
 #!/usr/bin/env node
-// airgap syncer: extracts one clean PNG per diff page from a phone video of the looping gif. only external tool: ffmpeg (decodes the phone video).
+// airgap syncer: extracts one clean PNG per diff page from a phone video of the looping gif. only real dependency: one ffmpeg binary (see chain below).
 import {execFileSync} from 'node:child_process'
-import {mkdirSync} from 'node:fs'
+import {mkdirSync, existsSync} from 'node:fs'
+import {join, dirname} from 'node:path'
+import {fileURLToPath} from 'node:url'
 
 const argv = process.argv.slice(2)
 const flag = (key, dflt, cast = Number) => { const i = argv.indexOf('--' + key); return i < 0 ? dflt : cast(argv.splice(i, 2)[1]) }
 const [fps, out, video] = [flag('fps', 8), flag('out', 'syncer/out-pages', String), argv[0]]
 if (!video) { console.error('usage: node syncer/video-to-pages.js phone-video.mp4 [--out dir] [--fps 8]'); process.exit(1) }
-const ffmpeg = args => { try { return execFileSync('ffmpeg', ['-v', 'error', ...args], {maxBuffer: 1 << 30}) }
-  catch (e) { if (e.code === 'ENOENT') { console.error('ffmpeg not found - install it (the only external tool, used to decode the video)'); process.exit(1) } throw e } }
+const attempt = fn => { try { return fn() } catch { return '' } }
+const here = dirname(fileURLToPath(import.meta.url))
+const ffmpegBin = process.env.FFMPEG
+  || [join(here, 'ffmpeg'), join(here, 'ffmpeg.exe')].find(existsSync)
+  || attempt(() => (execFileSync('ffmpeg', ['-version']), 'ffmpeg'))
+  || await import('ffmpeg-static').then(m => existsSync(m.default) && m.default, () => '')
+  || attempt(() => execFileSync('python3', ['-c', 'import imageio_ffmpeg;print(imageio_ffmpeg.get_ffmpeg_exe())'], {encoding: 'utf8'}).trim())
+if (!ffmpegBin) { console.error('no ffmpeg found. any of: extract the offline kit (syncer/make-offline-kit.sh) | npm i ffmpeg-static |'
+  + ' pip install imageio-ffmpeg | FFMPEG=/path/to/ffmpeg'); process.exit(1) }
+const ffmpeg = args => execFileSync(ffmpegBin, ['-v', 'error', ...args], {maxBuffer: 1 << 30})
 
 const SW = 48, SH = 27, FRAME = SW * SH * 3
 const raw = ffmpeg(['-i', video, '-vf', `fps=${fps},crop=iw/2:ih/2,scale=${SW}:${SH}`, '-pix_fmt', 'rgb24', '-f', 'rawvideo', 'pipe:1'])   // classify on center crop

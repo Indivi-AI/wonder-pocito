@@ -24,7 +24,7 @@ tap to focus, start anytime, stop after the magenta flash has appeared **twice**
 
     node syncer/video-to-pages.js phone-video.mp4
 
-Needs `ffmpeg` (the only external tool, used to decode the phone video). It classifies sampled frames by mean color,
+Needs one `ffmpeg` binary (see dependencies below). It classifies sampled frames by mean color,
 takes the content segments between two magenta markers, and saves the middle frame of each at full resolution as
 `syncer/out-pages/page-NN.png` — deterministic thresholds, no OCR, no ML. Photographed stills skip this step entirely.
 
@@ -37,6 +37,27 @@ Give the AI the page images plus this prompt:
 > "\\" a literal backslash, "\uXXXX" / "\u{...}" that unicode char. Page 1 opens with 2 meta lines (branch, base commit,
 > rules) that are not diff content. Reconstruct the patch and apply it to the current branch (verify it sits on the base
 > commit from the meta line). If any spot is unreadable, say so and stop — never guess code.
+
+## dependencies & offline kit
+
+| piece | needs | why |
+| --- | --- | --- |
+| `diff-to-media.js` | node + git only | font, png and gif encoders are embedded — zero packages |
+| `video-to-pages.js` | node + one ffmpeg binary | decoding phone h264/hevc video is the one thing node stdlib cannot do |
+| the reading AI | nothing | it just looks at `page-NN.png` |
+
+`video-to-pages.js` finds ffmpeg in this order: `FFMPEG` env var → `ffmpeg` file beside the script (offline kit) → system
+PATH → npm `ffmpeg-static` → pip `imageio-ffmpeg`. So inside the air gap any ONE of these makes it work:
+
+- `pip install imageio-ffmpeg` from the artifactory pypi mirror — **preferred**: its manylinux wheel embeds a static
+  ffmpeg, so the mirror alone is enough, no postinstall downloads
+- `npm i ffmpeg-static` from the artifactory npm mirror — works only if its github-release postinstall download is
+  also mirrored/allowed, which airgapped npm mirrors often are not
+- system ffmpeg, if the machine already has it
+- the offline kit: outside run `bash syncer/make-offline-kit.sh` (→ `syncer/syncer-kit.tar.gz` + `.sha256`, ~30MB;
+  ffmpeg taken from the versioned pypi imageio-ffmpeg wheel; `ARCH=aarch64` for arm, `FFMPEG_BIN=/path` to vendor your
+  own). Transfer both files, `sha256sum -c syncer-kit.tar.gz.sha256`, then `tar -xzf syncer-kit.tar.gz -C /path/to/wonder`
+  — it drops `syncer/ffmpeg` next to the scripts (plus the scripts themselves, so the kit alone bootstraps a bare machine)
 
 ## notes
 
