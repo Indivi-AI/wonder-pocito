@@ -22,6 +22,6 @@ real skill and tool loop; only the model response selection is deterministic.
 Run the deterministic suite with:
 
 ```sh
-cd solutions/idf/wonder-platform
+cd solutions/idf/marketplace-server
 ../platform-v0/.venv/bin/python -m unittest -v test_marketplace_server.py
 ```

@@ -1,6 +1,6 @@
 import { dsls, jb } from '@jb6/core'
 import '@jb6/react'
-import '../wonder-platform/wonder-platform-domain.js'
+import '../marketplace-ui/wonder-platform-domain.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
