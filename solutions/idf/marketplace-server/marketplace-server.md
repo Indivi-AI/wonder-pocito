@@ -5,9 +5,9 @@ direct clients may send the bare room ID themselves. Omitting the header preserv
 
 Resource manifests use a stable semantic `id` such as `uiRenderingSkill` in URLs and relationships, plus one editable `display_name` for UI.
 
-Copy `.env.example` to `.env`, configure the OpenAI-compatible provider, then run `./start-marketplace.sh`. All marketplace state lives in
+Setup from zero (dev and deployment): `solutions/idf/wonder-platform/README.md`. All marketplace state lives in
 MinIO/S3 — manifests, version snapshots, audit events, users, and artifacts are
-room-prefixed objects in one bucket; there is no sqlite. Start the local MinIO with `npm run start-min-io`. Defaults: `MARKETPLACE_S3_BUCKET=wonder-marketplace`,
+room-prefixed objects in one bucket; there is no sqlite. Defaults: `MARKETPLACE_S3_BUCKET=wonder-marketplace`,
 `MARKETPLACE_S3_ENDPOINT=http://127.0.0.1:9000`, `MARKETPLACE_S3_ACCESS_KEY=wonder`, `MARKETPLACE_S3_SECRET_KEY=wonder-minio-local`.
 Presigned upload/download URLs point at room-prefixed MinIO keys. `MARKETPLACE_DATA_DIR` only hosts runtime materialization, and each room's
 agent chat sessions use a separate Agno in-memory db, so both reset without data loss. `AGENT_OS_PORT` (default 7777), `AGENT_OS_HOST`
