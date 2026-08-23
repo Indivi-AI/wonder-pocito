@@ -156,7 +156,6 @@ Data('wonderPlatformUi', {
       ['skills', 'BookOpenText', 'מיומנויות'], ['tools', 'Wrench', 'כלים'], ['subagents', 'Network', 'סאב-אייג׳נטים'],
       ['reports', 'BadgeCheck', 'דוחות']],
     labels: {plugins: 'פלאגין', skills: 'מיומנות', tools: 'כלי', subagents: 'סאב-אייג׳נט', evaluations: 'סט אבלואציה'},
-    prefixes: {plugins: 'p', skills: 's', tools: 't', subagents: 'a', reports: 'r', evaluations: 'e'},
     classes: {
       button: 'inline-flex items-center justify-center gap-2 rounded-xl border border-[#dfe5e1] bg-white px-3.5 py-2 text-sm',
       primary: 'inline-flex items-center justify-center gap-2 rounded-xl bg-[#2f6b4b] px-4 py-2.5 text-sm font-semibold text-white',

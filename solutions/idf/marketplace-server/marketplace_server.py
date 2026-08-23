@@ -55,11 +55,12 @@ class StrictModel(BaseModel):
 
 
 class NamedModel(StrictModel):
-    display_name: str
+    id: str = Field(description='Stable semantic identifier used in API paths and references')
+    display_name: str = Field(description='Human-readable display name')
 
-    @field_validator('display_name')
+    @field_validator('id')
     @classmethod
-    def valid_name(cls, value):
+    def valid_id(cls, value):
         return safe_name(value)
 
 
@@ -129,7 +130,6 @@ class PluginConfig(BaseModel):
 
 
 class DescribedModel(NamedModel):
-    hebrew_display_name: str | None = None
     description: str
     hebrew_description: str | None = None
     tags: list[TagRef] = Field(default_factory=list)
@@ -145,7 +145,6 @@ class CreateSkill(DescribedModel):
 
 
 class ToolDescription(NamedModel):
-    hebrew_display_name: str | None = None
     description: str
     hebrew_description: str | None = None
 
@@ -188,8 +187,8 @@ class CreateAgent(DescribedModel):
 class UpdateBase(StrictModel):
     """Partial update: only explicitly set fields overwrite the stored manifest/config."""
 
+    id: str | None = None
     display_name: str | None = None
-    hebrew_display_name: str | None = None
     description: str | None = None
     hebrew_description: str | None = None
     tags: list[TagRef] | None = None
@@ -205,8 +204,8 @@ class UpdateSkill(UpdateBase):
 class UpdateTool(StrictModel):
     """Partial update; code_files is write-only and typed dedicated config is conditionally revalidated."""
 
+    id: str | None = None
     display_name: str | None = None
-    hebrew_display_name: str | None = None
     description: str | None = None
     hebrew_description: str | None = None
     tool_type: ToolType | None = None
@@ -327,9 +326,16 @@ class MarketplaceRepository:
     def resource_key(self, room, kind, name, path):
         return f'{safe_name(room)}/{kind}s/{safe_name(name)}/{path}'
 
+    def normalize_row(self, row):
+        data = dict(row['data'])
+        legacy_name = data.pop('hebrew_display_name', None)
+        if 'id' not in data:
+            data['id'], data['display_name'] = data['display_name'], legacy_name or data['display_name']
+        return row | {'data': data}
+
     def row(self, room, kind, name):
         try:
-            return self.read_json(self.resource_key(room, kind, name, 'manifest.json'))
+            return self.normalize_row(self.read_json(self.resource_key(room, kind, name, 'manifest.json')))
         except FileNotFoundError:
             raise HTTPException(404, f'{kind}/{name} not found')
 
@@ -364,27 +370,26 @@ class MarketplaceRepository:
             if 'config' in payload:
                 writes['config.yaml'] = (yaml.safe_dump(payload['config'], allow_unicode=True, sort_keys=False).encode(), 'text/yaml')
         for path, (content, mime_type) in writes.items():
-            self.objects.put(self.object_key(room, kind, payload['display_name'], version, path), content, mime_type)
+            self.objects.put(self.object_key(room, kind, payload['id'], version, path), content, mime_type)
             current[path] = {'path': path, 'version': version, 'mime_type': mime_type}
         return current
 
     def public(self, room, kind, row, include_assets=False, include_code=False):
-        data = dict(row['data'])
+        data = dict(self.normalize_row(row)['data'])
         artifacts, result = data.pop('_artifacts', {}), data
-        result |= {'id': result['display_name'], 'version': row['version'],
-          'created_at': row['created_at'], 'updated_at': row['updated_at']}
+        result |= {'version': row['version'], 'created_at': row['created_at'], 'updated_at': row['updated_at']}
         if kind == 'skill':
             skill = artifacts.get('SKILL.md')
-            result['skill_md'] = self.read_artifact(room, kind, result['display_name'], skill).decode() if skill else ''
-            result['assets'] = [self.asset(room, kind, result['display_name'], item, include_assets) for key, item in artifacts.items()
+            result['skill_md'] = self.read_artifact(room, kind, result['id'], skill).decode() if skill else ''
+            result['assets'] = [self.asset(room, kind, result['id'], item, include_assets) for key, item in artifacts.items()
               if key.startswith('assets/')]
         if kind == 'tool':
             result['tags'] = result.get('tags', [])
-            result['code_files'] = [self.code(room, kind, result['display_name'], item, include_code) for key, item in artifacts.items()
+            result['code_files'] = [self.code(room, kind, result['id'], item, include_code) for key, item in artifacts.items()
               if key.startswith('code/')]
         if kind in {'plugin', 'agent'}:
             readme = artifacts.get('README.md')
-            result['readme'] = self.read_artifact(room, kind, result['display_name'], readme).decode() if readme else ''
+            result['readme'] = self.read_artifact(room, kind, result['id'], readme).decode() if readme else ''
         return result
 
     def asset(self, room, kind, name, item, content):
@@ -408,7 +413,7 @@ class MarketplaceRepository:
 
     def create(self, room, kind, payload):
         data, timestamp = dict(payload), now()
-        name = data['display_name']
+        name = data['id']
         key = self.resource_key(room, kind, name, 'manifest.json')
         if self.objects.list(key):
             raise HTTPException(409, f'{kind}/{name} already exists')
@@ -424,11 +429,11 @@ class MarketplaceRepository:
     def update(self, room, kind, name, changes):
         row, timestamp = self.row(room, kind, name), now()
         previous, version = row['data'], row['version'] + 1
-        if changes.get('display_name') not in {None, name}:
-            raise HTTPException(422, 'display_name cannot rename a resource')
-        changes.pop('display_name', None)
+        if changes.get('id') not in {None, name}:
+            raise HTTPException(422, 'id cannot rename a resource')
+        changes.pop('id', None)
         merged = previous | changes
-        merged['display_name'] = name
+        merged['id'] = name
         merged['_artifacts'] = self.artifacts(room, kind, name, version, merged, previous.get('_artifacts'))
         self.write_json(self.resource_key(room, kind, name, f"versions/{row['version']:08d}.json"), row)
         self.write_json(self.resource_key(room, kind, name, 'manifest.json'),
@@ -470,7 +475,6 @@ class MarketplaceRepository:
             raise HTTPException(404, f'{kind}/{name} version {version} not found')
         result = self.public(room, kind, row, include_assets=True, include_code=True)
         if kind == 'tool':
-            result.pop('id', None)
             result.pop('tags', None)
         return result
 
@@ -592,7 +596,7 @@ class MarketplaceAgentRuntime:
         skill_names.update(config.get('skills', []))
         tool_names.update(config.get('tools', []))
         skills = Skills([LocalSkills(str(self.materialize_skill(room, item)), validate=False) for item in sorted(skill_names)])
-        return Agent(id=name, name=manifest.get('hebrew_display_name') or name, model=self.model_factory(manifest), db=self.db,
+        return Agent(id=name, name=manifest['display_name'], model=self.model_factory(manifest), db=self.db,
           tools=[self.tool(room, item) for item in sorted(tool_names)], skills=skills,
           instructions=[config['system_prompt']], markdown=True, telemetry=False)
 
@@ -635,28 +639,28 @@ def create_app(data_dir=None, model_factory=None):
 
         async def create_resource(payload: create_model):
             result = repo.create(SCOPE, kind, payload.model_dump())
-            register_agent(result['display_name']) if kind == 'agent' else None
+            register_agent(result['id']) if kind == 'agent' else None
             return result
 
-        async def get_resource(name: str, request: Request):
+        async def get_resource(id: str, request: Request):
             include_assets = kind == 'skill' and request.query_params.get('includeAssets', '').lower() == 'true'
-            return repo.get(SCOPE, kind, name, include_assets=include_assets)
+            return repo.get(SCOPE, kind, id, include_assets=include_assets)
 
-        async def update_resource(name: str, payload: update_model):
-            return repo.update(SCOPE, kind, name, payload.model_dump(exclude_unset=True))
+        async def update_resource(id: str, payload: update_model):
+            return repo.update(SCOPE, kind, id, payload.model_dump(exclude_unset=True))
 
-        async def delete_resource(name: str):
-            repo.delete(SCOPE, kind, name)
-            runtime.delete(SCOPE, kind, name) if kind in {'skill', 'tool'} else None
-            if kind == 'agent' and name not in repo.agent_names(SCOPE):
-                factories[:] = [item for item in factories if item.id != name]
+        async def delete_resource(id: str):
+            repo.delete(SCOPE, kind, id)
+            runtime.delete(SCOPE, kind, id) if kind in {'skill', 'tool'} else None
+            if kind == 'agent' and id not in repo.agent_names(SCOPE):
+                factories[:] = [item for item in factories if item.id != id]
             return Response(status_code=204)
 
-        async def list_versions(name: str):
-            return repo.versions(SCOPE, kind, name)
+        async def list_versions(id: str):
+            return repo.versions(SCOPE, kind, id)
 
-        async def read_version(name: str, n: int):
-            return repo.version(SCOPE, kind, name, n)
+        async def read_version(id: str, n: int):
+            return repo.version(SCOPE, kind, id, n)
 
         labels = {verb: f'{verb}_{kind}_api_v1_{plural}' for verb in ('create', 'get', 'update', 'delete')}
         base.add_api_route(f'/api/v1/{plural}/', list_resources, methods=['GET'], operation_id=f'list_{plural}_api_v1_{plural}__get')
@@ -664,14 +668,14 @@ def create_app(data_dir=None, model_factory=None):
           operation_id=f"{labels['create']}__post")
         base.add_api_route(f'/api/v1/{plural}', list_resources, methods=['GET'], include_in_schema=False)
         base.add_api_route(f'/api/v1/{plural}', create_resource, methods=['POST'], status_code=201, include_in_schema=False)
-        base.add_api_route(f'/api/v1/{plural}/{{name}}', get_resource, methods=['GET'], operation_id=f"{labels['get']}__name__get")
-        base.add_api_route(f'/api/v1/{plural}/{{name}}', update_resource, methods=['PUT'], operation_id=f"{labels['update']}__name__put")
-        base.add_api_route(f'/api/v1/{plural}/{{name}}', delete_resource, methods=['DELETE'], status_code=204,
-          operation_id=f"{labels['delete']}__name__delete")
-        base.add_api_route(f'/api/v1/{plural}/{{name}}/versions', list_versions, methods=['GET'],
-          operation_id=f'list_{kind}_versions_api_v1_{plural}__name__versions_get')
-        base.add_api_route(f'/api/v1/{plural}/{{name}}/versions/{{n}}', read_version, methods=['GET'],
-          operation_id=f'read_{kind}_version_api_v1_{plural}__name__versions__n__get')
+        base.add_api_route(f'/api/v1/{plural}/{{id}}', get_resource, methods=['GET'], operation_id=f"{labels['get']}__id__get")
+        base.add_api_route(f'/api/v1/{plural}/{{id}}', update_resource, methods=['PUT'], operation_id=f"{labels['update']}__id__put")
+        base.add_api_route(f'/api/v1/{plural}/{{id}}', delete_resource, methods=['DELETE'], status_code=204,
+          operation_id=f"{labels['delete']}__id__delete")
+        base.add_api_route(f'/api/v1/{plural}/{{id}}/versions', list_versions, methods=['GET'],
+          operation_id=f'list_{kind}_versions_api_v1_{plural}__id__versions_get')
+        base.add_api_route(f'/api/v1/{plural}/{{id}}/versions/{{n}}', read_version, methods=['GET'],
+          operation_id=f'read_{kind}_version_api_v1_{plural}__id__versions__n__get')
 
     for kind, pair in models.items():
         routes(kind, *pair)
@@ -680,49 +684,49 @@ def create_app(data_dir=None, model_factory=None):
         content, mime_type = repo.file(SCOPE, kind, safe_name(path[0]), f'{prefix}{safe_path(path[1])}')
         return Response(content, media_type=mime_type or 'application/octet-stream' if binary else 'text/plain')
 
-    @base.get('/api/v1/tools/{name}/code/{path:path}', tags=['tools'],
-      operation_id='get_tool_code_api_v1_tools__name__code__path__get')
-    def tool_code(name: str, path: str):
-        return raw_file('tool', 'code/', (name, path))
+    @base.get('/api/v1/tools/{id}/code/{path:path}', tags=['tools'],
+      operation_id='get_tool_code_api_v1_tools__id__code__path__get')
+    def tool_code(id: str, path: str):
+        return raw_file('tool', 'code/', (id, path))
 
-    @base.get('/api/v1/skills/{name}/SKILL.md', tags=['skills'], operation_id='get_skill_md_api_v1_skills__name__SKILL_md_get')
-    def skill_md(name: str):
-        return raw_file('skill', '', (name, 'SKILL.md'))
+    @base.get('/api/v1/skills/{id}/SKILL.md', tags=['skills'], operation_id='get_skill_md_api_v1_skills__id__SKILL_md_get')
+    def skill_md(id: str):
+        return raw_file('skill', '', (id, 'SKILL.md'))
 
-    @base.get('/api/v1/skills/{name}/assets/{path:path}', tags=['skills'],
-      operation_id='get_skill_asset_api_v1_skills__name__assets__path__get')
-    def skill_asset(name: str, path: str):
-        return raw_file('skill', 'assets/', (name, path), binary=True)
+    @base.get('/api/v1/skills/{id}/assets/{path:path}', tags=['skills'],
+      operation_id='get_skill_asset_api_v1_skills__id__assets__path__get')
+    def skill_asset(id: str, path: str):
+        return raw_file('skill', 'assets/', (id, path), binary=True)
 
-    @base.get('/api/v1/plugins/{name}/config.yaml', tags=['plugins'],
-      operation_id='get_plugin_config_api_v1_plugins__name__config_yaml_get')
-    def plugin_config(name: str):
-        return raw_file('plugin', '', (name, 'config.yaml'))
+    @base.get('/api/v1/plugins/{id}/config.yaml', tags=['plugins'],
+      operation_id='get_plugin_config_api_v1_plugins__id__config_yaml_get')
+    def plugin_config(id: str):
+        return raw_file('plugin', '', (id, 'config.yaml'))
 
-    @base.get('/api/v1/plugins/{name}/README.md', tags=['plugins'],
-      operation_id='get_plugin_readme_api_v1_plugins__name__README_md_get')
-    def plugin_readme(name: str):
-        return raw_file('plugin', '', (name, 'README.md'))
+    @base.get('/api/v1/plugins/{id}/README.md', tags=['plugins'],
+      operation_id='get_plugin_readme_api_v1_plugins__id__README_md_get')
+    def plugin_readme(id: str):
+        return raw_file('plugin', '', (id, 'README.md'))
 
-    @base.get('/api/v1/agents/{name}/config.yaml', tags=['agents'],
-      operation_id='get_agent_config_api_v1_agents__name__config_yaml_get')
-    def agent_config(name: str):
-        return raw_file('agent', '', (name, 'config.yaml'))
+    @base.get('/api/v1/agents/{id}/config.yaml', tags=['agents'],
+      operation_id='get_agent_config_api_v1_agents__id__config_yaml_get')
+    def agent_config(id: str):
+        return raw_file('agent', '', (id, 'config.yaml'))
 
-    @base.get('/api/v1/plugins/{name}/references', tags=['plugins'],
-      operation_id='check_plugin_references_api_v1_plugins__name__references_get')
-    def plugin_references(name: str):
-        return repo.references(SCOPE, 'plugin', name)
+    @base.get('/api/v1/plugins/{id}/references', tags=['plugins'],
+      operation_id='check_plugin_references_api_v1_plugins__id__references_get')
+    def plugin_references(id: str):
+        return repo.references(SCOPE, 'plugin', id)
 
-    @base.get('/api/v1/agents/{name}/references', tags=['agents'],
-      operation_id='check_agent_references_api_v1_agents__name__references_get')
-    def agent_references(name: str):
-        return repo.references(SCOPE, 'agent', name)
+    @base.get('/api/v1/agents/{id}/references', tags=['agents'],
+      operation_id='check_agent_references_api_v1_agents__id__references_get')
+    def agent_references(id: str):
+        return repo.references(SCOPE, 'agent', id)
 
-    @base.get('/api/v1/audit/{resource_type}/{resource_name}', tags=['audit'],
-      operation_id='list_audit_events_api_v1_audit__resource_type___resource_name__get')
-    def audit(resource_type: Literal['tool', 'skill', 'plugin', 'agent'], resource_name: str):
-        return repo.audits(SCOPE, resource_type, resource_name)
+    @base.get('/api/v1/audit/{resource_type}/{resource_id}', tags=['audit'],
+      operation_id='list_audit_events_api_v1_audit__resource_type___resource_id__get')
+    def audit(resource_type: Literal['tool', 'skill', 'plugin', 'agent'], resource_id: str):
+        return repo.audits(SCOPE, resource_type, resource_id)
 
     @base.post('/api/v1/users/', status_code=201, tags=['users'])
     def create_user(payload: CreateUser):

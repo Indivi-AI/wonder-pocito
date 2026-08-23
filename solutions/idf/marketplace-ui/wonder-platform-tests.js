@@ -55,26 +55,26 @@ Data('wonderPlatformMarketplaceFixture', {
   impl: ctx => {
     const seed = wonderPlatformSeed.$runWithCtx(ctx), item = (resource, manifest) => wonderPlatformMarketplaceItem.$runWithCtx(ctx, {resource, item: manifest})
     return {...seed, marketplace: true,
-      plugins: [item('plugins', {display_name: 'evidence-plugin', hebrew_display_name: 'פלאגין ראיות', description: 'Evidence plugin',
+      plugins: [item('plugins', {id: 'evidencePlugin', display_name: 'פלאגין ראיות', description: 'Evidence plugin',
         hebrew_description: 'אורז מיומנות וכלי.', tags: [{tag_type: 'domain', tag_name: 'audit'}], version: 2,
-        config: {skills: ['evidence-skill'], tools: ['evidence-search']}, readme: '# Evidence plugin'})],
-      skills: [item('skills', {display_name: 'evidence-skill', hebrew_display_name: 'מיומנות ראיות', description: 'Evidence skill',
+        config: {skills: ['evidenceSkill'], tools: ['evidenceSearch']}, readme: '# Evidence plugin'})],
+      skills: [item('skills', {id: 'evidenceSkill', display_name: 'מיומנות ראיות', description: 'Evidence skill',
         hebrew_description: 'בונה שרשרת ראיות.', version: 3, min_agent_version: '0.1.0', license: 'MIT', skill_md: '# Evidence skill',
         assets: [{path: 'checklist.md', content_b64: 'IyBDaGVja2xpc3Q=', mime_type: 'text/markdown'}]})],
-      tools: [item('tools', {display_name: 'evidence-search', hebrew_display_name: 'חיפוש ראיות', description: 'Evidence search',
+      tools: [item('tools', {id: 'evidenceSearch', display_name: 'חיפוש ראיות', description: 'Evidence search',
         hebrew_description: 'מחפש במקורות.', version: 4, tool_type: 'code', json_schema: {type: 'object'}, is_async: true, tracable: true,
         dedicated_tool_config: {}, code_files: [{path: 'tool.py', content: 'def search(): pass'}]})],
-      subagents: [item('subagents', {display_name: 'evidence-agent', hebrew_display_name: 'סוכן ראיות', description: 'Evidence agent',
+      subagents: [item('subagents', {id: 'evidenceAgent', display_name: 'סוכן ראיות', description: 'Evidence agent',
         hebrew_description: 'מאמת טענות.', version: 5, config: {system_prompt: 'Use evidence.', backend_config: {harness_type: 'deepagents'},
-          plugins: ['evidence-plugin'], skills: ['evidence-skill'], tools: ['evidence-search'], sub_agents: []}})]}
+          plugins: ['evidencePlugin'], skills: ['evidenceSkill'], tools: ['evidenceSearch'], sub_agents: []}})]}
   }
 })
 
 Data('wonderPlatformMarketplaceDetailFixture', {
-  params: [{id: 'resource', as: 'string'}, {id: 'name', as: 'string'}],
-  impl: (ctx, {}, {resource, name}) => ({...dsls.common.data.wonderPlatformMarketplaceFixture.$runWithCtx(ctx)[resource]
-    .find(item => item.id == name), versions: [{version: 1}, {version: 2}], audit: [{action: 'updated'}],
-    references: {ok: true}, configYaml: 'skills:\n  - evidence-skill'})
+  params: [{id: 'resource', as: 'string'}, {id: 'id', as: 'string'}],
+  impl: (ctx, {}, {resource, id}) => ({...dsls.common.data.wonderPlatformMarketplaceFixture.$runWithCtx(ctx)[resource]
+    .find(item => item.id == id), versions: [{version: 1}, {version: 2}], audit: [{action: 'updated'}],
+    references: {ok: true}, configYaml: 'skills:\n  - evidenceSkill'})
 })
 
 Data('wonderPlatformAnswerSmoke', {
@@ -166,7 +166,7 @@ ReactComp('wonderPlatformTestApp', {
 
 ReactComp('wonderPlatformMarketplaceTestApp', {
   impl: wonderPlatform({loadRepo: dsls.common.data.wonderPlatformMarketplaceFixture(), saveRepo: dsls.common.data.wonderPlatformTestSave(),
-    marketplaceDetail: dsls.common.data.wonderPlatformMarketplaceDetailFixture('%$resource%', '%$name%')})
+    marketplaceDetail: dsls.common.data.wonderPlatformMarketplaceDetailFixture('%$resource%', '%$id%')})
 })
 
 ReactComp('wonderPlatformAgentChatTestApp', {
@@ -177,7 +177,7 @@ ReactComp('wonderPlatformAgentChatTestApp', {
   })
 })
 
-const { wonderPlatformAgentChatTestApp, wonderPlatformMarketplaceTestApp } = dsls.react['react-comp']
+const { wonderPlatformAgentChatTestApp, wonderPlatformMarketplaceTestApp, wonderPlatformTestApp } = dsls.react['react-comp']
 
 Test('wonderPlatform.marketplaceApiRoutes', {
   impl: dataTest({
@@ -190,9 +190,9 @@ Test('wonderPlatform.marketplaceApiRoutes', {
       })
       const [list, version, audit, update, upload] = await Promise.all([
         call({operation: 'list', resource: 'plugins'}),
-        call({operation: 'version', resource: 'subagents', name: 'a b', version: 2}),
-        call({operation: 'audit', resource: 'skills', name: 'skill-1'}),
-        call({operation: 'update', resource: 'tools', name: 'tool-1', body: {tracable: true}}),
+        call({operation: 'version', resource: 'subagents', id: 'a b', version: 2}),
+        call({operation: 'audit', resource: 'skills', id: 'skill-1'}),
+        call({operation: 'update', resource: 'tools', id: 'tool-1', body: {tracable: true}}),
         call({operation: 'presignUpload', body: {key: 'assets/a'}})
       ])
       return {result: {list, version, audit, update, upload}, ...coreUtils.harvestLogs(ctx)}
@@ -216,16 +216,16 @@ Test('wonderPlatform.marketplaceManifest', {
           desc: 'ת', toolType: 'code', tracable: true}}), agentCreateReadme: wonderPlatformMarketplaceManifest.$run({resource: 'subagents',
             item: {id: 'a', readme: '# Agent'}}).readme, agentUpdateHasReadme: 'readme' in wonderPlatformMarketplaceManifest.$run({
               resource: 'subagents', operation: 'update', item: {id: 'a', readme: '# Agent'}})}}),
-    expectedResult: equals('%result%', asIs({plugin: {display_name: 'p', hebrew_display_name: 'פ', description: 'ת',
-      hebrew_description: 'ת', tags: [], config: {skills: ['s'], tools: ['t']}, readme: ''}, tool: {display_name: 't',
-      hebrew_display_name: 'כ', description: 'ת', hebrew_description: 'ת', tool_type: 'code', json_schema: {}, is_async: true,
+    expectedResult: equals('%result%', asIs({plugin: {id: 'p', display_name: 'פ', description: 'ת', hebrew_description: 'ת',
+      tags: [], config: {skills: ['s'], tools: ['t']}, readme: ''}, tool: {id: 't', display_name: 'כ',
+      description: 'ת', hebrew_description: 'ת', tool_type: 'code', json_schema: {}, is_async: true,
       tracable: true, dedicated_tool_config: {}, code_files: []}, agentCreateReadme: '# Agent', agentUpdateHasReadme: false}))
   })
 })
 
 Test('wonderPlatform.agentOsRun', {
   impl: dataTest({
-    calculate: wonderPlatformAgentOsRun('Question', asIs({id: 'evidence-agent', name: 'סוכן ראיות'}), 'session-1', {
+    calculate: wonderPlatformAgentOsRun('Question', asIs({id: 'evidenceAgent', name: 'סוכן ראיות'}), 'session-1', {
       request: dsls.common.data.wonderPlatformAgentOsCapture()}),
     expectedResult: and(equals('%text%', 'Grounded answer'), equals('%reportIds/0%', 'r1'), equals('%runId%', 'run-1'),
       equals('%runtimeSteps/0/kind%', 'AgentOS'))
@@ -423,7 +423,7 @@ Test('wonderPlatform.marketplaceAgentWorkspace', {
 })
 
 Test('wonderPlatform.marketplaceAgentCreate', {
-  impl: reactTest(dsls.react['react-comp'].wonderPlatformMarketplaceTestApp(), and(contains('README (creation only)'), contains('יצירת סוכן')), {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformMarketplaceTestApp(), and(contains('README (creation only)'), contains('שמירה')), {
     userActions: actions(waitForText('פלאגין ראיות'), click('סאב-אייג׳נטים'), waitForText('סוכן ראיות'), click('סאב-אייג׳נט חדש'),
       waitForText('README (creation only)'))})
 })
@@ -535,25 +535,45 @@ UiAction('wonderPlatformWaitForButtonGone', {
 
 const { wonderPlatformClickInSection, wonderPlatformSetControl, wonderPlatformWaitForButtonGone } = dsls.react['ui-action']
 
+Test('wonderPlatform.workspaceSavesOnlyFromButton', {
+  impl: reactTest(wonderPlatformTestApp(), contains('פלאגין שנשמר'), {
+    userActions: actions(
+      waitForText('אנליסט הוכחת קיום'),
+      click('אנליסט הוכחת קיום'),
+      waitForText('חיבורי הפלאגין'),
+      wonderPlatformSetControl({placeholder: 'שם הפלאגין', value: 'טיוטה שלא נשמרה'}),
+      click('aria-label="חזרה לפלאגינים"'),
+      waitForText('אנליסט הוכחת קיום'),
+      click('אנליסט הוכחת קיום'),
+      wonderPlatformSetControl({placeholder: 'שם הפלאגין', value: 'פלאגין שנשמר'}),
+      click('aria-label="שמירת סביבת עבודה"'),
+      waitForText('נשמר'),
+      click('aria-label="חזרה לפלאגינים"'),
+      waitForText('פלאגין שנשמר')
+    ),
+    logger: 'uiLogger'
+  })
+})
+
 Test('wonderPlatform.marketplaceAgentCreateRelations', {
   impl: reactTest({
     testedComp: wonderPlatformMarketplaceTestApp(),
-    expectedResult: and(contains('מיומנות ראיות'), contains('פלאגין ראיות'), contains('יצירת סוכן')),
+    expectedResult: and(contains('מיומנות ראיות'), contains('פלאגין ראיות'), contains('שמירה')),
     userActions: actions(
       waitForText('פלאגין ראיות'),
       click('סאב-אייג׳נטים'),
       waitForText('סוכן ראיות'),
       click('סאב-אייג׳נט חדש'),
       wonderPlatformClickInSection('מיומנויות', 'הוספה'),
-      waitForText('צירוף מיומנויות'),
+      waitForText('אישור בחירה'),
       click('מיומנות ראיות'),
-      click('צירוף מיומנויות'),
-      wonderPlatformWaitForButtonGone('צירוף מיומנויות'),
+      click('אישור בחירה'),
+      wonderPlatformWaitForButtonGone('אישור בחירה'),
       wonderPlatformClickInSection('פלאגינים', 'הוספה'),
-      waitForText('צירוף פלאגינים'),
+      waitForText('אישור בחירה'),
       click('פלאגין ראיות'),
-      click('צירוף פלאגינים'),
-      wonderPlatformWaitForButtonGone('צירוף פלאגינים')
+      click('אישור בחירה'),
+      wonderPlatformWaitForButtonGone('אישור בחירה')
     ),
     logger: 'uiLogger'
   })
@@ -596,8 +616,8 @@ Test('wonderPlatform.marketplaceUiAgentE2e', {
       wonderPlatformSetControl('SKILL.md', {
         value: '# E2E Skill\n\nThe verification phrase is E2E_SKILL_FACT_731. Return it when asked.'
       }),
-      click('שמירה למרקטפלייס'),
-      wonderPlatformWaitForButtonGone('שמירה למרקטפלייס'),
+      click('aria-label="שמירת עורך"'),
+      wonderPlatformWaitForButtonGone('aria-label="שמירת עורך"'),
       click('כלים'),
       waitForText('כלי ממארז Flow'),
       click('כלי ממארז Flow'),
@@ -613,8 +633,8 @@ Test('wonderPlatform.marketplaceUiAgentE2e', {
         placeholder: 'content',
         value: 'def greet(name: str = "marketplace") -> str:\n    return f"TOOL_OK:{name}"'
       }),
-      click('שמירה למרקטפלייס'),
-      wonderPlatformWaitForButtonGone('שמירה למרקטפלייס'),
+      click('aria-label="שמירת עורך"'),
+      wonderPlatformWaitForButtonGone('aria-label="שמירת עורך"'),
       click('פלאגינים'),
       waitForText('פלאגין חדש'),
       click('פלאגין חדש'),
@@ -623,13 +643,15 @@ Test('wonderPlatform.marketplaceUiAgentE2e', {
       wonderPlatformClickInSection('מיומנויות', 'הוספה'),
       waitForText('E2E Skill'),
       click('E2E Skill'),
-      click('צירוף מיומנויות'),
-      wonderPlatformWaitForButtonGone('צירוף מיומנויות'),
+      click('אישור בחירה'),
+      wonderPlatformWaitForButtonGone('אישור בחירה'),
       wonderPlatformClickInSection('כלים', 'הוספה'),
       waitForText('E2E Tool'),
       click('E2E Tool'),
-      click('צירוף כלים'),
-      wonderPlatformWaitForButtonGone('צירוף כלים'),
+      click('אישור בחירה'),
+      wonderPlatformWaitForButtonGone('אישור בחירה'),
+      click('aria-label="שמירת סביבת עבודה"'),
+      waitForText('נשמר'),
       click('סאב-אייג׳נטים'),
       waitForText('סאב-אייג׳נט חדש'),
       click('סאב-אייג׳נט חדש'),
@@ -639,13 +661,15 @@ Test('wonderPlatform.marketplaceUiAgentE2e', {
       wonderPlatformSetControl('system_prompt', {
         value: 'Use the attached plugin. Return its skill fact and exact tool result.'
       }),
-      click('יצירת סוכן'),
-      wonderPlatformWaitForButtonGone('יצירת סוכן'),
+      click('aria-label="שמירת סביבת עבודה"'),
+      waitForText('Marketplace API'),
       wonderPlatformClickInSection('פלאגינים', 'הוספה'),
       waitForText('E2E Plugin'),
       click('E2E Plugin'),
-      click('צירוף פלאגינים'),
-      wonderPlatformWaitForButtonGone('צירוף פלאגינים'),
+      click('אישור בחירה'),
+      wonderPlatformWaitForButtonGone('אישור בחירה'),
+      click('aria-label="שמירת סביבת עבודה"'),
+      waitForText('נשמר'),
       wonderPlatformSetControl({
         placeholder: 'נסה את הסאב-אייג׳נט',
         value: 'What is the verification phrase? Call the plugin tool with name browser.'

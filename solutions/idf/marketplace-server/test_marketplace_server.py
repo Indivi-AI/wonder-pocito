@@ -33,20 +33,20 @@ class MarketplaceServerTest(unittest.TestCase):
         return self.client.request(method, path, **kwargs)
 
     def skill(self, description='Knows the room code.'):
-        return {'display_name': 'room-facts', 'description': description,
+        return {'id': 'roomFactsSkill', 'display_name': 'Room facts', 'description': description,
           'skill_md': '# Room facts\nTHE ORBITAL CODE IS AMBER-17.',
           'assets': [{'path': 'references/fact.txt', 'content_b64': 'UkVGRVJFTkNFLU9L', 'mime_type': 'text/plain'}]}
 
     def tool(self):
-        return {'display_name': 'number-tool', 'description': 'Doubles a number.', 'tool_type': 'code',
+        return {'id': 'numberTool', 'display_name': 'Number tool', 'description': 'Doubles a number.', 'tool_type': 'code',
           'json_schema': {'type': 'object', 'properties': {'value': {'type': 'integer'}}, 'required': ['value']},
           'dedicated_tool_config': {'entrypoint': 'tool.py:double'},
           'code_files': [{'path': 'tool.py', 'content': "def double(value: int) -> str:\n    return f'TOOL_CALLED:{value * 2}'\n"}]}
 
     def agent(self):
-        return {'display_name': 'room-agent', 'description': 'Uses room facts.', 'config': {
+        return {'id': 'roomAgent', 'display_name': 'Room agent', 'description': 'Uses room facts.', 'config': {
           'system_prompt': 'Use the configured skill and tool.', 'backend_config': {'harness_type': 'deepagents'},
-          'plugins': ['room-plugin'], 'skills': [], 'tools': [], 'sub_agents': []}}
+          'plugins': ['roomPlugin'], 'skills': [], 'tools': [], 'sub_agents': []}}
 
     def test_contract_routes_exist(self):
         schema = self.client.get('/openapi.json').json()
@@ -68,40 +68,45 @@ class MarketplaceServerTest(unittest.TestCase):
         created = self.request('POST', '/api/v1/skills/', json=self.skill())
         self.assertEqual(created.status_code, 201)
         self.assertEqual(self.request('POST', '/api/v1/skills/', json=self.skill()).status_code, 409)
-        expanded = self.request('GET', '/api/v1/skills/room-facts?includeAssets=true').json()
+        expanded = self.request('GET', '/api/v1/skills/roomFactsSkill?includeAssets=true').json()
         self.assertEqual(expanded['assets'][0]['content_b64'], 'UkVGRVJFTkNFLU9L')
-        self.assertEqual(self.request('GET', '/api/v1/skills/room-facts/SKILL.md').text,
+        self.assertEqual((expanded['id'], expanded['display_name']), ('roomFactsSkill', 'Room facts'))
+        self.assertNotIn('hebrew_display_name', expanded)
+        self.assertEqual(self.request('GET', '/api/v1/skills/roomFactsSkill/SKILL.md').text,
           '# Room facts\nTHE ORBITAL CODE IS AMBER-17.')
-        self.assertEqual(self.request('GET', '/api/v1/skills/room-facts/assets/references/fact.txt').content, b'REFERENCE-OK')
-        self.assertTrue(self.request('GET', '/api/v1/skills/room-facts/SKILL.md').headers['content-type'].startswith('text/plain'))
-        updated = self.request('PUT', '/api/v1/skills/room-facts', json={'description': 'Updated'}).json()
-        self.assertEqual((updated['version'], updated['description']), (2, 'Updated'))
-        versions = self.request('GET', '/api/v1/skills/room-facts/versions').json()
-        self.assertEqual((len(versions), versions[0]['version'], versions[0]['description']), (1, 1, 'Knows the room code.'))
-        self.assertEqual(self.request('GET', '/api/v1/skills/room-facts/versions/1').json()['assets'][0]['content_b64'],
+        self.assertEqual(self.request('GET', '/api/v1/skills/roomFactsSkill/assets/references/fact.txt').content, b'REFERENCE-OK')
+        self.assertTrue(self.request('GET', '/api/v1/skills/roomFactsSkill/SKILL.md').headers['content-type'].startswith('text/plain'))
+        updated = self.request('PUT', '/api/v1/skills/roomFactsSkill', json={'display_name': 'Updated facts'}).json()
+        self.assertEqual((updated['id'], updated['display_name']), ('roomFactsSkill', 'Updated facts'))
+        self.assertEqual(self.request('PUT', '/api/v1/skills/roomFactsSkill', json={'id': 'renamedSkill'}).status_code, 422)
+        updated = self.request('PUT', '/api/v1/skills/roomFactsSkill', json={'description': 'Updated'}).json()
+        self.assertEqual((updated['version'], updated['description']), (3, 'Updated'))
+        versions = self.request('GET', '/api/v1/skills/roomFactsSkill/versions').json()
+        self.assertEqual((len(versions), versions[0]['version'], versions[0]['display_name']), (2, 1, 'Room facts'))
+        self.assertEqual(self.request('GET', '/api/v1/skills/roomFactsSkill/versions/1').json()['assets'][0]['content_b64'],
           'UkVGRVJFTkNFLU9L')
-        self.assertEqual([event['action'] for event in self.request('GET', '/api/v1/audit/skill/room-facts').json()],
-          ['create', 'update'])
+        self.assertEqual([event['action'] for event in self.request('GET', '/api/v1/audit/skill/roomFactsSkill').json()],
+          ['create', 'update', 'update'])
         tool = self.request('POST', '/api/v1/tools/', json=self.tool()).json()
         self.assertEqual(tool['tags'], [])
-        code = self.request('GET', '/api/v1/tools/number-tool/code/tool.py')
+        code = self.request('GET', '/api/v1/tools/numberTool/code/tool.py')
         self.assertTrue(code.headers['content-type'].startswith('text/plain'))
-        self.request('PUT', '/api/v1/tools/number-tool', json={'description': 'Updated'})
-        self.assertNotIn('id', self.request('GET', '/api/v1/tools/number-tool/versions/1').json())
-        plugin = {'display_name': 'room-plugin', 'description': 'Bundle',
-          'config': {'skills': ['room-facts'], 'tools': ['number-tool']}, 'readme': '# Bundle'}
+        self.request('PUT', '/api/v1/tools/numberTool', json={'description': 'Updated'})
+        self.assertEqual(self.request('GET', '/api/v1/tools/numberTool/versions/1').json()['id'], 'numberTool')
+        plugin = {'id': 'roomPlugin', 'display_name': 'Room plugin', 'description': 'Bundle',
+          'config': {'skills': ['roomFactsSkill'], 'tools': ['numberTool']}, 'readme': '# Bundle'}
         self.assertEqual(self.request('POST', '/api/v1/plugins/', json=plugin).status_code, 201)
-        self.assertTrue(self.request('GET', '/api/v1/plugins/room-plugin/references').json()['valid'])
-        self.assertIn('skills:', self.request('GET', '/api/v1/plugins/room-plugin/config.yaml').text)
-        readme = self.request('GET', '/api/v1/plugins/room-plugin/README.md')
+        self.assertTrue(self.request('GET', '/api/v1/plugins/roomPlugin/references').json()['valid'])
+        self.assertIn('skills:', self.request('GET', '/api/v1/plugins/roomPlugin/config.yaml').text)
+        readme = self.request('GET', '/api/v1/plugins/roomPlugin/README.md')
         self.assertEqual(readme.text, '# Bundle')
         self.assertTrue(readme.headers['content-type'].startswith('text/plain'))
-        self.assertEqual(self.request('DELETE', '/api/v1/tools/number-tool').status_code, 204)
-        self.assertEqual(self.request('GET', '/api/v1/tools/number-tool').status_code, 404)
-        self.assertEqual(self.objects.list('marketplace/tools/number-tool/'), [])
-        self.assertEqual([event['action'] for event in self.request('GET', '/api/v1/audit/tool/number-tool').json()],
+        self.assertEqual(self.request('DELETE', '/api/v1/tools/numberTool').status_code, 204)
+        self.assertEqual(self.request('GET', '/api/v1/tools/numberTool').status_code, 404)
+        self.assertEqual(self.objects.list('marketplace/tools/numberTool/'), [])
+        self.assertEqual([event['action'] for event in self.request('GET', '/api/v1/audit/tool/numberTool').json()],
           ['create', 'update', 'delete'])
-        self.assertFalse(self.request('GET', '/api/v1/plugins/room-plugin/references').json()['valid'])
+        self.assertFalse(self.request('GET', '/api/v1/plugins/roomPlugin/references').json()['valid'])
 
     def test_users_and_real_minio_presign(self):
         user = self.request('POST', '/api/v1/users/', json={'username': 'reviewer'}).json()
@@ -123,19 +128,25 @@ class MarketplaceServerTest(unittest.TestCase):
 
     def test_corrupt_manifests_are_logged_and_skipped(self):
         self.request('POST', '/api/v1/skills/', json=self.skill())
+        legacy = {'data': {'display_name': 'legacySkill', 'hebrew_display_name': 'Legacy skill', 'description': 'Legacy'},
+          'version': 1, 'created_at': '2026-01-01', 'updated_at': '2026-01-01'}
+        self.objects.put('marketplace/skills/legacySkill/manifest.json', json.dumps(legacy).encode())
         self.objects.put('marketplace/skills/legacy/manifest.json', b'{"display_name":"legacy"}')
         self.objects.put('marketplace/skills/broken/manifest.json', b'{')
         with self.assertLogs('marketplace_server', level='WARNING') as logs:
             response = self.request('GET', '/api/v1/skills/')
-        self.assertEqual([item['display_name'] for item in response.json()], ['room-facts'])
+        listed = {item['id']: item for item in response.json()}
+        self.assertEqual(set(listed), {'legacySkill', 'roomFactsSkill'})
+        self.assertEqual(listed['legacySkill']['display_name'], 'Legacy skill')
+        self.assertNotIn('hebrew_display_name', listed['legacySkill'])
         self.assertTrue(all(name in '\n'.join(logs.output) for name in ['legacy', 'broken']))
 
     def test_photographed_schema_examples_round_trip(self):
         for kind in ['Skill', 'Tool', 'Plugin', 'Agent']:
             body, plural = self.examples[f'create{kind}'], f'{kind.lower()}s'
             self.assertEqual(self.request('POST', f'/api/v1/{plural}/', json=body).status_code, 201)
-            self.assertEqual(self.request('GET', f"/api/v1/{plural}/{body['display_name']}").status_code, 200)
-            self.assertEqual(self.request('PUT', f"/api/v1/{plural}/{body['display_name']}",
+            self.assertEqual(self.request('GET', f"/api/v1/{plural}/{body['id']}").status_code, 200)
+            self.assertEqual(self.request('PUT', f"/api/v1/{plural}/{body['id']}",
               json=self.examples[f'update{kind}']).status_code, 200)
         user = self.request('POST', '/api/v1/users/', json=self.examples['createUser'])
         self.assertEqual(self.request('GET', f"/api/v1/users/{user.json()['uid']}").status_code, 200)
@@ -144,29 +155,30 @@ class MarketplaceServerTest(unittest.TestCase):
               json=self.examples[f'presign{action.title()}']).status_code, 200)
 
     def test_agentos_uses_saved_plugin_skill_and_tool_updates(self):
-        plugin = {'display_name': 'room-plugin', 'description': 'Bundle', 'config': {'skills': ['room-facts'], 'tools': []}}
+        plugin = {'id': 'roomPlugin', 'display_name': 'Room plugin', 'description': 'Bundle',
+          'config': {'skills': ['roomFactsSkill'], 'tools': []}}
         resources = [('/api/v1/skills/', self.skill()), ('/api/v1/tools/', self.tool()),
           ('/api/v1/plugins/', plugin), ('/api/v1/agents/', self.agent())]
         for path, body in resources:
             self.assertEqual(self.request('POST', path, json=body).status_code, 201)
         def agent_run(session):
-            response = self.request('POST', '/agents/room-agent/runs', data={
+            response = self.request('POST', '/agents/roomAgent/runs', data={
               'message': 'What is the code? Double 21.', 'session_id': session, 'user_id': 'tester', 'stream': 'false'})
             self.assertEqual(response.status_code, 200, response.text)
             return response.json()
         skill_only = agent_run('skill-only')
         self.assertIn('THE ORBITAL CODE IS AMBER-17', skill_only['content'])
         self.assertNotIn('TOOL_CALLED', skill_only['content'])
-        self.request('PUT', '/api/v1/plugins/room-plugin', json={'config': {'skills': ['room-facts'], 'tools': ['number-tool']}})
+        self.request('PUT', '/api/v1/plugins/roomPlugin', json={'config': {'skills': ['roomFactsSkill'], 'tools': ['numberTool']}})
         plugin_run = agent_run('plugin-updated')
         self.assertIn('THE ORBITAL CODE IS AMBER-17', plugin_run['content'])
         self.assertIn('TOOL_CALLED:42', plugin_run['content'])
         executions = plugin_run.get('tools') or plugin_run.get('tool_executions') or []
         names = [item.get('tool_name') or item.get('name') for item in executions]
         self.assertIn('get_skill_instructions', names)
-        self.assertIn('number_tool', names)
-        self.request('PUT', '/api/v1/skills/room-facts', json={'skill_md': '# Updated\nSAVED_SKILL_UPDATE'})
-        self.request('PUT', '/api/v1/tools/number-tool', json={'code_files': [{'path': 'tool.py',
+        self.assertIn('numberTool', names)
+        self.request('PUT', '/api/v1/skills/roomFactsSkill', json={'skill_md': '# Updated\nSAVED_SKILL_UPDATE'})
+        self.request('PUT', '/api/v1/tools/numberTool', json={'code_files': [{'path': 'tool.py',
           'content': "def double(value: int) -> str:\n    return f'SAVED_TOOL_UPDATE:{value * 2}'\n"}]})
         updated = agent_run('resources-updated')
         self.assertIn('SAVED_SKILL_UPDATE', updated['content'])

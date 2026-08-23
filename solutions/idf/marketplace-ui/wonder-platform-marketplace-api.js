@@ -28,7 +28,7 @@ Data('wonderPlatformMarketplaceCall', {
   params: [
     {id: 'operation', as: 'string', mandatory: true},
     {id: 'resource', as: 'string'},
-    {id: 'name', as: 'string'},
+    {id: 'id', as: 'string'},
     {id: 'filePath', as: 'string'},
     {id: 'version', as: 'number'},
     {id: 'body', as: 'object'},
@@ -39,20 +39,20 @@ Data('wonderPlatformMarketplaceCall', {
       baseUrl: '%$baseUrl%'
     })}
   ],
-  impl: (ctx, {}, {operation, resource, name, filePath, version, body, roomWUrl, baseUrl, request}) => {
-    const apiResource = resource == 'subagents' ? 'agents' : resource, id = encodeURIComponent(name || '')
+  impl: (ctx, {}, {operation, resource, id, filePath, version, body, roomWUrl, baseUrl, request}) => {
+    const apiResource = resource == 'subagents' ? 'agents' : resource, encodedId = encodeURIComponent(id || '')
     const file = String(filePath || '').split('/').map(encodeURIComponent).join('/')
     const routes = {
       health: ['GET', 'healthz'], list: ['GET', `${apiResource}/`], create: ['POST', `${apiResource}/`],
-      get: ['GET', `${apiResource}/${id}`], update: ['PUT', `${apiResource}/${id}`],
-      delete: ['DELETE', `${apiResource}/${id}`], config: ['GET', `${apiResource}/${id}/config.yaml`],
-      document: ['GET', `${apiResource}/${id}/${resource == 'skills' ? 'SKILL.md' : 'README.md'}`],
-      references: ['GET', `${apiResource}/${id}/references`],
-      versions: ['GET', `${apiResource}/${id}/versions`],
-      version: ['GET', `${apiResource}/${id}/versions/${version}`],
-      asset: ['GET', `skills/${id}/assets/${file}`],
-      code: ['GET', `tools/${id}/code/${file}`],
-      audit: ['GET', `audit/${{tools: 'tool', skills: 'skill', plugins: 'plugin', agents: 'agent'}[apiResource]}/${id}`],
+      get: ['GET', `${apiResource}/${encodedId}`], update: ['PUT', `${apiResource}/${encodedId}`],
+      delete: ['DELETE', `${apiResource}/${encodedId}`], config: ['GET', `${apiResource}/${encodedId}/config.yaml`],
+      document: ['GET', `${apiResource}/${encodedId}/${resource == 'skills' ? 'SKILL.md' : 'README.md'}`],
+      references: ['GET', `${apiResource}/${encodedId}/references`],
+      versions: ['GET', `${apiResource}/${encodedId}/versions`],
+      version: ['GET', `${apiResource}/${encodedId}/versions/${version}`],
+      asset: ['GET', `skills/${encodedId}/assets/${file}`],
+      code: ['GET', `tools/${encodedId}/code/${file}`],
+      audit: ['GET', `audit/${{tools: 'tool', skills: 'skill', plugins: 'plugin', agents: 'agent'}[apiResource]}/${encodedId}`],
       presignDownload: ['POST', 'presign/download'],
       presignUpload: ['POST', 'presign/upload'],
       createUser: ['POST', 'users/'],
@@ -69,7 +69,7 @@ const { wonderPlatformMarketplaceCall } = dsls.common.data
 Data('wonderPlatformMarketplaceManifest', {
   params: [{id: 'resource', as: 'string'}, {id: 'item', as: 'object'}, {id: 'operation', as: 'string', defaultValue: 'create'}],
   impl: ({}, {}, {resource, item, operation}) => {
-    const base = {display_name: item.id || item.display_name, hebrew_display_name: item.name || null,
+    const base = {id: item.id, display_name: item.name || item.id,
       description: item.apiDescription || item.desc || '', hebrew_description: item.desc || null, tags: item.tags || []}
     if (resource == 'plugins') return {...base, config: {skills: item.skillIds || [], tools: item.toolIds || []},
       readme: item.readme || ''}
@@ -88,7 +88,7 @@ Data('wonderPlatformMarketplaceManifest', {
 Data('wonderPlatformMarketplaceItem', {
   params: [{id: 'resource', as: 'string'}, {id: 'item', as: 'object'}],
   impl: ({}, {}, {resource, item}) => {
-    const config = item.config || {}, id = item.display_name || item.name || item.id, name = item.hebrew_display_name || id
+    const config = item.config || {}, id = item.id, name = item.display_name || id
     return {...item, _marketplace: true, id, name, mark: name?.slice(0, 2), desc: item.hebrew_description || item.description || '',
       apiDescription: item.description || '', tags: item.tags || [], version: item.version == null ? 'V0' : String(item.version),
       created: item.created_at || item.created || '—', updated: item.updated_at || item.updated || '—',
@@ -138,18 +138,18 @@ Data('wonderPlatformMarketplaceRepository', {
 Data('wonderPlatformMarketplaceDetail', {
   params: [
     {id: 'resource', as: 'string', mandatory: true},
-    {id: 'name', as: 'string', mandatory: true},
+    {id: 'id', as: 'string', mandatory: true},
     {id: 'roomWUrl', as: 'string', defaultValue: 'room://wonder-platform'},
     {id: 'baseUrl', as: 'string', defaultValue: 'http://localhost:7777'},
     {id: 'call', dynamic: true, defaultValue: wonderPlatformMarketplaceCall('%$operation%', '%$resource%', {
-      name: '%$name%',
+      id: '%$id%',
       roomWUrl: '%$roomWUrl%',
       baseUrl: '%$baseUrl%'
     })},
     {id: 'normalize', dynamic: true, defaultValue: wonderPlatformMarketplaceItem('%$resource%', '%$manifest%')}
   ],
-  impl: async (ctx, {}, {resource, name, roomWUrl, baseUrl, call, normalize}) => {
-    const run = (operation, vars = {}) => call(ctx.setVars({operation, resource, name, roomWUrl, baseUrl, ...vars}))
+  impl: async (ctx, {}, {resource, id, roomWUrl, baseUrl, call, normalize}) => {
+    const run = (operation, vars = {}) => call(ctx.setVars({operation, resource, id, roomWUrl, baseUrl, ...vars}))
     const [manifest, versions, audit] = await Promise.all([run('get'), run('versions'), run('audit')])
     const [references, document, configYaml] = await Promise.all([
       ['plugins', 'subagents'].includes(resource) ? run('references') : null,

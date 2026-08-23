@@ -27,7 +27,7 @@ ReactComp('wonderPlatformAttachPicker', {
         })), h('div:flex items-center justify-between border-t border-[#e5e9e7] bg-[#f8f9f8] p-4', {},
           h('span:text-xs text-[#9aa19d]', {}, 'בחירה מרובה'), h('div:flex gap-2', {}, h('button:rounded-xl px-4 py-2 text-sm', {
             onClick: () => setPicker()}, 'ביטול'), h('button:rounded-xl bg-[#2f6b4b] px-4 py-2 text-sm font-semibold text-white', {
-            onClick: attachSelected}, `צירוף ${picker.label}`)))))
+            onClick: attachSelected, 'aria-label': 'אישור בחירה'}, 'אישור בחירה')))))
   })
 })
 
@@ -41,6 +41,8 @@ ReactComp('wonderPlatformResourceEditor', {
       const field = (label, control) => h('label:block text-xs font-semibold text-[#69726d]', {}, label, control)
       const input = (key, props = {}) => h(`input:${classes.field}`, {value: item[key] || '',
         onInput: event => update({...item, [key]: event.target.value}), ...props})
+      const saveDisabled = !item.name?.trim() || !item.id?.trim() || resource == 'skills' && !repo.marketplace && (!item.content?.trim()
+        || !/^\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/.test(item.publishVersion))
       const relation = (fieldName, target, title) => h('section:rounded-2xl border border-[#e2e7e4] p-4', {},
         h('div:flex items-center justify-between', {}, h('b:text-sm', {}, title), h(`button:${classes.button}`, {
           onClick: () => openPicker(fieldName, target, title)}, h('L:Plus', {size: 14}), 'צירוף מהקטלוג')),
@@ -57,12 +59,14 @@ ReactComp('wonderPlatformResourceEditor', {
         editors.map((entry, index) => h('button', {key: index, onClick: () => setEditors(editors.slice(0, index + 1))},
           `${labels[entry.resource] || 'סט'} · ${entry.item.name || 'חדש'}`))), h('div:mt-3 flex items-center justify-between gap-4', {}, h('div', {},
         h('h2:text-xl font-bold', {}, item.name || active.createLabel), h('span:text-xs text-[#9aa19d]', {}, labels[resource])),
-      h('button:rounded-lg p-2 hover:bg-gray-100', {onClick: () => setEditors(editors.slice(0, -1)), 'aria-label': 'סגירה'}, h('L:X')))),
+      h('div:flex items-center gap-2', {}, h(`button:${classes.primary}`, {
+        disabled: saveDisabled, onClick: saveEditor, 'aria-label': 'שמירת עורך'}, 'שמירה'),
+        h('button:rounded-lg p-2 hover:bg-gray-100', {onClick: () => setEditors(editors.slice(0, -1)), 'aria-label': 'סגירה'}, h('L:X'))))),
       h('div:space-y-5 p-6', {}, resource == 'tools' && !repo.marketplace && h(
         'div:grid grid-cols-[1fr_auto] items-end gap-2 max-sm:grid-cols-1', {},
         field('מזהה מארז Flow', input('packageId', {dir: 'ltr', placeholder: '4821037'})), h(`button:${classes.button}`, {
-          onClick: readPackage}, 'קריאת המארז')), field('hebrew_display_name', input('name', {placeholder: 'שם בעברית'})),
-      field('display_name', input('id', {dir: 'ltr', placeholder: 'unique-id', disabled: !!item.originalId})),
+          onClick: readPackage}, 'קריאת המארז')), field('display_name', input('name', {placeholder: 'שם להצגה'})),
+      field('id', input('id', {dir: 'ltr', placeholder: 'uiRenderingSkill', disabled: !!item.originalId})),
       field('description', h(`textarea:${classes.field} min-h-24 resize-y`, {dir: 'ltr', value: item.apiDescription || '',
         onInput: event => update({...item, apiDescription: event.target.value})})), field('hebrew_description', h(
         `textarea:${classes.field} min-h-24 resize-y`, {value: item.desc || '', onInput: event => update({...item, desc: event.target.value})})),
@@ -163,12 +167,8 @@ ReactComp('wonderPlatformResourceEditor', {
         !repo.evalRuns.some(run => run.evaluationId == item.id) && h('p:mt-3 text-xs text-[#9aa19d]', {}, 'עדיין אין הרצות'))),
       h('div:flex items-center justify-between border-t border-[#e5e9e7] pt-5', {}, active.item.originalId &&
         (resource != 'skills' || repo.marketplace) && h('button:text-sm text-red-600', {
-        onClick: deleteEditor}, 'מחיקה'), h('div:mr-auto flex gap-2', {}, h(`button:${classes.button}`, {
-        onClick: () => setEditors(editors.slice(0, -1))}, 'ביטול'), h(`button:${classes.primary}`, {
-        disabled: !item.name?.trim() || !item.id?.trim() || resource == 'skills' && !repo.marketplace && (!item.content?.trim()
-          || !/^\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/.test(item.publishVersion)), onClick: saveEditor}, active.attachTo ? 'פרסום וצירוף'
-          : repo.marketplace ? 'שמירה למרקטפלייס' : resource == 'tools' ? 'פרסום לקטלוג'
-            : resource == 'skills' ? 'פרסום גרסה' : 'שמירה')))))
+        onClick: deleteEditor}, 'מחיקה'), h(`button:${classes.button} mr-auto`, {
+        onClick: () => setEditors(editors.slice(0, -1))}, 'ביטול'))))
     }
   })
 })
