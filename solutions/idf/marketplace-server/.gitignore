@@ -1,3 +1,4 @@
 .marketplace-data/
 __pycache__/
 .env
+.venv/

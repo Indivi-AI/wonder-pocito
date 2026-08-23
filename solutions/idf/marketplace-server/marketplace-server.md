@@ -10,7 +10,7 @@ MinIO/S3 — manifests, version snapshots, audit events, users, and artifacts ar
 room-prefixed objects in one bucket; there is no sqlite. Start the local MinIO with `npm run start-min-io`. Defaults: `MARKETPLACE_S3_BUCKET=wonder-marketplace`,
 `MARKETPLACE_S3_ENDPOINT=http://127.0.0.1:9000`, `MARKETPLACE_S3_ACCESS_KEY=wonder`, `MARKETPLACE_S3_SECRET_KEY=wonder-minio-local`.
 Presigned upload/download URLs point at room-prefixed MinIO keys. `MARKETPLACE_DATA_DIR` only hosts runtime materialization, and each room's
-agent chat sessions use a separate Agno in-memory db, so both reset without data loss. `AGENT_OS_PORT` and `CORS_ALLOWED_ORIGINS` are optional.
+agent chat sessions use a separate Agno in-memory db, so both reset without data loss. `AGENT_OS_PORT` is optional.
 
 Skills are materialized into Agno `LocalSkills`, including their assets. `GET /api/v1/skills/{id}?includeAssets=true` returns assets with
 `content_b64`; normal reads return metadata only.
@@ -26,5 +26,5 @@ Run the deterministic suite with:
 
 ```sh
 cd solutions/idf/marketplace-server
-../platform-v0/.venv/bin/python -m unittest -v test_marketplace_server.py
+.venv/bin/python -m unittest -v test_marketplace_server.py
 ```

@@ -9,18 +9,6 @@ Use this guide for Wonder ReactComp work here. Before editing, read these focuse
 Then use `room-state-react-comp.js`, `stable-chat-react-comp.js` and `llm-flow-react-comp.js` for complete patterns.
 Do not use `safeEditTgpComp`; edit normally with read/edit/write tools. Keep lines at or below 180 characters and use ESM only.
 
-For PlatformV0, start with `platform-v0.js`, then edit only the relevant module:
-
-- `platform-v0-model.js`: navigation metadata and initial state.
-- `platform-v0-services.js`: marketplace, Agno, and report-marker adapters.
-- `platform-v0-navigation.js`: desktop and mobile navigation.
-- `platform-v0-marketplace.js`: resource lists and cards.
-- `platform-v0-resource-modal.js`: create, edit, and skill upload form.
-- `platform-v0-chat.js`: chat, composer, and embedded verified reports.
-- `platform-v0-evaluation.js`: evaluation cards and run state.
-
-Ignore `platform-v0-minimax.js` unless the task explicitly evaluates that historical candidate.
-
 ## Registered ReactComp anatomy
 
 ```js

@@ -3,5 +3,5 @@ set -a
 source "$(dirname "$0")/.env"
 set +a
 cd "$(dirname "$0")"
-PYTHON_PATH="${MARKETPLACE_PYTHON:-../platform-v0/.venv/bin/python}"
+PYTHON_PATH="${MARKETPLACE_PYTHON:-.venv/bin/python}"
 exec "$PYTHON_PATH" marketplace_server.py

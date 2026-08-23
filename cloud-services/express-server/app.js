@@ -6,14 +6,6 @@ import crypto from 'node:crypto'
 import mime from 'mime-types'
 import { coreUtils } from '@jb6/core'
 import '@jb6/core/misc/import-map-services.js'
-import { setupAuthRoutes } from './lib/auth-routes.js'
-import { setupGCSProxyRoute } from './lib/gcs-proxy.js'
-import { setupLlmProxyRoute } from './lib/llm-proxy.js'
-import { setupSignedUrlForwarder } from './lib/signed-url-forwarder.js'
-import { setupRoomLambdaAndApplet } from './lib/room-lambda-and-applet.js'
-import { setupWfetch } from './lib/wfetch.js'
-import { roomPolicy, signWonderToken } from './lib/auth-utils.js'
-import { readDef, serveAppletPage } from './lib/room-lambda-and-applet.js'
 import { useCors } from './lib/use-cors.js'
 
 function setupLocalFiles(app, root) {
@@ -56,30 +48,33 @@ function setupLocalFiles(app, root) {
   })
 }
 
-async function setupLiveRepo(app) {
+async function setupLiveRepo(app, { readDef, serveAppletPage }, noAuth) {
   const root = await coreUtils.calcRepoRoot(), { importMap, staticMappings } = await coreUtils.getStaticServeConfig(root)
   process.env.HOST_NODE_MODULES_BASE = root
-  app.get('/wonder.html', (_, res) => res.type('html').send(`<script type="importmap">${JSON.stringify(importMap)}</script>
+  if (!noAuth) {
+    const { signWonderToken } = await import('./lib/auth-utils.js')
+    app.get('/wonder.html', (_, res) => res.type('html').send(`<script type="importmap">${JSON.stringify(importMap)}</script>
 <script type="module">import { handleAuth } from '@wonder/db/oauth2.js'; await handleAuth({})</script>`))
+    app.get('/mint-wonder-token', (req, res) => res.send(signWonderToken({ phone: req.query.email || 'devMachine' })))
+  }
   app.get('/studio/tests.html', async (_, res) => {
     const html = await fs.readFile(path.join(root, 'wonder/studio/tests.html'), 'utf8')
     res.type('html').send(html.replace('JB_IMPORT_MAP', JSON.stringify(importMap)))
   })
   app.use('/studio', express.static(path.join(root, 'wonder/studio')))
   app.use('/tests', express.static(path.join(root, 'tests')))
-  app.get('/mint-wonder-token', (req, res) => res.send(signWonderToken({ phone: req.query.email || 'devMachine' })))
   const appletRoute = signed => async (req, res, next) => {
     try {
       const { roomId, name } = req.params, roomWUrl = `${signed ? 'signedRoom' : 'room'}://${roomId}`
       const applet = await readDef(roomWUrl, `applets/${name}.json`)
       if (!applet) return next()
       if (applet.roomWUrl && applet.roomWUrl !== roomWUrl) return res.status(409).json({ error: `applet room mismatch: ${applet.roomWUrl}` })
-      await serveAppletPage({ ...applet, roomWUrl, noAuth: process.env.WONDER_AUTH_MODE === 'none' && roomWUrl.startsWith('room://'),
+      await serveAppletPage({ ...applet, roomWUrl, noAuth,
         og: [await readDef(roomWUrl, 'admin/branding.json'), applet.og] }, res, importMap.imports)
     } catch { next() }
   }
   app.get('/room/:roomId/applet/:name', appletRoute(false))
-  app.get('/signed-room/:roomId/applet/:name', appletRoute(true))
+  if (!noAuth) app.get('/signed-room/:roomId/applet/:name', appletRoute(true))
   for (const { urlPath, diskPath } of staticMappings) {
     app.use(urlPath, async (req, res, next) => {
       if (!req.path.endsWith('.html')) return next()
@@ -97,24 +92,32 @@ location.replace(url)
 </script>`)
 
 export async function createApp(mode = process.env.WONDER_SERVICE || 'public') {
-  if (mode === 'local') process.env.WONDER_TOKEN ||= crypto.randomBytes(32).toString('hex')
+  const noAuth = process.env.WONDER_AUTH_MODE === 'none'
+  if (mode === 'local' && !noAuth) process.env.WONDER_TOKEN ||= crypto.randomBytes(32).toString('hex')
   const app = express().set('trust proxy', 1)
   app.use((_, res, next) => (res.set({'X-Wonder-Service': mode,
     ...(process.env.K_REVISION && {'X-Wonder-Revision': process.env.K_REVISION})}), next()))
   useCors(app, mode === 'local')
   app.use(express.json({ limit: mode === 'local' ? '50mb' : '10mb' }))
   if (mode === 'local') app.use(express.raw({ type: req => !/^application\/json/i.test(req.headers['content-type'] || ''), limit: '50mb' }))
-  if (mode !== 'signed') app.get(mode === 'local' ? '/oauth2redirect' : '/', oauthRedirect)
-  if (mode === 'signed') setupSignedUrlForwarder(app)
+  if (!noAuth && mode !== 'signed') app.get(mode === 'local' ? '/oauth2redirect' : '/', oauthRedirect)
+  if (mode === 'signed') {
+    if (!noAuth) (await import('./lib/signed-url-forwarder.js')).setupSignedUrlForwarder(app)
+  }
   else {
-    setupAuthRoutes(app)
-    setupSignedUrlForwarder(app)
+    if (!noAuth) {
+      const [{ setupAuthRoutes }, { setupSignedUrlForwarder }] = await Promise.all([
+        import('./lib/auth-routes.js'), import('./lib/signed-url-forwarder.js')])
+      setupAuthRoutes(app)
+      setupSignedUrlForwarder(app)
+    }
+    const [{ setupWfetch }, roomRoutes] = await Promise.all([import('./lib/wfetch.js'), import('./lib/room-lambda-and-applet.js')])
     if (mode === 'local') {
       await import('../../.jb6/mcp.js')
       await import('@jb6/server-utils/serve-mcp.js')
       await import('@jb6/server-utils/serve-edit-source.js')
       const { serverUtils } = await import('@jb6/server-utils')
-      await setupLiveRepo(app)
+      await setupLiveRepo(app, roomRoutes, noAuth)
       setupLocalFiles(app, await coreUtils.calcRepoRoot())
       serverUtils.serveCli(app)
       serverUtils.serveCliStream(app)
@@ -123,9 +126,13 @@ export async function createApp(mode = process.env.WONDER_SERVICE || 'public') {
       await serverUtils.serveMcpViaCli(app, { express })
     }
     setupWfetch(app)
-    setupRoomLambdaAndApplet(app)
-    setupGCSProxyRoute(app)
-    setupLlmProxyRoute(app)
+    roomRoutes.setupRoomLambdaAndApplet(app)
+    if (!noAuth) {
+      const [{ setupGCSProxyRoute }, { setupLlmProxyRoute }] = await Promise.all([
+        import('./lib/gcs-proxy.js'), import('./lib/llm-proxy.js')])
+      setupGCSProxyRoute(app)
+      setupLlmProxyRoute(app)
+    }
   }
   app.get('/health', (_, res) => res.json({ status: 'ok', mode }))
   return app

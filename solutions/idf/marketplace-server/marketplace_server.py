@@ -622,9 +622,6 @@ def create_app(data_dir=None, model_factory=None):
     repo = MarketplaceRepository(S3ObjectStore())
     runtime = MarketplaceAgentRuntime(repo, data_dir / 'runtime', model_factory or configured_model_factory())
     base = FastAPI(title='marketplace', version='0.1.0')
-    origins = os.getenv('CORS_ALLOWED_ORIGINS',
-      'http://localhost:3000,http://127.0.0.1:3000,http://localhost:8083,http://127.0.0.1:8083').split(',')
-    base.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=['*'], allow_headers=['*'])
 
     @base.middleware('http')
     async def bind_room(request, call_next):
@@ -775,8 +772,10 @@ def create_app(data_dir=None, model_factory=None):
     for name in repo.agent_names():
         register_agent(name)
     agent_os = AgentOS(name='Wonder Marketplace', agents=factories, db=runtime.db, base_app=base,
-      cors_allowed_origins=origins, on_route_conflict='preserve_base_app', telemetry=False)
+      on_route_conflict='preserve_base_app', telemetry=False)
     app = agent_os.get_app()
+    app.user_middleware = [middleware for middleware in app.user_middleware if middleware.cls is not CORSMiddleware]
+    app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_methods=['*'], allow_headers=['*'])
     app.state.marketplace_repo, app.state.marketplace_runtime = repo, runtime
     app.openapi_schema = json.loads((ROOT / 'marketplace-openapi.json').read_text())
     app.openapi = lambda: app.openapi_schema

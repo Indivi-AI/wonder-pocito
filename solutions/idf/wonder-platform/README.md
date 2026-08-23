@@ -15,8 +15,8 @@ Do not install project libraries globally.
 
 ```sh
 npm ci
-python3.12 -m venv solutions/idf/platform-v0/.venv
-solutions/idf/platform-v0/.venv/bin/python -m pip install -r solutions/idf/marketplace-server/requirements.txt
+python3.12 -m venv solutions/idf/marketplace-server/.venv
+solutions/idf/marketplace-server/.venv/bin/python -m pip install -r solutions/idf/marketplace-server/requirements.txt
 touch cloud-services/express-server/.env.dev
 ```
 
