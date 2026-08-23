@@ -1,28 +1,27 @@
 import base64
 import hashlib
-import hmac
 import importlib
 import importlib.util
 import json
 import os
 import re
 import shutil
-import sqlite3
 import sys
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path, PurePosixPath
 from typing import Any, Literal
-from urllib.parse import quote
 
 import yaml
+import boto3
 from agno.agent import Agent
 from agno.agent.factory import AgentFactory
-from agno.db.sqlite import SqliteDb
+from agno.db.in_memory import InMemoryDb
 from agno.models.openai import OpenAIResponses
 from agno.os import AgentOS
 from agno.skills import LocalSkills, Skills
 from agno.tools.function import Function
+from botocore.exceptions import ClientError
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -250,65 +249,43 @@ class UploadRequest(DownloadRequest):
     content_type: str | None = None
 
 
-class FileObjectStore:
-    def __init__(self, root, secret='wonder-marketplace-local'):
-        self.root, self.secret = Path(root).resolve(), secret.encode()
-        self.root.mkdir(parents=True, exist_ok=True)
-
-    def path(self, key):
-        path = (self.root / safe_path(key)).resolve()
-        if self.root not in path.parents:
-            raise ValueError('object path escaped store')
-        return path
-
-    def put(self, key, content, content_type=None):
-        path = self.path(key)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(content)
-
-    def get(self, key):
-        path = self.path(key)
-        if not path.is_file():
-            raise FileNotFoundError(key)
-        return path.read_bytes()
-
-    def delete_prefix(self, prefix):
-        path = self.path(prefix)
-        if path.is_dir():
-            shutil.rmtree(path)
-        elif path.exists():
-            path.unlink()
-
-    def healthy(self):
-        return self.root.is_dir() and os.access(self.root, os.W_OK)
-
-    def signature(self, key, method, expires):
-        return hmac.new(self.secret, f'{method}\n{key}\n{expires}'.encode(), hashlib.sha256).hexdigest()
-
-    def presign(self, key, method, expires, base_url, content_type=None):
-        deadline = int(datetime.now().timestamp()) + expires
-        signature = self.signature(key, method, deadline)
-        return f'{base_url}/api/v1/objects/{quote(key, safe="/")}?expires={deadline}&signature={signature}'
-
-
 class S3ObjectStore:
-    def __init__(self):
-        import boto3
-
-        self.bucket = os.environ['MARKETPLACE_S3_BUCKET']
-        self.client = boto3.client('s3', endpoint_url=os.getenv('MARKETPLACE_S3_ENDPOINT'),
-          aws_access_key_id=os.getenv('MARKETPLACE_S3_ACCESS_KEY'), aws_secret_access_key=os.getenv('MARKETPLACE_S3_SECRET_KEY'),
+    def __init__(self, bucket=None, client=None):
+        self.bucket = bucket or os.getenv('MARKETPLACE_S3_BUCKET', 'wonder-marketplace')
+        self.client = client or boto3.client('s3', endpoint_url=os.getenv('MARKETPLACE_S3_ENDPOINT', 'http://127.0.0.1:9000'),
+          aws_access_key_id=os.getenv('MARKETPLACE_S3_ACCESS_KEY', 'wonder'),
+          aws_secret_access_key=os.getenv('MARKETPLACE_S3_SECRET_KEY', 'wonder-minio-local'),
           region_name=os.getenv('MARKETPLACE_S3_REGION', 'us-east-1'))
+        try:
+            self.client.head_bucket(Bucket=self.bucket)
+        except ClientError as error:
+            if error.response.get('Error', {}).get('Code') not in {'404', 'NoSuchBucket'}:
+                raise
+            self.client.create_bucket(Bucket=self.bucket)
 
-    def put(self, key, content, content_type=None):
-        self.client.put_object(Bucket=self.bucket, Key=key, Body=content, **({'ContentType': content_type} if content_type else {}))
+    def put(self, key, content, content_type=None, if_absent=False):
+        try:
+            self.client.put_object(Bucket=self.bucket, Key=safe_path(key), Body=content,
+              **({'ContentType': content_type} if content_type else {}), **({'IfNoneMatch': '*'} if if_absent else {}))
+        except ClientError as error:
+            if error.response.get('Error', {}).get('Code') in {'PreconditionFailed', '412'}:
+                raise FileExistsError(key)
+            raise
 
     def get(self, key):
-        return self.client.get_object(Bucket=self.bucket, Key=key)['Body'].read()
+        try:
+            return self.client.get_object(Bucket=self.bucket, Key=safe_path(key))['Body'].read()
+        except ClientError as error:
+            if error.response.get('Error', {}).get('Code') in {'NoSuchKey', '404'}:
+                raise FileNotFoundError(key)
+            raise
+
+    def list(self, prefix):
+        pages = self.client.get_paginator('list_objects_v2').paginate(Bucket=self.bucket, Prefix=prefix)
+        return [item['Key'] for page in pages for item in page.get('Contents', [])]
 
     def delete_prefix(self, prefix):
-        paginator = self.client.get_paginator('list_objects_v2')
-        keys = [{'Key': item['Key']} for page in paginator.paginate(Bucket=self.bucket, Prefix=prefix) for item in page.get('Contents', [])]
+        keys = [{'Key': key} for key in self.list(prefix)]
         for offset in range(0, len(keys), 1000):
             self.client.delete_objects(Bucket=self.bucket, Delete={'Objects': keys[offset:offset + 1000]})
 
