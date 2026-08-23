@@ -35,26 +35,41 @@ curl -s -X POST http://localhost:3000/mcp -H 'Content-Type: application/json' -d
   "params":{"name":"uploadRoomApplet","arguments":{"roomId":"demo","entryCompFullId":"react-comp<react>YOUR_APPLET"}}}'
 ```
 
-## Marketplace / AgentOS on-prem
+## Docker compose deployment (wonder + marketplace + llm-lite + minio)
 
-No code changes — everything is env. In `solutions/idf/marketplace-server/.env` (sourced by `start-marketplace.sh`):
+Everything is env; the images carry code and deps only — no `.env` is ever baked. One `docker-compose.yml` runs the
+outside sim, the site box, and mirrors what OpenShift deploys; every site fact (host, ports, endpoints, keys, storage
+class) lives in `.env.site` (copy from `.env.site.template`, gitignored).
 
-```dotenv
-AGENT_OS_HOST=0.0.0.0            # reachable through NAT/port-forwarding, not only localhost
-AGENT_OS_PORT=8046               # when 7777 is taken on this machine
-MARKETPLACE_S3_STORAGE_CLASS=STANDARD_IA   # only if the S3 appliance wants a storage class; unset for MinIO
-CORS_ALLOWED_ORIGINS=http://<host-users-browse-to>:3000
+Build outside and pack for whitening:
+
+```sh
+cloud-services/on-prem/build-images.sh --base    # dependency bases; needs network, so outside only
+cloud-services/on-prem/build-images.sh           # app layers, built with --network=none; prints IMAGE_TAG=dd-mm-yyyy-HH-MM-<sha>
+docker save wonder-server:<tag> marketplace-server:<tag> "$LLM_LITE_IMAGE" "$MINIO_IMAGE" | gzip > wonder-onprem-images.tar.gz
 ```
 
-In `cloud-services/express-server/.env.onprem`, tell browsers where the marketplace is (as THEY reach it — e.g. the
-NAT-mapped port, not the internal one):
+Whiten the tar plus this directory. On the site: `docker load`, fill `.env.site`, then:
 
-```dotenv
-MARKETPLACE_API_URL=http://<host-users-browse-to>:58046
+```sh
+docker compose --env-file .env.site --profile local-minio up -d    # external minio: set MINIO_ENDPOINT and drop the profile
+./sim-check.sh
 ```
 
-The server injects it into every applet page as `globalThis.MARKETPLACE_API_URL`; without it, browsers try the page's
-host on port 7777.
+Outside sim — identical, plus the air-gap overlay (no egress for app services; llm-lite alone reaches the real LLM,
+playing the site's internal endpoint) and a hosts alias so the browser origin is never localhost:
+
+```sh
+echo "127.0.0.1 g-force" | sudo tee -a /etc/hosts
+docker compose --env-file .env.site -f docker-compose.yml -f compose.airgap.yml --profile local-minio up -d
+./sim-check.sh
+```
+
+Browsers find the marketplace and the LLM through env injected into applet pages (`MARKETPLACE_API_URL`,
+`LLM_PROXY_URL`); wonder's `/llmProxy` forwards to llm-lite whenever `LLM_PROXY_TARGET` is set. In-gap code edits:
+rebuild the app layers from the whitened bases with `build-images.sh` — COPY-only, fully offline. Note: MinIO rejects
+`StorageClass: STANDARD_IA` (`InvalidStorageClass`), so leave `MARKETPLACE_S3_STORAGE_CLASS` empty on MinIO;
+`sim-check.sh` proves whatever value the site sets against the site's real S3.
 
 ## Getting the repo across
 

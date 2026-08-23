@@ -1,0 +1,13 @@
+# On-prem wonder server: live-repo serving from the image, no baked env, arbitrary-UID safe (OpenShift).
+# App layer is COPY-only so in-gap rebuilds work with --network=none from the whitened base.
+ARG BASE_IMAGE=wonder-server-base:latest
+FROM ${BASE_IMAGE}
+COPY nodejs-importmap.js nodejs-importmap-loader.js package.json package-lock.json ./
+COPY jb6 ./jb6
+COPY wonder ./wonder
+COPY solutions ./solutions
+COPY .jb6 ./.jb6
+COPY cloud-services ./cloud-services
+ENV HOME=/tmp
+USER 1001
+CMD ["node", "--import", "./nodejs-importmap.js", "cloud-services/express-server/local-server.js"]

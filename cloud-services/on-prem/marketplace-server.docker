@@ -1,0 +1,7 @@
+# Build context: solutions/idf/marketplace-server. COPY-only app layer over the whitened base.
+ARG BASE_IMAGE=marketplace-server-base:latest
+FROM ${BASE_IMAGE}
+COPY *.py marketplace-openapi.json marketplace-api-examples.json ./
+ENV HOME=/tmp
+USER 1001
+CMD ["python", "marketplace_server.py"]
