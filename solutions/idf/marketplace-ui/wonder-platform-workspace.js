@@ -43,7 +43,8 @@ ReactComp('wonderPlatformWorkspace', {
       const relationSection = ([field, resource, title]) => h(`section:${classes.card}`, {key: field},
         h('div:flex items-center justify-between', {}, h('div:flex items-center gap-2', {}, h('b', {}, title),
           h(`span:${classes.chip}`, {}, draft[field]?.length || 0)), h(`button:${classes.button}`, {
-            disabled: createPending, onClick: () => openPicker(field, resource, title)}, h('L:Plus', {size: 14}), 'הוספה')),
+            onClick: () => openPicker(field, resource, title, draft[field] || [], selected => persist({...draft, [field]: selected}))},
+          h('L:Plus', {size: 14}), 'הוספה')),
         h('div:mt-3 space-y-3', {}, (draft[field] || []).map(id => {
           const item = repo[resource].find(value => value.id == id), managed = resource == 'tools' && item?.managed
           if (!item) return null

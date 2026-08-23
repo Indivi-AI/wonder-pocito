@@ -108,12 +108,13 @@ ReactComp('wonderPlatform', {
         const draft = resource == 'skills' ? await skillDraft(item) : item
         setEditors(current => [...current, {resource, item: {...draft, originalId: item.id}, createLabel: config.resources[resource]?.create}])
       }
-      const openWorkspacePicker = (field, resource, label) => setPicker({source: 'workspace', field, resource, label,
-        single: config.resources[resource].label, selected: workspace.item[field] || [], query: ''})
+      const openWorkspacePicker = (field, resource, label, selected, attach) => setPicker({source: 'workspace', field, resource, label,
+        single: config.resources[resource].label, selected, attach,
+        draftOnly: repo.marketplace && workspace.resource == 'subagents' && !workspace.item.originalId, query: ''})
       const openEditorPicker = (field, resource, label) => setPicker({source: 'editor', editorIndex: editors.length - 1,
         field, resource, label, single: config.resources[resource].label, selected: editors.at(-1).item[field] || [], query: ''})
       const attachSelected = async () => {
-        if (picker.source == 'workspace') await saveWorkspace({...workspace.item, [picker.field]: picker.selected})
+        if (picker.source == 'workspace') await picker.attach(picker.selected)
         else setEditors(editors.map((entry, index) => index == picker.editorIndex
           ? {...entry, item: {...entry.item, [picker.field]: picker.selected}} : entry))
         setPicker()
@@ -135,6 +136,9 @@ ReactComp('wonderPlatform', {
           const childItem = repo.marketplace ? await saveRemote(active.resource, active.item) : active.item
           const child = active.resource == 'skills' && !repo.marketplace ? await publishEditedSkill(childItem, false)
             : upsert(ctx.setVars({repo, resource: active.resource, item: childItem})), field = active.attachTo.field
+          if (active.attachTo.draftOnly) {
+            await persistRepo(child.repo); active.attachTo.attach([...new Set([...active.attachTo.selected, child.saved.id])]); return setEditors(rest)
+          }
           let parent = upsert(ctx.setVars({repo: child.repo, resource: workspace.resource, item: {...workspace.item,
             originalId: workspace.item.originalId,
             [field]: [...new Set([...(workspace.item[field] || []), child.saved.id])]}}))
@@ -181,21 +185,22 @@ ReactComp('wonderPlatform', {
       const conversation = repo?.conversations.find(item => item.id == conversationId) || repo?.conversations[0]
       const updateConversation = async updated => persistRepo({...repo,
         conversations: repo.conversations.map(item => item.id == updated.id ? updated : item)})
-      const newConversation = async () => {
-        const created = {id: `c-${Date.now()}`, title: 'שיחה חדשה', pluginId: '', when: 'עכשיו', messages: []}
+      const newConversation = async (agentId = '') => {
+        const created = {id: `c-${Date.now()}`, title: 'שיחה חדשה', agentId, when: 'עכשיו', messages: []}
         await persistRepo({...repo, conversations: [created, ...repo.conversations]}); setConversationId(created.id); setMessage('')
       }
+      const selectAgent = agentId => conversation.messages.length ? newConversation(agentId) : updateConversation({...conversation, agentId})
       const send = async () => {
-        const text = message.trim(), plugin = repo.plugins.find(item => item.id == conversation?.pluginId)
-        if (!text || !plugin || busy) return
+        const text = message.trim(), agent = repo.subagents.find(item => item.id == conversation?.agentId)
+        if (!text || !agent || busy) return
         setMessage(''); setBusy(true)
         const pending = {...conversation, title: conversation.messages.length ? conversation.title : text.slice(0, 42), when: 'עכשיו',
           messages: [...conversation.messages, {id: `m-${Date.now()}`, role: 'user', text}]}
         await updateConversation(pending)
         try {
-          const result = await runTarget(text, plugin, conversation.id)
+          const result = await runTarget(text, agent, conversation.id)
           const reportIds = (result.reportIds || []).filter(id => repo.reports.some(report => report.id == id))
-          const steps = [...dsls.common.data.wonderPlatformTrace.$runWithCtx(ctx, {repo, target: plugin}), ...(result.runtimeSteps || [])]
+          const steps = [...dsls.common.data.wonderPlatformTrace.$runWithCtx(ctx, {repo, target: agent}), ...(result.runtimeSteps || [])]
           await updateConversation({...pending, messages: [...pending.messages, {...result, id: `m-${Date.now() + 1}`, role: 'agent',
             text: result.text || result.output, reportIds, steps}]})
         } catch (error) {
@@ -214,7 +219,7 @@ ReactComp('wonderPlatform', {
       const content = view == 'workspace' && workspace ? hh(ctx, dsls.react['react-comp'].wonderPlatformWorkspace, {workspace, repo,
         back: () => openView(workspace.resource), saveWorkspace, deleteWorkspace, openPicker: openWorkspacePicker,
         openEditor: openWorkspaceEditor, runTarget, runEval}) : view == 'chat' ? hh(ctx, dsls.react['react-comp'].wonderPlatformChat, {
-        repo, conversation, message, setMessage, busy, send, updateConversation, newConversation, setConversation: setConversationId})
+        repo, conversation, message, setMessage, busy, send, selectAgent, newConversation, setConversation: setConversationId})
         : view == 'evaluations' ? hh(ctx, dsls.react['react-comp'].wonderPlatformEvaluation, {repo, search, setSearch,
           openSet: item => setEditors([{resource: 'evaluations', item: {...item, originalId: item.id}}]),
           createSet: () => setEditors([{resource: 'evaluations', item: blank('evaluations'), createLabel: 'סט חדש'}]), runningSet, runSet})

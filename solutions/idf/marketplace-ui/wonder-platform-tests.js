@@ -45,6 +45,12 @@ Data('wonderPlatformAgentOsCapture', {
   impl: () => ({content: 'Grounded answer [[report:r1]]', run_id: 'run-1', status: 'COMPLETED'})
 })
 
+Data('wonderPlatformChatAgentCapture', {
+  impl: ctx => ({harness: 'agno', text: `AGNO_AGENT:${ctx.vars.target.id}`, reportIds: [], runtimeSteps: []})
+})
+
+const { wonderPlatformChatAgentCapture, wonderPlatformTestSave } = dsls.common.data
+
 Data('wonderPlatformMarketplaceFixture', {
   impl: ctx => {
     const seed = wonderPlatformSeed.$runWithCtx(ctx), item = (resource, manifest) => wonderPlatformMarketplaceItem.$runWithCtx(ctx, {resource, item: manifest})
@@ -163,6 +169,16 @@ ReactComp('wonderPlatformMarketplaceTestApp', {
     marketplaceDetail: dsls.common.data.wonderPlatformMarketplaceDetailFixture('%$resource%', '%$name%')})
 })
 
+ReactComp('wonderPlatformAgentChatTestApp', {
+  impl: wonderPlatform({
+    loadRepo: wonderPlatformSeed(),
+    saveRepo: wonderPlatformTestSave(),
+    runAgent: wonderPlatformChatAgentCapture()
+  })
+})
+
+const { wonderPlatformAgentChatTestApp, wonderPlatformMarketplaceTestApp } = dsls.react['react-comp']
+
 Test('wonderPlatform.marketplaceApiRoutes', {
   impl: dataTest({
     calculate: async ctx => {
@@ -242,8 +258,14 @@ Test('wonderPlatform.migration', {
         managedKind: repo.tools.find(tool => tool.id == 't1').kind, skills: repo.plugins[0].skillIds,
         evaluations: repo.evaluations.length, evalRuns: repo.evalRuns.length}}
     },
-    expectedResult: equals('%result%', asIs({version: 3, packageId: '4821037', managedKind: 'connector',
-      skills: ['evidenceVerification', 'documentationGaps'], evaluations: 4, evalRuns: 0}))
+    expectedResult: equals('%result%', asIs({
+        version: 4,
+        packageId: '4821037',
+        managedKind: 'connector',
+        skills: ['evidenceVerification','documentationGaps'],
+        evaluations: 4,
+        evalRuns: 0
+    }))
   })
 })
 
@@ -462,16 +484,16 @@ UiAction('wonderPlatformSetControl', {
   params: [
     {id: 'label', as: 'string'},
     {id: 'placeholder', as: 'string'},
+    {id: 'selector', as: 'string'},
     {id: 'value', as: 'string', mandatory: true}
   ],
-  impl: ({}, {}, {label, placeholder, value}) => ({
+  impl: ({}, {}, {label, placeholder, selector, value}) => ({
     async exec({vars: {win}}) {
-      const controls = [...win.document.querySelectorAll('input, textarea')]
-      const control = controls.find(element => label ? element.parentElement?.textContent.trim().startsWith(label)
+      const controls = [...win.document.querySelectorAll(selector || 'input, textarea')]
+      const control = selector ? controls[0] : controls.find(element => label ? element.parentElement?.textContent.trim().startsWith(label)
         : element.placeholder?.includes(placeholder))
-      if (!control) throw new Error(`Control not found: ${label || placeholder}`)
-      const prototype = control instanceof win.HTMLTextAreaElement ? win.HTMLTextAreaElement.prototype : win.HTMLInputElement.prototype
-      Object.getOwnPropertyDescriptor(prototype, 'value').set.call(control, value)
+      if (!control || control.disabled) throw new Error(`Control unavailable: ${label || placeholder || selector}`)
+      Object.getOwnPropertyDescriptor(Object.getPrototypeOf(control), 'value').set.call(control, value)
       control.dispatchEvent(new win.Event('input', {bubbles: true}))
       control.dispatchEvent(new win.Event('change', {bubbles: true}))
       control.dispatchEvent(new win.FocusEvent('focusout', {bubbles: true}))
@@ -512,6 +534,46 @@ UiAction('wonderPlatformWaitForButtonGone', {
 })
 
 const { wonderPlatformClickInSection, wonderPlatformSetControl, wonderPlatformWaitForButtonGone } = dsls.react['ui-action']
+
+Test('wonderPlatform.marketplaceAgentCreateRelations', {
+  impl: reactTest({
+    testedComp: wonderPlatformMarketplaceTestApp(),
+    expectedResult: and(contains('מיומנות ראיות'), contains('פלאגין ראיות'), contains('יצירת סוכן')),
+    userActions: actions(
+      waitForText('פלאגין ראיות'),
+      click('סאב-אייג׳נטים'),
+      waitForText('סוכן ראיות'),
+      click('סאב-אייג׳נט חדש'),
+      wonderPlatformClickInSection('מיומנויות', 'הוספה'),
+      waitForText('צירוף מיומנויות'),
+      click('מיומנות ראיות'),
+      click('צירוף מיומנויות'),
+      wonderPlatformWaitForButtonGone('צירוף מיומנויות'),
+      wonderPlatformClickInSection('פלאגינים', 'הוספה'),
+      waitForText('צירוף פלאגינים'),
+      click('פלאגין ראיות'),
+      click('צירוף פלאגינים'),
+      wonderPlatformWaitForButtonGone('צירוף פלאגינים')
+    ),
+    logger: 'uiLogger'
+  })
+})
+
+Test('wonderPlatform.chatRunsSelectedAgent', {
+  impl: reactTest(wonderPlatformAgentChatTestApp(), contains('AGNO_AGENT:a2'), {
+    userActions: actions(
+      waitForText('פלאגין חדש'),
+      click('צ׳אט'),
+      waitForText('מחלץ ישויות'),
+      wonderPlatformSetControl({ selector: '[data-testid="agent-selector"]', value: 'a2' }),
+      wonderPlatformSetControl({ placeholder: 'כתוב הודעה לסוכן', value: 'Question' }),
+      click('aria-label="שליחה"'),
+      waitForText('AGNO_AGENT:a2')
+    ),
+    logger: 'uiLogger'
+  })
+})
+
 ReactComp('wonderPlatformMarketplaceE2eApp', {
   impl: comp({hFunc: ctx => {
     const App = wonderPlatform.$runWithCtx(ctx, {roomWUrl: 'room://marketplace',

@@ -68,13 +68,13 @@ Data('wonderPlatformSeed', {
       ['מיומנות', 'הוכחת קיום — תהליך מלא', '8.4s'], ['כלי', 'חיפוש Jira', '4.7s'],
       ['כלי', 'חיפוש Confluence', '6.2s'], ['האצלה', 'מחלץ ישויות', '5.1s'], ['מודל', 'ניסוח תשובה מאומתת', '4.4s']
     ])
-    const conversations = [{id: 'c1', title: 'מוכנות תוכנית שחר', pluginId: 'p1', when: 'היום', messages: [
+    const conversations = [{id: 'c1', title: 'מוכנות תוכנית שחר', agentId: 'a1', when: 'היום', messages: [
       {id: 'm1', role: 'user', text: 'בדוק האם תוכנית שחר מוכנה ליציאה והצג את הראיות המרכזיות.'},
       {id: 'm2', role: 'agent', reportIds: ['r1', 'r2'], status: 'הושלם', duration: '41 שנ׳', steps,
         text: 'תוכנית שחר מוכנה חלקית: האישור התקציבי קיים ו-92% מבדיקות המוכנות עברו. ' +
           'הפער החוסם הוא נוהל ההתאוששות.'}
-    ]}, {id: 'c2', title: 'פערי מפרט מוקד צפון', pluginId: 'p2', when: 'אתמול', messages: []},
-    {id: 'c3', title: 'חריגות שבוע 33', pluginId: 'p3', when: 'יום א׳', messages: []}]
+    ]}, {id: 'c2', title: 'פערי מפרט מוקד צפון', agentId: 'a3', when: 'אתמול', messages: []},
+    {id: 'c3', title: 'חריגות שבוע 33', agentId: 'a2', when: 'יום א׳', messages: []}]
     const flowPackages = [
       {id: '4821037', name: 'איחוד דוחות שבועיים', desc: 'מארז Flow לאיחוד דוחות לפי טווח.', inputSchema: [
         {id: 'date_from', title: 'תאריך התחלה', type: 'DateTime', required: true},
@@ -84,12 +84,15 @@ Data('wonderPlatformSeed', {
       {id: '4821048', name: 'שליחת חבילת מסמכים', desc: 'מארז Flow לשליחת מסמכים.', inputSchema: [], cubes: []},
       {id: '4821062', name: 'מדדי מחסן', desc: 'מארז Flow לשאילתת מדדים.', inputSchema: [], cubes: []}
     ]
-    return {version: 3, plugins, skills, tools, subagents, reports, evaluations, evalRuns: [], conversations, flowPackages}
+    return {version: 4, plugins, skills, tools, subagents, reports, evaluations, evalRuns: [], conversations, flowPackages}
   }
 })
 
 Data('wonderPlatformNormalize', {
-  params: [{id: 'repo', as: 'object'}, {id: 'seed', as: 'object'}],
+  params: [
+    {id: 'repo', as: 'object'},
+    {id: 'seed', as: 'object'}
+  ],
   impl: ({}, {}, {repo, seed}) => {
     const stored = repo && typeof repo == 'object' ? repo : {}, list = key => Array.isArray(stored[key]) ? stored[key] : seed[key]
     const stamp = item => ({version: 'V0', created: '08/2026', updated: 'היום', ...item})
@@ -101,7 +104,8 @@ Data('wonderPlatformNormalize', {
       kind: item.managed ? 'connector' : item.kind == 'flow' ? 'flow' : String(item.kind || '').startsWith('Flow') ? 'flow' : 'connector',
       packageId: item.packageId || String(item.kind || '').match(/\d+/)?.[0] || '', inputSchema: item.inputSchema || [], outputCubes: item.outputCubes || []})),
     evaluations: list('evaluations').map(item => stamp({...item, rubric: item.rubric || '', rows: item.rows || []})),
-    evalRuns: list('evalRuns'), conversations: list('conversations').map(item => ({...item, messages: item.messages || []})),
+    evalRuns: list('evalRuns'), conversations: list('conversations').map(({pluginId, ...item}) => ({...item,
+      agentId: item.agentId || '', messages: item.messages || []})),
     flowPackages: list('flowPackages')}
   }
 })
