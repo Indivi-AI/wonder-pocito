@@ -64,9 +64,11 @@ ReactComp('wonderPlatform', {
         pluginIds: [], assets: [], toolType: resource == 'tools' ? 'code' : undefined, jsonSchema: {}, isAsync: true, tracable: true,
         dedicatedToolConfig: {}, codeFiles: [], packageId: '', inputSchema: [], outputCubes: []})
       const saveRemote = async (resource, item) => {
+        ctx.vars.marketplaceLogger?.info?.({t: 'saveRemoteStart', resource, id: item.id, originalId: item.originalId}, {}, {ctx}) // log to delete
         const operation = item.originalId ? 'update' : 'create', body = manifest(ctx.setVars({resource, item, operation}))
         const response = await marketplaceCall(ctx.setVars({operation, resource, name: item.originalId, body,
           roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))
+        ctx.vars.marketplaceLogger?.info?.({t: 'saveRemoteDone', resource, id: item.id}, {}, {ctx}) // log to delete
         return {...dsls.common.data.wonderPlatformMarketplaceItem.$runWithCtx(ctx, {resource, item: {...body, ...response}}),
           originalId: item.originalId}
       }
@@ -113,9 +115,16 @@ ReactComp('wonderPlatform', {
       const openEditorPicker = (field, resource, label) => setPicker({source: 'editor', editorIndex: editors.length - 1,
         field, resource, label, single: config.resources[resource].label, selected: editors.at(-1).item[field] || [], query: ''})
       const attachSelected = async () => {
-        if (picker.source == 'workspace') await saveWorkspace({...workspace.item, [picker.field]: picker.selected})
-        else setEditors(editors.map((entry, index) => index == picker.editorIndex
-          ? {...entry, item: {...entry.item, [picker.field]: picker.selected}} : entry))
+        ctx.vars.marketplaceLogger?.info?.({t: 'attachSelectedStart', source: picker.source, field: picker.field,
+          selected: picker.selected}, {}, {ctx}) // log to delete
+        try {
+          if (picker.source == 'workspace') await saveWorkspace({...workspace.item, [picker.field]: picker.selected})
+          else setEditors(editors.map((entry, index) => index == picker.editorIndex
+            ? {...entry, item: {...entry.item, [picker.field]: picker.selected}} : entry))
+        } catch (error) {
+          ctx.vars.marketplaceLogger?.info?.({t: 'attachSelectedError', err: String(error?.stack || error)}, {}, {ctx}) // log to delete
+          throw error
+        }
         setPicker()
       }
       const createNested = resource => {

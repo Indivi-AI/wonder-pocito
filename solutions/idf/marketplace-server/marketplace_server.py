@@ -264,6 +264,8 @@ class S3ObjectStore:
             self.client.create_bucket(Bucket=self.bucket)
 
     def put(self, key, content, content_type=None, if_absent=False):
+        import time  # log to delete
+        started = time.time()  # log to delete
         try:
             self.client.put_object(Bucket=self.bucket, Key=safe_path(key), Body=content,
               **({'ContentType': content_type} if content_type else {}), **({'IfNoneMatch': '*'} if if_absent else {}))
@@ -271,6 +273,10 @@ class S3ObjectStore:
             if error.response.get('Error', {}).get('Code') in {'PreconditionFailed', '412'}:
                 raise FileExistsError(key)
             raise
+        finally:  # log to delete
+            elapsed = time.time() - started  # log to delete
+            if elapsed > 1:  # log to delete
+                print(f'SLOW-PUT {key} if_absent={if_absent} took {elapsed:.1f}s', flush=True)  # log to delete
 
     def get(self, key):
         try:
