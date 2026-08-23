@@ -596,8 +596,7 @@ Test('wonderPlatform.chatRunsSelectedAgent', {
 
 ReactComp('wonderPlatformMarketplaceE2eApp', {
   impl: comp({hFunc: ctx => {
-    const App = wonderPlatform.$runWithCtx(ctx, {roomWUrl: 'room://marketplace',
-      marketplaceBaseUrl: 'http://localhost:7777', agentOsBaseUrl: 'http://localhost:7777'})
+    const App = wonderPlatform.$runWithCtx(ctx, {roomWUrl: 'room://marketplace'})
     return () => ctx.vars.react.h(App)
   }})
 })

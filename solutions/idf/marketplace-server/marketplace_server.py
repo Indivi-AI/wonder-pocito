@@ -258,6 +258,7 @@ class UploadRequest(DownloadRequest):
 class S3ObjectStore:
     def __init__(self, bucket=None, client=None):
         self.bucket = bucket or os.getenv('MARKETPLACE_S3_BUCKET', 'wonder-marketplace')
+        self.storage_class = os.getenv('MARKETPLACE_S3_STORAGE_CLASS', '')
         self.client = client or boto3.client('s3', endpoint_url=os.getenv('MARKETPLACE_S3_ENDPOINT', 'http://127.0.0.1:9000'),
           aws_access_key_id=os.getenv('MARKETPLACE_S3_ACCESS_KEY', 'wonder'),
           aws_secret_access_key=os.getenv('MARKETPLACE_S3_SECRET_KEY', 'wonder-minio-local'),
@@ -279,7 +280,8 @@ class S3ObjectStore:
     def put(self, key, content, content_type=None, if_absent=False):
         try:
             self.client.put_object(Bucket=self.bucket, Key=safe_path(key), Body=content,
-              **({'ContentType': content_type} if content_type else {}), **({'IfNoneMatch': '*'} if if_absent else {}))
+              **({'ContentType': content_type} if content_type else {}), **({'IfNoneMatch': '*'} if if_absent else {}),
+              **({'StorageClass': self.storage_class} if self.storage_class else {}))
         except ClientError as error:
             if error.response.get('Error', {}).get('Code') in {'PreconditionFailed', '412'}:
                 raise FileExistsError(key)
@@ -786,4 +788,4 @@ def create_app(data_dir=None, model_factory=None):
 if __name__ == '__main__':
     import uvicorn
 
-    uvicorn.run(create_app(), host='127.0.0.1', port=int(os.getenv('AGENT_OS_PORT', '7777')))
+    uvicorn.run(create_app(), host=os.getenv('AGENT_OS_HOST', '127.0.0.1'), port=int(os.getenv('AGENT_OS_PORT', '7777')))

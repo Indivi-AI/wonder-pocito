@@ -13,8 +13,8 @@ const { wonderPlatformRunAgent, wonderPlatformListSkills, wonderPlatformLoadSkil
 ReactComp('wonderPlatform', {
   params: [
     {id: 'roomWUrl', as: 'string', defaultValue: 'room://wonder-platform'},
-    {id: 'marketplaceBaseUrl', as: 'string', defaultValue: 'http://localhost:7777'},
-    {id: 'agentOsBaseUrl', as: 'string', defaultValue: 'http://localhost:7777'},
+    {id: 'marketplaceBaseUrl', as: 'string'},
+    {id: 'agentOsBaseUrl', as: 'string'},
     {id: 'agentOsToken', as: 'string'},
     {id: 'loadRepo', dynamic: true, defaultValue: wonderPlatformMarketplaceRepository('%$roomWUrl%', '%$marketplaceBaseUrl%')},
     {id: 'saveRepo', dynamic: true, defaultValue: wonderPlatformSaveRepository('%$roomWUrl%', '%$repo%')},
