@@ -3,6 +3,10 @@
 This is the current operating guide for Wonder in the air-gapped network. It records the working local setup, transfer process, runtime
 selection, bucket configuration, React applet flow, and remaining gaps.
 
+> Status: the docker-compose flow in `cloud-services/on-prem/README.md` (entry point: `solutions/idf/wonder-platform/README.md`)
+> is the target deployment path, and some scripts referenced below were since removed from the repo. This guide stays for its
+> operational knowledge: buckets, MinIO CORS, MCP wiring, and git-bundle updates.
+
 ## Current target
 
 - Ubuntu development server.
