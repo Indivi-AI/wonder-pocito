@@ -8,5 +8,3 @@ tests
 **/tests
 **/static-wasm
 *.log
-**/.env.*
-cloud-services/on-prem/onprem.env

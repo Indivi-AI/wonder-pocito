@@ -9,4 +9,4 @@ files/
 wonder.zip
 
 tmp/
-cloud-services/on-prem/onprem.env
+cloud-services/express-server/.env.onprem

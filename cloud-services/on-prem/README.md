@@ -11,11 +11,14 @@ Create buckets `indiviai-wonder` and `wonder-code-packages` and allow anonymous 
 ## Configure and run
 
 ```sh
-cp cloud-services/on-prem/onprem.env.template cloud-services/on-prem/onprem.env
-vi cloud-services/on-prem/onprem.env        # usually only MINIO_ENDPOINT needs a real value
-npm ci                                      # once
-npm run onprem                              # server + MCP at http://localhost:3000
+cp cloud-services/express-server/.env.onprem.template cloud-services/express-server/.env.onprem
+vi cloud-services/express-server/.env.onprem   # usually only MINIO_ENDPOINT needs a real value
+npm ci                                         # once
+npm run onprem                                 # WONDER_ENV=onprem -> loads .env.onprem; server + MCP at http://localhost:3000
 ```
+
+`WONDER_ENV` is the switch for which env file the local server loads: `dev` (default) loads `.env.dev`,
+`onprem` loads `.env.onprem` — same folder, same mechanism.
 
 ## Use
 
