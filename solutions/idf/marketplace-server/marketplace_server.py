@@ -3,6 +3,7 @@ import hashlib
 import importlib
 import importlib.util
 import json
+import logging
 import os
 import re
 import shutil
@@ -28,6 +29,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 ROOT = Path(__file__).parent
 SCOPE = 'marketplace'
+logger = logging.getLogger(__name__)
 
 
 def now():
@@ -386,7 +388,12 @@ class MarketplaceRepository:
         return result | ({'content': self.read_artifact(room, kind, name, item).decode()} if content else {})
 
     def list(self, room, kind):
-        return [self.public(room, kind, self.read_json(key)) for key in self.manifest_keys(room, kind)]
+        def read_manifest(key):
+            try:
+                return self.public(room, kind, self.read_json(key))
+            except (AttributeError, FileNotFoundError, KeyError, TypeError, ValueError) as error:
+                logger.warning('Ignoring corrupt marketplace manifest %s: %s', key, error)
+        return [item for key in self.manifest_keys(room, kind) if (item := read_manifest(key)) is not None]
 
     def get(self, room, kind, name, include_assets=False, include_code=False):
         return self.public(room, kind, self.row(room, kind, name), include_assets, include_code)

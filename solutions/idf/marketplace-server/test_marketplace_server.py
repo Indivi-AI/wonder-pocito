@@ -121,6 +121,15 @@ class MarketplaceServerTest(unittest.TestCase):
         self.assertEqual(self.request('GET', '/api/v1/audit/skill/missing').json(), [])
         self.assertEqual(self.request('GET', f"/api/v1/users/{user['uid']}").status_code, 422)
 
+    def test_corrupt_manifests_are_logged_and_skipped(self):
+        self.request('POST', '/api/v1/skills/', json=self.skill())
+        self.objects.put('marketplace/skills/legacy/manifest.json', b'{"display_name":"legacy"}')
+        self.objects.put('marketplace/skills/broken/manifest.json', b'{')
+        with self.assertLogs('marketplace_server', level='WARNING') as logs:
+            response = self.request('GET', '/api/v1/skills/')
+        self.assertEqual([item['display_name'] for item in response.json()], ['room-facts'])
+        self.assertTrue(all(name in '\n'.join(logs.output) for name in ['legacy', 'broken']))
+
     def test_photographed_schema_examples_round_trip(self):
         for kind in ['Skill', 'Tool', 'Plugin', 'Agent']:
             body, plural = self.examples[f'create{kind}'], f'{kind.lower()}s'
