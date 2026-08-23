@@ -56,10 +56,11 @@ await coreUtils.writeServiceResult(await coreUtils.resolveDeveloperEntryPoint())
 
     if (configuredPath.includes('{gitUser}')) {
       const { promisify } = await import('node:util'), { execFile } = await import('node:child_process')
-      const { stdout } = await promisify(execFile)('git', ['config', 'user.email'], {cwd: repoRoot})
-      const gitUser = stdout.trim().split('@')[0]
-      if (!gitUser) throw new Error(`git user.email is not configured in ${repoRoot}`)
-      configuredPath = configuredPath.replaceAll('{gitUser}', gitUser)
+      const gitUser = await promisify(execFile)('git', ['config', 'user.email'], {cwd: repoRoot})
+        .then(({stdout}) => stdout.trim().split('@')[0], () => '')
+      const perUser = gitUser && pathJoin(repoRoot, configuredPath.replaceAll('{gitUser}', gitUser))
+      configuredPath = perUser && await exists(perUser) ? configuredPath.replaceAll('{gitUser}', gitUser)
+        : configuredPath.replaceAll('{gitUser}', 'default')   // no git identity or no per-user file -> entry-points-default.js
     }
 
     developerEntryPoint = pathJoin(repoRoot, configuredPath)

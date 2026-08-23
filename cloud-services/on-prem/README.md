@@ -35,9 +35,6 @@ curl -s -X POST http://localhost:3000/mcp -H 'Content-Type: application/json' -d
   "params":{"name":"uploadRoomApplet","arguments":{"roomId":"demo","entryCompFullId":"react-comp<react>YOUR_APPLET"}}}'
 ```
 
-If the checkout has no team git identity, run `git config user.email onprem@airgap` once
-(maps the MCP dev tools to `.jb6/entry-points-onprem.js`).
-
 ## Getting the repo across
 
 `npm run airgapped-export -- ../wonder-kit` (outside) builds a transfer kit: `wonder.bundle` (git bundle),
