@@ -2,7 +2,7 @@ import { dsls, coreUtils, jb } from '@jb6/core'
 import '@wonder/db/db-drivers.js'
 import '@wonder/db/tests/gmail-test-users.js'
 
-const { wfetch2, wresolveInfo, wputMany } = jb.wonderUtils
+const { wfetch2, wresolveInfo, wputMany, storageEnvVars } = jb.wonderUtils
 import '@jb6/common'
 import '@jb6/mcp'
 import '@jb6/react'
@@ -111,10 +111,7 @@ export async function uploadCompDependencies(urlsToLoad) {
   timer.phase('imports')
 
   const baseDir = await coreUtils.calcRepoRoot()
-  const db = process.env.STORAGE_PROVIDER || 'gcs'
-  const dbCtx = coreUtils.ensureLoggers(['dbLogger'], {ctx: new coreUtils.Ctx().setVars({
-    db, ...(db === 'minio' && { bucketEndpoint: process.env.MINIO_ENDPOINT })
-  })})
+  const dbCtx = coreUtils.ensureLoggers(['dbLogger'], {ctx: new coreUtils.Ctx().setVars(storageEnvVars())})
 
   const sourceFiles = urlsToLoad.split(',').map(f => f.trim()).filter(Boolean)
   if (!sourceFiles.length) throw new Error('no source files')
@@ -195,8 +192,7 @@ export async function uploadLambdaCompDependencies(entryPath) {
   timer.phase('imports')
 
   const baseDir = await coreUtils.calcRepoRoot()
-  const db = process.env.STORAGE_PROVIDER || 'gcs'
-  const dbCtx = new coreUtils.Ctx().setVars({ db, ...(db === 'minio' && { bucketEndpoint: process.env.MINIO_ENDPOINT }) })
+  const dbCtx = new coreUtils.Ctx().setVars(storageEnvVars())
   // Version identity = git sha + entry path. Clean tree → deterministic reuse per package entry.
   // Dirty tree → `MMDD-HHMM-<gitSha>-<rand>` so every uncommitted change rebuilds. Computed first to allow early reuse.
   const gitSha = execSync('git rev-parse --short HEAD', { encoding: 'utf8', cwd: baseDir }).trim()
@@ -416,7 +412,7 @@ await coreUtils.writeServiceResult({ ...packageInfo, dir })
         const def = {lambdaV: result.lambdaV, lambdaCodeWUrl: result.lambdaCodeWUrl,
           entryPath: compPath, entryCompFullId: compFullId, dir: result.dir, roomWUrl}
         const defPath = `${roomWUrl}/lambdas/${lambdaId}.json`
-        await wfetch2(defPath, {method: 'PUT', body: def, headers: { 'x-wonder-json': 'as-is' }}, ctx)
+        await wfetch2(defPath, {method: 'PUT', body: def, headers: { 'x-wonder-json': 'as-is' }}, ctx.setVars(storageEnvVars()))
         timer.phase('writeManifest')
         ctx.vars.mcpLogger?.info?.({t: 'upload room lambda done', compFullId, entryPath, compPath,
           lambdaCodeWUrl: result.lambdaCodeWUrl, userEmail: ctx.vars.userEmail,
@@ -469,12 +465,14 @@ try {
     const {appletV, clientCodeWUrl, cmpId} = result, imageName = ogImageLocalPath?.split('/').pop()
     const imageUrl = imageName && `${roomWUrl}/applets/${cmpId}/${imageName}`
     const og = Object.fromEntries(Object.entries({ogTitle, ogDescription, ogImage: imageUrl || ogImage}).filter(([, v]) => v))
-    await Promise.all([
-      imageName && wfetch2(imageUrl, {method: 'PUT', body: ogImageLocalPath, headers: {'x-wonder-body': 'localFile'}}, ctx),
+    const dbCtx = ctx.setVars(storageEnvVars())
+    const [, defRes] = await Promise.all([
+      imageName && wfetch2(imageUrl, {method: 'PUT', body: ogImageLocalPath, headers: {'x-wonder-body': 'localFile'}}, dbCtx),
       wfetch2(`${roomWUrl}/applets/${cmpId}.json`, {method: 'PUT', headers: {'x-wonder-json': 'as-is'},
         body: {cmpId, urlsToLoad: entryPath, appletV, clientCodeWUrl, roomWUrl,
-          entryCompFullId, ...(Object.keys(og).length && {og})}}, ctx)
+          entryCompFullId, ...(Object.keys(og).length && {og})}}, dbCtx)
     ])
+    if (defRes?.ok === false) return JSON.stringify({error: `applet def PUT failed: ${defRes.status}`, defPath: `${roomWUrl}/applets/${cmpId}.json`})
     ctx.vars.mcpLogger?.info?.({t: 'upload room applet done', roomWUrl, cmpId, appletV, clientCodeWUrl,
       fileCount: result.fileCount, totalBytes: result.totalBytes, uploadMs: result.uploadMs, timeline: result.timeline}, {}, {ctx})
     return JSON.stringify({...result, imageUrl, defPath: `${roomWUrl}/applets/${cmpId}.json`,
@@ -495,7 +493,7 @@ import { uploadLambdaCompDependencies, uploadCompDependencies } from '@wonder/st
 import { jb, coreUtils } from '@jb6/core'
 import '@wonder/db/db-drivers.js'
 try {
-const roomWUrl = ${JSON.stringify(roomWUrl)}, dbCtx = new coreUtils.Ctx()
+const roomWUrl = ${JSON.stringify(roomWUrl)}, dbCtx = new coreUtils.Ctx().setVars(jb.wonderUtils.storageEnvVars())
 const defsIn = async dir => {
   const dirUrl = \`${roomWUrl}/\${dir}/\`
   const files = await (await jb.wonderUtils.wfetch2(dirUrl, { method: 'GET' }, dbCtx)).json()

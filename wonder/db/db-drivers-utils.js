@@ -19,7 +19,7 @@ async function wresolve(url, _ctx, method = 'GET') {
   let ctx = _ctx.setVars({ url, method, dbLogger, localhostServer: localhostServer(_ctx) })
   const extracted = extractFromUrl(url, ctx), db = extracted.db || ctx.vars.db || 'gcs'
   const store = dsls.wonder['object-store'][db.replace(/-/g, '')]?.$runWithCtx(ctx)
-  if (store?.enrichCtx) ctx = await store.enrichCtx(ctx)
+  if (store?.enrichCtx) ctx = (await store.enrichCtx(ctx)).setVars(ctx.vars)   // store enrichCtx supplies defaults - caller vars win, as in wfetch2
   const { fileName } = extracted
   const ext = (url.endsWith('/') || fileName?.includes('.')) ? '' : '.json'
   const path = await calcPath(ctx, extracted) + ext
@@ -36,6 +36,14 @@ async function wresolveInfo(url, _ctx, method = 'GET') {
   const isLocal = resolved != null && !/^https?:\/\//.test(resolved)   // wresolve returns a directly-readable path (fs or repo-relative mirror) for local; an https url for remote
   return { url, db, fullyResolvedWUrl, rangeUrl: coreUtils.isNode ? resolved : fullyResolvedWUrl,
     resolved, isWUrl: resolved != null, isLocal, needsWcache: resolved != null && !isLocal }
+}
+
+// the whole env->storage contract: process boundaries (mcp tools, express server) opt in via ctx vars; db resolution itself never reads env
+const storageEnvVars = ({ forBrowser } = {}) => {
+  const env = globalThis.process?.env || {}
+  if (env.STORAGE_PROVIDER !== 'minio') return {}
+  const bucketEndpoint = forBrowser ? env.WONDER_STORAGE_URL : env.MINIO_ENDPOINT || env.WONDER_STORAGE_URL
+  return { db: 'minio', ...(bucketEndpoint && { bucketEndpoint }), ...(env.WONDER_CDN_URL && { clientCodeEndpoint: env.WONDER_CDN_URL }) }
 }
 
 async function wputMany(items, ctx) {
@@ -314,7 +322,7 @@ const rawFileUtils = (text, binary) => {
 
 const wcachePath = (bucketName, path) => `${wcacheRoot()}/${bucketName}/${path}`
 
-Object.assign(jb.wonderUtils, { formatDay, formatTimeWithRandom, wresolve, wresolveInfo, wputMany, wcachePopulate,
+Object.assign(jb.wonderUtils, { formatDay, formatTimeWithRandom, wresolve, wresolveInfo, wputMany, wcachePopulate, storageEnvVars,
   saveRoomBigLog2, prefetchSignedUrls, getIdToken, getAccessToken,
   storagePrefix, wonderBucketName, successResult, errorResultByException, notFoundResult,
   calcPath, extractFromUrl, wonderRepoRoot, bustCdnCache, paginateGcsList, gcsStorage,
