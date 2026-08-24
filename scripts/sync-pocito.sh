@@ -14,5 +14,5 @@ cd "$SRC"; wanted="$(git ls-files | grep -vE "$DROP" | grep -vE "$JUNK")"
 # keeping only the `files` submodule ref. Then copy wanted over. Deletions and renames propagate.
 cd "$DST"
 comm -23 <(git ls-files | grep -vE '^files$' | sort) <(echo "$wanted" | sort) | while read -r f; do git rm -qf --ignore-unmatch -- "$f" >/dev/null; done
-while read -r f; do [ -f "$SRC/$f" ] || continue; mkdir -p "$DST/$(dirname "$f")"; cp -p "$SRC/$f" "$DST/$f"; done <<< "$wanted"
+while read -r f; do [ -f "$SRC/$f" ] || continue; [ "$SRC/$f" -ef "$DST/$f" ] && continue; mkdir -p "$DST/$(dirname "$f")"; cp -p "$SRC/$f" "$DST/$f"; done <<< "$wanted"
 echo "synced $SRC -> $DST (pocito-only, $(echo "$wanted" | wc -l | tr -d ' ') files)"
