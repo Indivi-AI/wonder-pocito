@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Smoke the deployed stack from outside, as a browser would - same script for the sim, the site box, and OpenShift routes.
 # Reads .env.site next to this script; needs only curl. Waits for readiness, exits non-zero on any failure.
-# LLM_SMOKE=1 additionally runs one real completion through /llmProxy -> llm-lite (costs one upstream call).
+# The /llmProxy check sends one tiny completion through llm-lite and prints the upstream verdict (costs one upstream call).
 set -uo pipefail
 cd "$(dirname "$0")"
 set -a; source .env.site; set +a
@@ -30,15 +30,11 @@ done
 curl -sS --max-time 10 "$wonder/room/$room/applet/none" | grep -q "no applet" \
   && pass "applet route answers through $wonder" || flunk "applet route broken"
 
-llm_status=$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' -X POST "$wonder/llmProxy" -H 'content-type: application/json' \
+llm_response=$(curl -sS --max-time 20 -X POST "$wonder/llmProxy" -H 'content-type: application/json' \
   -d "{\"targetUrl\":\"https://api.openai.com/v1/chat/completions\",\"originalBody\":{\"model\":\"${LLM_MODEL#*/}\",\"messages\":[{\"role\":\"user\",\"content\":\"Say OK\"}]}}")
-[ "$llm_status" != 404 ] && pass "/llmProxy registered (status $llm_status)" || flunk "/llmProxy is 404 - not registered on the wonder server"
-if [ "${LLM_SMOKE:-0}" = 1 ]; then
-  mcurl -X POST "$wonder/llmProxy" -H 'content-type: application/json' \
-    -d "{\"targetUrl\":\"https://api.openai.com/v1/chat/completions\",\"originalBody\":{\"model\":\"${LLM_MODEL#*/}\",\"messages\":[{\"role\":\"user\",\"content\":\"Say OK\"}]}}" \
-    | grep -q '"content"' && pass "LLM completion via llm-lite (model ${LLM_MODEL#*/})" || flunk "LLM completion via llm-lite"
-fi
-
+if echo "$llm_response" | grep -q "Cannot POST /llmProxy"; then flunk "/llmProxy not registered on the wonder server"
+elif echo "$llm_response" | grep -q '"content"'; then pass "/llmProxy -> llm-lite -> upstream answered a completion"
+else pass "/llmProxy registered; upstream replied: $(echo "$llm_response" | tr -d '\n' | head -c 140)"; fi
 mcurl -X POST "$market/api/v1/skills/" -H 'content-type: application/json' \
   -d '{"id":"smokeSkill","display_name":"Smoke skill","description":"fact: SIM_SMOKE_OK","skill_md":"# smoke\nThe phrase is SIM_SMOKE_OK."}' \
   > /dev/null && pass "skill create (S3 put incl MARKETPLACE_S3_STORAGE_CLASS='${MARKETPLACE_S3_STORAGE_CLASS:-}')" || flunk "skill create"

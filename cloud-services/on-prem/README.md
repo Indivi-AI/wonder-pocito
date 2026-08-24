@@ -19,8 +19,8 @@ docker compose --env-file .env.site -f docker-compose.yml -f compose.airgap.yml 
 
 Images target the SITE's cpu: `build-images.sh` defaults to `linux/amd64` (override with `PLATFORM=linux/arm64`) —
 a mac arm build without it produces images g-force-class x86 hosts cannot run. In the sim, the `minio-init` one-shot
-creates the `WONDER_BUCKETS` with anonymous read/write; `LLM_SMOKE=1 ./sim-check.sh` additionally buys one real
-completion through llm-lite. For teammate day-to-day development, `./wonder-up.sh` at the repo root wraps all of this
+creates the `WONDER_BUCKETS` with anonymous read/write; the smoke's `/llmProxy` check sends one tiny completion
+through llm-lite and prints the upstream's verdict verbatim. For teammate day-to-day development, `./wonder-up.sh` at the repo root wraps all of this
 and adds `compose.dev.yml` — the working tree mounted live into the containers, native-arch images.
 
 The airgap overlay removes internet for wonder/marketplace/minio (published ports still work); llm-lite alone gets
