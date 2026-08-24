@@ -186,7 +186,7 @@ Data('wonderPlatformAgentOsRequest', {
       method: 'POST',
       headers: token ? {Authorization: `Bearer ${token}`} : {},
       body
-    }, ctx.setVars({marketplaceBaseUrl: baseUrl}))
+    }, ctx.setVars({marketplaceBaseUrl: baseUrl, agnoBaseUrl: baseUrl}))
     ctx.vars.agentOsLogger?.info?.({t: 'agentOsRun', agentId, sessionId, status: response.status}, {}, {ctx})
     if (!response.ok) throw new Error(`AgentOS ${response.status}: ${await response.text()}`)
     return response.json()

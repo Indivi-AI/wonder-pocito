@@ -8,9 +8,17 @@ name: wonder-onprem
 networks:
   edge: {}
 
+x-marketplace-s3-env: &marketplace-s3-env   # marketplace + agno share ONLY this object store - no calls between them
+  MARKETPLACE_S3_ENDPOINT: ${MINIO_ENDPOINT:-${SITE_SCHEME}://${SITE_HOST}:${MINIO_PUBLISHED_PORT}}
+  MARKETPLACE_S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+  MARKETPLACE_S3_SECRET_KEY: ${S3_SECRET_KEY}
+  MARKETPLACE_S3_BUCKET: ${MARKETPLACE_S3_BUCKET}
+  MARKETPLACE_S3_STORAGE_CLASS: ${MARKETPLACE_S3_STORAGE_CLASS}
+  CORS_ALLOWED_ORIGINS: ${SITE_SCHEME}://${SITE_HOST}:${WONDER_PUBLISHED_PORT}
+
 volumes:
   minio-data: {}
-  marketplace-runtime: {}
+  agno-runtime: {}
 
 services:
   wonder:
@@ -26,6 +34,7 @@ services:
       WONDER_SERVICE_URL: http://127.0.0.1:${WONDER_PORT}
       MINIO_ENDPOINT: ${MINIO_ENDPOINT:-${SITE_SCHEME}://${SITE_HOST}:${MINIO_PUBLISHED_PORT}}
       MARKETPLACE_API_URL: ${SITE_SCHEME}://${SITE_HOST}:${MARKETPLACE_PUBLISHED_PORT}
+      AGNO_API_URL: ${SITE_SCHEME}://${SITE_HOST}:${AGNO_PUBLISHED_PORT}
       LLM_PROXY_URL: ${SITE_SCHEME}://${SITE_HOST}:${WONDER_PUBLISHED_PORT}/llmProxy
       LLM_PROXY_TARGET: ${SITE_SCHEME}://${SITE_HOST}:${LLM_LITE_PUBLISHED_PORT}
       LLM_PROXY_KEY: ${LLM_PROXY_KEY}
@@ -34,20 +43,27 @@ services:
   marketplace:
     image: marketplace-server:${IMAGE_TAG}
     restart: unless-stopped
-    ports: ["${MARKETPLACE_PUBLISHED_PORT}:${AGENT_OS_PORT}"]
+    ports: ["${MARKETPLACE_PUBLISHED_PORT}:${MARKETPLACE_PORT}"]
     networks: [edge]
     extra_hosts: ["${SITE_HOST}:host-gateway"]
-    volumes: [marketplace-runtime:/data]
     environment:
+      <<: *marketplace-s3-env
+      MARKETPLACE_HOST: 0.0.0.0
+      MARKETPLACE_PORT: ${MARKETPLACE_PORT}
+
+  agno:
+    image: marketplace-server:${IMAGE_TAG}
+    command: ["python", "agno_server.py"]
+    restart: unless-stopped
+    ports: ["${AGNO_PUBLISHED_PORT}:${AGENT_OS_PORT}"]
+    networks: [edge]
+    extra_hosts: ["${SITE_HOST}:host-gateway"]
+    volumes: [agno-runtime:/data]
+    environment:
+      <<: *marketplace-s3-env
       AGENT_OS_HOST: 0.0.0.0
       AGENT_OS_PORT: ${AGENT_OS_PORT}
       MARKETPLACE_DATA_DIR: /data
-      MARKETPLACE_S3_ENDPOINT: ${MINIO_ENDPOINT:-${SITE_SCHEME}://${SITE_HOST}:${MINIO_PUBLISHED_PORT}}
-      MARKETPLACE_S3_ACCESS_KEY: ${S3_ACCESS_KEY}
-      MARKETPLACE_S3_SECRET_KEY: ${S3_SECRET_KEY}
-      MARKETPLACE_S3_BUCKET: ${MARKETPLACE_S3_BUCKET}
-      MARKETPLACE_S3_STORAGE_CLASS: ${MARKETPLACE_S3_STORAGE_CLASS}
-      CORS_ALLOWED_ORIGINS: ${SITE_SCHEME}://${SITE_HOST}:${WONDER_PUBLISHED_PORT}
       OPENAI_BASE_URL: ${SITE_SCHEME}://${SITE_HOST}:${LLM_LITE_PUBLISHED_PORT}/v1
       OPENAI_API_KEY: ${LLM_PROXY_KEY}
       OPENAI_MODEL: ${OPENAI_MODEL}

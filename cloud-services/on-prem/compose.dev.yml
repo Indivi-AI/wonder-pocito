@@ -10,6 +10,9 @@ services:
   marketplace:
     volumes:
       - ../../solutions/pocito/marketplace-server:/app
+  agno:
+    volumes:
+      - ../../solutions/pocito/marketplace-server:/app
 
 volumes:
   wonder-node-modules: {}

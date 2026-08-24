@@ -15,7 +15,16 @@ Data('wonderPlatformMarketplaceApiBase', {
     || (globalThis.location ? `${location.protocol}//${location.hostname}:7777` : 'http://localhost:7777')).replace(/\/$/, '')
 })
 
-const { wonderPlatformMarketplaceApiBase } = dsls.common.data
+Data('wonderPlatformAgnoApiBase', {
+  description: 'agent-run (AgentOS) server base: explicit baseUrl, else AGNO_API_URL (page global or server env), else agno on the page host at 7778',
+  params: [
+    {id: 'baseUrl', as: 'string'}
+  ],
+  impl: ({}, {}, {baseUrl}) => (baseUrl || globalThis.AGNO_API_URL || globalThis.process?.env?.AGNO_API_URL
+    || (globalThis.location ? `${location.protocol}//${location.hostname}:7778` : 'http://localhost:7778')).replace(/\/$/, '')
+})
+
+const { wonderPlatformAgnoApiBase, wonderPlatformMarketplaceApiBase } = dsls.common.data
 
 Data('wonderPlatformAgentWUrlResponse', {
   params: [
@@ -23,7 +32,9 @@ Data('wonderPlatformAgentWUrlResponse', {
     {id: 'fileName', as: 'string', mandatory: true},
     {id: 'opts', as: 'object', defaultValue: {}},
     {id: 'baseUrl', as: 'string'},
+    {id: 'agnoBaseUrl', as: 'string'},
     {id: 'resolveApiBase', dynamic: true, defaultValue: wonderPlatformMarketplaceApiBase('%$baseUrl%')},
+    {id: 'resolveAgnoBase', dynamic: true, defaultValue: wonderPlatformAgnoApiBase('%$agnoBaseUrl%')},
     {id: 'loadRepository', dynamic: true, defaultValue: wonderPlatformLoadRepository('%$roomWUrl%')},
     {id: 'runLlmFlow', dynamic: true, defaultValue: wonderPlatformAnswer('%$message%', '%$target%', {
       repo: '%$repo%',
@@ -31,7 +42,7 @@ Data('wonderPlatformAgentWUrlResponse', {
       roomWUrl: '%$roomWUrl%'
     })}
   ],
-  impl: async (ctx, {}, {url, fileName, opts, baseUrl, resolveApiBase, loadRepository, runLlmFlow}) => {
+  impl: async (ctx, {}, {url, fileName, opts, baseUrl, agnoBaseUrl, resolveApiBase, resolveAgnoBase, loadRepository, runLlmFlow}) => {
     const match = String(fileName).match(/^agent\/([^/]+)$/)
     if (!match) return
     const method = (opts.method || 'GET').toUpperCase(), harness = new URL(url).searchParams.get('harness')
@@ -55,7 +66,7 @@ Data('wonderPlatformAgentWUrlResponse', {
         message: body.message, history: body.history || []}))
       return json({...result, harness, agentId})
     }
-    const apiBase = resolveApiBase(ctx.setVars({baseUrl}))
+    const apiBase = method == 'GET' ? resolveApiBase(ctx.setVars({baseUrl})) : resolveAgnoBase(ctx.setVars({agnoBaseUrl}))
     const apiPath = method == 'GET' ? `/api/v1/agents/${encodeURIComponent(agentId)}`
       : `/agents/${encodeURIComponent(agentId)}/runs`
     const headers = new Headers(opts.headers || {})
@@ -92,7 +103,7 @@ Data('wonderPlatformAgentWUrlRequest', {
     const wUrl = `${roomWUrl.replace(/\/$/, '')}/agent/${encodeURIComponent(agentId)}?harness=${harness}`
     const response = await jb.wonderUtils.wfetch2(wUrl, {
       method: 'POST', headers: token ? {Authorization: `Bearer ${token}`} : {}, body: {message, sessionId, history}
-    }, ctx.setVars({marketplaceBaseUrl: baseUrl, agentRepo: repo, agentTarget: target}))
+    }, ctx.setVars({marketplaceBaseUrl: baseUrl, agnoBaseUrl: baseUrl, agentRepo: repo, agentTarget: target}))
     if (!response.ok) throw new Error(`Agent ${response.status}: ${await response.text()}`)
     return response.json()
   }
@@ -105,14 +116,17 @@ Data('wonderPlatformWUrlResponse', {
     {id: 'fileName', as: 'string', mandatory: true},
     {id: 'opts', as: 'object', defaultValue: {}},
     {id: 'baseUrl', as: 'string'},
+    {id: 'agnoBaseUrl', as: 'string'},
     {id: 'resolveApiBase', dynamic: true, defaultValue: wonderPlatformMarketplaceApiBase('%$baseUrl%')},
+    {id: 'resolveAgnoBase', dynamic: true, defaultValue: wonderPlatformAgnoApiBase('%$agnoBaseUrl%')},
     {id: 'agentResponse', dynamic: true, defaultValue: wonderPlatformAgentWUrlResponse('%$url%', '%$fileName%', {
       opts: '%$opts%',
-      baseUrl: '%$baseUrl%'
+      baseUrl: '%$baseUrl%',
+      agnoBaseUrl: '%$agnoBaseUrl%'
     })}
   ],
-  impl: async (ctx, {}, {url, fileName, opts, baseUrl, resolveApiBase, agentResponse}) => {
-    const agent = await agentResponse(ctx.setVars({url, fileName, opts, baseUrl}))
+  impl: async (ctx, {}, {url, fileName, opts, baseUrl, agnoBaseUrl, resolveApiBase, resolveAgnoBase, agentResponse}) => {
+    const agent = await agentResponse(ctx.setVars({url, fileName, opts, baseUrl, agnoBaseUrl}))
     if (agent) return agent
     let path = String(fileName || '').replace(/^\/+/, '')
     if (!/^(healthz$|plugins(?:\/|$)|skills(?:\/|$)|tools(?:\/|$)|agents(?:\/|$)|subagents(?:\/|$)|audit(?:\/|$)|presign(?:\/|$)|users(?:\/|$))/.test(path))
@@ -128,7 +142,7 @@ Data('wonderPlatformWUrlResponse', {
     const headers = new Headers(opts.headers || {})
     if (isJson) headers.set('Content-Type', 'application/json')
     headers.set('x-wonder-room', ctx.vars.roomId)
-    const apiBase = resolveApiBase(ctx.setVars({baseUrl}))
+    const apiBase = runtime ? resolveAgnoBase(ctx.setVars({agnoBaseUrl})) : resolveApiBase(ctx.setVars({baseUrl}))
     const response = await fetch(`${apiBase}${apiPath}${query}`, {
       method, headers, ...(hasBody ? {body: isJson ? JSON.stringify(body) : body} : {})
     })
