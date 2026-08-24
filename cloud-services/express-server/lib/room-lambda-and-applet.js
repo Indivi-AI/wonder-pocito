@@ -122,7 +122,8 @@ export async function serveAppletPage(spec, res, localImports) {
   const branding = mergeBranding(ogDefaults(runtimeBase), ...og)
   const html = APPLET_HOST_HTML
     .replace('_CLIENT_ENV_', JSON.stringify({ WONDER_STORAGE_PROVIDER: storageProvider(), WONDER_STORAGE_URL: storageUrl(),
-      MARKETPLACE_API_URL: process.env.MARKETPLACE_API_URL, LLM_PROXY_URL: process.env.LLM_PROXY_URL }))   // undefined keys are dropped by JSON.stringify
+      MARKETPLACE_API_URL: process.env.MARKETPLACE_API_URL, LLM_PROXY_URL: process.env.LLM_PROXY_URL,
+      LLM_MODEL: process.env.LLM_MODEL }))   // undefined keys are dropped by JSON.stringify
     .replace('_IMPORT_MAP_', JSON.stringify({ imports }))
     .replace('_APPLET_SPEC_', JSON.stringify({ ...clientSpec, liveRepo: !!localImports }))
     .replace('_FAVICON_', branding.favicon)

@@ -1,27 +1,49 @@
 #!/usr/bin/env bash
 # Smoke the deployed stack from outside, as a browser would - same script for the sim, the site box, and OpenShift routes.
-# Reads .env.site next to this script; needs only curl. Exits non-zero on any failure.
+# Reads .env.site next to this script; needs only curl. Waits for readiness, exits non-zero on any failure.
+# LLM_SMOKE=1 additionally runs one real completion through /llmProxy -> llm-lite (costs one upstream call).
 set -uo pipefail
 cd "$(dirname "$0")"
 set -a; source .env.site; set +a
 wonder="$SITE_SCHEME://$SITE_HOST:$WONDER_PUBLISHED_PORT"
 market="$SITE_SCHEME://$SITE_HOST:$MARKETPLACE_PUBLISHED_PORT"
+minio_url="${MINIO_ENDPOINT:-$SITE_SCHEME://$SITE_HOST:$MINIO_PUBLISHED_PORT}"
 room="smoke-$$"
 fail=0
 pass() { echo "PASS $1"; }
 flunk() { echo "FAIL $1"; fail=1; }
 mcurl() { curl -fsS --max-time 20 -H "x-wonder-room: $room" "$@"; }
+wait_ready() { for _ in $(seq 60); do curl -fsS --max-time 3 "$1" > /dev/null 2>&1 && { pass "ready: $1"; return 0; }; sleep 2; done
+  flunk "never became ready: $1"; return 1; }
 
-curl -fsS --max-time 10 "$wonder/health" > /dev/null && pass "wonder /health via $wonder" || flunk "wonder /health via $wonder"
+wait_ready "$wonder/health" || exit 1
+wait_ready "$market/healthz" || exit 1
 curl -fsS --max-time 10 "$market/healthz" | grep -q '"object_store":"ok"' \
-  && pass "marketplace healthz + object store" || flunk "marketplace healthz + object store"
+  && pass "marketplace object store" || flunk "marketplace object store"
+
+for bucket in indiviai-wonder wonder-code-packages; do
+  curl -fsS --max-time 10 -X PUT "$minio_url/$bucket/$room/probe.json" -d '{"probe":true}' > /dev/null \
+    && curl -fsS --max-time 10 "$minio_url/$bucket/$room/probe.json" | grep -q probe \
+    && curl -fsS --max-time 10 -X DELETE "$minio_url/$bucket/$room/probe.json" > /dev/null \
+    && pass "anonymous rw on $bucket (rooms/applets storage)" || flunk "anonymous rw on $bucket - wonder cannot serve rooms/applets"
+done
+curl -sS --max-time 10 "$wonder/room/$room/applet/none" | grep -q "no applet" \
+  && pass "applet route answers through $wonder" || flunk "applet route broken"
+
+llm_status=$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' -X POST "$wonder/llmProxy" -H 'content-type: application/json' \
+  -d "{\"targetUrl\":\"https://api.openai.com/v1/chat/completions\",\"originalBody\":{\"model\":\"${LLM_MODEL#*/}\",\"messages\":[{\"role\":\"user\",\"content\":\"Say OK\"}]}}")
+[ "$llm_status" != 404 ] && pass "/llmProxy registered (status $llm_status)" || flunk "/llmProxy is 404 - not registered on the wonder server"
+if [ "${LLM_SMOKE:-0}" = 1 ]; then
+  mcurl -X POST "$wonder/llmProxy" -H 'content-type: application/json' \
+    -d "{\"targetUrl\":\"https://api.openai.com/v1/chat/completions\",\"originalBody\":{\"model\":\"${LLM_MODEL#*/}\",\"messages\":[{\"role\":\"user\",\"content\":\"Say OK\"}]}}" \
+    | grep -q '"content"' && pass "LLM completion via llm-lite (model ${LLM_MODEL#*/})" || flunk "LLM completion via llm-lite"
+fi
 
 mcurl -X POST "$market/api/v1/skills/" -H 'content-type: application/json' \
   -d '{"id":"smokeSkill","display_name":"Smoke skill","description":"fact: SIM_SMOKE_OK","skill_md":"# smoke\nThe phrase is SIM_SMOKE_OK."}' \
   > /dev/null && pass "skill create (S3 put incl MARKETPLACE_S3_STORAGE_CLASS='${MARKETPLACE_S3_STORAGE_CLASS:-}')" || flunk "skill create"
 mcurl "$market/api/v1/skills/smokeSkill" | grep -q SIM_SMOKE_OK && pass "skill read" || flunk "skill read"
 
-minio_url="${MINIO_ENDPOINT:-$SITE_SCHEME://$SITE_HOST:$MINIO_PUBLISHED_PORT}"
 mcurl -X POST "$market/api/v1/presign/download" -H 'content-type: application/json' -d '{"key":"smoke/presign.txt"}' \
   | grep -q "\"url\":\"$minio_url/" && pass "presigned url is browser-reachable ($minio_url)" || flunk "presigned url not browser-reachable"
 
