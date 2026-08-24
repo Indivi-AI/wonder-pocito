@@ -10,7 +10,7 @@ Data('wonderPlatformMarketplaceRequest', {
     {id: 'method', as: 'string', defaultValue: 'GET'},
     {id: 'wUrl', as: 'string', mandatory: true},
     {id: 'body', as: 'object'},
-    {id: 'baseUrl', as: 'string', defaultValue: 'http://localhost:7777'}
+    {id: 'baseUrl', as: 'string'}
   ],
   impl: async (ctx, {}, {method, wUrl, body, baseUrl}) => {
     const hasBody = !['GET', 'DELETE'].includes(method) && body != null
@@ -33,7 +33,7 @@ Data('wonderPlatformMarketplaceCall', {
     {id: 'version', as: 'number'},
     {id: 'body', as: 'object'},
     {id: 'roomWUrl', as: 'string', defaultValue: 'room://wonder-platform'},
-    {id: 'baseUrl', as: 'string', defaultValue: 'http://localhost:7777'},
+    {id: 'baseUrl', as: 'string'},
     {id: 'request', dynamic: true, defaultValue: wonderPlatformMarketplaceRequest('%$method%', '%$wUrl%', {
       body: '%$body%',
       baseUrl: '%$baseUrl%'
@@ -113,7 +113,7 @@ Data('wonderPlatformMarketplaceItem', {
 Data('wonderPlatformMarketplaceLoad', {
   params: [
     {id: 'roomWUrl', as: 'string', defaultValue: 'room://wonder-platform'},
-    {id: 'baseUrl', as: 'string', defaultValue: 'http://localhost:7777'},
+    {id: 'baseUrl', as: 'string'},
     {id: 'call', dynamic: true, defaultValue: wonderPlatformMarketplaceCall('list', '%$resource%', {
       roomWUrl: '%$roomWUrl%',
       baseUrl: '%$baseUrl%'
@@ -130,7 +130,7 @@ const { wonderPlatformMarketplaceItem, wonderPlatformMarketplaceLoad, wonderPlat
 Data('wonderPlatformMarketplaceRepository', {
   params: [
     {id: 'roomWUrl', as: 'string', defaultValue: 'room://wonder-platform'},
-    {id: 'baseUrl', as: 'string', defaultValue: 'http://localhost:7777'},
+    {id: 'baseUrl', as: 'string'},
     {id: 'seed', dynamic: true, defaultValue: wonderPlatformSeed()},
     {id: 'load', dynamic: true, defaultValue: wonderPlatformMarketplaceLoad('%$roomWUrl%', '%$baseUrl%')},
     {id: 'normalize', dynamic: true, defaultValue: wonderPlatformMarketplaceItem('%$resource%', '%$item%')}
@@ -147,7 +147,7 @@ Data('wonderPlatformMarketplaceDetail', {
     {id: 'resource', as: 'string', mandatory: true},
     {id: 'id', as: 'string', mandatory: true},
     {id: 'roomWUrl', as: 'string', defaultValue: 'room://wonder-platform'},
-    {id: 'baseUrl', as: 'string', defaultValue: 'http://localhost:7777'},
+    {id: 'baseUrl', as: 'string'},
     {id: 'call', dynamic: true, defaultValue: wonderPlatformMarketplaceCall('%$operation%', '%$resource%', {
       id: '%$id%',
       roomWUrl: '%$roomWUrl%',
@@ -174,7 +174,7 @@ Data('wonderPlatformAgentOsRequest', {
     {id: 'message', as: 'string', mandatory: true},
     {id: 'sessionId', as: 'string', mandatory: true},
     {id: 'roomWUrl', as: 'string', defaultValue: 'room://wonder-platform'},
-    {id: 'baseUrl', as: 'string', defaultValue: 'http://localhost:7777'},
+    {id: 'baseUrl', as: 'string'},
     {id: 'token', as: 'string'}
   ],
   impl: async (ctx, {}, {agentId, message, sessionId, roomWUrl, baseUrl, token}) => {
@@ -201,7 +201,7 @@ Data('wonderPlatformAgentOsRun', {
     {id: 'target', as: 'object', mandatory: true},
     {id: 'sessionId', as: 'string', mandatory: true},
     {id: 'roomWUrl', as: 'string', defaultValue: 'room://wonder-platform'},
-    {id: 'baseUrl', as: 'string', defaultValue: 'http://localhost:7777'},
+    {id: 'baseUrl', as: 'string'},
     {id: 'token', as: 'string'},
     {id: 'request', dynamic: true, defaultValue: wonderPlatformAgentOsRequest('%$agentId%', '%$text%', {
       sessionId: '%$sessionId%',

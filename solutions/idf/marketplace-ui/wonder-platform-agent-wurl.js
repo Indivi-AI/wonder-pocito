@@ -6,12 +6,24 @@ import './wonder-platform-runtime.js'
 
 const { common: { Data, data: { wonderPlatformAnswer, wonderPlatformLoadRepository } } } = dsls
 
+Data('wonderPlatformMarketplaceApiBase', {
+  description: 'single source of truth: explicit baseUrl, else MARKETPLACE_API_URL (page global or server env), else marketplace on the page host at 7777',
+  params: [
+    {id: 'baseUrl', as: 'string'}
+  ],
+  impl: ({}, {}, {baseUrl}) => (baseUrl || globalThis.MARKETPLACE_API_URL || globalThis.process?.env?.MARKETPLACE_API_URL
+    || (globalThis.location ? `${location.protocol}//${location.hostname}:7777` : 'http://localhost:7777')).replace(/\/$/, '')
+})
+
+const { wonderPlatformMarketplaceApiBase } = dsls.common.data
+
 Data('wonderPlatformAgentWUrlResponse', {
   params: [
     {id: 'url', as: 'string', mandatory: true},
     {id: 'fileName', as: 'string', mandatory: true},
     {id: 'opts', as: 'object', defaultValue: {}},
     {id: 'baseUrl', as: 'string'},
+    {id: 'resolveApiBase', dynamic: true, defaultValue: wonderPlatformMarketplaceApiBase('%$baseUrl%')},
     {id: 'loadRepository', dynamic: true, defaultValue: wonderPlatformLoadRepository('%$roomWUrl%')},
     {id: 'runLlmFlow', dynamic: true, defaultValue: wonderPlatformAnswer('%$message%', '%$target%', {
       repo: '%$repo%',
@@ -19,7 +31,7 @@ Data('wonderPlatformAgentWUrlResponse', {
       roomWUrl: '%$roomWUrl%'
     })}
   ],
-  impl: async (ctx, {}, {url, fileName, opts, baseUrl, loadRepository, runLlmFlow}) => {
+  impl: async (ctx, {}, {url, fileName, opts, baseUrl, resolveApiBase, loadRepository, runLlmFlow}) => {
     const match = String(fileName).match(/^agent\/([^/]+)$/)
     if (!match) return
     const method = (opts.method || 'GET').toUpperCase(), harness = new URL(url).searchParams.get('harness')
@@ -43,8 +55,7 @@ Data('wonderPlatformAgentWUrlResponse', {
         message: body.message, history: body.history || []}))
       return json({...result, harness, agentId})
     }
-    const apiBase = (baseUrl || globalThis.MARKETPLACE_API_URL || globalThis.process?.env?.MARKETPLACE_API_URL
-      || 'http://localhost:7777').replace(/\/$/, '')
+    const apiBase = resolveApiBase(ctx.setVars({baseUrl}))
     const apiPath = method == 'GET' ? `/api/v1/agents/${encodeURIComponent(agentId)}`
       : `/agents/${encodeURIComponent(agentId)}/runs`
     const headers = new Headers(opts.headers || {})
@@ -72,7 +83,7 @@ Data('wonderPlatformAgentWUrlRequest', {
     {id: 'sessionId', as: 'string'},
     {id: 'history', as: 'array', defaultValue: []},
     {id: 'roomWUrl', as: 'string', defaultValue: 'room://wonder-platform'},
-    {id: 'baseUrl', as: 'string', defaultValue: 'http://localhost:7777'},
+    {id: 'baseUrl', as: 'string'},
     {id: 'token', as: 'string'},
     {id: 'repo', as: 'object'},
     {id: 'target', as: 'object'}
@@ -94,12 +105,13 @@ Data('wonderPlatformWUrlResponse', {
     {id: 'fileName', as: 'string', mandatory: true},
     {id: 'opts', as: 'object', defaultValue: {}},
     {id: 'baseUrl', as: 'string'},
+    {id: 'resolveApiBase', dynamic: true, defaultValue: wonderPlatformMarketplaceApiBase('%$baseUrl%')},
     {id: 'agentResponse', dynamic: true, defaultValue: wonderPlatformAgentWUrlResponse('%$url%', '%$fileName%', {
       opts: '%$opts%',
       baseUrl: '%$baseUrl%'
     })}
   ],
-  impl: async (ctx, {}, {url, fileName, opts, baseUrl, agentResponse}) => {
+  impl: async (ctx, {}, {url, fileName, opts, baseUrl, resolveApiBase, agentResponse}) => {
     const agent = await agentResponse(ctx.setVars({url, fileName, opts, baseUrl}))
     if (agent) return agent
     let path = String(fileName || '').replace(/^\/+/, '')
@@ -116,8 +128,7 @@ Data('wonderPlatformWUrlResponse', {
     const headers = new Headers(opts.headers || {})
     if (isJson) headers.set('Content-Type', 'application/json')
     headers.set('x-wonder-room', ctx.vars.roomId)
-    const apiBase = (baseUrl || globalThis.MARKETPLACE_API_URL || globalThis.process?.env?.MARKETPLACE_API_URL
-      || 'http://localhost:7777').replace(/\/$/, '')
+    const apiBase = resolveApiBase(ctx.setVars({baseUrl}))
     const response = await fetch(`${apiBase}${apiPath}${query}`, {
       method, headers, ...(hasBody ? {body: isJson ? JSON.stringify(body) : body} : {})
     })
@@ -132,7 +143,7 @@ Data('wonderPlatformRunAgent', {
     {id: 'sessionId', as: 'string'},
     {id: 'history', as: 'array', defaultValue: []},
     {id: 'roomWUrl', as: 'string', defaultValue: 'room://wonder-platform'},
-    {id: 'baseUrl', as: 'string', defaultValue: 'http://localhost:7777'},
+    {id: 'baseUrl', as: 'string'},
     {id: 'token', as: 'string'},
     {id: 'repo', as: 'object'},
     {id: 'harness', as: 'string'},

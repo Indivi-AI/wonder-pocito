@@ -1,0 +1,10 @@
+# llm-lite (LiteLLM) routes every requested model to one OpenAI-compatible upstream.
+# Upstream + keys come from the environment (.env.site) - nothing baked, nothing committed.
+model_list:
+  - model_name: "*"
+    litellm_params:
+      model: openai/*
+      api_base: os.environ/LLM_UPSTREAM_BASE
+      api_key: os.environ/LLM_UPSTREAM_KEY
+general_settings:
+  master_key: os.environ/LLM_PROXY_KEY

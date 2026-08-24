@@ -1,41 +1,63 @@
-# Wonder on-prem — env + local server
+# Wonder on-prem — build outside, whiten, run inside
 
-One machine: this checkout, node 24, and a reachable MinIO. No Kubernetes.
+Images are built OUTSIDE the gap and carry code + deps only — no `.env` is ever baked. One `docker-compose.yml` runs
+the outside sim and the site stack (and mirrors what OpenShift deploys); every site fact lives in `.env.site`
+(copy `.env.site.template`, gitignored, one copy per machine). All communication — browsers and service-to-service
+alike — crosses the host at `SITE_HOST:<published port>`; there is no internal docker network, so nothing can depend
+on an address browsers cannot reach (presigned S3 urls included). Containers resolve `SITE_HOST` back to the host via
+docker's `host-gateway`; on OpenShift, cluster DNS and routes provide the same name.
 
-## One-time MinIO setup
-
-Create buckets `indiviai-wonder` and `wonder-code-packages` and allow anonymous read+write on both
-(S3 Browser, or `mc anonymous set public <alias>/<bucket>`). MinIO CORS must allow the server origin
-(the default `MINIO_API_CORS_ALLOW_ORIGIN=*` is fine).
-
-## Configure and run
-
-```sh
-cp cloud-services/express-server/.env.onprem.template cloud-services/express-server/.env.onprem
-vi cloud-services/express-server/.env.onprem   # usually only MINIO_ENDPOINT needs a real value
-npm ci                                         # once
-npm run onprem                                 # WONDER_ENV=onprem -> loads .env.onprem; server + MCP at http://localhost:3000
-```
-
-`WONDER_ENV` is the switch for which env file the local server loads: `dev` (default) loads `.env.dev`,
-`onprem` loads `.env.onprem` — same folder, same mechanism.
-
-## Use
-
-Applets serve live from the checkout, no login: `http://localhost:3000/room/<roomId>/applet/<name>`
-
-Smoke-test storage over MinIO, then publish, via MCP:
+## Outside: build and simulate
 
 ```sh
-curl -s -X POST http://localhost:3000/mcp -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"tools/call",
-  "params":{"name":"wFetch","arguments":{"url":"room://demo/usersRW/hello.json","method":"PUT","body":{"hello":"on-prem"}}}}'
-curl -s -X POST http://localhost:3000/mcp -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":2,"method":"tools/call",
-  "params":{"name":"wFetch","arguments":{"url":"room://demo/usersRW/hello.json"}}}'
-curl -s -X POST http://localhost:3000/mcp -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":3,"method":"tools/call",
-  "params":{"name":"uploadRoomApplet","arguments":{"roomId":"demo","entryCompFullId":"react-comp<react>YOUR_APPLET"}}}'
+cloud-services/on-prem/build-images.sh --base    # dependency bases; needs network, so outside only
+cloud-services/on-prem/build-images.sh           # app layers, built with --network=none; prints IMAGE_TAG=dd-mm-yyyy-HH-MM-<sha>
+cd cloud-services/on-prem && cp .env.site.template .env.site   # SITE_HOST=$(hostname), IMAGE_TAG, LLM_UPSTREAM_KEY
+docker compose --env-file .env.site -f docker-compose.yml -f compose.airgap.yml --profile local-minio up -d
+./sim-check.sh    # health, room-scoped CRUD, browser-reachable presign, deterministic AgentOS run
 ```
 
-## Getting the repo across
+The airgap overlay removes internet for wonder/marketplace/minio (published ports still work); llm-lite alone gets
+egress, playing the site's internal LLM endpoint. `--profile local-minio` spins a stand-in for the site's global
+MinIO. Set `SITE_HOST` to the machine's own hostname — any machine, any name; add an `/etc/hosts` entry only for a
+made-up name, and never browse via localhost: it masks host/origin/CORS bugs.
+Browser check: `http://$SITE_HOST:58045/room/<room>/applet/<name>`.
 
-`npm run airgapped-export -- ../wonder-kit` (outside) builds a transfer kit: `wonder.bundle` (git bundle),
-the runtime image, matching linux `node_modules`, and `SHA256SUMS` to verify after the copy.
+## The whitening kit
+
+```sh
+source cloud-services/on-prem/.env.site
+docker save wonder-server:<tag> marketplace-server:<tag> "$LLM_LITE_IMAGE" | gzip > wonder-images.tar.gz
+git bundle create wonder.bundle HEAD <branch>          # source: enables in-gap edits and image rebuilds
+sha256sum wonder-images.tar.gz wonder.bundle > SHA256SUMS
+```
+
+Kit = the images tar + `wonder.bundle` + this directory (compose files, dockerfiles, `llm-lite-config.yaml`,
+`.env.site.template`, scripts). `export-airgap.sh` still builds the legacy bare-process kit (bundle + runtime image +
+`node_modules` tarball) when needed.
+
+## Inside: deploy and iterate
+
+```sh
+docker load < wonder-images.tar.gz
+cp .env.site.template .env.site
+docker compose --env-file .env.site up -d    # wonder + marketplace + llm-lite; no minio service on site
+./sim-check.sh
+```
+
+Fill `.env.site` with: `SITE_HOST` (the name browsers use for this machine), `IMAGE_TAG`, `MINIO_ENDPOINT` = the
+site's **global MinIO** url (browser-reachable), its S3 creds, `MARKETPLACE_S3_STORAGE_CLASS` (site S3 only — MinIO
+rejects `STANDARD_IA` with `InvalidStorageClass`; `sim-check.sh` proves whatever the site sets),
+`LLM_UPSTREAM_BASE` = the internal OpenAI-compatible endpoint, `LLM_UPSTREAM_KEY`, and an invented `LLM_PROXY_KEY`
+(gates the published llm-lite port). Wonder's global MinIO needs buckets `indiviai-wonder` and
+`wonder-code-packages` with anonymous read+write.
+
+In-gap code edits: update source from `wonder.bundle`, run `build-images.sh` (COPY-only layers, fully offline from
+the whitened bases), bump `IMAGE_TAG` in `.env.site`, `up -d`. OpenShift prod: the same images; the same `.env.site`
+keys become ConfigMap/Secret entries.
+
+## Bare-process dev mode (no docker)
+
+`npm run onprem` runs the wonder server alone against a reachable MinIO, loading
+`cloud-services/express-server/.env.onprem` (copy `.env.onprem.template`; usually only `MINIO_ENDPOINT` needs a real
+value). Applets serve live from the checkout at `http://localhost:3000/room/<roomId>/applet/<name>`.

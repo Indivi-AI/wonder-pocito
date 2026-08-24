@@ -89,7 +89,8 @@ Data('wonderPlatformAnswer', {
       `${skill.id}@${skill.version}`, skill.content)).join('\n\n')
     const workflowCtx = await jb.workflowUtils.extendWithWorkflowVars(ctx.setVars({userMessage: text, selectedTarget: JSON.stringify(target),
       chatHistory: JSON.stringify(history), assetRepoText: JSON.stringify(assetRepo), loadedSkillDoclets,
-      accumulatedContext: {chatHistory: history}, llmProxyUrl: 'https://node25-automations-server-365199207445.me-west1.run.app/llmProxy'}))
+      accumulatedContext: {chatHistory: history},
+      llmProxyUrl: globalThis.LLM_PROXY_URL || 'https://node25-automations-server-365199207445.me-west1.run.app/llmProxy'}))
     const result = await agentWorkflow(ctx).calcWorkflow(workflowCtx), output = typeof result.runRes == 'string' ? {text: result.runRes} : result.runRes || {}
     return {text: output.text || result.workflowErrors?.[0]?.t || 'ההרצה הסתיימה ללא תשובה.', reportIds: output.reportIds || [],
       followUps: output.followUps || [], status: result.workflowErrors?.length ? 'נכשל' : 'הושלם',

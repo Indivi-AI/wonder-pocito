@@ -1,7 +1,7 @@
 import { coreUtils, jb, dsls } from '@jb6/core'
 import '@jb6/core/misc/jb-cli.js'
 import '@jb6/core/misc/import-map-services.js'
-import pty from 'node-pty'
+const pty = await import('node-pty').then(module => module.default, () => null)   // optional native dep - servers without it lose only interactive terminals
 
 const { runNodeCli, runBashScript, buildNodeCliCmd, ensureImportMapsInCli } = coreUtils
 
@@ -71,6 +71,7 @@ function serveCliStream(app) {
     if (!req.body) return res.json({ error: 'no body in req' })
 
     if (req.body.interactive) {
+      if (!pty) return res.json({ error: 'node-pty is not installed on this server' })
       const { runId, run, urls, broadcastStatus, broadcastDone, cleanup } = startRun('/run-cli-stream')
       const { cmd = 'bash', args = [], cwd, env, shell, cols = 120, rows = 40 } = req.body
       const sh = shell || process.env.SHELL || '/bin/bash'

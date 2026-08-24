@@ -18,6 +18,7 @@
     "server-secrets:push:dev": "node scripts/secrets.js push dev",
     "server-secrets:push:prod": "node scripts/secrets.js push prod",
     "update-jb6": "bash ./scripts/update-jb6.sh",
+    "pocito": "bash scripts/sync-pocito.sh",
     "bgn": "bash scripts/zip-wonder.sh"
   },
   "dependencies": {
@@ -30,13 +31,15 @@
     "esbuild": "^0.25.0",
     "express": "^4.21.2",
     "google-auth-library": "^10.2.0",
-    "node-pty": "^1.1.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "stream-json": "^1.9.1",
     "tar": "^7.5.1",
     "undici": "^8.3.0",
     "zod": "^3.25.0"
+  },
+  "optionalDependencies": {
+    "node-pty": "^1.1.0"
   },
   "devDependencies": {
     "fake-indexeddb": "^6.0.1",
