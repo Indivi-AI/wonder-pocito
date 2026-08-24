@@ -7,12 +7,12 @@ SRC="$(cd "$(dirname "$0")/.." && pwd)"
 DST="$(cd "${1:-$SRC/../wonder-pocito}" && pwd)"
 [[ -d "$DST/.git" ]] || { echo "not a git checkout: $DST" >&2; exit 1; }
 DROP='^solutions/(comax|finance)/'
-JUNK='(^|/)(node_modules|__pycache__|\.venv|files)/|(^|/)\.env(\.(dev|prod|onprem|site))?$|(^|/)\.DS_Store$'
+JUNK='(^|/)(node_modules|__pycache__|\.venv)/|^files$|(^|/)\.env(\.(dev|prod|onprem|site))?$|(^|/)\.DS_Store$'
 
 cd "$SRC"; wanted="$(git ls-files | grep -vE "$DROP" | grep -vE "$JUNK")"
 # remove tracked files in DST that wonder no longer has (so deletions propagate), skipping DST-local junk
 cd "$DST"
 comm -23 <(git ls-files | grep -vE "$DROP" | sort) <(echo "$wanted" | sort) | while read -r f; do git rm -qf --ignore-unmatch -- "$f" >/dev/null; done
 git rm -rqf --ignore-unmatch -- solutions/comax solutions/finance >/dev/null 2>&1 || true
-cd "$SRC"; while read -r f; do mkdir -p "$DST/$(dirname "$f")"; cp -p "$f" "$DST/$f"; done <<< "$wanted"
+while read -r f; do [ -f "$SRC/$f" ] || continue; mkdir -p "$DST/$(dirname "$f")"; cp -p "$SRC/$f" "$DST/$f"; done <<< "$wanted"
 echo "synced $SRC -> $DST (pocito-only, $(echo "$wanted" | wc -l | tr -d ' ') files)"
