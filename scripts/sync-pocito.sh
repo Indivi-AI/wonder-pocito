@@ -9,7 +9,7 @@ DST="$(cd "${1:-$SRC/../wonder-pocito}" && pwd)"
 [[ -d "$DST/.git" && -d "$DST/solutions/pocito" ]] || { echo "not a wonder-pocito checkout: $DST" >&2; exit 1; }
 
 POCITO_OWNED='^(CLAUDE\.md|air-gapped-instructions\.md|task\.md|\.jb6/|cloud-services/express-server/(app\.js|lib/(room-lambda-and-applet|wfetch)\.js)|solutions/pocito/CLAUDE\.md|solutions/pocito/marketplace-server/(marketplace-server\.md|marketplace_server\.py|start-marketplace\.sh|\.gitignore)|solutions/pocito/wonder-platform/README\.md)'
-SKIP='/(node_modules|__pycache__|\.venv|files)/|(^|/)(\.env(\.(dev|prod|onprem|site))?|\.DS_Store)$|^solutions/idf/platform-v0/'
+SKIP='/(node_modules|__pycache__|\.venv|files)/|(^|/)(\.env(\.(dev|prod|onprem|site))?|\.DS_Store)$'
 
 translate() { sed -e 's/solutions\/idf/solutions\/pocito/g' -e 's/@solution\/idf/@solution\/pocito/g' -e 's/entry-points-idf/entry-points-pocito/g'; }
 

@@ -21,14 +21,9 @@ Prereqs: Node 24, Python 3.12, the [MinIO binary](https://min.io/docs/minio/maco
 
 ```sh
 npm ci
-<<<<<<< HEAD
 python3.12 -m venv solutions/idf/marketplace-server/.venv
-solutions/idf/marketplace-server/.venv/bin/python -m pip install -r solutions/idf/marketplace-server/requirements.txt
-=======
-python3.12 -m venv solutions/idf/platform-v0/.venv
-solutions/idf/platform-v0/.venv/bin/pip install -r solutions/idf/marketplace-server/requirements.txt
+solutions/idf/marketplace-server/.venv/bin/pip install -r solutions/idf/marketplace-server/requirements.txt
 cp solutions/idf/marketplace-server/.env.example solutions/idf/marketplace-server/.env   # OPENAI_API_KEY only for real agent runs
->>>>>>> origin/master
 touch cloud-services/express-server/.env.dev
 ```
 
