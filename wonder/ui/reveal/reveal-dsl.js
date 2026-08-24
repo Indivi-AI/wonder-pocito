@@ -207,7 +207,7 @@ ListItem('listItem', {
 })
 
 const deckSlideViewId = Data('deckSlideViewId', {
-  description: 'best categorized ReactComp variant (e.g. columnsSlide.idf) for a slide kind, like finance3ReportViewId',
+  description: 'best categorized ReactComp variant (e.g. columnsSlide.pocito) for a slide kind, like finance3ReportViewId',
   params: [
     {id: 'kindId', as: 'string', mandatory: true}
   ],

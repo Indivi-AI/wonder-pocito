@@ -10,7 +10,7 @@ const LINES = [
   'Wonder Agents can also run in the frontend for easy embedding in other applications'
 ]
 
-ReactComp('idfAgentsViz', {
+ReactComp('pocitoAgentsViz', {
   impl: comp({
     hFunc: (ctx, { react: { h } }) => () => h('div:iv', {}, h('div:iv-title', {}, 'Agents'),
       ...LINES.map(text => h('div:iv-line', { key: text }, text)))

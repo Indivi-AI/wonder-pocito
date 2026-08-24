@@ -47,7 +47,7 @@ ListItem('listItem', {
 })
 
 const deckSlideViewId = Data('deckSlideViewId', {
-  description: 'best categorized ReactComp variant (e.g. columnsSlide.idf) for a slide kind, like finance3ReportViewId',
+  description: 'best categorized ReactComp variant (e.g. columnsSlide.pocito) for a slide kind, like finance3ReportViewId',
   params: [{ id: 'kindId', as: 'string', mandatory: true }],
   impl: (ctx, {}, { kindId }) => Object.entries(dsls.react['react-comp'])
     .filter(([id, cmp]) => cmp?.[coreUtils.asJbComp] && id.split('.')[0] == kindId && id.includes('.'))

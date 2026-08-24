@@ -4,10 +4,10 @@ import '@jb6/core/misc/pretty-print.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
-ReactComp('idfArtifactsViz', {
+ReactComp('pocitoArtifactsViz', {
   impl: comp({
     hFunc: (ctx, { react: { h, useMemo, useState } }) => () => {
-      const deckComp = useMemo(() => coreUtils.compByFullId('deck<deck>idfDeck'), [])
+      const deckComp = useMemo(() => coreUtils.compByFullId('deck<deck>pocitoDeck'), [])
       const [printed, setPrinted] = useState(() => coreUtils.prettyPrintWithPositions(deckComp, { tgpModel: jb }))
       const editProfile = e => {
         const source = e.target.value, oldSource = printed.text
@@ -26,7 +26,7 @@ ReactComp('idfArtifactsViz', {
         window.dispatchEvent(new Event('deckProfileChanged'))
       }
       return h('div:iv', {}, h('div:iv-title', {}, 'Artifacts'), h('div:iv-sub', {}, 'Edit slide text in its TGP profile'),
-        h('div:win', {}, h('div:chrome', {}, h('i'), h('i'), h('i'), 'admin/idf/idf-deck.js'),
+        h('div:win', {}, h('div:chrome', {}, h('i'), h('i'), h('i'), 'admin/pocito/pocito-deck.js'),
           h('textarea:code-pane', { value: printed.text, onChange: editProfile, spellCheck: false, 'aria-label': 'Deck profile editor' })))
     }
   })

@@ -26,7 +26,7 @@ const TREE = ROOMS.flatMap(([room, roomWUrl, dirs]) => [{ cls: 'root', prefix: '
         prefix: `${lastDir ? '    ' : '│   '}${fi == files.length - 1 ? '└── ' : '├── '}` }))]
   })])
 
-ReactComp('idfRoomsAssetsViz', {
+ReactComp('pocitoRoomsAssetsViz', {
   impl: comp({
     hFunc: (ctx, { react: { h, useState } }) => () => {
       const [wUrl, setWUrl] = useState(TREE[0].wUrl)

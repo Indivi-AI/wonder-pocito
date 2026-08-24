@@ -35,7 +35,7 @@ text is shown below the image, keep it short\`
   }
 ]
 
-ReactComp('idfCategoriesViz', {
+ReactComp('pocitoCategoriesViz', {
   impl: comp({
     hFunc: (ctx, { react: { h } }) => () => h('div:iv', {}, h('style', {}, CSS),
       h('div:iv-title', {}, 'Context aware asset resolution'),

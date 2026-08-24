@@ -10,13 +10,13 @@ Data('stableChatExampleSeed', {
 
 ReactComp('stableChatExample', {
   params: [
-    {id: 'roomWUrl', as: 'string', defaultValue: 'room:minio//idf-stable-chat-example'}
+    {id: 'roomWUrl', as: 'string', defaultValue: 'room:minio//pocito-stable-chat-example'}
   ],
   impl: comp({
     hFunc: (ctx, {}, {roomWUrl}) => {
       const { h, hh, useEffect, useState } = ctx.vars.react
       const seed = dsls.common.data.stableChatExampleSeed.$run()
-      const store = dsls.common.data.idfRoomJsonStore.$runWithCtx(ctx, {
+      const store = dsls.common.data.pocitoRoomJsonStore.$runWithCtx(ctx, {
         roomWUrl, assetPath: 'usersRW/react-comp-examples/stable-chat'
       })
       return function StableChatExample() {

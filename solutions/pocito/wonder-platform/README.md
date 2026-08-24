@@ -1,11 +1,11 @@
 # Wonder Platform
 
-A marketplace + agents platform: the `wonderPlatform` browser applet (`solutions/idf/marketplace-ui/`) backed by four services.
+A marketplace + agents platform: the `wonderPlatform` browser applet (`solutions/pocito/marketplace-ui/`) backed by four services.
 
 | Service | Role | Local dev | Deployed (published on `SITE_HOST`) |
 |---|---|---|---|
 | wonder server | serves applets live from the repo, `/wfetch`, `/mcp`, `/llmProxy` | :3000 | :58045 |
-| marketplace + AgentOS | resource CRUD, versions, audit, agent runs (`solutions/idf/marketplace-server/`) | :7777 | :58046 |
+| marketplace + AgentOS | resource CRUD, versions, audit, agent runs (`solutions/pocito/marketplace-server/`) | :7777 | :58046 |
 | llm-lite (LiteLLM) | the one OpenAI-compatible gateway to the LLM | not needed (cloud proxy) | :58047 |
 | MinIO | all storage: marketplace objects, rooms, applet code | :9000 | the site's global MinIO |
 
@@ -21,9 +21,9 @@ Prereqs: Node 24, Python 3.12, the [MinIO binary](https://min.io/docs/minio/maco
 
 ```sh
 npm ci
-python3.12 -m venv solutions/idf/marketplace-server/.venv
-solutions/idf/marketplace-server/.venv/bin/pip install -r solutions/idf/marketplace-server/requirements.txt
-cp solutions/idf/marketplace-server/.env.example solutions/idf/marketplace-server/.env   # OPENAI_API_KEY only for real agent runs
+python3.12 -m venv solutions/pocito/marketplace-server/.venv
+solutions/pocito/marketplace-server/.venv/bin/pip install -r solutions/pocito/marketplace-server/requirements.txt
+cp solutions/pocito/marketplace-server/.env.example solutions/pocito/marketplace-server/.env   # OPENAI_API_KEY only for real agent runs
 touch cloud-services/express-server/.env.dev
 ```
 
@@ -32,12 +32,12 @@ Run, one terminal each:
 ```sh
 npm run start-min-io                                        # MinIO :9000 (console :9001, wonder / wonder-minio-local)
 npm run local                                               # wonder :3000
-./solutions/idf/marketplace-server/start-marketplace.sh     # marketplace + AgentOS :7777
+./solutions/pocito/marketplace-server/start-marketplace.sh     # marketplace + AgentOS :7777
 ```
 
-Verify: [platform UI](http://localhost:3000/jb6_packages/react/react-comp-view.html?cmpId=wonderPlatform&urlsToLoad=@solution/idf/marketplace-ui/wonder-platform.js),
+Verify: [platform UI](http://localhost:3000/jb6_packages/react/react-comp-view.html?cmpId=wonderPlatform&urlsToLoad=@solution/pocito/marketplace-ui/wonder-platform.js),
 [marketplace health](http://localhost:7777/healthz) (`object_store: ok`), [API docs](http://localhost:7777/docs).
-Tests: `node --import ./nodejs-importmap.js jb6/testing/run-tests-cli.js .jb6/entry-points-idf.js --pattern=wonderPlatform`
+Tests: `node --import ./nodejs-importmap.js jb6/testing/run-tests-cli.js .jb6/entry-points-pocito.js --pattern=wonderPlatform`
 
 ## 2. Build images + simulate the on-prem — internet machine
 
@@ -70,12 +70,12 @@ Full runbook, whitening kit, in-gap rebuilds, OpenShift notes: `cloud-services/o
 | File | Machine | Holds |
 |---|---|---|
 | `cloud-services/express-server/.env.dev` | dev | optional `OPENAI_API_KEY` for cloud LLM flows |
-| `solutions/idf/marketplace-server/.env` | dev | marketplace `OPENAI_*` provider (from `.env.example`) |
+| `solutions/pocito/marketplace-server/.env` | dev | marketplace `OPENAI_*` provider (from `.env.example`) |
 | `cloud-services/on-prem/.env.site` | sim and site, own gitignored copy each | all deployment facts: `SITE_HOST`, ports, `IMAGE_TAG`, MinIO + LLM endpoints and keys |
 
 Images are env-free; secrets are never committed and never baked into an image.
 
 ## Reference
 
-- `solutions/idf/marketplace-server/marketplace-server.md` — marketplace/AgentOS server behavior, env names, tests.
+- `solutions/pocito/marketplace-server/marketplace-server.md` — marketplace/AgentOS server behavior, env names, tests.
 - `cloud-services/on-prem/README.md` — the outside/inside deployment runbook.

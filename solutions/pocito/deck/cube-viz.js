@@ -132,19 +132,19 @@ font:500 19px Heebo;color:#c7cce0;align-items:baseline}
 .cube-row .num{text-align:right;font-variant-numeric:tabular-nums}
 `
 
-ReactComp('vizSlide.idf', {
+ReactComp('vizSlide.pocito', {
   impl: comp({
     hFunc: (ctx, { react: { h, hh } }) => ({ slide }) => {
       const Viz = dsls.react['react-comp'][slide.viz]
       return h('div:s-slide', {}, h('div:glow'),
-        hh(ctx, dsls.react['react-comp']['slideHead.idf'], { title: slide.title }),
+        hh(ctx, dsls.react['react-comp']['slideHead.pocito'], { title: slide.title }),
         slide.subtitle && h('div:slide-sub', {}, slide.subtitle),
         Viz && hh(ctx, Viz))
     }
   })
 })
 
-ReactComp('idfCubeViz', {
+ReactComp('pocitoCubeViz', {
   impl: comp({
     hFunc: (ctx, { react: { h, useState } }) => () => {
       const [tab, setTab] = useState('cube')

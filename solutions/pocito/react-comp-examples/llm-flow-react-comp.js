@@ -28,13 +28,13 @@ Data('llmFlowExampleAnswer', {
 
 ReactComp('llmFlowExample', {
   params: [
-    {id: 'roomWUrl', as: 'string', defaultValue: 'room:minio//idf-llm-flow-example'}
+    {id: 'roomWUrl', as: 'string', defaultValue: 'room:minio//pocito-llm-flow-example'}
   ],
   impl: comp({
     hFunc: (ctx, {}, {roomWUrl}) => {
       const { h, useEffect, useState } = ctx.vars.react
       const seed = dsls.common.data.wonderPlatformSeed.$run()
-      const store = dsls.common.data.idfRoomJsonStore.$runWithCtx(ctx, {
+      const store = dsls.common.data.pocitoRoomJsonStore.$runWithCtx(ctx, {
         roomWUrl, assetPath: 'usersRW/react-comp-examples/llm-flow-assets'
       })
       return function LlmFlowExample() {

@@ -9,7 +9,7 @@ services:
       - wonder-node-modules:/usr/src/app/node_modules
   marketplace:
     volumes:
-      - ../../solutions/idf/marketplace-server:/app
+      - ../../solutions/pocito/marketplace-server:/app
 
 volumes:
   wonder-node-modules: {}

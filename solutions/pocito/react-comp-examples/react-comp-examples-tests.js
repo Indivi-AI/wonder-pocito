@@ -18,7 +18,7 @@ const {
 Test('reactCompExamples.registry', {
   impl: dataTest({
     calculate: () => ({ result: {
-      store: !!coreUtils.compByFullId('data<common>idfRoomJsonStore'),
+      store: !!coreUtils.compByFullId('data<common>pocitoRoomJsonStore'),
       roomState: !!coreUtils.compByFullId('react-comp<react>roomStateExample'),
       stableChat: !!coreUtils.compByFullId('react-comp<react>stableChatExample'),
       composer: !!coreUtils.compByFullId('react-comp<react>stableChatComposerExample'),
@@ -39,8 +39,8 @@ Test('reactCompExamples.roomStoreRoundTrip', {
   nodeOnly: true,
   impl: dataTest({
     calculate: async (ctx, {testSessionId}) => {
-      const store = dsls.common.data.idfRoomJsonStore.$runWithCtx(ctx, {
-        roomWUrl: 'room:minio//idf-react-comp-examples-test', assetPath: 'tests/' + testSessionId + '/items'
+      const store = dsls.common.data.pocitoRoomJsonStore.$runWithCtx(ctx, {
+        roomWUrl: 'room:minio//pocito-react-comp-examples-test', assetPath: 'tests/' + testSessionId + '/items'
       })
       const seed = { version: 1, items: [{ id: 'i1', name: 'ראשון' }] }
       await store.load(seed)
@@ -78,7 +78,7 @@ Test('reactCompExamples.llmFlowGrounding', {
 ReactComp('stableChatExampleTestHost', {
   impl: comp({
     hFunc: ctx => {
-      const Chat = dsls.react['react-comp'].stableChatExample.$runWithCtx(ctx, { roomWUrl: 'room:minio//idf-stable-chat-example-test' })
+      const Chat = dsls.react['react-comp'].stableChatExample.$runWithCtx(ctx, { roomWUrl: 'room:minio//pocito-stable-chat-example-test' })
       return () => ctx.vars.react.h(Chat)
     }
   })

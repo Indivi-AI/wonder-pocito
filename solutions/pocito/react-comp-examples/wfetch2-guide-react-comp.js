@@ -6,7 +6,7 @@ const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
 ReactComp('wfetch2Guide', {
   params: [
-    {id: 'roomWUrl', as: 'string', defaultValue: 'room:minio//idf-wfetch2-guide'}
+    {id: 'roomWUrl', as: 'string', defaultValue: 'room:minio//pocito-wfetch2-guide'}
   ],
   impl: comp({
     hFunc: (ctx, {}, {roomWUrl}) => {

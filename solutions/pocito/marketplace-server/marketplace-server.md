@@ -5,7 +5,7 @@ direct clients may send the bare room ID themselves. Omitting the header preserv
 
 Resource manifests use a stable semantic `id` such as `uiRenderingSkill` in URLs and relationships, plus one editable `display_name` for UI.
 
-Setup from zero (dev and deployment): `solutions/idf/wonder-platform/README.md`. All marketplace state lives in
+Setup from zero (dev and deployment): `solutions/pocito/wonder-platform/README.md`. All marketplace state lives in
 MinIO/S3 — manifests, version snapshots, audit events, users, and artifacts are
 room-prefixed objects in one bucket; there is no sqlite. Defaults: `MARKETPLACE_S3_BUCKET=wonder-marketplace`,
 `MARKETPLACE_S3_ENDPOINT=http://127.0.0.1:9000`, `MARKETPLACE_S3_ACCESS_KEY=wonder`, `MARKETPLACE_S3_SECRET_KEY=wonder-minio-local`.
@@ -28,6 +28,6 @@ real skill and tool loop; only the model response selection is deterministic.
 Run the deterministic suite with:
 
 ```sh
-cd solutions/idf/marketplace-server
+cd solutions/pocito/marketplace-server
 .venv/bin/python -m unittest -v test_marketplace_server.py
 ```

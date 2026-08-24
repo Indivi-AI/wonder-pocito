@@ -3,7 +3,7 @@ import '@jb6/react'
 import '@wonder/ai/llm-flow-core.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
-const LOG_WURL = 'room://idf/logExample.json'
+const LOG_WURL = 'room://pocito/logExample.json'
 
 const QA_JQ = `$top | select(.runRes and .workflowLog) | {userMessage: (.metadata.userMessage // .workflowLog[0].userMessage),
   responseText: (.responseText // .runRes.text // .runRes), userId: .workflowLog[0].userId}`
@@ -61,7 +61,7 @@ ${messages.find(m => m.role == 'user')?.content || ''}
 == Result ==
 ${fullContent || ''}`
 
-ReactComp('idfLogsViz', {
+ReactComp('pocitoLogsViz', {
   impl: comp({
     hFunc: (ctx, { react: { h, useState, useEffect } }) => () => {
       const [log, setLog] = useState(null)

@@ -1,4 +1,4 @@
-# ReactComp guide for `solutions/idf`
+# ReactComp guide for `solutions/pocito`
 
 Use this guide for Wonder ReactComp work here. Before editing, read these focused examples:
 
@@ -58,7 +58,7 @@ await jb.wonderUtils.wfetch2(assetUrl, { method: 'PUT', body: value }, ctx)
 ```
 
 If GET is missing, PUT the seed once, then use it as state.
-The reusable registered implementation is `data<common>idfRoomJsonStore`; load in `useEffect`, then set state and PUT the same immutable object.
+The reusable registered implementation is `data<common>pocitoRoomJsonStore`; load in `useEffect`, then set state and PUT the same immutable object.
 Add with `[...items, item]`, edit with `items.map`, and delete with `items.filter`.
 Never mutate room assets, messages, reports, tags, or nested arrays in place.
 
@@ -92,7 +92,7 @@ Before rendering an id, find it in `repo.reports`, ignore missing ids, and rende
 ## Tests and upload
 
 After every meaningful edit run `node --check` on the changed JavaScript file.
-Run the focused tests through `.jb6/entry-points-idf.js` and inspect logger arrays, not only `success`.
+Run the focused tests through `.jb6/entry-points-pocito.js` and inspect logger arrays, not only `success`.
 Use `dbLogger` for room round trips, `workflowLogger` for `llm-flow`, and `uiLogger` for browser behavior.
 Validate every changed registered component with the repository TGP formatter/validator.
 Use the ReactComp development URL first, then test the isolated local-MinIO room.

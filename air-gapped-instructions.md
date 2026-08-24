@@ -3,7 +3,7 @@
 This is the current operating guide for Wonder in the air-gapped network. It records the working local setup, transfer process, runtime
 selection, bucket configuration, React applet flow, and remaining gaps.
 
-> Status: the docker-compose flow in `cloud-services/on-prem/README.md` (entry point: `solutions/idf/wonder-platform/README.md`)
+> Status: the docker-compose flow in `cloud-services/on-prem/README.md` (entry point: `solutions/pocito/wonder-platform/README.md`)
 > is the target deployment path, and some scripts referenced below were since removed from the repo. This guide stays for its
 > operational knowledge: buckets, MinIO CORS, MCP wiring, and git-bundle updates.
 
@@ -257,13 +257,13 @@ routes. HTTP/1.1 keep-alive is sufficient.
 
 ## Creating and registering React components
 
-Put model-created IDF JavaScript files under:
+Put model-created Pocito JavaScript files under:
 
 ```text
-/mnt/users/yiftach/wonder/solutions/idf/
+/mnt/users/yiftach/wonder/solutions/pocito/
 ```
 
-`.jb6/mcp-on-prem.js` recursively imports every non-hidden `.js` file under `solutions/idf`. This prevents the inside model from forgetting a
+`.jb6/mcp-on-prem.js` recursively imports every non-hidden `.js` file under `solutions/pocito`. This prevents the inside model from forgetting a
 separate entry-point registration step. Tests are recommended for correctness but are not required merely to register a component.
 
 Each file must still:
@@ -273,7 +273,7 @@ Each file must still:
 - Import only files and packages available inside the air-gapped repository.
 - Have no broken or missing dependencies.
 
-The recursive import is strict: one invalid JavaScript file or missing import under `solutions/idf` can prevent the on-prem MCP from starting.
+The recursive import is strict: one invalid JavaScript file or missing import under `solutions/pocito` can prevent the on-prem MCP from starting.
 Remove incomplete scratch files from that directory. ESM can resolve ordinary cycles, but application-level cyclic initialization can still fail.
 
 After adding a component, use its full ID, for example:
@@ -282,7 +282,7 @@ After adding a component, use its full ID, for example:
 react-comp<react>myApplet
 ```
 
-If the MCP says the component is not registered, confirm its file is under `solutions/idf`, fix import errors, and restart the local server.
+If the MCP says the component is not registered, confirm its file is under `solutions/pocito`, fix import errors, and restart the local server.
 
 ## Upload an unsigned room applet
 
@@ -493,7 +493,7 @@ revision strategy later.
 | MCP starts the GCS path | `STORAGE_PROVIDER` must be exactly `minio` inside the container |
 | MinIO object requests use GCS | Remove explicit `:gcs//` wUrls and verify `MINIO_ENDPOINT` |
 | Applet upload says not registered | File location, full component ID, import error, then restart MCP |
-| MCP fails during startup | Every `.js` under `solutions/idf` must import successfully |
+| MCP fails during startup | Every `.js` under `solutions/pocito` must import successfully |
 | Upload returns 403 | Anonymous PUT policy on `indiviai-wonder` and `wonder-code-packages` |
 | Applet manifest is 404 | Exact room/component ID and anonymous GET policy |
 | Browser reports CORS | MinIO CORS, public endpoint reachability, and allowed response headers |
@@ -514,14 +514,14 @@ revision strategy later.
 5. Run `bash cloud-services/on-prem/run-mcp.sh /mnt/users/yiftach/wonder`.
 6. Verify `/health` locally and from the MCP client machine.
 7. Configure the model with `http://UBUNTU_HOST_OR_IP:3000/mcp`.
-8. Put valid component files under `solutions/idf`.
+8. Put valid component files under `solutions/pocito`.
 9. Call `uploadRoomApplet` for an unsigned room.
 10. Open `/room/ROOM_ID/applet/COMPONENT_ID`.
 
 ## Source-of-truth files
 
 - `.jb6/mcp.js` — selects the on-prem MCP.
-- `.jb6/mcp-on-prem.js` — imports MinIO support, MCP tools, and all IDF JavaScript.
+- `.jb6/mcp-on-prem.js` — imports MinIO support, MCP tools, and all Pocito JavaScript.
 - `wonder/db/db-drivers-s3-minio.js` — MinIO object store and driver.
 - `wonder/db/db-drivers-core.js` — runtime DB/category selection.
 - `wonder/db/db-drivers-code.js` — client and lambda code bucket mapping.

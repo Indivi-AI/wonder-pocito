@@ -37,7 +37,7 @@ const CUBE_CODE = `Cube('finance3Cube', { impl: cube({
   ]
 }) })`
 
-ReactComp('idfDataSourcesViz', {
+ReactComp('pocitoDataSourcesViz', {
   impl: comp({
     hFunc: (ctx, { react: { h } }) => () => h('div:iv', {}, h('style', {}, CSS), h('div:iv-title', {}, 'Data Sources'),
       h('div:ds-wrap', {},

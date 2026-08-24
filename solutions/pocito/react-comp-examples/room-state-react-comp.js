@@ -5,7 +5,7 @@ import '@wonder/db/db-drivers-s3-minio.js'
 
 const { common: { Data }, react: { ReactComp, 'react-comp': { comp } } } = dsls
 
-Data('idfRoomJsonStore', {
+Data('pocitoRoomJsonStore', {
   params: [
     {id: 'roomWUrl', as: 'string'},
     {id: 'assetPath', as: 'string'}
@@ -30,13 +30,13 @@ Data('roomStateExampleSeed', {
 
 ReactComp('roomStateExample', {
   params: [
-    {id: 'roomWUrl', as: 'string', defaultValue: 'room:minio//idf-room-state-example'}
+    {id: 'roomWUrl', as: 'string', defaultValue: 'room:minio//pocito-room-state-example'}
   ],
   impl: comp({
     hFunc: (ctx, {}, {roomWUrl}) => {
       const { h, useEffect, useState } = ctx.vars.react
       const seed = dsls.common.data.roomStateExampleSeed.$run()
-      const store = dsls.common.data.idfRoomJsonStore.$runWithCtx(ctx, {
+      const store = dsls.common.data.pocitoRoomJsonStore.$runWithCtx(ctx, {
         roomWUrl, assetPath: 'usersRW/react-comp-examples/items'
       })
       return function RoomStateExample() {
