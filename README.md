@@ -10,8 +10,8 @@ git clone <this repo> && cd wonder
 ./wonder-up.sh --env ~/Downloads/team.env    # the .env.site your team lead sent (LLM keys; everything else auto-fills)
 ```
 
-That builds the images for your cpu, starts wonder + marketplace + llm-lite + minio with your working tree mounted
-live, creates the buckets, smoke-checks everything, and prints your URLs — including the ready-to-paste
+That builds the images for your cpu, starts wonder + marketplace + agno (AgentOS) + llm-lite + minio with your working
+tree mounted live, creates the buckets, smoke-checks everything, and prints your URLs — including the ready-to-paste
 `claude mcp add ...` line for Claude Code.
 
 Your first applet: ask Claude Code (with the wonder MCP added) to call `uploadRoomApplet` with

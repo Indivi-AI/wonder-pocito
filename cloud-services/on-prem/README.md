@@ -23,8 +23,9 @@ creates the `WONDER_BUCKETS` with anonymous read/write; the smoke's `/llmProxy` 
 through llm-lite and prints the upstream's verdict verbatim. For teammate day-to-day development, `./wonder-up.sh` at the repo root wraps all of this
 and adds `compose.dev.yml` — the working tree mounted live into the containers, native-arch images.
 
-The airgap overlay removes internet for wonder/marketplace/minio (published ports still work); llm-lite alone gets
-egress, playing the site's internal LLM endpoint. `--profile local-minio` spins a stand-in for the site's global
+The airgap overlay removes internet for wonder/marketplace/agno/minio (published ports still work); llm-lite alone
+gets egress, playing the site's internal LLM endpoint. agno (AgentOS agent runs, `agno_server.py`) shares the
+marketplace image; the two servers share only the object store — browsers call each at its own published port. `--profile local-minio` spins a stand-in for the site's global
 MinIO. Set `SITE_HOST` to the machine's own hostname — any machine, any name; add an `/etc/hosts` entry only for a
 made-up name, and never browse via localhost: it masks host/origin/CORS bugs.
 Browser check: `http://$SITE_HOST:58045/room/<room>/applet/<name>`.
@@ -47,7 +48,7 @@ Kit = the images tar + `wonder.bundle` + this directory (compose files, dockerfi
 ```sh
 docker load < wonder-images.tar.gz
 cp .env.site.template .env.site
-docker compose --env-file .env.site up -d    # wonder + marketplace + llm-lite; no minio service on site
+docker compose --env-file .env.site up -d    # wonder + marketplace + agno + llm-lite; no minio service on site
 ./sim-check.sh
 ```
 

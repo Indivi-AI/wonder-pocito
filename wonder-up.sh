@@ -17,7 +17,8 @@ if [[ "$MODE" == clean ]]; then compose -f compose.dev.yml --profile local-minio
 [[ -n "$ENVFILE" ]] && cp "$ENVFILE" .env.site
 [[ -f .env.site ]] || cp .env.site.template .env.site
 while IFS= read -r line; do key="${line%%=*}"; grep -q "^$key=" .env.site || echo "$line" >> .env.site; done \
-  < <(grep -E '^[A-Z_]+=' .env.site.template)   # backfill keys added by newer templates; your existing values always win
+  < <(grep -E '^[A-Z_]+=' .env.site.template | sed -E 's/[[:space:]]+#.*$//')   # backfill keys added by newer templates,
+  # comment-stripped (compose reads "KEY=  # x" as value "# x"); your existing values always win
 grep -Eq '^SITE_HOST=[^ ]' .env.site || { sed -i.bak "s/^SITE_HOST=.*/SITE_HOST=$(hostname)/" .env.site && rm -f .env.site.bak; }
 
 [[ "$MODE" == dev ]] && export PLATFORM="${PLATFORM:-$(docker version -f '{{.Server.Os}}/{{.Server.Arch}}')}" \
@@ -34,5 +35,6 @@ echo
 echo "Wonder is up ($MODE mode, images $TAG):"
 echo "  applets:          $SITE_SCHEME://$SITE_HOST:$WONDER_PUBLISHED_PORT/room/<roomId>/applet/<name>"
 echo "  marketplace API:  $SITE_SCHEME://$SITE_HOST:$MARKETPLACE_PUBLISHED_PORT/docs"
+echo "  agno (AgentOS):   $SITE_SCHEME://$SITE_HOST:$AGNO_PUBLISHED_PORT/docs"
 echo "  minio console:    $SITE_SCHEME://$SITE_HOST:$MINIO_PUBLISHED_PORT"
 echo "  Claude Code MCP:  claude mcp add --transport http wonder $SITE_SCHEME://$SITE_HOST:$WONDER_PUBLISHED_PORT/mcp"

@@ -7,6 +7,7 @@ cd "$(dirname "$0")"
 set -a; source .env.site; set +a
 wonder="$SITE_SCHEME://$SITE_HOST:$WONDER_PUBLISHED_PORT"
 market="$SITE_SCHEME://$SITE_HOST:$MARKETPLACE_PUBLISHED_PORT"
+agno="$SITE_SCHEME://$SITE_HOST:$AGNO_PUBLISHED_PORT"
 minio_url="${MINIO_ENDPOINT:-$SITE_SCHEME://$SITE_HOST:$MINIO_PUBLISHED_PORT}"
 room="smoke-$$"
 fail=0
@@ -18,6 +19,7 @@ wait_ready() { for _ in $(seq 60); do curl -fsS --max-time 3 "$1" > /dev/null 2>
 
 wait_ready "$wonder/health" || exit 1
 wait_ready "$market/healthz" || exit 1
+wait_ready "$agno/healthz" || exit 1
 curl -fsS --max-time 10 "$market/healthz" | grep -q '"object_store":"ok"' \
   && pass "marketplace object store" || flunk "marketplace object store"
 
@@ -47,8 +49,8 @@ mcurl -X POST "$market/api/v1/agents/" -H 'content-type: application/json' \
   -d '{"id":"smokeAgent","display_name":"Smoke agent","description":"smoke","config":{"system_prompt":"Answer briefly.",
        "backend_config":{"harness_type":"deepagents"},"skills":["smokeSkill"]},"readme":""}' \
   > /dev/null && pass "agent create" || flunk "agent create"
-run=$(mcurl -X POST "$market/agents/smokeAgent/runs" -F message='What is the phrase?' -F session_id="$room" -F user_id=smoke -F stream=false)
-echo "$run" | grep -q '"content"' && pass "AgentOS run (skills materialized, model factory answered)" || flunk "AgentOS run: $run"
+run=$(mcurl -X POST "$agno/agents/smokeAgent/runs" -F message='What is the phrase?' -F session_id="$room" -F user_id=smoke -F stream=false)
+echo "$run" | grep -q '"content"' && pass "agno run (agent created on marketplace, run by agno via shared S3)" || flunk "agno run: $run"
 
 for resource in agents/smokeAgent skills/smokeSkill; do mcurl -X DELETE "$market/api/v1/$resource" > /dev/null || flunk "cleanup $resource"; done
 [ "$fail" = 0 ] && pass "cleanup + ALL CHECKS"

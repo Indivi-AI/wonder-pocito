@@ -10,7 +10,8 @@ DbDriverInterceptor('wonderPlatformMarketplace', {
     designConcerns: 'The singular agent path is runtime-only; plural agents remains the Swagger CRUD resource.',
     pre: wonderPlatformWUrlResponse('%$url%', '%$fileName%', {
       opts: '%$opts%',
-      baseUrl: '%$marketplaceBaseUrl%'
+      baseUrl: '%$marketplaceBaseUrl%',
+      agnoBaseUrl: '%$agnoBaseUrl%'
     })
   })
 })

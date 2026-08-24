@@ -9,6 +9,7 @@ from unittest.mock import patch
 import httpx
 from fastapi.testclient import TestClient
 
+from agno_server import create_app as create_agent_os_app
 from marketplace_e2e_model import model_factory
 from marketplace_server import create_app
 
@@ -18,12 +19,14 @@ class MarketplaceServerTest(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.env = patch.dict(os.environ, {'MARKETPLACE_S3_BUCKET': f'marketplace-test-{uuid.uuid4().hex[:12]}'})
         self.env.start()
-        self.client = TestClient(create_app(self.temp.name, model_factory))
+        self.client = TestClient(create_app())
+        self.agno = TestClient(create_agent_os_app(self.temp.name, model_factory))
         self.objects = self.client.app.state.marketplace_repo.objects
         self.examples = json.loads((Path(__file__).parent / 'marketplace-api-examples.json').read_text())
 
     def tearDown(self):
         self.client.close()
+        self.agno.close()
         self.objects.delete_prefix('')
         self.objects.client.delete_bucket(Bucket=self.objects.bucket)
         self.env.stop()
@@ -61,7 +64,7 @@ class MarketplaceServerTest(unittest.TestCase):
     def test_model_factory_can_be_selected_by_environment(self):
         with tempfile.TemporaryDirectory() as data_dir, patch.dict(os.environ,
           {'MARKETPLACE_MODEL_FACTORY': 'marketplace_e2e_model:model_factory'}):
-            app = create_app(data_dir)
+            app = create_agent_os_app(data_dir)
             self.assertIs(app.state.marketplace_runtime.model_factory, model_factory)
 
     def test_crud_artifacts_versions_audit_and_references(self):
@@ -136,7 +139,7 @@ class MarketplaceServerTest(unittest.TestCase):
         upload = self.request('POST', '/api/v1/presign/upload', headers=room_headers('room-a'), json={'key': 'uploads/a.txt'}).json()
         self.assertIn(f'/{self.objects.bucket}/room-a/uploads/a.txt', upload['url'])
         for room, fact in [('room-a', 'ROOM_A_FACT'), ('room-b', 'ROOM_B_FACT')]:
-            run = self.request('POST', '/agents/roomAgent/runs', headers=room_headers(room), data={
+            run = self.agno.post('/agents/roomAgent/runs', headers=room_headers(room), data={
               'message': 'What is the room fact?', 'session_id': room, 'user_id': 'tester', 'stream': 'false'})
             self.assertEqual(run.status_code, 200, run.text)
             self.assertIn(fact, run.json()['content'])
@@ -185,7 +188,7 @@ class MarketplaceServerTest(unittest.TestCase):
         for path, body in resources:
             self.assertEqual(self.request('POST', path, json=body).status_code, 201)
         def agent_run(session):
-            response = self.request('POST', '/agents/roomAgent/runs', data={
+            response = self.agno.post('/agents/roomAgent/runs', data={
               'message': 'What is the code? Double 21.', 'session_id': session, 'user_id': 'tester', 'stream': 'false'})
             self.assertEqual(response.status_code, 200, response.text)
             return response.json()

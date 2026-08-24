@@ -1,16 +1,18 @@
 # Wonder Platform
 
-A marketplace + agents platform: the `wonderPlatform` browser applet (`solutions/pocito/marketplace-ui/`) backed by four services.
+A marketplace + agents platform: the `wonderPlatform` browser applet (`solutions/pocito/marketplace-ui/`) backed by five services.
 
 | Service | Role | Local dev | Deployed (published on `SITE_HOST`) |
 |---|---|---|---|
 | wonder server | serves applets live from the repo, `/wfetch`, `/mcp`, `/llmProxy` | :3000 | :58045 |
-| marketplace + AgentOS | resource CRUD, versions, audit, agent runs (`solutions/pocito/marketplace-server/`) | :7777 | :58046 |
+| marketplace | resource CRUD, versions, audit, presign (`marketplace_server.py`) | :7777 | :58046 |
+| agno (AgentOS) | agent runs (`agno_server.py`, same package/image; shares only S3 with the marketplace) | :7778 | :58049 |
 | llm-lite (LiteLLM) | the one OpenAI-compatible gateway to the LLM | not needed (cloud proxy) | :58047 |
 | MinIO | all storage: marketplace objects, rooms, applet code | :9000 | the site's global MinIO |
 
-Everything talks through the same published URLs browsers use; applet pages receive `MARKETPLACE_API_URL` and
-`LLM_PROXY_URL` from the wonder server's env. Ports above are defaults — every value comes from env files (below).
+Everything talks through the same published URLs browsers use; applet pages receive `MARKETPLACE_API_URL`,
+`AGNO_API_URL` and `LLM_PROXY_URL` from the wonder server's env, so the browser calls each server directly.
+Ports above are defaults — every value comes from env files (below).
 
 Fastest team setup: `./wonder-up.sh` at the repo root (see the root `README.md`) — docker, one command, working tree
 mounted live. The paths below are the bare-process alternative and the deployment flows.
@@ -32,11 +34,13 @@ Run, one terminal each:
 ```sh
 npm run start-min-io                                        # MinIO :9000 (console :9001, wonder / wonder-minio-local)
 npm run local                                               # wonder :3000
-./solutions/pocito/marketplace-server/start-marketplace.sh     # marketplace + AgentOS :7777
+./solutions/pocito/marketplace-server/start-marketplace.sh     # marketplace CRUD :7777
+./solutions/pocito/marketplace-server/start-agno.sh            # agno (AgentOS) agent runs :7778
 ```
 
 Verify: [platform UI](http://localhost:3000/jb6_packages/react/react-comp-view.html?cmpId=wonderPlatform&urlsToLoad=@solution/pocito/marketplace-ui/wonder-platform.js),
-[marketplace health](http://localhost:7777/healthz) (`object_store: ok`), [API docs](http://localhost:7777/docs).
+[marketplace health](http://localhost:7777/healthz) and [agno health](http://localhost:7778/healthz) (`object_store: ok`),
+[API docs](http://localhost:7777/docs).
 Tests: `node --import ./nodejs-importmap.js jb6/testing/run-tests-cli.js .jb6/entry-points-pocito.js --pattern=wonderPlatform`
 
 ## 2. Build images + simulate the on-prem — internet machine
@@ -59,7 +63,7 @@ Whiten `wonder-images.tar.gz` (`docker save` of the built images) plus the `clou
 ```sh
 docker load < wonder-images.tar.gz
 cp .env.site.template .env.site      # SITE_HOST=<site hostname>, IMAGE_TAG, MINIO_ENDPOINT=<global MinIO URL>, keys
-docker compose --env-file .env.site up -d      # wonder + marketplace + llm-lite; storage is the global MinIO
+docker compose --env-file .env.site up -d      # wonder + marketplace + agno + llm-lite; storage is the global MinIO
 ./sim-check.sh
 ```
 
@@ -77,5 +81,5 @@ Images are env-free; secrets are never committed and never baked into an image.
 
 ## Reference
 
-- `solutions/pocito/marketplace-server/marketplace-server.md` — marketplace/AgentOS server behavior, env names, tests.
+- `solutions/pocito/marketplace-server/marketplace-server.md` — marketplace + agno server behavior, env names, tests.
 - `cloud-services/on-prem/README.md` — the outside/inside deployment runbook.
