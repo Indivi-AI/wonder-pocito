@@ -1,7 +1,7 @@
 import { dsls, jb, coreUtils } from '@jb6/core'
 import '@jb6/common'
 import '@jb6/react'
-import '@wonder/applets/applet.js'
+import '@wonder/ui/applet.js'
 import '@wonder/ai/duckdb-sql-step.js'
 import '@wonder/ui/viz/viz-index.js'
 import './finance-analytics.js' // registers the financeAnalytics workflow (Ask AI) + the runFinanceAnalytics/runFinanceReport* lambdas

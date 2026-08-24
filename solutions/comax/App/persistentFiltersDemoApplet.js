@@ -1,5 +1,5 @@
 import { dsls } from '@jb6/core'
-import '@wonder/applets/applet.js'
+import '@wonder/ui/applet.js'
 
 const { react: { ReactComp, 'react-comp': { comp }, 'react-metadata': { applet } } } = dsls
 const stores = ['כל הסניפים', 'דיזנגוף', 'קניון הזהב', 'אילת']

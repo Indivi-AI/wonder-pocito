@@ -1,6 +1,6 @@
 import { dsls, coreUtils } from '@jb6/core'
 import '@jb6/react'
-import '@wonder/applets/applet.js'
+import '@wonder/ui/applet.js'
 import './comax-v2-agent.js'
 
 const { react: { ReactComp, 'react-comp': reactComps, 'react-metadata': { applet } } } = dsls

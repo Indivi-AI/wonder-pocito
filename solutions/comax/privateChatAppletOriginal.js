@@ -2,7 +2,7 @@ import { dsls, coreUtils, jb } from '@jb6/core'
 import '@wonder/db/db-drivers-utils.js'
 import '@wonder/ui/ui-utils.js'
 const { createShortUrl, formatTimeWithRandom, shareHandler, wAppend, wGet, wPut } = jb.wonderUtils
-import '@wonder/applets/applet.js'
+import '@wonder/ui/applet.js'
 import './Agents/analytics-agent.js' // registers the basicAnalytics workflow (run in-browser; its duckDbSql offloads duckdb to /run-bash)
 import './nostalgy/reports-based-agent.js'
 import './Agents/reports-template-agent.js'   // registers reportsTemplateAnalytics (LLM fills slots, runtime owns the report flow)

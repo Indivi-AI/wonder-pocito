@@ -1,7 +1,7 @@
 import { dsls, jb } from '@jb6/core'
 import '@jb6/common'
 import '@jb6/react'
-import '@wonder/applets/applet.js'
+import '@wonder/ui/applet.js'
 import '@wonder/ai/report-step.js'
 import '@wonder/verified-queries/verified-queries-dsl.js'
 import '@wonder/db/db-drivers.js'

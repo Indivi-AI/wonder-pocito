@@ -1,6 +1,6 @@
 import { dsls } from '@jb6/core'
 import '@jb6/react'
-import '@wonder/applets/applet.js'
+import '@wonder/ui/applet.js'
 import '@wonder/ui/viz/viz-index.js'
 import '@wonder/db/room-lambda-client.js'
 import './reports-workspace-lambda.js'

@@ -2,7 +2,7 @@ import { dsls, coreUtils, jb } from '@jb6/core'
 import '@wonder/db/db-drivers-utils.js'
 import '@wonder/ui/ui-utils.js'
 const { createShortUrl, formatTimeWithRandom, shareHandler, wAppend, wGet, wPut } = jb.wonderUtils
-import '@wonder/applets/applet.js'
+import '@wonder/ui/applet.js'
 import '@wonder/db/room-lambda-client.js'   // roomLambda db-driver-interceptor - routes the <roomWUrl>/lambdas/<name> POSTs of the remote duckDbSql hook
 import '../comax-v2-agent.js'
 import '../Agents/agents-repo.js'   // Data('comaxAnalyticsAgents') — the selectable-agents repo
