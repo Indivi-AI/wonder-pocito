@@ -12,6 +12,9 @@ A marketplace + agents platform: the `wonderPlatform` browser applet (`solutions
 Everything talks through the same published URLs browsers use; applet pages receive `MARKETPLACE_API_URL` and
 `LLM_PROXY_URL` from the wonder server's env. Ports above are defaults — every value comes from env files (below).
 
+Fastest team setup: `./wonder-up.sh` at the repo root (see the root `README.md`) — docker, one command, working tree
+mounted live. The paths below are the bare-process alternative and the deployment flows.
+
 ## 1. Local development — internet machine, from zero
 
 Prereqs: Node 24, Python 3.12, the [MinIO binary](https://min.io/docs/minio/macos/index.html) at `~/.local/bin/minio`.

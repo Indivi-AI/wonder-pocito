@@ -49,7 +49,7 @@ Example:
 })
 
 Workflow('wonderPlatformAgent', {
-  params: [{id: 'model', as: 'string', defaultValue: 'gemini/gemini-3.5-flash'}],
+  params: [{id: 'model', as: 'string', defaultValue: globalThis.LLM_MODEL || globalThis.process?.env?.LLM_MODEL || 'gemini/gemini-3.5-flash'}],
   impl: mainWorkflow({
     main: mpi('%$model%', {
       prompt: `USER_MESSAGE: %$userMessage%

@@ -12,3 +12,4 @@ tmp/
 cloud-services/express-server/.env.onprem
 
 cloud-services/on-prem/.env.site
+__pycache__/

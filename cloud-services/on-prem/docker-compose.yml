@@ -29,6 +29,7 @@ services:
       LLM_PROXY_URL: ${SITE_SCHEME}://${SITE_HOST}:${WONDER_PUBLISHED_PORT}/llmProxy
       LLM_PROXY_TARGET: ${SITE_SCHEME}://${SITE_HOST}:${LLM_LITE_PUBLISHED_PORT}
       LLM_PROXY_KEY: ${LLM_PROXY_KEY}
+      LLM_MODEL: ${LLM_MODEL}
 
   marketplace:
     image: marketplace-server:${IMAGE_TAG}
@@ -75,3 +76,17 @@ services:
     environment:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
+
+  minio-init:
+    image: marketplace-server:${IMAGE_TAG}
+    profiles: [local-minio]
+    restart: "no"
+    networks: [edge]
+    extra_hosts: ["${SITE_HOST}:host-gateway"]
+    volumes: ["./minio-init.py:/minio-init.py:ro"]
+    command: ["python", "/minio-init.py"]
+    environment:
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-${SITE_SCHEME}://${SITE_HOST}:${MINIO_PUBLISHED_PORT}}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      WONDER_BUCKETS: ${WONDER_BUCKETS}

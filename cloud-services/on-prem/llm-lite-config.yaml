@@ -1,5 +1,6 @@
-# llm-lite (LiteLLM) routes every requested model to one OpenAI-compatible upstream.
-# Upstream + keys come from the environment (.env.site) - nothing baked, nothing committed.
+# llm-lite (LiteLLM) passes any requested openai/<model> through to one OpenAI-compatible upstream.
+# The model name browsers send is wonder's LLM_MODEL (.env.site, e.g. openai/gpt-5-mini) - it must exist upstream;
+# non-openai model shapes (gemini/... SSE paths) are not served here. Upstream + keys come from the environment.
 model_list:
   - model_name: "*"
     litellm_params:

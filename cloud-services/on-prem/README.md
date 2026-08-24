@@ -14,8 +14,14 @@ cloud-services/on-prem/build-images.sh --base    # dependency bases; needs netwo
 cloud-services/on-prem/build-images.sh           # app layers, built with --network=none; prints IMAGE_TAG=dd-mm-yyyy-HH-MM-<sha>
 cd cloud-services/on-prem && cp .env.site.template .env.site   # SITE_HOST=$(hostname), IMAGE_TAG, LLM_UPSTREAM_KEY
 docker compose --env-file .env.site -f docker-compose.yml -f compose.airgap.yml --profile local-minio up -d
-./sim-check.sh    # health, room-scoped CRUD, browser-reachable presign, deterministic AgentOS run
+./sim-check.sh    # waits for readiness, then: anonymous room/applet storage, /llmProxy, CRUD, presign, AgentOS run
 ```
+
+Images target the SITE's cpu: `build-images.sh` defaults to `linux/amd64` (override with `PLATFORM=linux/arm64`) —
+a mac arm build without it produces images g-force-class x86 hosts cannot run. In the sim, the `minio-init` one-shot
+creates the `WONDER_BUCKETS` with anonymous read/write; `LLM_SMOKE=1 ./sim-check.sh` additionally buys one real
+completion through llm-lite. For teammate day-to-day development, `./wonder-up.sh` at the repo root wraps all of this
+and adds `compose.dev.yml` — the working tree mounted live into the containers, native-arch images.
 
 The airgap overlay removes internet for wonder/marketplace/minio (published ports still work); llm-lite alone gets
 egress, playing the site's internal LLM endpoint. `--profile local-minio` spins a stand-in for the site's global
