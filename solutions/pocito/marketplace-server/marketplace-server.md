@@ -2,8 +2,9 @@
 
 Two servers in one package, one per process: `marketplace_server.py` serves the marketplace CRUD API on port 7777 and
 `agno_server.py` serves Agno AgentOS agent runs (`POST /agents/{id}/runs`) on port 7778. They never call each other -
-both talk to the same S3/MinIO bucket, and agno refreshes its agent list from it on every `/agents` request, so agents
-created or deleted through the marketplace are runnable immediately. Wonder derives `x-wonder-room` from the request wUrl;
+both read and write the same S3/MinIO bucket through the shared `marketplace_storage.py` layer (`S3ObjectStore` +
+`MarketplaceRepository`; manifests live in envelopes `{data, version, created_at, updated_at}`), and agno refreshes its
+agent list from it on every `/agents` request, so agents created or deleted through the marketplace are runnable immediately. Wonder derives `x-wonder-room` from the request wUrl;
 direct clients may send the bare room ID themselves. Omitting the header preserves the default `marketplace` room.
 
 Resource manifests use a stable semantic `id` such as `uiRenderingSkill` in URLs and relationships, plus one editable `display_name` for UI.

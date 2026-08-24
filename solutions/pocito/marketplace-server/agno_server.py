@@ -1,6 +1,6 @@
 """Agno AgentOS runtime server: runs the agents the marketplace server defines.
-The two servers share only the S3 object store - agents created or deleted there are picked up
-here per request by sync_factories, so neither server ever calls the other."""
+The two servers share only the S3 object store (through marketplace_storage) - agents created or
+deleted there are picked up here per request by sync_factories, so neither server ever calls the other."""
 import base64
 import hashlib
 import importlib
@@ -23,7 +23,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from marketplace_server import DEFAULT_ROOM, ROOM_CONTEXT, ROOT, MarketplaceRepository, S3ObjectStore, safe_name, safe_path
+from marketplace_storage import DEFAULT_ROOM, ROOM_CONTEXT, ROOT, MarketplaceRepository, S3ObjectStore, safe_name, safe_path
 
 
 class MarketplaceAgentRuntime:
