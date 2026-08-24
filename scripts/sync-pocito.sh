@@ -10,9 +10,9 @@ DROP='^solutions/(comax|finance)/'
 JUNK='(^|/)(node_modules|__pycache__|\.venv)/|^files$|(^|/)\.env(\.(dev|prod|onprem|site))?$|(^|/)\.DS_Store$'
 
 cd "$SRC"; wanted="$(git ls-files | grep -vE "$DROP" | grep -vE "$JUNK")"
-# remove tracked files in DST that wonder no longer has (so deletions propagate), skipping DST-local junk
+# make DST match wanted exactly: delete every tracked DST file not in wanted (strips ALL non-pocito solutions),
+# keeping only the `files` submodule ref. Then copy wanted over. Deletions and renames propagate.
 cd "$DST"
-comm -23 <(git ls-files | grep -vE "$DROP" | sort) <(echo "$wanted" | sort) | while read -r f; do git rm -qf --ignore-unmatch -- "$f" >/dev/null; done
-git rm -rqf --ignore-unmatch -- solutions/comax solutions/finance >/dev/null 2>&1 || true
+comm -23 <(git ls-files | grep -vE '^files$' | sort) <(echo "$wanted" | sort) | while read -r f; do git rm -qf --ignore-unmatch -- "$f" >/dev/null; done
 while read -r f; do [ -f "$SRC/$f" ] || continue; mkdir -p "$DST/$(dirname "$f")"; cp -p "$SRC/$f" "$DST/$f"; done <<< "$wanted"
 echo "synced $SRC -> $DST (pocito-only, $(echo "$wanted" | wc -l | tr -d ' ') files)"
