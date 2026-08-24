@@ -159,7 +159,7 @@ class MarketplaceServerTest(unittest.TestCase):
         self.objects.put('marketplace/skills/legacySkill/manifest.json', json.dumps(legacy).encode())
         self.objects.put('marketplace/skills/legacy/manifest.json', b'{"display_name":"legacy"}')
         self.objects.put('marketplace/skills/broken/manifest.json', b'{')
-        with self.assertLogs('marketplace_server', level='WARNING') as logs:
+        with self.assertLogs('marketplace_storage', level='WARNING') as logs:
             response = self.request('GET', '/api/v1/skills/')
         listed = {item['id']: item for item in response.json()}
         self.assertEqual(set(listed), {'legacySkill', 'roomFactsSkill'})
