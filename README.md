@@ -16,12 +16,12 @@ live, creates the buckets, smoke-checks everything, and prints your URLs — inc
 
 Your first applet: ask Claude Code (with the wonder MCP added) to call `uploadRoomApplet` with
 `{"roomId": "demo", "entryCompFullId": "react-comp<react>wonderPlatform"}`, then open
-`http://<your-host>:58045/room/demo/applet/wonderPlatform`. New applets are `.js` files under `solutions/idf/` —
+`http://<your-host>:58045/room/demo/applet/wonderPlatform`. New applets are `.js` files under `solutions/pocito/` —
 edits serve live, no rebuilds; after adding new server code run `docker compose restart wonder`.
 `./wonder-up.sh --clean` resets everything.
 
 ## Going deeper
 
-- `solutions/idf/wonder-platform/README.md` — the platform: bare-process dev, on-prem build/sim/deploy, env reference.
+- `solutions/pocito/wonder-platform/README.md` — the platform: bare-process dev, on-prem build/sim/deploy, env reference.
 - `cloud-services/on-prem/README.md` — the air-gap deployment runbook (whitening kit, `--airgap` sim, OpenShift).
 - `CLAUDE.md` — coding rules for working in this repo with Claude.

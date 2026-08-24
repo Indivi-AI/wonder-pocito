@@ -38,7 +38,7 @@ const compSections = source => parse(source, { ecmaVersion: 'latest' }).body.red
 const fencedBlocks = txt => [...String(txt || '').matchAll(/```[^\n]*\n([\s\S]*?)```/g)].map(m => m[1])
 
 Data('compSection', {
-  description: 'the source text of one top-level section of a comp source, by name prefix (e.g. Deck. matches Deck.idfDeck)',
+  description: 'the source text of one top-level section of a comp source, by name prefix (e.g. Deck. matches Deck.pocitoDeck)',
   params: [
     {id: 'name', as: 'string', mandatory: true},
     {id: 'source', as: 'text', defaultValue: '%%'}
@@ -145,7 +145,7 @@ Data('uploadReactComp', {
 Data('seedRoomCompFromModule', {
   description: 'node-side seeding: read a repo module, strip its import lines (deps come from the host bundle) and PUT the body as a room comp source',
   params: [
-    {id: 'modulePath', as: 'string', mandatory: true, description: 'repo-relative module, e.g. admin/idf/idf-deck.js'},
+    {id: 'modulePath', as: 'string', mandatory: true, description: 'repo-relative module, e.g. admin/pocito/pocito-deck.js'},
     {id: 'wUrl', as: 'string', mandatory: true}
   ],
   impl: async (ctx, {dbLogger}, {modulePath, wUrl}) => {
@@ -183,9 +183,9 @@ Doclet('uploadReactCompDataComponent', {
       example(`
 // fetch a room react-comp source, then upload an edited version. the room serves the applet from this file - upload makes the edit live
 {$: 'flow-elem<ai>setCtxVar', goal: 'read current source', varName: 'compSource',
-  value: {$: 'data<common>fetchReactCompSource', wUrl: 'room://idf/reactComps/chatUi.js'}}
+  value: {$: 'data<common>fetchReactCompSource', wUrl: 'room://pocito/reactComps/chatUi.js'}}
 {$: 'flow-elem<ai>setCtxData', goal: 'save edited source',
-  value: {$: 'data<common>uploadReactComp', wUrl: 'room://idf/reactComps/chatUi.js', compId: 'chatUi'}}
+  value: {$: 'data<common>uploadReactComp', wUrl: 'room://pocito/reactComps/chatUi.js', compId: 'chatUi'}}
 `),
       mustDo('pass compId - upload validates the source compiles AND re-registers ReactComp(compId) before writing'),
       doNot('PUT comp source with wonderPut or wFetch directly', { reason: 'uploadReactComp is the guarded path: broken source never overwrites a working applet' })

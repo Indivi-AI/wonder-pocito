@@ -1,2 +1,4 @@
+import '@jb6/mcp/mcp-jb-tools.js'
 import '../solutions/pocito/marketplace-ui/wonder-platform-tests.js'
 import '../solutions/pocito/marketplace-ui/wonder-platform-agent-tests.js'
+import '../solutions/pocito/react-comp-examples/react-comp-examples-tests.js'

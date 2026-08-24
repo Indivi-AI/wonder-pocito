@@ -62,6 +62,12 @@ In-gap code edits: update source from `wonder.bundle`, run `build-images.sh` (CO
 the whitened bases), bump `IMAGE_TAG` in `.env.site`, `up -d`. OpenShift prod: the same images; the same `.env.site`
 keys become ConfigMap/Secret entries.
 
+Site LiteLLM config: put the site's own yaml at `llm-lite-site.yaml` next to `.env.site` (gitignored; include it in
+the whitening kit) and set `LLM_LITE_CONFIG=./llm-lite-site.yaml`. Any `os.environ/KEY` it references goes into
+`.env.site`; if it pins its own `master_key`, `LLM_PROXY_KEY` must equal it, and `LLM_MODEL`/`OPENAI_MODEL` must name
+models it serves. If its upstream is https behind an internal CA, add the CA via a small override:
+`services: {llm-lite: {volumes: ["./site-ca.pem:/site-ca.pem:ro"], environment: {SSL_CERT_FILE: /site-ca.pem}}}`.
+
 ## Bare-process dev mode (no docker)
 
 `npm run onprem` runs the wonder server alone against a reachable MinIO, loading
