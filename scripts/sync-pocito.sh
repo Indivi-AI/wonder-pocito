@@ -6,10 +6,9 @@ set -euo pipefail
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
 DST="$(cd "${1:-$SRC/../wonder-pocito}" && pwd)"
 [[ -d "$DST/.git" ]] || { echo "not a git checkout: $DST" >&2; exit 1; }
-DROP='^solutions/(comax|finance)/'
 JUNK='(^|/)(node_modules|__pycache__|\.venv)/|^files$|(^|/)\.env(\.(dev|prod|onprem|site))?$|(^|/)\.DS_Store$'
 
-cd "$SRC"; wanted="$(git ls-files | grep -vE "$DROP" | grep -vE "$JUNK")"
+cd "$SRC"; wanted="$(git ls-files | grep -vE "$JUNK" | awk '!/^solutions\// || /^solutions\/pocito\//')"   # pocito is the ONLY solution that syncs
 # make DST match wanted exactly: delete every tracked DST file not in wanted (strips ALL non-pocito solutions),
 # keeping only the `files` submodule ref. Then copy wanted over. Deletions and renames propagate.
 cd "$DST"
