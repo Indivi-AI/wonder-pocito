@@ -14,3 +14,7 @@ cloud-services/express-server/.env.onprem
 cloud-services/on-prem/.env.site
 __pycache__/
 cloud-services/on-prem/llm-lite-site.yaml
+
+solutions/idf/marketplace-server/.venv/
+
+solutions/idf/marketplace-server/.env
