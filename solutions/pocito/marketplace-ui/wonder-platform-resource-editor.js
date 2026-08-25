@@ -39,6 +39,7 @@ ReactComp('wonderPlatformResourceEditor', {
       if (!active) return null
       const {resource, item} = active, update = value => setEditors(editors.map((entry, index) => index == editors.length - 1
         ? {...entry, item: typeof value == 'function' ? value(entry.item) : value} : entry))
+      const readOnlyTool = resource == 'tools' && item.originalId && item.kind != 'flow'
       const saveDisabled = !item.name?.trim() || !item.id?.trim() || resource == 'skills' && !repo.marketplace && (!item.content?.trim()
         || !/^\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/.test(item.publishVersion))
       return h('div:fixed inset-0 z-[80] bg-black/25', {}, h('section:absolute inset-y-0 left-0 w-full max-w-3xl overflow-y-auto bg-white shadow-2xl', {
@@ -46,7 +47,7 @@ ReactComp('wonderPlatformResourceEditor', {
         editors.map((entry, index) => h('button', {key: index, onClick: () => setEditors(editors.slice(0, index + 1))},
           `${labels[entry.resource] || 'סט'} · ${entry.item.name || 'חדש'}`))), h('div:mt-3 flex items-center justify-between gap-4', {}, h('div', {},
         h('h2:text-xl font-bold', {}, item.name || active.createLabel), h('span:text-xs text-[#6b6b6f]', {}, labels[resource])),
-      h('div:flex items-center gap-2', {}, h(`button:${classes.primary}`, {
+      h('div:flex items-center gap-2', {}, !readOnlyTool && h(`button:${classes.primary}`, {
         disabled: saveDisabled, onClick: saveEditor, 'aria-label': 'שמירת עורך'}, 'שמירה'),
         h('button:rounded-lg p-2 hover:bg-gray-100', {onClick: () => setEditors(editors.slice(0, -1)), 'aria-label': 'סגירה'}, h('L:X'))))),
       h('div:p-6', {}, hh(ctx, dsls.react['react-comp'].wonderPlatformResourceFields, {resource, item, update, repo, openPicker})),
