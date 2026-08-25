@@ -38,7 +38,7 @@ ReactComp('wonderPlatformSearchableSelect', {
       open && h('div:absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-[#e8e8ea] bg-white shadow-lg', {},
         h('input:w-full border-b border-[#e8e8ea] px-3 py-2 text-sm outline-none', {value: query, autoFocus: true,
           placeholder: 'חיפוש…', onInput: event => setQuery(event.target.value)}),
-        h(`div:${tall ? '' : 'max-h-56 overflow-y-auto '}`, {}, !multi && h('div:cursor-pointer px-3 py-2 text-sm text-[#6b6b6f] hover:bg-gray-50', {
+        h('div' + (tall ? '' : ':max-h-56 overflow-y-auto'), {}, !multi && h('div:cursor-pointer px-3 py-2 text-sm text-[#6b6b6f] hover:bg-gray-50', {
           onMouseDown: event => event.preventDefault(), onClick: () => pick('')}, empty || 'ללא בחירה'),
         filtered.map(row), filtered.length == 0 && h('div:px-3 py-2 text-xs text-[#6b6b6f]', {}, 'אין תוצאות')),
         multi && h('button:w-full border-t border-[#e8e8ea] px-3 py-2 text-xs text-[#0f0f10]', {
