@@ -138,6 +138,91 @@ def knowledge_reader(path):
     return reader
 
 
+def generate_json_schema(input_schema):
+    properties = {}
+    required = []
+    
+    type_map = {
+        'String': lambda: {'type': 'string'},
+        'Int': lambda: {'type': 'integer'},
+        'Double': lambda: {'type': 'number'},
+        'Boolean': lambda: {'type': 'boolean'},
+        'Timestamp': lambda: {'type': 'string', 'format': 'date-time'},
+        'DateTime': lambda: {
+            'type': 'object',
+            'description': 'Date range: e.g. {"From": "YYYY-MM-DD", "To": "YYYY-MM-DD"} or {"TimeBackValue": 30, "TimeBackUnit": "DAY"}'
+        },
+        'Haphoch': lambda: {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'value': {'type': 'array', 'items': {'type': 'string'}},
+                    'radius': {'type': 'integer'}
+                },
+                'required': ['value', 'radius']
+            },
+            'description': 'Geo area coordinates in WKT with search radius'
+        }
+    }
+    
+    for param in input_schema:
+        name = param.get('Name')
+        if not name:
+            continue
+        p_type = param.get('Type', 'String')
+        display = param.get('DisplayName', name)
+        desc = param.get('Description') or display
+        
+        prop = type_map.get(p_type, lambda: {'type': 'string'})()
+        prop['description'] = desc
+        properties[name] = prop
+        
+        if param.get('IsRequired'):
+            required.append(name)
+            
+    return {
+        'type': 'object',
+        'properties': properties,
+        'required': required
+    }
+
+
+def make_flow_package_executor(package_id):
+    def execute(**flat_args):
+        import urllib.request
+        import urllib.error
+        import json
+        flapi_base_url = os.getenv('FLAPI_BASE_URL', 'http://localhost:6001')
+        flapi_token = os.getenv('FLAPI_BEARER_TOKEN', '')
+        
+        url = f"{flapi_base_url.rstrip('/')}/package/v3/{package_id}"
+        headers = {
+            'Content-Type': 'application/json'
+        }
+        if flapi_token:
+            headers['Authorization'] = f"Bearer {flapi_token}"
+            
+        payload = {
+            "params": flat_args
+        }
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode('utf-8'),
+            headers=headers,
+            method='POST'
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as response:
+                return json.loads(response.read().decode('utf-8'))
+        except urllib.error.HTTPError as e:
+            raise RuntimeError(f"FLAPI error {e.code}: {e.read().decode('utf-8')}")
+        except Exception as e:
+            raise RuntimeError(f"FLAPI request failed: {e}")
+            
+    return execute
+
+
 class MarketplaceAgentRuntime:
     def __init__(self, repo, runtime_dir, model_factory=None, embedder=None):
         self.repo, self.runtime_dir = repo, Path(runtime_dir)
