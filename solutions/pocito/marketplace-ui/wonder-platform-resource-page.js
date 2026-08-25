@@ -9,6 +9,7 @@ ReactComp('wonderPlatformResourcePage', {
   impl: comp({
     hFunc: (ctx, {react: {h, hh}}) => ({active, update, save, deleteItem, back, repo, openPicker, saveAndRun, runningSet}) => {
       const {classes, labels} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx), {resource, item} = active
+      const readOnlyTool = resource == 'tools' && item.originalId && item.kind != 'flow'
       const saveDisabled = !item.name?.trim() || !item.id?.trim() || resource == 'skills' && !repo.marketplace && (!item.content?.trim()
         || !/^\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/.test(item.publishVersion))
       return h('main:min-h-screen overflow-x-hidden pb-24 sm:mr-[248px] sm:pb-0', {},
@@ -18,8 +19,8 @@ ReactComp('wonderPlatformResourcePage', {
           h('input:min-w-0 flex-1 text-xl font-bold outline-none', {value: item.name || '', placeholder: 'שם להצגה…', 'aria-label': 'display_name',
             onInput: event => update({...item, name: event.target.value})}),
           h(`span:${classes.chip}`, {}, item.version || 'V0'),
-          h(`button:${classes.primary}`, {disabled: saveDisabled, onClick: save, 'aria-label': 'שמירת עמוד'}, 'שמירה'),
-          item.originalId && (resource != 'skills' || repo.marketplace) && h('button:text-sm text-red-600', {onClick: deleteItem}, 'מחיקה')),
+          !readOnlyTool && h(`button:${classes.primary}`, {disabled: saveDisabled, onClick: save, 'aria-label': 'שמירת עמוד'}, 'שמירה'),
+          !readOnlyTool && item.originalId && (resource != 'skills' || repo.marketplace) && h('button:text-sm text-red-600', {onClick: deleteItem}, 'מחיקה')),
         h('div:mx-auto max-w-4xl p-5', {}, hh(ctx, dsls.react['react-comp'].wonderPlatformResourceFields, {
           resource, item, update, repo, openPicker, saveAndRun, runningSet})))
     }
