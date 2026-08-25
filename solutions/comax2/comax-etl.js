@@ -2,10 +2,10 @@ import { dsls, coreUtils } from '@jb6/core'
 import '@jb6/common'
 import '@wonder/db/etl/etl-dsl.js'
 
-const { tgp: { Component }, test: { logger: { etlLogger } } } = dsls
+const { common: { Data }, test: { logger: { etlLogger } } } = dsls
 
 // Query-aligned row groups: latest month, four calendar quarters, then calendar years.
-Component('monthQauterYear', {
+Data('monthQuarterYear', {
   moreTypes: 'etl<etl>',
   params: [
     {id: 'source', as: 'string', options: 'lines,header', defaultValue: 'lines', description: 'lines = header-enriched fact; header = self-dated KupaDoc_Header'},
@@ -13,7 +13,7 @@ Component('monthQauterYear', {
     {id: 'outFile', as: 'string', description: 'defaults to <srcDir>/KupaDoc_<Lines|Header>-mqy.parquet'}
   ],
   impl: async (_ctx, { etlId }, { source, srcDir, outFile }) => {
-    const log = _ctx.vars.etlLogger || etlLogger.$runWithCtx(_ctx), ctx = _ctx.setVars({ etlId: etlId || 'monthQauterYear' })
+    const log = _ctx.vars.etlLogger || etlLogger.$runWithCtx(_ctx), ctx = _ctx.setVars({ etlId: etlId || 'monthQuarterYear' })
     const lines = `${srcDir}/KupaDoc_Lines.parquet`, headers = `${srcDir}/KupaDoc_Header.parquet`
     const q = source === 'header'
       ? `select h.*, h.DateDoc::date sale_date, strftime(h.DateDoc,'%Y-%m') sale_month from read_parquet('${headers}') h order by h.DateDoc, h.C`
@@ -46,11 +46,11 @@ flush(); w.close()
 groups = con.execute(f"select count(distinct row_group_id) from parquet_metadata('{tmp}')").fetchone()[0]
 if groups != len(segments): raise RuntimeError(f'MQY segments {len(segments)} != row groups {groups}')
 os.replace(tmp, ${JSON.stringify(outFile)}); print('DONE', len(segments), flush=True)`
-    log.info({ t: 'monthQauterYear start', outFile }, {}, { ctx })
+    log.info({ t: 'monthQuarterYear start', outFile }, {}, { ctx })
     const r = await coreUtils.runBashScript(`python3 - <<'PYEOF'\n${py}\nPYEOF`)
     if (!/DONE/.test(r.stdout || '')) { log.error({ t: 'pyarrow write failed', stderr: r.stderr, stdout: r.stdout }, {}, { ctx }); throw new Error(r.stderr || 'pyarrow failed') }
     const segments = (r.stdout.match(/^DONE (\d+)/m) || [])[1]
-    log.info({ t: 'monthQauterYear complete', outFile, segments: +segments }, {}, { ctx })
+    log.info({ t: 'monthQuarterYear complete', outFile, segments: +segments }, {}, { ctx })
     return { ...coreUtils.harvestLogs(ctx) }
   }
 })
