@@ -13,12 +13,12 @@ ReactComp('wonderPlatformChatContext', {
         ['toolIds', 'tools', 'כלים'], ['knowledgeIds', 'knowledge', 'ידע']]
       const [closed, setClosed] = useState('')
       const select = props => hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {bare: true, tall: true, ...props})
-      const section = (id, label, body) => h('div:mb-4', {key: id},
-        h(`button:flex w-full items-center justify-between border-b border-[#e8e8ea] py-2 text-base font-semibold text-[#0f0f10]`,
+      const section = (id, label, body) => h('div:mb-3', {key: id},
+        h(`button:flex w-full items-center justify-between border-b border-[#e8e8ea] py-1.5 text-base font-semibold text-[#0f0f10]`,
           {onClick: () => setClosed(closed == id ? '' : id)}, label,
           h(`L:${closed == id ? 'ChevronDown' : 'ChevronUp'}`, {size: 16})),
-        closed != id && h('div:pt-3', {}, body))
-      return h('aside:hidden w-[280px] shrink-0 overflow-y-auto bg-white px-4 py-5 shadow-[-8px_0_24px_rgba(0,0,0,0.07)] lg:block', {},
+        closed != id && h('div:pt-2', {}, body))
+      return h('aside:hidden w-[260px] shrink-0 overflow-y-auto bg-white px-4 py-5 shadow-[-8px_0_24px_rgba(0,0,0,0.07)] lg:block', {},
         h('div:mb-5 text-[13px] font-semibold text-[#0f0f10]', {}, 'הקשר השיחה'),
         section('agent', 'סוכן', select({items: repo.agents, value: conversation?.agentId || '', onChange: selectAgent,
           placeholder: 'בחר סוכן', empty: 'ללא סוכן', testId: 'agent-selector'})),
