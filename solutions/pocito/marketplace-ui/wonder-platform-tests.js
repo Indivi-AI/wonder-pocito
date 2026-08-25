@@ -413,8 +413,8 @@ Test('wonderPlatform.pluginWorkspace', {
 
 Test('wonderPlatform.evaluationCatalog', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(), and(
-    contains('בחירת מערכי נתונים'), contains('איכות התשובה'), contains('סיכום ההרצה')), {
-    userActions: actions(waitForText('פלאגין חדש'), click('אבלואציה'), waitForText('סיכום ההרצה')),
+    contains('הרצה חדשה'), contains('ספרייה'), contains('איזה סוכן רוצים לבדוק?')), {
+    userActions: actions(waitForText('פלאגין חדש'), click('אבלואציה'), waitForText('איזה סוכן רוצים לבדוק?')),
     logger: 'uiLogger'})
 })
 

@@ -36,6 +36,7 @@ ReactComp('EvaluationPage', {
       const [repo, setRepo] = useState(), repoRef = useRef(), saveQueue = useRef(Promise.resolve()), definitionTimer = useRef()
       const editedVersions = useRef(new Set())
       const [targets, setTargets] = useState([]), [loadError, setLoadError] = useState(), [view, setView] = useState('composer')
+      const [composerStep, setComposerStep] = useState(0), [libraryTab, setLibraryTab] = useState('datasets')
       const [targetId, setTargetId] = useState(''), [datasetIds, setDatasetIds] = useState([]), [graderIds, setGraderIds] = useState([])
       const [editingDatasetId, setEditingDatasetId] = useState(), [editingGraderId, setEditingGraderId] = useState()
       const [selectedRunId, setSelectedRunId] = useState(), [configurationName, setConfigurationName] = useState('')
@@ -91,6 +92,9 @@ ReactComp('EvaluationPage', {
         : tone == 'red' ? 'border-red-200 bg-red-50 text-red-700' : tone == 'amber' ? 'border-amber-200 bg-amber-50 text-amber-800' : ''}`, {}, text)
       const button = (text, onClick, primary, props = {}) => h(`button:${primary ? classes.primary : classes.button}`, {onClick, ...props}, text)
       const field = (title, control) => h('label:block text-xs font-semibold text-[#6b6b6f]', {}, title, control)
+      const emptyChoice = (text, action, label) => h(
+        'div:mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-dashed border-[#d8d8dc] p-4', {}, h(
+          'span:text-sm text-[#6b6b6f]', {}, text), button(label, action, false))
       const toggle = (list, setList, id) => setList(list.includes(id) ? list.filter(value => value != id) : [...list, id])
       const summaryOf = run => dsls.common.data.evaluationPageSummary.$runWithCtx(ctx, {run})
       const updateDefinition = (resource, id, patch) => { const key = `${resource}:${id}`, bump = !editedVersions.current.has(key)
@@ -104,7 +108,8 @@ ReactComp('EvaluationPage', {
         setConfigurationName(''); flash('התצורה נשמרה')
       }
       const applyConfiguration = configuration => {
-        setTargetId(configuration.targetId); setDatasetIds(configuration.datasetIds); setGraderIds(configuration.graderIds); flash('התצורה נטענה')
+        setTargetId(configuration.targetId); setDatasetIds(configuration.datasetIds); setGraderIds(configuration.graderIds)
+        setComposerStep(3); flash('התצורה נטענה — אפשר להריץ')
       }
       const runEvaluation = async () => {
         if (blockers.length) return
@@ -134,9 +139,9 @@ ReactComp('EvaluationPage', {
         }))
         await persistRun(runId, item => ({...item, status: 'completed', finishedAt: Date.now()}))
       }
-      const nav = h('nav:mt-7 grid grid-cols-4 border-b border-[#e8e8ea] sm:flex', {'aria-label': 'ניווט אבלואציה'}, [
-        ['composer', 'Play', 'הרצה חדשה'], ['runs', 'ChartNoAxesCombined', 'הרצות'], ['datasets', 'Table2', 'מערכי נתונים'],
-        ['graders', 'Scale', 'בודקים']].map(([id, icon, title]) => h(`button:relative flex items-center justify-center gap-1 px-1 py-3
+      const nav = h('nav:mt-7 grid grid-cols-3 border-b border-[#e8e8ea] sm:flex', {'aria-label': 'ניווט אבלואציה'}, [
+        ['composer', 'Play', 'הרצה'], ['runs', 'ChartNoAxesCombined', 'הרצות קודמות'], ['library', 'Library', 'ספרייה']]
+        .map(([id, icon, title]) => h(`button:relative flex items-center justify-center gap-1 px-1 py-3
           text-[11px] outline-none focus-visible:ring-1 focus-visible:ring-[#0f0f10] sm:gap-2 sm:px-3 sm:text-[13px] ${
           view == id ? 'font-medium text-[#0f0f10]' : 'text-[#6b6b6f] hover:text-[#0f0f10]'}`, {key: id, onClick: () => setView(id)}, h(
             `L:${icon}`, {size: 14}), title, view == id && h('span:absolute inset-x-3 bottom-0 h-px bg-[#0f0f10]'))))
@@ -145,47 +150,64 @@ ReactComp('EvaluationPage', {
           'div:min-w-0 flex-1', {}, h('h2:text-[15px] font-semibold', {}, title), h('p:mt-1 text-[13px] text-[#6b6b6f]', {}, description), content)))
       const choice = (item, selected, meta, select) => h(`button:rounded-xl border p-4 text-right transition-colors ${selected
         ? 'border-[#0f0f10] bg-[#fafafa]' : 'border-[#e8e8ea] hover:border-[#d8d8dc] hover:bg-[#fafafa]'}`, {key: item.id,
-        onClick: select}, h('div:flex items-start justify-between gap-3', {}, h('b:text-sm', {}, item.name), selected && h('L:CircleCheck', {
-          size: 17, className: 'text-[#0f0f10]'})), h('p:mt-2 line-clamp-2 text-xs leading-5 text-[#6b6b6f]', {}, item.description), h(
+        onClick: select, 'aria-label': item.name}, h('div:flex items-start justify-between gap-3', {}, h('b:text-sm', {}, item.name), selected && h('L:CircleCheck', {
+          size: 17, className: 'text-[#0f0f10]'})), h('p:mt-2 line-clamp-2 text-xs leading-5 text-[#6b6b6f]', {}, item.description || item.desc), h(
           'div:mt-3 flex flex-wrap gap-2', {}, meta))
       const savedConfigurations = repo.configurations.length > 0 && h(`section:${classes.card}`, {}, h(
         'div:flex flex-wrap items-center gap-2', {}, h('span:text-xs font-semibold text-[#6b6b6f]', {},
           'תצורות שמורות'), repo.configurations.map(item => h(
             'button:rounded-lg border border-[#e8e8ea] px-3 py-1.5 text-xs hover:border-[#0f0f10]', {key: item.id,
               onClick: () => applyConfiguration(item)}, item.name))))
-      const targetStep = step('1', 'בחירת סוכן', 'התצורה המדויקת של הסוכן נשמרת עם ההרצה.', targets.length ? h(
-        'select:mt-4 w-full rounded-[10px] border border-[#e8e8ea] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#c9c9ce]', {
-          value: targetId, 'aria-label': 'בחירת סוכן', onChange: event => setTargetId(event.target.value)}, h(
-            'option', {value: ''}, 'בחרו סוכן'), targets.map(item => h(
-            'option', {key: item.id, value: item.id}, `${item.name} · ${item.version || 'V0'}`))) : h(
+      const targetStep = step('1', 'איזה סוכן רוצים לבדוק?', 'בחרו את הסוכן שעליו תרוץ הבדיקה.', targets.length ? h(
+        'div:mt-4 grid gap-3 md:grid-cols-2', {}, targets.map(item => choice(item, item.id == targetId, [badge(item.version || 'V0')], () =>
+          setTargetId(item.id)))) : h(
           'div:mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-dashed border-[#d8d8dc] p-4', {}, h(
             'span:text-sm text-[#6b6b6f]', {}, 'אין עדיין סוכנים זמינים.'), openView && button('יצירת סוכן', () => openView('agents'), false)))
-      const datasetStep = step('2', 'בחירת מערכי נתונים', 'אפשר לשלב כמה מערכים. רק תרחישים פעילים יורצו.', h(
+      const datasetStep = step('2', 'על אילו תרחישים?',
+        'בחרו מערך אחד או יותר. רק תרחישים פעילים יורצו.', repo.datasets.length ? h(
         'div:mt-4 grid gap-3 md:grid-cols-2', {}, repo.datasets.map(dataset => choice(dataset, datasetIds.includes(dataset.id), [badge(
           `${dataset.cases.filter(item => item.enabled).length} תרחישים`), badge(`v${dataset.version}`)], () => toggle(
-          datasetIds, setDatasetIds, dataset.id)))))
-      const graderStep = step('3', 'בחירת בודקים',
-        'בודקי חובה קובעים הצלחה או כישלון; בודקי מידע מציגים מדדים בלבד.', h(
+          datasetIds, setDatasetIds, dataset.id)))) : emptyChoice('אין עדיין סטים.', () => (
+            setLibraryTab('datasets'), setView('library')), 'יצירת סט'))
+      const graderStep = step('3', 'איך מודדים הצלחה?',
+        'בודקי חובה קובעים הצלחה או כישלון. מדדי מידע לא משפיעים על התוצאה.', repo.graders.length ? h(
         'div:mt-4 grid gap-3 md:grid-cols-2', {}, repo.graders.map(grader => choice(grader, graderIds.includes(grader.id), [badge(
           graderKinds[grader.kind]), badge(grader.required ? 'חובה' : 'מידע')], () => toggle(
-          graderIds, setGraderIds, grader.id)))))
+          graderIds, setGraderIds, grader.id)))) : emptyChoice('אין עדיין בודקים.', () => (
+            setLibraryTab('graders'), setView('library')), 'יצירת בודק'))
       const metrics = [[selectedCases.length, 'תרחישים'], [selectedCases.length, 'קריאות לסוכן'], [selectedCases.length * selectedGraders.length,
         'בדיקות'], [estimatedLlmGrades, 'בדיקות מודל']]
-      const runSummary = h(`aside:${classes.card} self-start p-5 xl:sticky xl:top-6`, {}, h(
-        'div:flex items-center justify-between', {}, h('h2:text-[15px] font-semibold', {}, 'סיכום ההרצה'), badge(
-          blockers.length ? 'לא מוכן' : 'מוכן להרצה', blockers.length ? 'amber' : 'green')), h(
-          'div:mt-5 grid grid-cols-2 gap-x-5 gap-y-4', {}, metrics.map(([value, label]) => h(
-            'div:border-b border-[#e8e8ea] pb-3', {key: label}, h('b:block text-xl', {}, value), h(
-              'span:text-[11px] text-[#6b6b6f]', {}, label)))), blockers.length ? h(
-        'div:mt-4 rounded-[10px] border border-amber-200 bg-amber-50 p-3', {}, h('b:text-xs text-amber-900', {}, 'נדרש לפני ההרצה'), h(
-          'ul:mt-2 space-y-1 text-xs text-amber-800', {}, blockers.map(item => h('li', {key: item}, `• ${item}`)))) : h(
+      const reviewRow = (icon, title, value, editStep) => h('div:flex items-center gap-3 rounded-xl border border-[#e8e8ea] p-4', {}, h(
+        'span:grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#f4f4f5]', {}, h(`L:${icon}`, {size: 16})), h(
+          'div:min-w-0 flex-1', {}, h('span:block text-[11px] text-[#6b6b6f]', {}, title), h('b:block truncate text-sm', {}, value)), h(
+            'button:text-xs font-medium text-[#0f0f10]', {onClick: () => setComposerStep(editStep)}, 'שינוי'))
+      const reviewStep = step('4', 'סיכום ההרצה', 'עברו על הבחירות, תנו שם אם תרצו, והתחילו.', h('div:mt-5', {}, h(
+        'div:grid gap-3 md:grid-cols-3', {}, reviewRow('Bot', 'סוכן', selectedTarget?.name || 'לא נבחר', 0), reviewRow(
+          'Table2', 'סטים', selectedDatasets.map(item => item.name).join(', ') || 'לא נבחרו', 1), reviewRow(
+          'Scale', 'בודקים', `${selectedGraders.length} נבחרו`, 2)), h(
+        'div:mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4', {}, metrics.map(([value, label]) => h(
+          'div:rounded-xl bg-[#fafafa] p-3', {key: label}, h('b:block text-xl', {}, value), h(
+            'span:text-[11px] text-[#6b6b6f]', {}, label)))), blockers.length ? h(
+        'div:mt-4 rounded-[10px] border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800', {}, blockers.join(' · ')) : h(
         'div:mt-4 flex items-center gap-2 text-sm text-emerald-700', {}, h('L:CircleCheck', {size: 16}), 'הכול מוכן'), h(
         'input:mt-4 w-full rounded-[10px] border border-[#e8e8ea] bg-white px-3 py-2.5 text-sm outline-none placeholder:text-[#9b9ba0] focus:border-[#0f0f10]', {
-          value: configurationName, placeholder: 'שם לתצורה (רשות)', onInput: event => setConfigurationName(event.target.value)}), h(
-        'div:mt-3 grid gap-2', {}, button('הרצת אבלואציה', runEvaluation, true, {disabled: !!blockers.length}), button(
-          'שמירת תצורה', saveConfiguration, false, {disabled: !!blockers.length})))
-      const composer = h('div:grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]', {}, h('div:space-y-4', {}, savedConfigurations, targetStep,
-        datasetStep, graderStep), runSummary)
+          value: configurationName, placeholder: 'שם להרצה (רשות)', onInput: event => setConfigurationName(event.target.value)}), h(
+        'div:mt-3 flex flex-col gap-2 sm:flex-row', {}, button('הרצת אבלואציה', runEvaluation, true, {disabled: !!blockers.length}), button(
+          'שמירת הבחירות לשימוש חוזר', saveConfiguration, false, {disabled: !!blockers.length}))))
+      const stepReady = [!!selectedTarget, !!selectedCases.length && !selectedCases.some(item => !item.input?.trim()), !blockers.length, !blockers.length]
+      const furthestStep = stepReady[0] ? stepReady[1] ? stepReady[2] ? 3 : 2 : 1 : 0
+      const flowSteps = [['Bot', 'סוכן'], ['Table2', 'תרחישים'], ['Scale', 'מדידה'], ['Rocket', 'הרצה']]
+      const flowNav = h('nav:grid grid-cols-4 overflow-hidden rounded-xl border border-[#e8e8ea] bg-white', {'aria-label': 'שלבי ההרצה'},
+        flowSteps.map(([icon, title], index) => h(`button:flex min-w-0 items-center justify-center gap-1 border-l border-[#e8e8ea] px-1 py-3
+          text-[11px] last:border-l-0 sm:gap-2 sm:px-2 sm:text-xs ${index == composerStep ? 'bg-[#0f0f10] font-semibold text-white' : index <= furthestStep
+            ? 'text-[#0f0f10] hover:bg-[#fafafa]' : 'cursor-not-allowed text-[#b9b9be]'}`, {key: title, disabled: index > furthestStep,
+          onClick: () => setComposerStep(index)}, index < composerStep && index <= furthestStep ? h('L:Check', {size: 14}) : h(
+            `L:${icon}`, {size: 14}), h('span:truncate', {}, title))))
+      const nextLabels = ['המשך לתרחישים', 'המשך לבודקים', 'המשך לסיכום']
+      const flowControls = composerStep < 3 && h('div:mt-4 flex items-center justify-between gap-3', {}, composerStep ? button(
+        'חזרה', () => setComposerStep(composerStep - 1), false) : h('span'), button(nextLabels[composerStep], () => setComposerStep(
+          composerStep + 1), true, {disabled: !stepReady[composerStep]}))
+      const composer = h('div:space-y-4', {}, savedConfigurations, flowNav, [targetStep, datasetStep, graderStep, reviewStep][composerStep], flowControls)
       const datasetEditor = dataset => {
         const update = patch => updateDefinition('datasets', dataset.id, patch)
         const updateCase = (caseId, patch) => update({cases: dataset.cases.map(item => item.id == caseId ? {...item, ...patch} : item)})
@@ -195,9 +217,9 @@ ReactComp('EvaluationPage', {
             'input:min-w-0 flex-1 text-xl font-semibold outline-none', {value: dataset.name, 'aria-label': 'שם מערך הנתונים',
               dir: 'auto', onInput: event => update({name: event.target.value})}), badge(`v${dataset.version}`), h(
                 'span:col-span-2 col-start-2 text-[11px] text-[#9b9ba0]', {}, 'השינויים נשמרים אוטומטית')), field(
-                  'תיאור מערך הנתונים', h(
+                  'תיאור הסט', h(
           'textarea:mt-2 min-h-20 w-full rounded-[10px] border border-[#e8e8ea] bg-[#fafafa] p-3 text-sm outline-none focus:border-[#c9c9ce]', {
-            value: dataset.description, placeholder: 'מה מערך הנתונים בודק?', onInput: event => update({description: event.target.value})})), h(
+            value: dataset.description, placeholder: 'מה הסט בודק?', onInput: event => update({description: event.target.value})})), h(
           'div:mt-6 flex items-center justify-between', {}, h('h2:font-semibold', {}, `${dataset.cases.length} תרחישים`), button(
             'הוספת תרחיש', () => update({cases: [...dataset.cases, {id: `case-${Date.now().toString(36)}`, name: 'תרחיש ללא שם', input: '',
               referenceOutput: '', tags: [], enabled: true}]}), false)), h(
@@ -222,7 +244,7 @@ ReactComp('EvaluationPage', {
             const dataset = {id: `dataset-${Date.now().toString(36)}`, name: 'מערך ללא שם', description: '', version: 1, cases: []}
             editedVersions.current.add(`datasets:${dataset.id}`)
             persistDefinitions(current => ({...current, datasets: [dataset, ...current.datasets]})); setEditingDatasetId(dataset.id)
-          }}, h('L:Plus', {size: 20, className: 'mx-auto'}), h('b:mt-3 block text-sm', {}, 'מערך נתונים חדש')), repo.datasets.map(dataset => h(
+          }}, h('L:Plus', {size: 20, className: 'mx-auto'}), h('b:mt-3 block text-sm', {}, 'סט חדש')), repo.datasets.map(dataset => h(
           `article:${classes.card} flex flex-col`, {key: dataset.id}, h('div:flex items-start justify-between gap-3', {}, h(
             'div:min-w-0', {}, h('h2:text-[14px] font-medium', {}, dataset.name), h(
               'p:mt-2 line-clamp-2 min-h-[40px] text-[13px] leading-5 text-[#6b6b6f]', {}, dataset.description)), badge(`v${dataset.version}`)), h(
@@ -313,14 +335,20 @@ ReactComp('EvaluationPage', {
       })() : h('div:rounded-xl border border-dashed border-[#d8d8dc] p-16 text-center', {}, h('L:ChartNoAxesCombined', {
         size: 28, className: 'mx-auto text-[#6b6b6f]'}), h('h2:mt-4 font-semibold', {}, 'אין עדיין הרצות'), h(
         'p:mt-2 text-sm text-[#6b6b6f]', {}, 'הרכיבו אבלואציה ראשונה כדי ליצור תוצאה שניתנת להשוואה.'))
-      const pageMeta = {composer: ['אבלואציה', 'בחרו סוכן, מערכי נתונים ובודקים — והריצו בדיקה שניתנת לשחזור.'],
-        runs: ['הרצות', 'תוצאות שמפרידות בין תקלות הרצה לבין איכות התשובה.'],
-        datasets: ['מערכי נתונים', 'תרחישים לשימוש חוזר, עם גרסאות ופלט מצופה.'],
-        graders: ['בודקים', 'כללי בדיקה דטרמיניסטיים ומבוססי מודל.']}[view]
+      const openLibraryTab = id => (setLibraryTab(id), setEditingDatasetId(), setEditingGraderId())
+      const libraryView = h('div', {}, h('nav:mb-5 flex gap-1 border-b border-[#e8e8ea]', {'aria-label': 'ספריית אבלואציה'}, [
+        ['datasets', 'Table2', 'סטים'], ['graders', 'Scale', 'בודקים']].map(([id, icon, title]) => h(
+          `button:relative flex items-center gap-2 px-3 py-3 text-sm outline-none focus-visible:ring-1 focus-visible:ring-[#0f0f10] ${
+            libraryTab == id ? 'font-semibold text-[#0f0f10]' :
+            'text-[#6b6b6f] hover:text-[#0f0f10]'}`, {key: id, onClick: () => openLibraryTab(id)}, h(`L:${icon}`, {size: 15}), title,
+          libraryTab == id && h('span:absolute inset-x-3 bottom-0 h-px bg-[#0f0f10]')))), libraryTab == 'datasets' ? datasetsView : gradersView)
+      const pageMeta = {
+        composer: ['הרצה חדשה', 'בוחרים סוכן, תרחישים ומדדי הצלחה — ומקבלים תוצאה שאפשר לסמוך עליה.'],
+        runs: ['הרצות קודמות', 'תוצאות שמפרידות בין תקלות הרצה לבין איכות התשובה.'],
+        library: ['ספריית אבלואציה', 'יוצרים ומנהלים סטים ובודקים לשימוש חוזר.']}[view]
       const page = h(`${embedded ? 'main:min-h-screen px-5 pb-24 pt-10 sm:mr-[248px] sm:px-10' : 'main:mx-auto px-4 py-8 sm:px-7'} max-w-[1440px]`, {}, h(
         'div:mx-auto max-w-6xl', {}, h('div', {}, h('h1:text-[26px] font-semibold tracking-[-0.02em]', {}, pageMeta[0]), h(
-          'p:mt-1.5 text-sm text-[#6b6b6f]', {}, pageMeta[1])), nav, h('div:mt-5', {}, {composer, runs: runsView, datasets: datasetsView,
-            graders: gradersView}[view])))
+          'p:mt-1.5 text-sm text-[#6b6b6f]', {}, pageMeta[1])), nav, h('div:mt-5', {}, {composer, runs: runsView, library: libraryView}[view])))
       const alert = notice && h(`div:fixed ${embedded ? 'bottom-16' : 'bottom-5'} left-5 z-[100] rounded-xl border border-[#d8d8dc] ` +
         'bg-[#f4f4f5] px-4 py-2 text-sm sm:bottom-5', {}, notice)
       if (embedded) return h('div:min-w-0 overflow-x-hidden bg-white text-[#0f0f10] antialiased', {dir: 'rtl', lang: 'he',

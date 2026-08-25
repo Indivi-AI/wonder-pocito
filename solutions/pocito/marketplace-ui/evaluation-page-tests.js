@@ -89,12 +89,12 @@ Test('evaluationPage.composer', {
   impl: reactTest({
     testedComp: evaluationPageTestHost(),
     expectedResult: and(
-      contains('אבלואציה'),
-      contains('בחירת מערכי נתונים'),
-      contains('איכות התשובה'),
-      contains('סיכום ההרצה')
+      contains('הרצה חדשה'),
+      contains('איזה סוכן רוצים לבדוק?'),
+      contains('סוכן תמיכת לקוחות B2B'),
+      contains('המשך לתרחישים')
     ),
-    userActions: waitForText('סיכום ההרצה'),
+    userActions: waitForText('איזה סוכן רוצים לבדוק?'),
     logger: 'uiLogger'
   })
 })
@@ -102,11 +102,11 @@ Test('evaluationPage.composer', {
 Test('evaluationPage.datasetAuthoring', {
   impl: reactTest({
     testedComp: evaluationPageTestHost(),
-    expectedResult: and(contains('תיאור מערך הנתונים'), contains('קלט לסוכן'), contains('פלט מצופה או עובדות נדרשות')),
+    expectedResult: and(contains('תיאור הסט'), contains('קלט לסוכן'), contains('פלט מצופה או עובדות נדרשות')),
     userActions: actions(
-      waitForText('סיכום ההרצה'),
-      click('מערכי נתונים'),
-      waitForText('מערך נתונים חדש'),
+      waitForText('איזה סוכן רוצים לבדוק?'),
+      click('ספרייה'),
+      waitForText('סט חדש'),
       click('פתיחה'),
       waitForText('קלט לסוכן')
     ),
