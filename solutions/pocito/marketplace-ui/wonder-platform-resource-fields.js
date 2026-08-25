@@ -99,6 +99,12 @@ ReactComp('wonderPlatformResourceFields', {
         h('button', {onClick: () => removeFile(index), 'aria-label': `הסרת ${file.name}`}, h('L:X', {size: 12})))
       const addFiles = event => update({...item, files: [...(item.files || []), ...[...event.target.files].map(file =>
         ({name: file.name, size: file.size, file}))]})
+      const readAsset = (file, win) => new Promise(resolve => { const reader = new win.FileReader(); reader.onload = () => resolve({
+        path: file.name, content_b64: reader.result.split(',')[1], mime_type: file.type || 'application/octet-stream'}); reader.readAsDataURL(file) })
+      const addAssets = async (files, win) => {
+        const added = await Promise.all([...files].map(file => readAsset(file, win)))
+        update({...item, assets: [...(item.assets || []).filter(asset => !added.some(value => value.path == asset.path)), ...added]})
+      }
       const knowledgeSection = () => h('section:rounded-2xl border border-[#e8e8ea] p-4', {},
         h('div:flex items-center justify-between', {}, h('b:text-sm', {}, `קבצים (${(item.files || []).length})`),
           h(`label:${classes.button} cursor-pointer`, {}, h('L:Plus', {size: 14}), 'הוספת קבצים',
@@ -194,16 +200,23 @@ ReactComp('wonderPlatformResourceFields', {
           'השמירה מפרסמת release חדש. גרסאות ותוכן שכבר פורסמו נשארים בלתי משתנים.')),
       resource == 'skills' && repo.marketplace && h('div:grid grid-cols-1 gap-3 sm:grid-cols-2', {},
         field('min_agent_version', input('minAgentVersion', {dir: 'ltr'})), field('license', input('license', {dir: 'ltr'}))),
-      resource == 'skills' && repo.marketplace && h('section:rounded-2xl border border-[#e8e8ea] p-4', {}, h(
-        'div:flex items-center justify-between', {}, h('b:text-sm', {}, 'Assets'), h(`button:${classes.button}`, {
-          onClick: () => update({...item, assets: [...(item.assets || []), {path: '', content_b64: '', mime_type: ''}]})},
-        h('L:Plus', {size: 14}), 'Asset')), (item.assets || []).map((asset, index) => h(
-          'div:mt-3 grid grid-cols-[1fr_1fr_1fr_32px] gap-2 max-sm:grid-cols-1', {key: index}, ...[
-            ['path', 'path'], ['content_b64', 'base64'], ['mime_type', 'mime type']].map(([key, placeholder]) => h(
-              'input:min-w-0 rounded-lg border p-2 text-xs', {key, dir: 'ltr', value: asset[key] || '', placeholder,
-                onInput: event => update({...item, assets: item.assets.map((value, row) => row == index
-                  ? {...value, [key]: event.target.value} : value)})})), h('button', {onClick: () => update({...item,
-            assets: item.assets.filter((value, row) => row != index)}), 'aria-label': 'מחיקת asset'}, h('L:Trash2', {size: 14}))))),
+      resource == 'skills' && repo.marketplace && h('section:rounded-2xl border border-[#e8e8ea] p-4', {},
+        h('div:flex items-start justify-between gap-3', {}, h('div', {}, h('b:text-sm', {}, `Assets (${(item.assets || []).length})`),
+          h('p:mt-1 text-xs text-[#6b6b6f]', {}, 'Files bundled with this skill. You can adjust their path before saving.'))),
+        h('label:mt-3 flex cursor-pointer flex-col items-center rounded-xl border-2 border-dashed border-[#d8d8dc] px-4 py-5 text-center hover:bg-[#fafafa]',
+          {onDragOver: event => event.preventDefault(), onDrop: event => (event.preventDefault(), addAssets(event.dataTransfer.files,
+            event.currentTarget.ownerDocument.defaultView))}, h('L:Upload', {size: 20}), h('b:mt-2 text-sm', {}, 'Drop files here or browse'),
+          h('span:mt-1 text-xs text-[#6b6b6f]', {}, 'Multiple files are supported'), h('input:hidden', {type: 'file', multiple: true,
+            'data-skill-assets': true, onChange: event => addAssets(event.target.files, event.currentTarget.ownerDocument.defaultView)})),
+        (item.assets || []).length ? h('div:mt-3 space-y-2', {}, item.assets.map((asset, index) => h(
+          'div:flex min-w-0 items-center gap-3 rounded-xl border border-[#e8e8ea] p-3', {key: `${asset.path}-${index}`},
+          h('L:File', {size: 18}), h('div:min-w-0 flex-1', {}, h('input:w-full min-w-0 bg-transparent text-sm font-medium outline-none', {
+            dir: 'ltr', value: asset.path || '', 'aria-label': `Asset path ${index + 1}`, onInput: event => update({...item,
+              assets: item.assets.map((value, row) => row == index ? {...value, path: event.target.value} : value)})}),
+          h('p:mt-1 truncate text-xs text-[#6b6b6f]', {}, asset.mime_type || 'application/octet-stream')),
+          h('button:rounded-lg p-2 hover:bg-[#f3f3f4]', {onClick: () => update({...item,
+            assets: item.assets.filter((value, row) => row != index)}), 'aria-label': `Remove ${asset.path}`}, h('L:Trash2', {size: 14})))))
+          : h('p:mt-3 text-center text-xs text-[#6b6b6f]', {}, 'No assets added yet')),
       resource == 'skills' && relation('toolIds', 'tools', 'כלים'), resource == 'subagents' && h('div:space-y-4', {},
         relation('skillIds', 'skills', 'מיומנויות'), relation('toolIds', 'tools', 'כלים')), resource == 'tools' && repo.marketplace && h(
       'div:space-y-5', {}, h('section:rounded-2xl border border-[#e8e8ea] p-4', {}, h('div:grid grid-cols-1 gap-3 sm:grid-cols-3', {},

@@ -46,7 +46,8 @@ Data('wonderPlatformMarketplaceCall', {
     const file = String(filePath || '').split('/').map(encodeURIComponent).join('/')
     const routes = {
       health: ['GET', 'healthz'], list: ['GET', `${apiResource}/`], create: ['POST', `${apiResource}/`],
-      get: ['GET', `${apiResource}/${encodedId}`], update: ['PUT', `${apiResource}/${encodedId}`],
+      get: ['GET', `${apiResource}/${encodedId}${resource == 'skills' ? '?includeAssets=true' : ''}`],
+      update: ['PUT', `${apiResource}/${encodedId}`],
       delete: ['DELETE', `${apiResource}/${encodedId}`], config: ['GET', `${apiResource}/${encodedId}/config.yaml`],
       document: ['GET', `${apiResource}/${encodedId}/${resource == 'skills' ? 'SKILL.md' : 'README.md'}`],
       references: ['GET', `${apiResource}/${encodedId}/references`],
@@ -87,7 +88,7 @@ Data('wonderPlatformMarketplaceManifest', {
       tools: item.toolIds || [], sub_agents: item.subagentIds || [], knowledge_bases: item.knowledgeIds || []},
       ...(operation == 'create' ? {readme: item.readme || ''} : {})}
     if (resource == 'skills') return {...base, min_agent_version: item.minAgentVersion || null, license: item.license || null,
-      skill_md: item.content || '', assets: item.assets || []}
+      skill_md: item.content || '', assets: (item.assets || []).map(({path, content_b64, mime_type}) => ({path, content_b64, mime_type}))}
     if (resource == 'knowledge') return base
     const {tags, ...toolBase} = base
     return {...toolBase, tool_type: item.toolType || item.tool_type || 'code', json_schema: item.jsonSchema || {},

@@ -190,8 +190,9 @@ Test('wonderPlatform.marketplaceApiRoutes', {
         ...args,
         request
       })
-      const [list, version, audit, update, upload, contents, deleteContent] = await Promise.all([
+      const [list, skill, version, audit, update, upload, contents, deleteContent] = await Promise.all([
         call({operation: 'list', resource: 'plugins'}),
+        call({operation: 'get', resource: 'skills', id: 'skill-a'}),
         call({operation: 'version', resource: 'subagents', id: 'a b', version: 2}),
         call({operation: 'audit', resource: 'skills', id: 'skill-1'}),
         call({operation: 'update', resource: 'tools', id: 'tool-1', body: {tracable: true}}),
@@ -199,10 +200,11 @@ Test('wonderPlatform.marketplaceApiRoutes', {
         call({operation: 'listContent', resource: 'knowledge', id: 'kb 1'}),
         call({operation: 'deleteContent', resource: 'knowledge', id: 'kb 1', contentId: 'doc/1'})
       ])
-      return {result: {list, version, audit, update, upload, contents, deleteContent}, ...coreUtils.harvestLogs(ctx)}
+      return {result: {list, skill, version, audit, update, upload, contents, deleteContent}, ...coreUtils.harvestLogs(ctx)}
     },
     expectedResult: equals('%result%', asIs({
         list: {method: 'GET', wUrl: 'room://tenant-a/plugins/'},
+        skill: {method: 'GET', wUrl: 'room://tenant-a/skills/skill-a?includeAssets=true'},
         version: {method: 'GET', wUrl: 'room://tenant-a/agents/a%20b/versions/2'},
         audit: {method: 'GET', wUrl: 'room://tenant-a/audit/skill/skill-1'},
         update: {method: 'PUT', wUrl: 'room://tenant-a/tools/tool-1', body: {tracable: true}},
@@ -252,6 +254,16 @@ Test('wonderPlatform.marketplaceManifest', {
         knowledge: {id: 'k', display_name: 'י', description: 'ת', hebrew_description: 'ת', tags: []},
         agentUpdateHasReadme: false
     }))
+  })
+})
+
+Test('wonderPlatform.marketplaceSkillAssetManifest', {
+  impl: dataTest({
+    calculate: () => wonderPlatformMarketplaceManifest.$run({resource: 'skills', item: {id: 'skill-a', assets: [{
+      path: 'references/checklist.md', content_b64: 'IyBDaGVja2xpc3Q=', mime_type: 'text/markdown', size: 11}]}}),
+    expectedResult: equals('%assets%', asIs([
+        {path: 'references/checklist.md', content_b64: 'IyBDaGVja2xpc3Q=', mime_type: 'text/markdown'}
+    ]))
   })
 })
 
@@ -575,8 +587,39 @@ UiAction('wonderPlatformWaitForButtonGone', {
     }
   })
 })
+UiAction('wonderPlatformUploadAsset', {
+  params: [
+    {id: 'name', as: 'string', mandatory: true},
+    {id: 'content', as: 'string', mandatory: true},
+    {id: 'mimeType', as: 'string', mandatory: true}
+  ],
+  impl: ({}, {}, {name, content, mimeType}) => ({
+    async exec({vars: {win}}) {
+      const input = win.document.querySelector('input[data-skill-assets]')
+      if (!input) throw new Error('Skill asset input unavailable')
+      Object.defineProperty(input, 'files', {configurable: true, value: [new win.File([content], name, {type: mimeType})]})
+      input.dispatchEvent(new win.Event('change', {bubbles: true}))
+      await win.waitForMutations(100)
+    }
+  })
+})
 
-const { wonderPlatformClickInSection, wonderPlatformSetControl, wonderPlatformWaitForButtonGone } = dsls.react['ui-action']
+const { wonderPlatformClickInSection, wonderPlatformSetControl, wonderPlatformUploadAsset, wonderPlatformWaitForButtonGone } =
+  dsls.react['ui-action']
+
+Test('wonderPlatform.marketplaceSkillAssetUpload', {
+  impl: reactTest(wonderPlatformMarketplaceTestApp(), and(contains('checklist.md'), contains('text/markdown')), {
+    userActions: actions(
+      waitForText('פלאגין ראיות'),
+      click('מיומנויות'),
+      waitForText('מיומנות ראיות'),
+      click('מיומנות ראיות'),
+      waitForText('Assets'),
+      wonderPlatformUploadAsset('checklist.md', '# Checklist', { mimeType: 'text/markdown' }),
+      waitForText('checklist.md')
+    )
+  })
+})
 
 Test('wonderPlatform.workspaceSavesOnlyFromButton', {
   impl: reactTest(wonderPlatformTestApp(), contains('פלאגין שנשמר'), {
