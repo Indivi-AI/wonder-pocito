@@ -10,7 +10,6 @@ ReactComp('wonderPlatformResourceFields', {
   impl: comp({
     hFunc: (ctx, {react: {h, hh, useState}}) => ({resource, item, update, repo, openPicker, saveAndRun, runningSet}) => {
       const {classes} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
-      const [cubeQuery, setCubeQuery] = useState('')
       const [historyDetail, setHistoryDetail] = useState(-1)
       const [packageQuery, setPackageQuery] = useState(''), [packageResults, setPackageResults] = useState([])
       const [pkg, setPkg] = useState()
@@ -28,25 +27,23 @@ ReactComp('wonderPlatformResourceFields', {
       const currentPackage = pkg || repo.flowPackages.find(value => value.Id == item.packageId)
       const searchPackages = async query => { setPackageQuery(query); setPackageResults(query.trim() ? (flapiBaseUrl
         ? await flapiCall('search', {partial: query}) : repo.flowPackages.filter(value => value.Name.includes(query))) : []) }
-      const pickPackage = result => (update({...item, packageId: String(result.Id)}), setPkg(), setPackageQuery(''), setPackageResults([]))
-      const pickPackageResult = result => h('button:block w-full px-3 py-2 text-right text-xs hover:bg-gray-50', {key: result.Id,
-        onClick: () => pickPackage(result)}, result.Name)
-      const readPackage = async () => {
+      const pickPackage = async result => {
+        setPackageQuery(''); setPackageResults([])
         const [quick, metadata] = flapiBaseUrl
-          ? await Promise.all([flapiCall('quick', {packageId: item.packageId}), flapiCall('metadata', {packageId: item.packageId})])
-          : [currentPackage?.Quick, currentPackage]
+          ? await Promise.all([flapiCall('quick', {packageId: String(result.Id)}), flapiCall('metadata', {packageId: String(result.Id)})])
+          : [result.Quick, result]
         setPkg(metadata)
-        update({...item, name: item.name || metadata?.Name || '', desc: item.desc || metadata?.Description || '',
+        update({...item, packageId: String(result.Id), name: item.name || metadata?.Name || '', desc: item.desc || metadata?.Description || '',
           inputSchema: Object.values(quick || {}).flat().map(value => ({...value, Description: value.Description || ''})), outputCubes: []})
       }
+      const pickPackageResult = result => h('button:block w-full px-3 py-2 text-right text-xs hover:bg-gray-50', {key: result.Id,
+        onClick: () => pickPackage(result)}, result.Name)
       const packageStep = () => h('div:space-y-2', {},
         field('חיפוש מארז Flow', h('div:relative', {}, h(`input:${classes.field}`, {value: packageQuery, placeholder: 'חיפוש מארז...',
           onInput: event => searchPackages(event.target.value)}), packageResults.length > 0 && h(
           'div:absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-[#e8e8ea] bg-white shadow-lg', {},
           packageResults.map(pickPackageResult)))),
-        h('div:grid grid-cols-[1fr_auto] items-end gap-2 max-sm:grid-cols-1', {},
-          field('מזהה מארז נבחר', h(`div:${classes.field} text-[#6b6b6f]`, {dir: 'ltr'}, item.packageId || '—')),
-          h(`button:${classes.button}`, {disabled: !item.packageId, onClick: readPackage}, 'קריאת המארז')))
+        item.packageId && h('p:text-xs text-[#6b6b6f]', {dir: 'ltr'}, `נבחר: ${currentPackage?.Name || item.packageId} (#${item.packageId})`))
       const setCube = (index, patch) => update({...item, outputCubes: item.outputCubes.map((value, cubeIndex) =>
         cubeIndex == index ? {...value, ...patch} : value)})
       const quickParamRow = (row, index) => h('div:mt-3 rounded-lg border border-[#e8e8ea] p-2', {key: row.Name},
@@ -59,9 +56,6 @@ ReactComp('wonderPlatformResourceFields', {
             ? {...value, Description: event.target.value} : value)})}))
       const inputSchemaSection = () => h('section:rounded-2xl border border-[#e8e8ea] p-4', {},
         h('b:text-sm', {}, 'סכמת קלט — פרמטרים מהירים'), (item.inputSchema || []).map(quickParamRow))
-      const pickCubeResult = cube => h(`button:${classes.chip}`, {key: cube.id, onClick: () => update({...item,
-        outputCubes: [...(item.outputCubes || []), {...cube, description: '', markdownRows: cube.ResultsLimit || 20,
-          save: false, format: 'json'}]})}, `+ ${cube.Name}`)
       const cubeRow = (cube, index) => h('div:mt-3 space-y-2 rounded-lg border border-[#e8e8ea] p-2', {key: cube.id},
         h('div:flex items-center justify-between', {}, h('span:text-sm font-semibold', {}, cube.Name),
           h('button:text-xs text-[#6b6b6f] hover:text-red-600', {onClick: () => update({...item,
@@ -78,16 +72,15 @@ ReactComp('wonderPlatformResourceFields', {
             h('option', {key: value, value}, value.toUpperCase())))))
       const outputCubesSection = () => {
         const allCubes = currentPackage?.Queries || []
-        const available = allCubes.filter(cube => !item.outputCubes?.some(value => value.id == cube.id)
-          && (!cubeQuery.trim() || cube.Name.includes(cubeQuery)))
+        const pickCubes = ids => update({...item, outputCubes: ids.map(id => (item.outputCubes || []).find(value => value.id == id)
+          || {...allCubes.find(cube => cube.id == id), description: '', markdownRows: allCubes.find(cube => cube.id == id)?.ResultsLimit || 20,
+            save: false, format: 'json'})})
         return h('section:rounded-2xl border border-[#e8e8ea] p-4', {},
           h('div:flex items-center justify-between', {}, h('b:text-sm', {}, 'קוביות פלט'),
             h('span:text-xs text-[#6b6b6f]', {}, `${item.outputCubes?.length || 0} קוביות נבחרו`)),
-          h('div:mt-3 space-y-2', {},
-            h('input:rounded-lg border border-[#e8e8ea] px-2 py-1.5 text-sm', {value: cubeQuery,
-              placeholder: `חיפוש קובייה להוספה מתוך ${allCubes.length}…`, onInput: event => setCubeQuery(event.target.value)}),
-            h('div:flex flex-wrap gap-2', {}, available.length ? available.map(pickCubeResult) : h('span:text-xs text-[#6b6b6f]', {},
-              cubeQuery.trim() ? 'אין קוביות נוספות תואמות לחיפוש' : 'כל הקוביות נבחרו'))),
+          h('div:mt-3', {}, hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {items: allCubes.map(cube =>
+            ({id: cube.id, name: cube.Name})), value: (item.outputCubes || []).map(cube => cube.id), onChange: pickCubes, multi: true,
+            placeholder: 'בחר קוביות פלט'})),
           (item.outputCubes || []).map(cubeRow))
       }
       const removeFile = index => update({...item, files: item.files.filter((value, row) => row != index),
@@ -178,10 +171,27 @@ ReactComp('wonderPlatformResourceFields', {
             `button:${classes.primary}`, {disabled: !ready || running, onClick: () => saveAndRun(item, target)},
             running ? 'מריץ…' : 'שמירה והרצה')))
       }
-      return h('div:space-y-5', {}, resource == 'tools' && !repo.marketplace && packageStep(),
-      resource == 'tools' && !repo.marketplace && item.packageId && (item.inputSchema || []).length > 0 && h(
-        'div:rounded-lg border border-[#d8d8dc] bg-[#f4f4f5] px-3 py-2 text-xs text-[#0f0f10]', {},
-        `נקראו ${item.inputSchema.length} פרמטרים מהירים ו-${currentPackage?.Queries?.length || 0} קוביות.`),
+      const legacyTool = () => h('div:space-y-5', {},
+        h('section:rounded-2xl border border-[#e8e8ea] p-4', {},
+          field('display_name', h(`div:${classes.field} text-[#6b6b6f]`, {}, item.name || '—')),
+          field('description', h(`div:${classes.field} text-[#6b6b6f]`, {dir: 'ltr'}, item.apiDescription || '—')),
+          field('hebrew_description', h(`div:${classes.field} text-[#6b6b6f]`, {}, item.desc || '—'))),
+        h('p:text-xs leading-5 text-[#6b6b6f]', {}, 'כלי Connector מנוהל — לא ניתן לעריכה מכאן.'))
+      const toolFields = () => item.originalId && item.kind != 'flow' ? legacyTool() : h('div:space-y-5', {},
+        field('display_name', input('name', {placeholder: 'שם להצגה'})),
+        field('id', input('id', {dir: 'ltr', placeholder: 'uiRenderingSkill', disabled: !!item.originalId})),
+        field('description', h(`textarea:${classes.field} min-h-24 resize-y`, {dir: 'ltr', value: item.apiDescription || '',
+          onInput: event => update({...item, apiDescription: event.target.value})})),
+        field('hebrew_description', h(`textarea:${classes.field} min-h-24 resize-y`, {value: item.desc || '',
+          onInput: event => update({...item, desc: event.target.value})})),
+        packageStep(),
+        item.packageId && (item.inputSchema || []).length > 0 && h(
+          'div:rounded-lg border border-[#d8d8dc] bg-[#f4f4f5] px-3 py-2 text-xs text-[#0f0f10]', {},
+          `נקראו ${item.inputSchema.length} פרמטרים מהירים ו-${currentPackage?.Queries?.length || 0} קוביות.`),
+        item.packageId && (item.inputSchema || []).length > 0 && inputSchemaSection(),
+        item.packageId && (item.inputSchema || []).length > 0 && outputCubesSection())
+      if (resource == 'tools') return toolFields()
+      return h('div:space-y-5', {},
       field('display_name', input('name', {placeholder: 'שם להצגה'})),
       field('id', input('id', {dir: 'ltr', placeholder: 'uiRenderingSkill', disabled: !!item.originalId})),
       field('description', h(`textarea:${classes.field} min-h-24 resize-y`, {dir: 'ltr', value: item.apiDescription || '',
@@ -218,32 +228,7 @@ ReactComp('wonderPlatformResourceFields', {
             assets: item.assets.filter((value, row) => row != index)}), 'aria-label': `Remove ${asset.path}`}, h('L:Trash2', {size: 14})))))
           : h('p:mt-3 text-center text-xs text-[#6b6b6f]', {}, 'No assets added yet')),
       resource == 'skills' && relation('toolIds', 'tools', 'כלים'), resource == 'subagents' && h('div:space-y-4', {},
-        relation('skillIds', 'skills', 'מיומנויות'), relation('toolIds', 'tools', 'כלים')), resource == 'tools' && repo.marketplace && h(
-      'div:space-y-5', {}, h('section:rounded-2xl border border-[#e8e8ea] p-4', {}, h('div:grid grid-cols-1 gap-3 sm:grid-cols-3', {},
-        field('tool_type', h(`select:${classes.field}`, {value: item.toolType || 'code', onChange: event => update({...item,
-          toolType: event.target.value})}, ...['code', 'flow_package', 'flow_cube', 'solr', 'kick_graphql'].map(value => h(
-            'option', {key: value, value}, value)))), field('is_async', h('input:mt-4 h-5 w-5', {type: 'checkbox', checked: item.isAsync ?? true,
-              onChange: event => update({...item, isAsync: event.target.checked})})), field('tracable', h('input:mt-4 h-5 w-5', {
-                type: 'checkbox', checked: item.tracable ?? true, onChange: event => update({...item, tracable: event.target.checked})}))),
-        field('json_schema', h(`textarea:${classes.field} min-h-32 font-mono text-xs`, {dir: 'ltr',
-          defaultValue: JSON.stringify(item.jsonSchema || {}, null, 2), onBlur: event => update({...item,
-            jsonSchema: JSON.parse(event.target.value)})})), field('dedicated_tool_config', h(
-          `textarea:${classes.field} min-h-32 font-mono text-xs`, {dir: 'ltr', defaultValue: JSON.stringify(item.dedicatedToolConfig || {}, null, 2),
-            onBlur: event => update({...item, dedicatedToolConfig: JSON.parse(event.target.value)})})),
-        h('p:text-xs leading-5 text-[#6b6b6f]', {}, 'json_schema מגדיר את פרמטרי הקלט של הכלי (JSON Schema). ' +
-          'dedicated_tool_config הוא תצורת הרצה ייעודית לכלי זה, בפורמט JSON חופשי.'))),
-      resource == 'tools' && repo.marketplace && h('section:rounded-2xl border border-[#e8e8ea] p-4', {}, h('div:flex items-center justify-between', {},
-        h('b:text-sm', {}, 'Code files'), h(`button:${classes.button}`, {onClick: () => update({...item,
-          codeFiles: [...(item.codeFiles || []), {path: '', content: ''}]})}, h('L:Plus', {size: 14}), 'קובץ')), (item.codeFiles || []).map(
-        (file, index) => h('div:mt-3 grid grid-cols-[1fr_2fr_32px] gap-2 max-sm:grid-cols-1', {key: index}, h(
-          'input:min-w-0 rounded-lg border p-2 font-mono text-xs', {dir: 'ltr', value: file.path, placeholder: 'path',
-            onInput: event => update({...item, codeFiles: item.codeFiles.map((value, row) => row == index
-              ? {...value, path: event.target.value} : value)})}), h('textarea:min-h-24 min-w-0 rounded-lg border p-2 font-mono text-xs', {
-            dir: 'ltr', value: file.content, placeholder: 'content', onInput: event => update({...item,
-              codeFiles: item.codeFiles.map((value, row) => row == index ? {...value, content: event.target.value} : value)})}), h(
-            'button', {onClick: () => update({...item, codeFiles: item.codeFiles.filter((value, row) => row != index)}),
-              'aria-label': 'מחיקת קובץ'}, h('L:Trash2', {size: 14}))))), resource == 'tools' && !repo.marketplace && h(
-        'div:space-y-5', {}, inputSchemaSection(), outputCubesSection()),
+        relation('skillIds', 'skills', 'מיומנויות'), relation('toolIds', 'tools', 'כלים')),
       repo.marketplace && item._marketplace && h('section:rounded-2xl border border-[#e8e8ea] p-4', {}, h(
         'div:flex flex-wrap items-center gap-2', {}, h('b:text-sm', {}, 'Marketplace API'), h(`span:${classes.chip}`, {},
           `${item.versions?.length || 0} גרסאות`), h(`span:${classes.chip}`, {}, `${item.audit?.length || 0} אירועי audit`)),
