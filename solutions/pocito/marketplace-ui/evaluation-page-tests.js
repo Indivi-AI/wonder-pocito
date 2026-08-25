@@ -7,7 +7,7 @@ import './evaluation-page.js'
 
 const { common: { data: { asIs, evaluationPageGrade, evaluationPageLoad, evaluationPageSaveDefinitions, evaluationPageSaveRun,
   evaluationPageSeed, wonderPlatformSeed }, boolean: {and, contains, equals} },
-  react: { ReactComp, 'react-comp': { comp, EvaluationPage }, 'ui-action': {waitForText} },
+  react: { ReactComp, 'react-comp': { comp, EvaluationPage }, 'ui-action': {actions, click, waitForText} },
   test: { Test, test: {dataTest, reactTest} } } = dsls
 
 Test('evaluationPage.contracts', {
@@ -95,6 +95,21 @@ Test('evaluationPage.composer', {
       contains('סיכום ההרצה')
     ),
     userActions: waitForText('סיכום ההרצה'),
+    logger: 'uiLogger'
+  })
+})
+
+Test('evaluationPage.datasetAuthoring', {
+  impl: reactTest({
+    testedComp: evaluationPageTestHost(),
+    expectedResult: and(contains('תיאור מערך הנתונים'), contains('קלט לסוכן'), contains('פלט מצופה או עובדות נדרשות')),
+    userActions: actions(
+      waitForText('סיכום ההרצה'),
+      click('מערכי נתונים'),
+      waitForText('מערך נתונים חדש'),
+      click('פתיחה'),
+      waitForText('קלט לסוכן')
+    ),
     logger: 'uiLogger'
   })
 })

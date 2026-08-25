@@ -413,8 +413,9 @@ Test('wonderPlatform.pluginWorkspace', {
 
 Test('wonderPlatform.evaluationCatalog', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(), and(
-    contains('אימות טענות ומקורות'), contains('תרחישים'), contains('טרם הורץ')), {
-    userActions: actions(waitForText('פלאגין חדש'), click('אבלואציה'), waitForText('אימות טענות ומקורות'))})
+    contains('בחירת מערכי נתונים'), contains('איכות התשובה'), contains('סיכום ההרצה')), {
+    userActions: actions(waitForText('פלאגין חדש'), click('אבלואציה'), waitForText('סיכום ההרצה')),
+    logger: 'uiLogger'})
 })
 
 Test('wonderPlatform.toolRules', {

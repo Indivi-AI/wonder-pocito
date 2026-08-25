@@ -270,7 +270,7 @@ ReactComp('wonderPlatform', {
         openEditor: openWorkspaceEditor, runTarget, runEval}) : view == 'chat' ? hh(ctx, dsls.react['react-comp'].wonderPlatformChat, {
         repo, conversation, message, setMessage, busy, send, selectAgent, setContext})
         : view == 'evaluations' ? hh(ctx, dsls.react['react-comp'].EvaluationPage, {embedded: true, roomWUrl: repositoryRoomWUrl,
-          marketplaceBaseUrl: marketplaceUrl, agentOsBaseUrl: agentUrl, agentOsToken: token})
+          marketplaceBaseUrl: marketplaceUrl, agentOsBaseUrl: agentUrl, agentOsToken: token, targetItems: repo.agents, openView})
           : editors[0]?.standalone ? hh(ctx, dsls.react['react-comp'].wonderPlatformResourcePage, {active: editors[0], update: updateBase,
               save: saveBase, deleteItem: deleteBase, back: () => requestLeave(() => setEditors([])), repo, openPicker: openEditorPicker,
               saveAndRun, runningSet})
