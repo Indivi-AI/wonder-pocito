@@ -1,4 +1,16 @@
-PROPRIETARY LICENSE
+PROPRIETARY SOFTWARE LICENSE
 
-All Wonder code and its dependencies belong to Indivi.AI.
-Use is permitted only with written permission from Indivi.AI.
+Copyright (c) 2026 Indivi.AI. All rights reserved.
+
+This license applies to all source code, documentation, and other materials in this repository except materials located under the `solutions/`
+directory. All materials to which this license applies are the "Proprietary Materials." Materials under `solutions/` are excluded from this
+license and may be governed by separate terms.
+
+The Proprietary Materials are the exclusive intellectual property of Indivi.AI. No permission is granted to use, copy, reproduce, modify, merge,
+publish, distribute, sublicense, sell, or otherwise exploit them without Indivi.AI's prior express written permission. Access to or possession of
+the Proprietary Materials does not grant any license or ownership right. Any rights granted in a separate written agreement are governed solely
+by that agreement.
+
+THE PROPRIETARY MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. TO THE MAXIMUM EXTENT PERMITTED BY LAW, INDIVI.AI SHALL NOT BE LIABLE FOR ANY CLAIM,
+DAMAGES, OR OTHER LIABILITY ARISING FROM OR RELATED TO THE PROPRIETARY MATERIALS OR THEIR USE.
