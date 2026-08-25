@@ -102,25 +102,20 @@ ReactComp('wonderPlatform', {
         return {...item, content: loaded?.content || '', publishVersion: dsls.common.data.wonderPlatformNextVersion.$run(item.version)}
       }
       const navigate = id => (setView(id), setWorkspace(), setSearch(''))
-      const dirty = (resource, item) => {
-        const skip = ['originalId', 'syncStatus', 'fileCount', 'updated', 'publishVersion', 'versions', 'audit', 'references', 'configYaml',
-          'contents', ...(resource == 'skills' && !repo.marketplace ? ['content'] : [])]
-        const strip = value => Object.fromEntries(Object.entries(value).filter(([key]) => !skip.includes(key)))
-        const stored = item.originalId ? repo[resource]?.find(value => value.id == item.originalId) : {...blank(resource), id: item.id}
-        return JSON.stringify(strip(item)) != JSON.stringify(strip(stored || {}))
-      }
+      const editorEntry = (resource, item, extra = {}) => ({resource, item, baseline: JSON.stringify(item), ...extra})
+      const dirty = entry => JSON.stringify(entry.item) != entry.baseline
       const leave = id => (setEditors([]), navigate(id), setPendingNav())
-      const openView = id => editors.at(-1) && dirty(editors.at(-1).resource, editors.at(-1).item) ? setPendingNav(id) : leave(id)
+      const openView = id => editors.at(-1) && dirty(editors.at(-1)) ? setPendingNav(id) : leave(id)
       const openItem = async (resource, item) => {
         if (repo.marketplace && marketResources.includes(resource)) item = await marketplaceDetail(
           ctx.setVars({resource, id: item.id, roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))
         if (['plugins', 'subagents', 'agents'].includes(resource)) return setWorkspace({resource, item: {...item, originalId: item.id}}), setView('workspace')
         if (resource == 'skills') item = await skillDraft(item)
-        setEditors([{resource, item: {...item, originalId: item.id}, createLabel: config.resources[resource]?.create, standalone: true}])
+        setEditors([editorEntry(resource, {...item, originalId: item.id}, {createLabel: config.resources[resource]?.create, standalone: true})])
       }
       const createItem = resource => ['plugins', 'subagents', 'agents'].includes(resource)
         ? (setWorkspace({resource, item: blank(resource)}), setView('workspace'))
-        : setEditors([{resource, item: blank(resource), createLabel: config.resources[resource]?.create, standalone: true}])
+        : setEditors([editorEntry(resource, blank(resource), {createLabel: config.resources[resource]?.create, standalone: true})])
       const saveWorkspace = async item => {
         const saved = await saveItem(workspace.resource, item)
         setWorkspace({...workspace, item: {...saved, originalId: saved.id}}); flash('נשמר'); return saved
@@ -137,8 +132,8 @@ ReactComp('wonderPlatform', {
         if (repo.marketplace && marketResources.includes(resource)) item = await marketplaceDetail(ctx.setVars({resource, id: item.id, roomWUrl: repositoryRoomWUrl,
           marketplaceBaseUrl: marketplaceUrl}))
         const draft = resource == 'skills' ? await skillDraft(item) : item
-        setEditors(current => [...current, {resource, item: {...draft, originalId: item.id}, createLabel: config.resources[resource]?.create,
-          returnToWorkspace: true}])
+        setEditors(current => [...current, editorEntry(resource, {...draft, originalId: item.id},
+          {createLabel: config.resources[resource]?.create, returnToWorkspace: true})])
       }
       const openWorkspacePicker = (field, resource, label, selected, attach) => setPicker({source: 'workspace', field, resource, label,
         single: config.resources[resource].label, selected, attach, query: ''})
@@ -152,8 +147,8 @@ ReactComp('wonderPlatform', {
       }
       const createNested = resource => {
         const attachTo = picker
-        setPicker(); setEditors([...editors, {resource, item: blank(resource), attachTo,
-          createLabel: resource == 'tools' ? 'כלי חדש ממארז Flow' : config.resources[resource].create}])
+        setPicker(); setEditors([...editors, editorEntry(resource, blank(resource), {attachTo,
+          createLabel: resource == 'tools' ? 'כלי חדש ממארז Flow' : config.resources[resource].create})])
       }
       const publishEditedSkill = async skill => {
         await publishSkill(ctx.setVars({roomWUrl: repositoryRoomWUrl, skill}))
@@ -185,7 +180,8 @@ ReactComp('wonderPlatform', {
       const saveBase = async () => {
         const {resource, item} = editors[0]
         const saved = await saveItem(resource, item)
-        setEditors(resource == 'evaluations' ? [{...editors[0], item: {...saved, originalId: saved.id}}] : [])
+        setEditors(resource == 'evaluations'
+          ? [{...editors[0], item: {...saved, originalId: saved.id}, baseline: JSON.stringify({...saved, originalId: saved.id})}] : [])
         flash('נשמר בקטלוג המשותף'); return saved
       }
       const saveAndLeave = async () => { const id = pendingNav
@@ -258,7 +254,8 @@ ReactComp('wonderPlatform', {
       }
       const saveAndRun = async (evaluation, target) => {
         const result = upsert(ctx.setVars({repo, resource: 'evaluations', item: evaluation})), next = await persistRepo(result.repo)
-        setEditors([{...editors[0], item: {...result.saved, originalId: result.saved.id}}]); flash('נשמר')
+        setEditors([{...editors[0], item: {...result.saved, originalId: result.saved.id},
+          baseline: JSON.stringify({...result.saved, originalId: result.saved.id})}]); flash('נשמר')
         setRunningSet(result.saved.id); await runEval(result.saved, 'agents', target, next); setRunningSet('')
       }
       if (loadError) return h('div:grid min-h-screen place-items-center p-6 text-center', {}, h('div', {}, h(
@@ -270,8 +267,8 @@ ReactComp('wonderPlatform', {
         openEditor: openWorkspaceEditor, runTarget, runEval}) : view == 'chat' ? hh(ctx, dsls.react['react-comp'].wonderPlatformChat, {
         repo, conversation, message, setMessage, busy, send, selectAgent, setContext})
         : view == 'evaluations' && !(editors[0]?.standalone) ? hh(ctx, dsls.react['react-comp'].wonderPlatformEvaluation, {repo, search, setSearch,
-          openSet: item => setEditors([{resource: 'evaluations', item: {...item, originalId: item.id}, standalone: true}]),
-          createSet: () => setEditors([{resource: 'evaluations', item: blank('evaluations'), createLabel: 'סט חדש', standalone: true}]),
+          openSet: item => setEditors([editorEntry('evaluations', {...item, originalId: item.id}, {standalone: true})]),
+          createSet: () => setEditors([editorEntry('evaluations', blank('evaluations'), {createLabel: 'סט חדש', standalone: true})]),
           runningSet, runSet})
           : editors[0]?.standalone ? hh(ctx, dsls.react['react-comp'].wonderPlatformResourcePage, {active: editors[0], update: updateBase,
               save: saveBase, deleteItem: deleteBase, back: () => setEditors([]), repo, openPicker: openEditorPicker, saveAndRun, runningSet})
