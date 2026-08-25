@@ -18,7 +18,7 @@
     "server-secrets:push:dev": "node scripts/secrets.js push dev",
     "server-secrets:push:prod": "node scripts/secrets.js push prod",
     "update-jb6": "bash ./scripts/update-jb6.sh",
-    "pocito": "bash scripts/sync-pocito.sh",
+    "pocito-update": "bash scripts/sync-pocito.sh",
     "bgn": "bash scripts/zip-wonder.sh"
   },
   "dependencies": {
