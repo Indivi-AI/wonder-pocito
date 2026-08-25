@@ -91,9 +91,8 @@ Data('wonderPlatformMarketplaceManifest', {
       skill_md: item.content || '', assets: (item.assets || []).map(({path, content_b64, mime_type}) => ({path, content_b64, mime_type}))}
     if (resource == 'knowledge') return base
     const {tags, ...toolBase} = base
-    return {...toolBase, tool_type: item.toolType || item.tool_type || 'code', json_schema: item.jsonSchema || {},
-      is_async: item.isAsync ?? true, tracable: item.tracable ?? true, dedicated_tool_config: item.dedicatedToolConfig || {},
-      code_files: item.codeFiles || []}
+    return {...toolBase, tool_type: 'flow_package', is_async: true, tracable: true,
+      package_id: item.packageId || '', input_schema: item.inputSchema || [], output_cubes: item.outputCubes || []}
   }
 })
 
