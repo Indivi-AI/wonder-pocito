@@ -2,6 +2,7 @@
 An envelope is the stored JSON object {data, version, created_at, updated_at} wrapping each manifest -
 the only state the two servers share, so both must read and write it through this one module."""
 import base64
+import hashlib
 import json
 import logging
 import os
@@ -280,6 +281,7 @@ class MarketplaceRepository:
         config = self.get(room, kind, name).get('config') or {}
         refs = [('plugin', value) for value in config.get('plugins', [])] + [('skill', value) for value in config.get('skills', [])]
         refs += [('tool', value) for value in config.get('tools', [])] + [('agent', value) for value in config.get('sub_agents', [])]
+        refs += [('knowledge', value) for value in config.get('knowledge_bases', [])]
         checked = []
         for ref_kind, ref_name in refs:
             try:
@@ -290,6 +292,64 @@ class MarketplaceRepository:
             checked.append({'resource_type': ref_kind, 'name': ref_name, 'exists': exists})
         return {'valid': all(item['exists'] for item in checked), 'references': checked,
           'missing': [item for item in checked if not item['exists']]}
+
+    def content_key(self, room, knowledge, content, path):
+        return self.resource_key(room, 'knowledge', knowledge, f'contents/{safe_name(content)}/{path}')
+
+    def contents(self, room, knowledge):
+        self.envelope(room, 'knowledge', knowledge)
+        prefix = self.resource_key(room, 'knowledge', knowledge, 'contents/')
+        keys = [key for key in self.objects.list(prefix) if key.endswith('/manifest.json')]
+        return [self.public_content(self.read_json(key)) for key in keys]
+
+    def content(self, room, knowledge, content):
+        self.envelope(room, 'knowledge', knowledge)
+        try:
+            return self.read_json(self.content_key(room, knowledge, content, 'manifest.json'))
+        except FileNotFoundError:
+            raise HTTPException(404, f'knowledge/{knowledge}/content/{content} not found')
+
+    def public_content(self, content):
+        return {key: value for key, value in content.items() if not key.startswith('_')}
+
+    def create_content(self, room, knowledge, name, description, metadata, file_name, content_type, body):
+        self.envelope(room, 'knowledge', knowledge)
+        content_id, timestamp = os.urandom(16).hex(), now()
+        file_name = safe_name(PurePosixPath(file_name).name)
+        record = {'id': content_id, 'name': name or file_name, 'description': description, 'type': content_type,
+          'size': str(len(body)), 'linked_to': knowledge, 'metadata': metadata, 'access_count': 0, 'status': 'processing',
+          'status_message': '', 'created_at': timestamp, 'updated_at': timestamp,
+          '_content_hash': hashlib.sha256(body).hexdigest(), '_artifact': {'path': file_name, 'mime_type': content_type}}
+        self.objects.put(self.content_key(room, knowledge, content_id, file_name), body, content_type)
+        self.write_json(self.content_key(room, knowledge, content_id, 'manifest.json'), record, if_absent=True)
+        self.audit(room, 'knowledge', knowledge, 'content.create', self.envelope(room, 'knowledge', knowledge)['version'],
+          self.public_content(record), timestamp)
+        return self.public_content(record)
+
+    def update_content(self, room, knowledge, content, changes):
+        record, timestamp = self.content(room, knowledge, content), now()
+        record |= changes | {'status': 'processing', 'status_message': '', 'updated_at': timestamp}
+        self.write_json(self.content_key(room, knowledge, content, 'manifest.json'), record)
+        self.audit(room, 'knowledge', knowledge, 'content.update', self.envelope(room, 'knowledge', knowledge)['version'],
+          changes, timestamp)
+        return self.public_content(record)
+
+    def set_content_status(self, room, knowledge, content, status, message=''):
+        record = self.content(room, knowledge, content) | {'status': status, 'status_message': message, 'updated_at': now()}
+        self.write_json(self.content_key(room, knowledge, content, 'manifest.json'), record)
+        return self.public_content(record)
+
+    def delete_content(self, room, knowledge, content):
+        record = self.content(room, knowledge, content)
+        self.objects.delete_prefix(self.content_key(room, knowledge, content, ''))
+        self.audit(room, 'knowledge', knowledge, 'content.delete', self.envelope(room, 'knowledge', knowledge)['version'],
+          {'id': content}, now())
+        return self.public_content(record)
+
+    def content_file(self, room, knowledge, content):
+        record = self.content(room, knowledge, content)
+        artifact = record['_artifact']
+        return self.objects.get(self.content_key(room, knowledge, content, artifact['path'])), artifact
 
     def user_key(self, room, uid):
         return f'{safe_name(room)}/users/{safe_name(uid)}.json'

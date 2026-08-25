@@ -10,7 +10,7 @@ import httpx
 from fastapi.testclient import TestClient
 
 from agno_server import create_app as create_agent_os_app
-from marketplace_e2e_model import model_factory
+from marketplace_e2e_model import MarketplaceE2EEmbedder, model_factory
 from marketplace_server import create_app
 
 
@@ -20,7 +20,7 @@ class MarketplaceServerTest(unittest.TestCase):
         self.env = patch.dict(os.environ, {'MARKETPLACE_S3_BUCKET': f'marketplace-test-{uuid.uuid4().hex[:12]}'})
         self.env.start()
         self.client = TestClient(create_app())
-        self.agno = TestClient(create_agent_os_app(self.temp.name, model_factory))
+        self.agno = TestClient(create_agent_os_app(self.temp.name, model_factory, MarketplaceE2EEmbedder()))
         self.objects = self.client.app.state.marketplace_repo.objects
         self.examples = json.loads((Path(__file__).parent / 'marketplace-api-examples.json').read_text())
 
@@ -50,6 +50,9 @@ class MarketplaceServerTest(unittest.TestCase):
         return {'id': 'roomAgent', 'display_name': 'Room agent', 'description': 'Uses room facts.', 'config': {
           'system_prompt': 'Use the configured skill and tool.', 'backend_config': {'harness_type': 'deepagents'},
           'plugins': ['roomPlugin'], 'skills': [], 'tools': [], 'sub_agents': []}}
+
+    def knowledge(self, id):
+        return {'id': id, 'display_name': id, 'description': f'{id} knowledge base'}
 
     def test_contract_routes_exist(self):
         schema = self.client.get('/openapi.json').json()
@@ -168,8 +171,8 @@ class MarketplaceServerTest(unittest.TestCase):
         self.assertTrue(all(name in '\n'.join(logs.output) for name in ['legacy', 'broken']))
 
     def test_photographed_schema_examples_round_trip(self):
-        for kind in ['Skill', 'Tool', 'Plugin', 'Agent']:
-            body, plural = self.examples[f'create{kind}'], f'{kind.lower()}s'
+        for kind in ['Skill', 'Tool', 'Plugin', 'Agent', 'Knowledge']:
+            body, plural = self.examples[f'create{kind}'], kind.lower() if kind == 'Knowledge' else f'{kind.lower()}s'
             self.assertEqual(self.request('POST', f'/api/v1/{plural}/', json=body).status_code, 201)
             self.assertEqual(self.request('GET', f"/api/v1/{plural}/{body['id']}").status_code, 200)
             self.assertEqual(self.request('PUT', f"/api/v1/{plural}/{body['id']}",
@@ -179,6 +182,27 @@ class MarketplaceServerTest(unittest.TestCase):
         for action in ['download', 'upload']:
             self.assertEqual(self.request('POST', f'/api/v1/presign/{action}',
               json=self.examples[f'presign{action.title()}']).status_code, 200)
+
+    def test_multiple_knowledge_bases_are_managed_and_connected_to_agents(self):
+        for id, fact in [('finance', 'FINANCE_CODE_GOLD_41'), ('legal', 'LEGAL_CODE_BLUE_92')]:
+            self.assertEqual(self.request('POST', '/api/v1/knowledge/', json=self.knowledge(id)).status_code, 201)
+            content = self.request('POST', f'/api/v1/knowledge/{id}/content',
+              data={'name': f'{id} facts', 'text_content': fact, 'metadata': json.dumps({'domain': id})})
+            self.assertEqual(content.status_code, 202, content.text)
+            self.assertEqual(content.json()['status'], 'processing')
+        agent = self.agent()
+        agent['config'] |= {'plugins': [], 'knowledge_bases': ['finance', 'legal']}
+        self.assertEqual(self.request('POST', '/api/v1/agents/', json=agent).status_code, 201)
+        self.assertTrue(self.request('GET', '/api/v1/agents/roomAgent/references').json()['valid'])
+        run = self.agno.post('/agents/roomAgent/runs', data={'message': 'Find FINANCE_CODE_GOLD_41 and LEGAL_CODE_BLUE_92.',
+          'session_id': 'knowledge', 'user_id': 'tester', 'stream': 'false'})
+        self.assertEqual(run.status_code, 200, run.text)
+        self.assertIn('FINANCE_CODE_GOLD_41', run.json()['content'])
+        self.assertIn('LEGAL_CODE_BLUE_92', run.json()['content'])
+        for id in ['finance', 'legal']:
+            content = self.request('GET', f'/api/v1/knowledge/{id}/content').json()['data'][0]
+            self.assertEqual(self.request('GET', f"/api/v1/knowledge/{id}/content/{content['id']}/status").json()['status'],
+              'completed')
 
     def test_agentos_uses_saved_plugin_skill_and_tool_updates(self):
         plugin = {'id': 'roomPlugin', 'display_name': 'Room plugin', 'description': 'Bundle',
