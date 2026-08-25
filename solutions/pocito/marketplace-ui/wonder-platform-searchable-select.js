@@ -5,8 +5,15 @@ const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
 ReactComp('wonderPlatformSearchableSelect', {
   impl: comp({
-    hFunc: (ctx, {react: {h, useState}}) => ({items, value, onChange, placeholder, empty, testId, multi, bare, tall}) => {
+    hFunc: (ctx, {react: {h, useState, useEffect, useRef}}) => ({items, value, onChange, placeholder, empty, testId, multi, bare, tall}) => {
       const [open, setOpen] = useState(false), [query, setQuery] = useState('')
+      const ref = useRef()
+      useEffect(() => {
+        if (!open) return
+        const close = event => { if (!ref.current?.contains(event.target)) setOpen(false) }
+        document.addEventListener('pointerdown', close)
+        return () => document.removeEventListener('pointerdown', close)
+      }, [open])
       const chosen = multi ? (value || []) : [], selected = multi ? null : items.find(item => item.id == value)
       const filtered = items.filter(item => !query.trim() || (item.name || '').includes(query))
       const pick = id => multi
@@ -20,7 +27,7 @@ ReactComp('wonderPlatformSearchableSelect', {
       multi && h(`span:grid h-4 w-4 shrink-0 place-items-center rounded border ${chosen.includes(item.id)
         ? 'border-[#0f0f10] bg-[#0f0f10] text-white' : 'border-[#d8d8dc]'}`, {}, chosen.includes(item.id) && h('L:Check', {size: 11})),
       h('span:truncate', {}, item.name))
-      return h('div:relative', {tabIndex: -1, onBlur: () => setOpen(false)}, h(`button:flex w-full items-center justify-between gap-2 px-3 py-2.5 text-sm${
+      return h('div:relative', {ref}, h(`button:flex w-full items-center justify-between gap-2 px-3 py-2.5 text-sm${
         bare ? '' : ' rounded-xl border border-[#e8e8ea] bg-[#fafafa]'}`, {type: 'button', 'data-testid': testId,
         onClick: () => setOpen(!open)},
       multi && chosen.length
