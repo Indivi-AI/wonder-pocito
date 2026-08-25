@@ -26,6 +26,7 @@ from agno.models.openai import OpenAIChat
 from agno.os import AgentOS
 from agno.skills import LocalSkills, Skills
 from agno.tools.function import Function
+from agno.tools.mcp import MCPTools
 from agno.vectordb.pgvector import PgVector
 from agno.vectordb.search import SearchType
 from fastapi import FastAPI, HTTPException
@@ -152,10 +153,12 @@ class MarketplaceAgentRuntime:
           database=os.getenv('POSTGRES_DB', 'wonder'))
         self.vector_db_engine = create_engine(pgvector_url, pool_pre_ping=True)
         self.knowledge_instances, self.worker_id = {}, os.urandom(16).hex()
+        self.mcp_tools = {}
 
     def openai_model(self, manifest):
         model = manifest.get('config', {}).get('backend_config', {}).get('model') or os.getenv('OPENAI_MODEL', 'gpt-5-mini')
-        return OpenAIChat(id=model, api_key=os.getenv('OPENAI_API_KEY'), base_url=os.getenv('OPENAI_BASE_URL'))
+        return OpenAIChat(id=model, api_key=os.getenv('OPENAI_API_KEY'), base_url=os.getenv('OPENAI_BASE_URL'),
+                          reasoning_effort=os.getenv("OPENAI_REASONING_EFFORT") or None)
 
     def agent_manifest(self, room, name):
         try:
@@ -184,8 +187,29 @@ class MarketplaceAgentRuntime:
             path.write_bytes(base64.b64decode(asset['content_b64']))
         return target
 
-    def tool(self, room, name):
+    async def close_mcp(self, room, name, keep=None):
+        for key in [k for k in self.mcp_tools if k[:2] == (room, name) and k != keep]:
+            await self.mcp_tools.pop(key).close()
+
+    async def mcp_toolkit(self, room, name, manifest, context_ref=''):
+        config = dict(manifest.get('dedicated_tool_config', {}))
+        config.pop('transport', None)
+        key = (room, name, manifest['version'], context_ref)
+        await self.close_mcp(room, name, keep=key)
+        if key not in self.mcp_tools:
+            if context_ref:
+                ref = context_ref
+                config['header_provider'] = lambda: {'X-Context-Ref': ref}
+            self.mcp_tools[key] = MCPTools(**config)
+        toolkit = self.mcp_tools[key]
+        if not getattr(toolkit, '_initialized', False):
+            await toolkit.connect()
+        return toolkit
+
+    async def tool(self, room, name, context_ref=''):
         manifest = self.repo.get(room, 'tool', name, include_code=True)
+        if manifest.get('tool_type') == 'mcp':
+            return await self.mcp_toolkit(room, name, manifest, context_ref)
         if manifest.get('tool_type') == 'flow_package':
             package_id = manifest.get('package_id')
             if not package_id:
@@ -300,7 +324,7 @@ class MarketplaceAgentRuntime:
         limit = num_documents or knowledge.max_results
         return self.search_knowledge(ROOM_CONTEXT.get(), sorted(names), query, limit)
 
-    def build_agent(self, room, manifest, agent_id, knowledge_names):
+    async def build_agent(self, room, manifest, agent_id, knowledge_names, context_ref=''):
         config, skill_names, tool_names = manifest['config'], set(), set()
         knowledge_names = set(knowledge_names)
         for plugin_name in config.get('plugins', []):
@@ -311,16 +335,17 @@ class MarketplaceAgentRuntime:
         tool_names.update(config.get('tools', []))
         skills = Skills([LocalSkills(str(self.materialize_skill(room, item)), validate=False) for item in sorted(skill_names)])
         knowledge = self.knowledge(room, sorted(knowledge_names)[0]) if knowledge_names else None
+        tools = [await self.tool(room, item, context_ref) for item in sorted(tool_names)]
         return Agent(id=agent_id, name=manifest['display_name'], model=self.model_factory(manifest),
           db=self.room_dbs[room], add_history_to_context=True,
-          tools=[self.tool(room, item) for item in sorted(tool_names)], skills=skills,
+          tools=tools, skills=skills,
           knowledge=knowledge, knowledge_retriever=(lambda agent, query, num_documents=None, **kwargs:
             self.retrieve_knowledge(knowledge, knowledge_names, query, num_documents, **kwargs)) if knowledge else None,
           instructions=[config['system_prompt']], markdown=True, telemetry=False)
 
-    def agent(self, room, name):
+    async def agent(self, room, name, context_ref=''):
         manifest = self.agent_manifest(room, name)
-        return self.build_agent(room, manifest, name, self.assigned_knowledge_names(room, name))
+        return await self.build_agent(room, manifest, name, self.assigned_knowledge_names(room, name), context_ref)
 
 
 class AdhocRunRequest(BaseModel):
@@ -375,8 +400,10 @@ def create_app(data_dir=None, model_factory=None, embedder=None):
         names = set(repo.agent_names(room)) | {item['id'] for item in repo.list(room, 'plugin')}
         factories[:] = [item for item in factories if item.id in names]
         for name in sorted(names - {item.id for item in factories}):
-            factories.append(AgentFactory(id=name, db=runtime.db,
-              factory=lambda ctx, agent_name=name: runtime.agent(ROOM_CONTEXT.get(), agent_name)))
+            async def build(ctx, agent_name=name):
+                context_ref = (ctx.input or {}).get('context_ref', '') if ctx else ''
+                return await runtime.agent(ROOM_CONTEXT.get(), agent_name, context_ref)
+            factories.append(AgentFactory(id=name, db=runtime.db, factory=build))
 
     @base.middleware('http')
     async def bind_room(request, call_next):
@@ -412,7 +439,7 @@ def create_app(data_dir=None, model_factory=None, embedder=None):
         session_id = payload.session_id or uuid.uuid4().hex
         manifest = {'display_name': payload.display_name or 'Ad-hoc agent', 'config': {
           'system_prompt': payload.instructions or ADHOC_DEFAULT_INSTRUCTIONS, 'plugins': plugins, 'skills': skills, 'tools': tools}}
-        agent = runtime.build_agent(room, manifest, f'adhoc-{session_id}', knowledge)
+        agent = await runtime.build_agent(room, manifest, f'adhoc-{session_id}', knowledge)
         result = await agent.arun(payload.message, session_id=session_id, stream=False)
         return {'run_id': result.run_id, 'content': result.content, 'status': result.status.value, 'session_id': session_id}
 
