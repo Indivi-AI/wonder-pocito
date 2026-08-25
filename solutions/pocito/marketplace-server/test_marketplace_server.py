@@ -241,6 +241,53 @@ class MarketplaceServerTest(unittest.TestCase):
         self.assertIn('SAVED_SKILL_UPDATE', updated['content'])
         self.assertIn('SAVED_TOOL_UPDATE:42', updated['content'])
 
+    def test_flow_package_tool_integration(self):
+        tool_payload = {
+            'id': 'flowTool',
+            'display_name': 'Flow Tool',
+            'description': 'Flow Tool description',
+            'tool_type': 'flow_package',
+            'package_id': '7',
+            'input_schema': [
+                {'Name': 'category', 'Type': 'String', 'DisplayName': 'Category', 'Description': 'Category filter', 'IsRequired': True}
+            ],
+            'output_cubes': [{'name': 'Orders Cube'}]
+        }
+        
+        # 1. Create the flow package tool via marketplace API
+        created = self.request('POST', '/api/v1/tools/', json=tool_payload)
+        self.assertEqual(created.status_code, 201)
+        created_json = created.json()
+        self.assertEqual(created_json['package_id'], '7')
+        self.assertEqual(created_json['input_schema'][0]['Name'], 'category')
+        self.assertEqual(created_json['output_cubes'][0]['name'], 'Orders Cube')
+        
+        # 2. Get the tool via marketplace API
+        fetched = self.request('GET', '/api/v1/tools/flowTool').json()
+        self.assertEqual(fetched['package_id'], '7')
+        
+        # 3. Update the tool via marketplace API
+        self.request('PUT', '/api/v1/tools/flowTool', json={'description': 'Updated Description'})
+        updated = self.request('GET', '/api/v1/tools/flowTool').json()
+        self.assertEqual(updated['description'], 'Updated Description')
+        
+        # 4. Load the tool via Agno runtime
+        runtime = self.agno.app.state.marketplace_runtime
+        agno_tool = runtime.tool('marketplace', 'flowTool')
+        
+        # Verify Agno Function contract
+        self.assertEqual(agno_tool.name, 'flowTool')
+        self.assertEqual(agno_tool.description, 'Updated Description')
+        self.assertIn('category', agno_tool.parameters['properties'])
+        self.assertEqual(agno_tool.parameters['properties']['category']['type'], 'string')
+        self.assertIn('category', agno_tool.parameters['required'])
+        
+        # 5. Execute the tool entrypoint
+        with patch.dict(os.environ, {'FLAPI_BASE_URL': 'http://localhost:6001', 'FLAPI_BEARER_TOKEN': 'mock-test-token'}):
+            result = agno_tool.entrypoint(category='Audio')
+            self.assertIn('results', result)
+            self.assertIn('Orders Cube', result['results'])
+
 
 if __name__ == '__main__':
     unittest.main()

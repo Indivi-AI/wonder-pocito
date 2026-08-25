@@ -8,12 +8,24 @@ const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
 ReactComp('wonderPlatformResourceFields', {
   impl: comp({
-    hFunc: (ctx, {react: {h, hh, useState, useEffect}}) => ({resource, item, update, repo, openPicker, saveAndRun, runningSet}) => {
+    hFunc: (ctx, {react: {h, hh, useState, useEffect}}) => ({resource, item, update, repo, loadPackage, openPicker, saveAndRun, runningSet}) => {
       const {classes} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
       const [historyDetail, setHistoryDetail] = useState(-1)
       const [pkg, setPkg] = useState()
+      const [packageState, setPackageState] = useState({loading: false, error: ''})
       const [activeId, setActiveId] = useState('general')
-      useEffect(() => { setActiveId('general'); setPkg() }, [item.id, resource])
+      useEffect(() => {
+        setActiveId('general'); setPkg(); setPackageState({loading: false, error: ''})
+        if (resource == 'tools' && item.toolType == 'flow_package' && item.packageId) {
+          setPackageState({loading: true, error: ''})
+          loadPackage(ctx.setVars({packageId: item.packageId}))
+            .then(({metadata}) => {
+              setPkg(metadata)
+              setPackageState({loading: false, error: ''})
+            })
+            .catch(error => setPackageState({loading: false, error: error.message || String(error)}))
+        }
+      }, [item.id, resource])
       const field = (label, control, hint) => h('label:block text-xs font-semibold text-[#2e2e2e]', {}, label,
         hint && h('span:mr-2 font-mono text-xs font-normal text-[#6b6b6f]', {dir: 'ltr'}, hint), control)
       const input = (key, props = {}) => h(`input:${classes.field}`, {value: item[key] || '',
@@ -100,10 +112,10 @@ ReactComp('wonderPlatformResourceFields', {
       const inputSchemaSection = () => h('section:rounded-2xl border border-[#e8e8ea] p-4', {},
         h('b:text-sm', {}, 'סכמת קלט — פרמטרים מהירים'),
         h('div:mt-2 divide-y divide-[#f0f0f1]', {}, (item.inputSchema || []).map(quickParamRow)))
-      const cubeRow = (cube, index) => h('div:space-y-2 py-3', {key: cube.id},
-        h('div:flex items-center justify-between', {}, h('span:text-sm font-semibold', {}, cube.Name),
+      const cubeRow = (cube, index) => h('div:space-y-2 py-3', {key: cube.id || cube.Name || cube.name || index},
+        h('div:flex items-center justify-between', {}, h('span:text-sm font-semibold', {}, cube.Name || cube.name || cube.id),
           h('button:text-xs text-[#6b6b6f] hover:text-red-600', {onClick: () => update({...item,
-            outputCubes: item.outputCubes.filter((value, cubeIndex) => cubeIndex != index)}), 'aria-label': `הסרת ${cube.Name}`}, '✕')),
+            outputCubes: item.outputCubes.filter((value, cubeIndex) => cubeIndex != index)}), 'aria-label': `הסרת ${cube.Name || cube.name || cube.id}`}, '✕')),
         h('div:grid grid-cols-[2fr_100px] gap-2 max-sm:grid-cols-1', {},
           h('input:rounded-lg border px-2 py-1 text-sm', {value: cube.description || '', placeholder: 'מה הקובייה מחזירה',
             onInput: event => setCube(index, {description: event.target.value})}),
@@ -191,18 +203,24 @@ ReactComp('wonderPlatformResourceFields', {
           field('תיאור באנגלית', h(`div:${classes.field} text-[#6b6b6f]`, {dir: 'ltr'}, item.apiDescription || '—'), 'description'),
           field('תיאור בעברית', h(`div:${classes.field} text-[#6b6b6f]`, {}, item.desc || '—'), 'hebrew_description')),
         h('p:text-xs leading-5 text-[#6b6b6f]', {}, 'כלי Connector מנוהל — לא ניתן לעריכה מכאן.'))
-      const mockLoadPackage = () => {
-        const seed = repo.flowPackages.find(value => String(value.Id) == item.id) || repo.flowPackages[0]
-        setPkg(seed)
-        update({...item, packageId: item.id, inputSchema: Object.values(seed.Quick || {}).flat().map(value =>
-          ({...value, Description: value.Description || ''})), outputCubes: []})
+      const loadFlowPackage = async () => {
+        setPackageState({loading: true, error: ''})
+        try {
+          const {quick, metadata} = await loadPackage(ctx.setVars({packageId: item.packageId}))
+          setPkg(metadata); update({...item, packageId: String(metadata.Id ?? item.packageId), inputSchema: Object.values(quick || {}).flat().map(value =>
+            ({...value, Description: value.Description || ''})), outputCubes: []})
+          setPackageState({loading: false, error: ''})
+        } catch (error) { setPackageState({loading: false, error: error.message || String(error)}) }
       }
-      const loaded = !!(item.packageId && (item.inputSchema || []).length)
+      const loaded = !!item.packageId
       const toolSteps = [
         {id: 'general', label: 'כללי', render: () => h('div:space-y-4', {},
+          field('מזהה הכלי', input('id', {dir: 'ltr', placeholder: 'ecommerceAnalyticsTool', disabled: !!item.originalId}), 'id'),
           h('div:flex items-end gap-2', {}, h('div:flex-1', {},
-            field('מזהה מארז Flow', input('id', {dir: 'ltr', placeholder: '12345678', inputMode: 'numeric'}), 'id')),
-            h(`button:${classes.button}`, {onClick: mockLoadPackage}, 'טעינת מארז')),
+            field('מזהה מארז Flow', input('packageId', {dir: 'ltr', placeholder: '7', inputMode: 'numeric'}), 'packageId')),
+            h(`button:${classes.button}`, {onClick: loadFlowPackage, disabled: packageState.loading || !item.packageId || !item.packageId.trim()},
+              packageState.loading ? 'טוען…' : 'טעינת מארז')),
+          packageState.error && h('p:text-xs text-red-600', {dir: 'ltr'}, packageState.error),
           field('תיאור באנגלית', h(`textarea:${classes.field} min-h-24 resize-y`, {dir: 'ltr', value: item.apiDescription || '',
             onInput: event => update({...item, apiDescription: event.target.value})}), 'description'),
           field('תיאור בעברית', h(`textarea:${classes.field} min-h-24 resize-y`, {value: item.desc || '',

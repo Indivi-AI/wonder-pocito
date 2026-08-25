@@ -132,6 +132,9 @@ class CreateTool(ToolDescription):
     tracable: bool = True
     dedicated_tool_config: dict[str, Any] = Field(default_factory=dict)
     code_files: list[CodeFile] = Field(default_factory=list)
+    package_id: str | None = None
+    input_schema: list[dict[str, Any]] | None = Field(default_factory=list)
+    output_cubes: list[dict[str, Any]] | None = Field(default_factory=list)
 
 
 class CreatePlugin(DescribedModel):
@@ -182,6 +185,9 @@ class UpdateTool(StrictModel):
     tracable: bool | None = None
     dedicated_tool_config: dict[str, Any] | None = None
     code_files: list[CodeFile] | None = None
+    package_id: str | None = None
+    input_schema: list[dict[str, Any]] | None = Field(default_factory=list)
+    output_cubes: list[dict[str, Any]] | None = Field(default_factory=list)
 
 
 class UpdatePlugin(UpdateBase):

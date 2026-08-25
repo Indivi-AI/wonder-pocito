@@ -129,6 +129,7 @@ export async function createApp(mode = process.env.WONDER_SERVICE || 'public') {
     roomRoutes.setupRoomLambdaAndApplet(app)
     if (!noAuth) (await import('./lib/gcs-proxy.js')).setupGCSProxyRoute(app)
     ;(await import('./lib/llm-proxy.js')).setupLlmProxyRoute(app)   // always: with LLM_PROXY_TARGET it forwards to llm-lite, no auth or GCS involved
+    ;(await import('./lib/flapi-proxy.js')).setupFlapiProxyRoute(app)
   }
   app.get('/health', (_, res) => res.json({ status: 'ok', mode }))
   return app

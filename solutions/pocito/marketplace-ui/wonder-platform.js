@@ -9,7 +9,7 @@ import './evaluation-page.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 const { wonderPlatformRunAgent, wonderPlatformListSkills, wonderPlatformLoadSkill, wonderPlatformMarketplaceCall,
-  wonderPlatformMarketplaceDetail, wonderPlatformMarketplaceManifest, wonderPlatformMarketplaceRepository,
+  wonderPlatformFlapiPackage, wonderPlatformMarketplaceDetail, wonderPlatformMarketplaceManifest, wonderPlatformMarketplaceRepository,
   wonderPlatformPublishSkill, wonderPlatformSaveRepository, wonderPlatformUpsert } = dsls.common.data
 
 ReactComp('wonderPlatform', {
@@ -23,6 +23,7 @@ ReactComp('wonderPlatform', {
     {id: 'extraPrimaryNav', as: 'array'}, {id: 'extraLibraryNav', as: 'array'},
     {id: 'loadRepo', dynamic: true, defaultValue: wonderPlatformMarketplaceRepository('%$roomWUrl%', '%$marketplaceBaseUrl%')},
     {id: 'saveRepo', dynamic: true, defaultValue: wonderPlatformSaveRepository('%$roomWUrl%', '%$repo%')},
+    {id: 'loadPackage', dynamic: true, defaultValue: wonderPlatformFlapiPackage('%$packageId%')},
     {id: 'upsert', dynamic: true, defaultValue: wonderPlatformUpsert('%$repo%', '%$resource%', { item: '%$item%' })},
     {id: 'loadSkill', dynamic: true, defaultValue: wonderPlatformLoadSkill('%$docletWUrl%')},
     {id: 'listSkills', dynamic: true, defaultValue: wonderPlatformListSkills('%$roomWUrl%')},
@@ -49,7 +50,7 @@ ReactComp('wonderPlatform', {
   impl: comp({
     hFunc: (ctx, {react: {h, hh, useEffect, useState, useRef}},
       {roomWUrl, marketplaceBaseUrl, agentOsBaseUrl, agentOsToken, defaultView, brand, brandTagline, brandIcon, extraPrimaryNav,
-        extraLibraryNav, loadRepo, saveRepo, upsert, loadSkill, listSkills, publishSkill,
+        extraLibraryNav, loadRepo, saveRepo, loadPackage, upsert, loadSkill, listSkills, publishSkill,
         marketplaceCall, marketplaceDetail, manifest, runAgent}) => () => {
       const repositoryRoomWUrl = ctx.vars.roomWUrl || roomWUrl, marketplaceUrl = ctx.vars.marketplaceBaseUrl || marketplaceBaseUrl
       const agentUrl = ctx.vars.agentOsBaseUrl || agentOsBaseUrl, token = ctx.vars.agentOsToken || agentOsToken
@@ -277,7 +278,7 @@ ReactComp('wonderPlatform', {
           marketplaceBaseUrl: marketplaceUrl, agentOsBaseUrl: agentUrl, agentOsToken: token, targetItems: repo.agents, openView})
           : editors[0]?.standalone ? hh(ctx, dsls.react['react-comp'].wonderPlatformResourcePage, {active: editors[0], update: updateBase,
               save: saveBase, deleteItem: deleteBase, back: () => requestLeave(() => setEditors([])), repo, openPicker: openEditorPicker,
-              saveAndRun, runningSet})
+              loadPackage, saveAndRun, runningSet})
               : hh(ctx, dsls.react['react-comp'].wonderPlatformCatalog, {view, repo, search, setSearch, openItem, createItem, importItem})
       return h('div:min-h-screen overflow-x-clip bg-white text-[#0f0f10] antialiased', {dir: 'rtl', lang: 'he', style: {
         fontFamily: '"Inter", "Assistant", system-ui, sans-serif', letterSpacing: '-0.005em'}},
@@ -287,7 +288,7 @@ ReactComp('wonderPlatform', {
         openConversation: id => (setConversationId(id), openView('chat'))}), content),
       editors.length > (editors[0]?.standalone ? 1 : 0) && hh(ctx,
         dsls.react['react-comp'].wonderPlatformResourceEditor, {editors, setEditors, repo, saveEditor, deleteEditor,
-          openPicker: openEditorPicker, requestClose: requestLeave}),
+          loadPackage, openPicker: openEditorPicker, requestClose: requestLeave}),
       picker && hh(ctx, dsls.react['react-comp'].wonderPlatformAttachPicker, {picker, repo, setPicker, attachSelected, createNested}),
       pendingLeave && h('div:fixed inset-0 z-[90] grid place-items-center bg-black/25 p-4', {}, h(
         'section:w-full max-w-md rounded-2xl border border-[#e8e8ea] bg-white p-5 shadow-2xl', {}, h(

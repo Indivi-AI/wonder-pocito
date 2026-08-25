@@ -66,7 +66,16 @@ ReactComp('wonderPlatformWorkspace', {
             h(`span:${classes.chip}`, {}, items.length)), addButton),
           h('div:mt-3 space-y-3', {}, items.map(id => {
             const item = repo[resource].find(value => value.id == id), managed = resource == 'tools' && item?.managed
-            if (!item) return null
+            if (!item) {
+              const label = {skills: 'מיומנות', tools: 'כלי', knowledge: 'ידע', plugins: 'פלאגין'}[resource] || 'משאב'
+              return h('article:rounded-xl border border-red-200 bg-red-50/30 p-3', {key: id}, h('div:flex items-start gap-3', {},
+                h('span:grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-red-100 text-xs font-bold text-red-600', {}, '⚠'),
+                h('div:min-w-0 flex-1', {},
+                  h('b:block text-sm text-red-700', {}, `${id} (${label} לא זמין)`),
+                  h('p:mt-1 text-xs leading-5 text-red-500', {}, 'המשאב נמחק או אינו קיים עוד בקטלוג.')),
+                h('button:rounded-lg p-1.5 hover:bg-red-100', {onClick: () => setDraft({...draft, [field]: items.filter(value => value != id)}),
+                  'aria-label': `הסרת ${id}`, title: `הסרת ${id}`}, h('L:X', {size: 14}))))
+            }
             const inherited = resource == 'skills' ? item.toolIds?.map(toolId => ['כלי', repo.tools.find(value => value.id == toolId)?.name])
               : resource == 'subagents' ? [...(item.skillIds || []).map(skillId => ['מיומנות', repo.skills.find(value => value.id == skillId)?.name]),
                 ...(item.toolIds || []).map(toolId => ['כלי', repo.tools.find(value => value.id == toolId)?.name])] : []
@@ -171,6 +180,11 @@ ReactComp('wonderPlatformWorkspace', {
           lastRun && h('div:mt-3 flex items-center justify-between text-xs text-[#6b6b6f]', {},
             `הרצה אחרונה · ${lastRun.started} · ${lastRun.status}`, h('button:text-[#0f0f10]', {
             onClick: () => (setPanelOpen(true), setTab('evaluation'))}, 'צפייה בהיסטוריית ההרצות'))))}]
+      const isAgent = ['agents', 'subagents'].includes(workspace.resource)
+      const isPlugin = workspace.resource == 'plugins'
+      const saveWorkspaceDisabled = !draft.name?.trim() || !draft.id?.trim()
+        || (isAgent && (!draft.apiDescription?.trim() || !draft.desc?.trim() || !draft.instructions?.trim()))
+        || (isPlugin && (!draft.apiDescription?.trim() || !draft.desc?.trim() || !draft.readme?.trim()))
       return h('main:min-h-screen min-w-0 flex-1 overflow-x-clip pb-24 sm:pb-0', {}, h('header:sticky top-0 z-20 flex flex-wrap items-center ' +
         'gap-3 border-b border-[#e8e8ea] bg-white px-5 py-4', {}, h('button:rounded-lg p-2 hover:bg-[#f4f4f5]', {onClick: back,
         'aria-label': `חזרה ל${{plugins: 'פלאגינים', subagents: 'סאב-אייג׳נטים', agents: 'סוכנים'}[workspace.resource]}`},
@@ -183,7 +197,7 @@ ReactComp('wonderPlatformWorkspace', {
       h(`span:${classes.chip}`, {}, draft.version || 'V0'), h(`button:${classes.button} ${panelOpen ? 'bg-[#f4f4f5] font-semibold' : ''}`, {
         onClick: () => setPanelOpen(!panelOpen), 'aria-label': panelOpen ? 'סגירת פאנל הרצת ניסוי' : 'פתיחת פאנל הרצת ניסוי',
         'aria-expanded': panelOpen, title: 'הרצת ניסוי'}, h('L:MessageCircle', {size: 14}), 'הרצת ניסוי'), h(`button:${classes.primary}`, {
-        disabled: !draft.name.trim() || !draft.id.trim(), onClick: () => saveWorkspace(draft),
+        disabled: saveWorkspaceDisabled, onClick: () => saveWorkspace(draft),
         'aria-label': 'שמירת סביבת עבודה'}, 'שמירה')),
       h('div:flex min-h-[calc(100vh-65px)] max-lg:block', {}, h(`section:min-w-0 flex-1 space-y-4 p-5 ${panelOpen ? 'lg:max-w-[58%]' : ''}`, {},
         hh(ctx, dsls.react['react-comp'].wonderPlatformWizard, {steps, activeId: stepId, onStep: setStepId})), panelOpen && h(

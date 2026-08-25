@@ -40,6 +40,8 @@ services:
       LLM_PROXY_TARGET: ${SITE_SCHEME}://${SITE_HOST}:${LLM_LITE_PUBLISHED_PORT}
       LLM_PROXY_KEY: ${LLM_PROXY_KEY}
       LLM_MODEL: ${LLM_MODEL}
+      FLAPI_BASE_URL: ${FLAPI_BASE_URL}
+      FLAPI_BEARER_TOKEN: ${FLAPI_BEARER_TOKEN}
 
   marketplace:
     image: marketplace-server:${IMAGE_TAG}
@@ -81,6 +83,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wonder-pg-local}
       MARKETPLACE_MODEL_FACTORY: ${MARKETPLACE_MODEL_FACTORY}
       MCP_BEARER_TOKEN: ${MCP_BEARER_TOKEN:-${LLM_PROXY_KEY}}
+      FLAPI_BASE_URL: ${FLAPI_BASE_URL}
+      FLAPI_BEARER_TOKEN: ${FLAPI_BEARER_TOKEN}
 
   pgvector:
     image: ${PGVECTOR_IMAGE:-pgvector/pgvector:0.8.6-pg16-bookworm}

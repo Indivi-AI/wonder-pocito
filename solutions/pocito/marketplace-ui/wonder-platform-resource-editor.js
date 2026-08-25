@@ -34,7 +34,7 @@ ReactComp('wonderPlatformAttachPicker', {
 
 ReactComp('wonderPlatformResourceEditor', {
   impl: comp({
-    hFunc: (ctx, {react: {h, hh}}) => ({editors, setEditors, repo, saveEditor, deleteEditor, openPicker, requestClose}) => {
+    hFunc: (ctx, {react: {h, hh}}) => ({editors, setEditors, repo, loadPackage, saveEditor, deleteEditor, openPicker, requestClose}) => {
       const {classes, labels} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx), active = editors.at(-1)
       if (!active) return null
       const {resource, item} = active, update = value => setEditors(editors.map((entry, index) => index == editors.length - 1
@@ -54,7 +54,7 @@ ReactComp('wonderPlatformResourceEditor', {
         disabled: saveDisabled, onClick: saveEditor, 'aria-label': 'שמירת עורך'}, 'שמירה'),
         h('button:rounded-lg p-2 hover:bg-gray-100', {onClick: () => requestClose(() => setEditors(editors.slice(0, -1))),
           'aria-label': 'סגירה'}, h('L:X'))))),
-      h('div:p-6', {}, hh(ctx, dsls.react['react-comp'].wonderPlatformResourceFields, {resource, item, update, repo, openPicker})),
+      h('div:p-6', {}, hh(ctx, dsls.react['react-comp'].wonderPlatformResourceFields, {resource, item, update, repo, loadPackage, openPicker})),
       h('div:flex items-center justify-between border-t border-[#e8e8ea] p-5', {}, !readOnlyTool && active.item.originalId &&
         (resource != 'skills' || repo.marketplace) && h('button:text-sm text-red-600', {
         onClick: deleteEditor}, 'מחיקה'), h(`button:${classes.button} mr-auto`, {

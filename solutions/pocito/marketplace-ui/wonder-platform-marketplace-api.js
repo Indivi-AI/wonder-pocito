@@ -22,6 +22,17 @@ Data('wonderPlatformMarketplaceRequest', {
   }
 })
 
+Data('wonderPlatformFlapiPackage', {
+  params: [
+    {id: 'packageId', as: 'string', mandatory: true}
+  ],
+  impl: async (ctx, {}, {packageId}) => {
+    const response = await fetch(`/flapi/package/${encodeURIComponent(packageId)}`)
+    if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || `FLAPI ${response.status}`)
+    return response.json()
+  }
+})
+
 const { wonderPlatformMarketplaceRequest } = dsls.common.data
 
 Data('wonderPlatformMarketplaceCall', {
@@ -114,7 +125,20 @@ Data('wonderPlatformMarketplaceItem', {
       tracable: item.tracable, dedicatedToolConfig: item.dedicated_tool_config || {}, codeFiles: item.code_files || [],
       kind: resource == 'tools' ? ['flow_package', 'flow_cube'].includes(item.tool_type) ? 'flow' : 'connector' : item.kind,
       managed: resource == 'tools' && item.tool_type == 'kick_graphql', files: item.contents?.data || item.files || [],
-      fileCount: item.contents?.meta?.total_count ?? item.files?.length ?? 0}
+      fileCount: item.contents?.meta?.total_count ?? item.files?.length ?? 0,
+      packageId: item.package_id || '', inputSchema: item.input_schema || [],
+      outputCubes: (item.output_cubes || []).map(cube => {
+        const name = cube.Name || cube.name || cube.id || '';
+        return {
+          ...cube,
+          id: cube.id || (item.package_id ? `query-${item.package_id}-${name}` : name),
+          Name: name,
+          description: cube.description || '',
+          markdownRows: cube.markdownRows || 20,
+          save: cube.save || false,
+          format: cube.format || 'json'
+        };
+      })}
   }
 })
 
