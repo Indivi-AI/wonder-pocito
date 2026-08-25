@@ -20,7 +20,7 @@ ReactComp('wonderPlatformWorkspace', {
       const savedConfig = runtimeConfig(workspace.item), [chatSessionId, setChatSessionId] = useState(`${workspace.item.id}-${Date.now()}`)
       const [sessionConfig, setSessionConfig] = useState(savedConfig), draftConfig = runtimeConfig(draft)
       const draftDirty = draftConfig != savedConfig, sessionOutdated = runs.length > 0 && sessionConfig != savedConfig
-      useEffect(() => { setDraft({...workspace.item}); setEvaluationId(workspace.item.evaluationId || '') }, [workspace.item])
+      useEffect(() => { setDraft({...workspace.item}); setEvaluationId(workspace.item.evaluationId || ''); setStepId('general') }, [workspace.item])
       useEffect(() => {
         setRuns([]); setChatSessionId(`${workspace.item.id}-${Date.now()}`); setSessionConfig(runtimeConfig(workspace.item))
       }, [workspace.item.id])

@@ -8,11 +8,12 @@ const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
 ReactComp('wonderPlatformResourceFields', {
   impl: comp({
-    hFunc: (ctx, {react: {h, hh, useState}}) => ({resource, item, update, repo, openPicker, saveAndRun, runningSet}) => {
+    hFunc: (ctx, {react: {h, hh, useState, useEffect}}) => ({resource, item, update, repo, openPicker, saveAndRun, runningSet}) => {
       const {classes} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
       const [historyDetail, setHistoryDetail] = useState(-1)
       const [pkg, setPkg] = useState()
       const [activeId, setActiveId] = useState('general')
+      useEffect(() => { setActiveId('general'); setPkg() }, [item.id, resource])
       const field = (label, control) => h('label:block text-xs font-semibold text-[#2e2e2e]', {}, label, control)
       const input = (key, props = {}) => h(`input:${classes.field}`, {value: item[key] || '',
         onInput: event => update({...item, [key]: event.target.value}), ...props})

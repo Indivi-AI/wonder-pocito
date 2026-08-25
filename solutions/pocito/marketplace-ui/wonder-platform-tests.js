@@ -471,6 +471,7 @@ Test('wonderPlatform.marketplaceAgentWorkspace', {
       click('סוכן תמיכת לקוחות B2B'),
       waitForText('חיבורים'),
       click('חיבורים'),
+      waitForText('הוספה'),
       waitForText('פלאגינים')
     )
   })
