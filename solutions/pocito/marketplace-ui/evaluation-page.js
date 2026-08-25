@@ -64,7 +64,7 @@ ReactComp('EvaluationPage', {
         saveQueue.current = saveQueue.current.then(() => saveRun(ctx.setVars({roomWUrl, run})))
         return saveQueue.current
       }
-      const stateShell = embedded ? ' sm:mr-[248px]' : ''
+      const stateShell = embedded ? ' min-w-0 flex-1' : ''
       if (loadError) return h(`main:grid min-h-screen place-items-center p-6${stateShell}`, {}, h(
         'div:max-w-lg rounded-xl border border-red-200 bg-white p-8 text-center', {}, h('L:CircleAlert', {
           size: 28, className: 'mx-auto text-red-600'}), h('h1:mt-4 text-lg font-bold', {}, 'לא ניתן לטעון את עמוד האבלואציה'), h(
@@ -239,7 +239,8 @@ ReactComp('EvaluationPage', {
                 onInput: event => updateCase(testCase.id, {referenceOutput: event.target.value})})))))))
       }
       const datasetsView = editingDatasetId ? datasetEditor(repo.datasets.find(item => item.id == editingDatasetId)) : h(
-        'div:grid gap-3 md:grid-cols-2 xl:grid-cols-3', {}, h('button:min-h-44 rounded-xl border border-dashed border-[#d8d8dc] p-6 text-[#6b6b6f] hover:border-[#0f0f10]', {
+        'div:grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]', {}, h('button:min-h-44 rounded-xl ' +
+          'border border-dashed border-[#d8d8dc] p-6 text-[#6b6b6f] hover:border-[#0f0f10]', {
           onClick: () => {
             const dataset = {id: `dataset-${Date.now().toString(36)}`, name: 'מערך ללא שם', description: '', version: 1, cases: []}
             editedVersions.current.add(`datasets:${dataset.id}`)
@@ -279,7 +280,8 @@ ReactComp('EvaluationPage', {
               onInput: event => update({threshold: +event.target.value})})))
       }
       const gradersView = editingGraderId ? graderEditor(repo.graders.find(item => item.id == editingGraderId)) : h(
-        'div:grid gap-3 md:grid-cols-2 xl:grid-cols-3', {}, h('button:min-h-44 rounded-xl border border-dashed border-[#d8d8dc] p-6 text-[#6b6b6f] hover:border-[#0f0f10]', {
+        'div:grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]', {}, h('button:min-h-44 rounded-xl ' +
+          'border border-dashed border-[#d8d8dc] p-6 text-[#6b6b6f] hover:border-[#0f0f10]', {
           onClick: () => {
             const grader = {id: `grader-${Date.now().toString(36)}`, name: 'בודק ללא שם', description: '', kind: 'contains', required: true,
               threshold: 1, version: 1}
@@ -346,8 +348,8 @@ ReactComp('EvaluationPage', {
         composer: ['הרצה חדשה', 'בוחרים סוכן, תרחישים ומדדי הצלחה — ומקבלים תוצאה שאפשר לסמוך עליה.'],
         runs: ['הרצות קודמות', 'תוצאות שמפרידות בין תקלות הרצה לבין איכות התשובה.'],
         library: ['ספריית אבלואציה', 'יוצרים ומנהלים סטים ובודקים לשימוש חוזר.']}[view]
-      const page = h(`${embedded ? 'main:min-h-screen px-5 pb-24 pt-10 sm:mr-[248px] sm:px-10' : 'main:mx-auto px-4 py-8 sm:px-7'} max-w-[1440px]`, {}, h(
-        'div:mx-auto max-w-6xl', {}, h('div', {}, h('h1:text-[26px] font-semibold tracking-[-0.02em]', {}, pageMeta[0]), h(
+      const page = h(`${embedded ? 'main:min-h-screen min-w-0 flex-1 px-5 pb-24 pt-10 sm:px-10' : 'main:mx-auto px-4 py-8 sm:px-7'}`, {}, h(
+        'div:mx-auto max-w-[1600px]', {}, h('div', {}, h('h1:text-[26px] font-semibold tracking-[-0.02em]', {}, pageMeta[0]), h(
           'p:mt-1.5 text-sm text-[#6b6b6f]', {}, pageMeta[1])), nav, h('div:mt-5', {}, {composer, runs: runsView, library: libraryView}[view])))
       const alert = notice && h(`div:fixed ${embedded ? 'bottom-16' : 'bottom-5'} left-5 z-[100] rounded-xl border border-[#d8d8dc] ` +
         'bg-[#f4f4f5] px-4 py-2 text-sm sm:bottom-5', {}, notice)
