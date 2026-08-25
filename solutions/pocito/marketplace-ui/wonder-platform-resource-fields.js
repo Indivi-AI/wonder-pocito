@@ -37,10 +37,8 @@ ReactComp('wonderPlatformResourceFields', {
         {id: 'general', label: 'כללי', render: generalStep},
         {id: 'instructions', label: 'הנחיות', render: () => field('הנחיות', h(`textarea:${classes.field} min-h-40 resize-y`, {
           value: item.instructions || '', onInput: event => update({...item, instructions: event.target.value})}))},
-        {id: 'plugins', label: 'פלאגינים', render: () => relation('pluginIds', 'plugins', 'פלאגינים')},
-        {id: 'skills', label: 'מיומנויות', render: () => relation('skillIds', 'skills', 'מיומנויות')},
-        {id: 'tools', label: 'כלים', render: () => relation('toolIds', 'tools', 'כלים')},
-        {id: 'knowledge', label: 'ידע', render: () => relation('knowledgeIds', 'knowledge', 'ידע')}
+        {id: 'connections', label: 'חיבורים', render: () => h('div:space-y-4', {}, relation('pluginIds', 'plugins', 'פלאגינים'),
+          relation('skillIds', 'skills', 'מיומנויות'), relation('toolIds', 'tools', 'כלים'), relation('knowledgeIds', 'knowledge', 'ידע'))}
       ] : resource == 'skills' ? [
         {id: 'general', label: 'כללי', render: generalStep},
         {id: 'content', label: 'תוכן המיומנות', render: () => field(repo.marketplace ? 'SKILL.md' : 'תוכן המיומנות', h(
@@ -72,16 +70,15 @@ ReactComp('wonderPlatformResourceFields', {
         {id: 'instructions', label: 'הנחיות', render: () => field('הנחיות בסיס', h(
           `textarea:${classes.field} min-h-40 resize-y`, {value: item.instructions || '',
             onInput: event => update({...item, instructions: event.target.value})}))},
-        {id: 'skills', label: 'מיומנויות', render: () => relation('skillIds', 'skills', 'מיומנויות')},
-        {id: 'tools', label: 'כלים', render: () => relation('toolIds', 'tools', 'כלים')},
-        {id: 'knowledge', label: 'ידע', render: () => relation('knowledgeIds', 'knowledge', 'ידע')}
+        {id: 'connections', label: 'חיבורים', render: () => h('div:space-y-4', {}, relation('skillIds', 'skills', 'מיומנויות'),
+          relation('toolIds', 'tools', 'כלים'), relation('knowledgeIds', 'knowledge', 'ידע'))}
       ] : [
         {id: 'general', label: 'כללי', render: generalStep},
         {id: 'instructions', label: 'הנחיות בסיס', render: () => field('הנחיות בסיס', h(
           `textarea:${classes.field} min-h-40 resize-y`, {value: item.instructions || '',
             onInput: event => update({...item, instructions: event.target.value})}))},
-        {id: 'skills', label: 'מיומנויות', render: () => relation('skillIds', 'skills', 'מיומנויות')},
-        {id: 'tools', label: 'כלים', render: () => relation('toolIds', 'tools', 'כלים')}
+        {id: 'connections', label: 'חיבורים', render: () => h('div:space-y-4', {}, relation('skillIds', 'skills', 'מיומנויות'),
+          relation('toolIds', 'tools', 'כלים'))}
       ]
       const currentPackage = pkg || repo.flowPackages.find(value => value.Id == item.packageId)
       const setCube = (index, patch) => update({...item, outputCubes: item.outputCubes.map((value, cubeIndex) =>

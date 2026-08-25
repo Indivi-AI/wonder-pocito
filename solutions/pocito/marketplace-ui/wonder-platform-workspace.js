@@ -3,6 +3,7 @@ import '@jb6/react'
 import './wonder-platform-domain.js'
 import './wonder-platform-agent-results.js'
 import './wonder-platform-searchable-select.js'
+import './wonder-platform-wizard.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
@@ -14,7 +15,7 @@ ReactComp('wonderPlatformWorkspace', {
       const [panelOpen, setPanelOpen] = useState(true), [tab, setTab] = useState('test'), [testInput, setTestInput] = useState('')
       const [runs, setRuns] = useState([]), [evaluationId, setEvaluationId] = useState(workspace.item.evaluationId || '')
       const [evaluationRun, setEvaluationRun] = useState(), [detail, setDetail] = useState(-1)
-      const [activeTab, setActiveTab] = useState('settings')
+      const [activeTab, setActiveTab] = useState('settings'), [stepId, setStepId] = useState('general')
       const runtimeConfig = item => JSON.stringify(item)
       const savedConfig = runtimeConfig(workspace.item), [chatSessionId, setChatSessionId] = useState(`${workspace.item.id}-${Date.now()}`)
       const [sessionConfig, setSessionConfig] = useState(savedConfig), draftConfig = runtimeConfig(draft)
@@ -118,6 +119,40 @@ ReactComp('wonderPlatformWorkspace', {
           disabled: !evaluationId || shownRun?.status == 'מריץ…', onClick: executeEval}, shownRun?.status == 'מריץ…' ? 'מריץ…' : 'הרצת הסט')),
       shownRun && h('div:mt-4', {}, h('div:flex items-center gap-2', {}, h(`span:${classes.chip}`, {}, shownRun.status),
         h('span:text-xs text-[#6b6b6f]', {}, shownRun.started || 'עכשיו')), h('div:mt-4 space-y-2', {}, (shownRun.rows || []).map(evalRow))))
+      const steps = [{id: 'general', label: 'כללי', render: () => h('div:space-y-4', {},
+        h(`section:${classes.card} space-y-4`, {}, h('label:block text-xs font-semibold', {}, 'id', h(
+          'input:mt-2 w-full rounded-xl border border-[#e8e8ea] bg-[#fafafa] p-3 font-mono text-sm', {dir: 'ltr', value: draft.id || '',
+            placeholder: 'uiRenderingSkill', disabled: !!draft.originalId,
+            onInput: event => setDraft({...draft, id: event.target.value})})), h('label:block text-xs font-semibold', {},
+          'Description', h('textarea:mt-2 w-full resize-y rounded-xl border border-[#e8e8ea] bg-[#fafafa] p-3 text-sm', {
+            dir: 'ltr', value: draft.apiDescription || '', onInput: event => setDraft({...draft, apiDescription: event.target.value})})),
+        h('label:block text-xs font-semibold', {}, 'תיאור בעברית', h(
+          'textarea:mt-2 w-full resize-y rounded-xl border border-[#e8e8ea] bg-[#fafafa] p-3 text-sm', {value: draft.desc || '',
+            onInput: event => setDraft({...draft, desc: event.target.value})}))),
+        draft._marketplace && h(`section:${classes.card}`, {}, h('div:flex flex-wrap items-center gap-2', {}, h('b:text-sm', {},
+          'Marketplace API'), h(`span:${classes.chip}`, {}, `${draft.versions?.length || 0} גרסאות`), h(`span:${classes.chip}`, {},
+            `${draft.audit?.length || 0} אירועי audit`)), draft.references && h(
+            'pre:mt-3 overflow-x-auto rounded-xl bg-[#fafafa] p-3 text-xs', {dir: 'ltr'}, JSON.stringify(draft.references, null, 2)),
+          draft.configYaml && h('details:mt-3', {}, h('summary:cursor-pointer text-xs font-semibold text-[#0f0f10]', {}, 'config.yaml'),
+            h('pre:mt-2 max-w-full overflow-x-auto rounded-xl bg-[#fafafa] p-3 text-xs', {dir: 'ltr'}, draft.configYaml))))},
+        {id: 'instructions', label: 'הנחיות', render: () => h('div:space-y-4', {},
+          h(`section:${classes.card}`, {}, h('div:flex items-center justify-between', {}, h('b:text-sm', {}, workspace.resource == 'plugins'
+            ? 'README.md' : 'system_prompt'), h('span:text-[10px] text-[#6b6b6f]', {}, `טקסט חופשי · ${workspace.resource == 'plugins'
+              ? draft.readme?.length || 0 : draft.instructions?.length || 0} תווים`)), h(
+            'textarea:mt-3 min-h-44 w-full resize-y rounded-xl border border-[#e8e8ea] bg-[#fafafa] p-3 text-sm leading-7', {
+              value: workspace.resource == 'plugins' ? draft.readme || '' : draft.instructions || '',
+              onInput: event => setDraft({...draft, [workspace.resource == 'plugins' ? 'readme' : 'instructions']: event.target.value})}),
+          h('div:mt-4', {}, h('span:block text-xs font-semibold', {}, 'סט אבלואציה מקושר'), h('div:mt-2', {},
+            hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {items: repo.evaluations, value: draft.evaluationId || '',
+              onChange: id => setDraft({...draft, evaluationId: id}), placeholder: 'ללא סט מקושר', empty: 'ללא סט מקושר'}))),
+          lastRun && h('div:mt-3 flex items-center justify-between text-xs text-[#6b6b6f]', {},
+            `הרצה אחרונה · ${lastRun.started} · ${lastRun.status}`, h('button:text-[#0f0f10]', {
+            onClick: () => (setPanelOpen(true), setTab('evaluation'))}, 'צפייה בהיסטוריית ההרצות'))),
+          ['subagents', 'agents'].includes(workspace.resource) && !draft.originalId && h(`section:${classes.card}`, {},
+            h('b:text-sm', {}, 'README (creation only)'), h(
+              'textarea:mt-3 min-h-32 w-full resize-y rounded-xl border border-[#e8e8ea] bg-[#fafafa] p-3 text-sm', {
+                value: draft.readme || '', onInput: event => setDraft({...draft, readme: event.target.value})})))},
+        {id: 'connections', label: 'חיבורים', render: () => h('div:space-y-4', {}, relationRows.map(relationSection))}]
       return h('main:min-h-screen overflow-x-clip pb-24 sm:mr-[248px] sm:pb-0', {}, h('header:sticky top-0 z-20 flex flex-wrap items-center ' +
         'gap-3 border-b border-[#e8e8ea] bg-white px-5 py-4', {}, h('button:rounded-lg p-2 hover:bg-[#f4f4f5]', {onClick: back,
         'aria-label': `חזרה ל${{plugins: 'פלאגינים', subagents: 'סאב-אייג׳נטים', agents: 'סוכנים'}[workspace.resource]}`},
@@ -130,39 +165,7 @@ ReactComp('wonderPlatformWorkspace', {
         'aria-label': 'שמירת סביבת עבודה'}, 'שמירה'), draft.originalId && h(
               'button:text-xs text-red-600', {onClick: props.deleteWorkspace}, 'מחיקה')),
       h('div:flex min-h-[calc(100vh-65px)] max-lg:block', {}, h(`section:min-w-0 flex-1 space-y-4 p-5 ${panelOpen ? 'lg:max-w-[58%]' : ''}`, {},
-        h(`section:${classes.card} space-y-4`, {}, h('label:block text-xs font-semibold', {}, 'id', h(
-          'input:mt-2 w-full rounded-xl border border-[#e8e8ea] bg-[#fafafa] p-3 font-mono text-sm', {dir: 'ltr', value: draft.id || '',
-            placeholder: 'uiRenderingSkill', disabled: !!draft.originalId,
-            onInput: event => setDraft({...draft, id: event.target.value})})), h('label:block text-xs font-semibold', {},
-          'Description', h('textarea:mt-2 w-full resize-y rounded-xl border border-[#e8e8ea] bg-[#fafafa] p-3 text-sm', {
-            dir: 'ltr', value: draft.apiDescription || '', onInput: event => setDraft({...draft, apiDescription: event.target.value})})),
-          h('label:block text-xs font-semibold', {}, 'תיאור בעברית', h(
-          'textarea:mt-2 w-full resize-y rounded-xl border border-[#e8e8ea] bg-[#fafafa] p-3 text-sm', {value: draft.desc || '',
-            onInput: event => setDraft({...draft, desc: event.target.value})}))),
-        h(`section:${classes.card}`, {}, h('div:flex items-center justify-between', {}, h('b:text-sm', {}, workspace.resource == 'plugins'
-          ? 'README.md' : 'system_prompt'), h('span:text-[10px] text-[#6b6b6f]', {}, `טקסט חופשי · ${workspace.resource == 'plugins'
-            ? draft.readme?.length || 0 : draft.instructions?.length || 0} תווים`)), h(
-          'textarea:mt-3 min-h-44 w-full resize-y rounded-xl border border-[#e8e8ea] bg-[#fafafa] p-3 text-sm leading-7', {
-            value: workspace.resource == 'plugins' ? draft.readme || '' : draft.instructions || '',
-            onInput: event => setDraft({...draft, [workspace.resource == 'plugins' ? 'readme' : 'instructions']: event.target.value})}),
-        h('div:mt-4', {}, h('span:block text-xs font-semibold', {}, 'סט אבלואציה מקושר'), h('div:mt-2', {},
-          hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {items: repo.evaluations, value: draft.evaluationId || '',
-            onChange: id => setDraft({...draft, evaluationId: id}), placeholder: 'ללא סט מקושר', empty: 'ללא סט מקושר'}))),
-        lastRun && h('div:mt-3 flex items-center justify-between text-xs text-[#6b6b6f]', {},
-          `הרצה אחרונה · ${lastRun.started} · ${lastRun.status}`, h('button:text-[#0f0f10]', {
-          onClick: () => (setPanelOpen(true), setTab('evaluation'))}, 'צפייה בהיסטוריית ההרצות'))),
-        ['subagents', 'agents'].includes(workspace.resource) && !draft.originalId && h(`section:${classes.card}`, {},
-          h('b:text-sm', {}, 'README (creation only)'), h(
-            'textarea:mt-3 min-h-32 w-full resize-y rounded-xl border border-[#e8e8ea] bg-[#fafafa] p-3 text-sm', {
-              value: draft.readme || '', onInput: event => setDraft({...draft, readme: event.target.value})})),
-        h('h2:pt-2 text-lg font-bold', {}, `חיבורי ${targetLabel}`), relationRows.map(relationSection),
-        draft._marketplace && h(
-          `section:${classes.card}`, {}, h('div:flex flex-wrap items-center gap-2', {}, h('b:text-sm', {}, 'Marketplace API'),
-            h(`span:${classes.chip}`, {}, `${draft.versions?.length || 0} גרסאות`), h(`span:${classes.chip}`, {},
-              `${draft.audit?.length || 0} אירועי audit`)), draft.references && h('pre:mt-3 overflow-x-auto rounded-xl bg-[#fafafa] p-3 text-xs', {
-                dir: 'ltr'}, JSON.stringify(draft.references, null, 2)), draft.configYaml && h(
-              'details:mt-3', {}, h('summary:cursor-pointer text-xs font-semibold text-[#0f0f10]', {}, 'config.yaml'), h(
-                'pre:mt-2 max-w-full overflow-x-auto rounded-xl bg-[#fafafa] p-3 text-xs', {dir: 'ltr'}, draft.configYaml)))), panelOpen ? h(
+        hh(ctx, dsls.react['react-comp'].wonderPlatformWizard, {steps, activeId: stepId, onStep: setStepId})), panelOpen ? h(
         'aside:w-full shrink-0 self-start border-r border-[#e8e8ea] bg-[#fafafa] lg:sticky lg:top-[65px] lg:h-[calc(100vh-65px)] ' +
           'lg:w-[42%]', {}, h('div:flex items-center border-b border-[#e8e8ea] bg-white p-3', {},
           h('button:ml-2 rounded-lg p-2', {onClick: () => setPanelOpen(false), 'aria-label': 'סגירה'}, h('L:X', {size: 15})),

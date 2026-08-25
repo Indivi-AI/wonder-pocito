@@ -406,9 +406,9 @@ Test('wonderPlatform.wfetchApi', {
 })
 
 Test('wonderPlatform.pluginWorkspace', {
-  impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(), and(contains('חיבורי הפלאגין'), contains('הרצת ניסוי'),
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(), and(contains('חיבורים'), contains('הרצת ניסוי'),
     contains('סט אבלואציה מקושר')), {userActions: actions(waitForText('אנליסט הוכחת קיום'), click('אנליסט הוכחת קיום'),
-      waitForText('חיבורי הפלאגין'))})
+      waitForText('חיבורים'), click('הנחיות'), waitForText('סט אבלואציה מקושר'))})
 })
 
 Test('wonderPlatform.evaluationCatalog', {
@@ -436,8 +436,9 @@ Test('wonderPlatform.chatContextPanel', {
 
 Test('wonderPlatform.marketplacePluginWorkspace', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformMarketplaceTestApp(),
-    and(contains('README.md'), contains('Marketplace API'), contains('2 גרסאות'), contains('config.yaml')), {
-      userActions: actions(waitForText('פלאגין ראיות'), click('פלאגין ראיות'), waitForText('Marketplace API'))})
+    and(contains('Marketplace API'), contains('2 גרסאות'), contains('config.yaml'), contains('חיבורים')), {
+      userActions: actions(waitForText('פלאגין ראיות'), click('פלאגין ראיות'), waitForText('Marketplace API'),
+        click('הנחיות'), waitForText('README.md'), click('כללי'), waitForText('Marketplace API'))})
 })
 
 Test('wonderPlatform.marketplaceSkillEditor', {
@@ -459,7 +460,7 @@ Test('wonderPlatform.marketplaceAgentWorkspace', {
   impl: reactTest({
     testedComp: {$: 'react-comp<react>wonderPlatformMarketplaceTestApp'},
     expectedResult: and(
-      contains('חיבורי הסוכן'),
+      contains('חיבורים'),
       contains('פלאגינים'),
       contains('ידע')
     ),
@@ -468,7 +469,9 @@ Test('wonderPlatform.marketplaceAgentWorkspace', {
       click('סוכנים'),
       waitForText('סוכן תמיכת לקוחות B2B'),
       click('סוכן תמיכת לקוחות B2B'),
-      waitForText('חיבורי הסוכן')
+      waitForText('חיבורים'),
+      click('חיבורים'),
+      waitForText('פלאגינים')
     )
   })
 })
@@ -476,7 +479,7 @@ Test('wonderPlatform.marketplaceAgentWorkspace', {
 Test('wonderPlatform.marketplaceAgentCreate', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformMarketplaceTestApp(), and(contains('README (creation only)'), contains('שמירה')), {
     userActions: actions(waitForText('פלאגין ראיות'), click('סוכנים'), waitForText('סוכן חדש'), click('סוכן חדש'),
-      waitForText('README (creation only)'))})
+      waitForText('הנחיות'), click('הנחיות'), waitForText('README (creation only)'))})
 })
 
 ReactComp('wonderPlatformChatTestHost', {
@@ -657,7 +660,7 @@ Test('wonderPlatform.workspaceSavesOnlyFromButton', {
     userActions: actions(
       waitForText('אנליסט הוכחת קיום'),
       click('אנליסט הוכחת קיום'),
-      waitForText('חיבורי הפלאגין'),
+      waitForText('חיבורים'),
       wonderPlatformSetControl({selector: '[aria-label="display_name"]', value: 'טיוטה שלא נשמרה'}),
       click('aria-label="חזרה לפלאגינים"'),
       waitForText('אנליסט הוכחת קיום'),
@@ -681,6 +684,8 @@ Test('wonderPlatform.marketplaceAgentCreateRelations', {
       click('סוכנים'),
       waitForText('סוכן חדש'),
       click('סוכן חדש'),
+      waitForText('חיבורים'),
+      click('חיבורים'),
       wonderPlatformClickInSection('מיומנויות', 'הוספה'),
       waitForText('אישור בחירה'),
       click('מיומנות ראיות'),
@@ -758,6 +763,7 @@ Test('wonderPlatform.marketplaceUiAgentE2e', {
       click('פלאגין חדש'),
       wonderPlatformSetControl('id', { value: 'e2ePlugin' }),
       wonderPlatformSetControl({ selector: '[aria-label="display_name"]', value: 'E2E Plugin' }),
+      click('חיבורים'),
       wonderPlatformClickInSection('מיומנויות', 'הוספה'),
       waitForText('E2E Skill'),
       click('E2E Skill'),
@@ -773,14 +779,19 @@ Test('wonderPlatform.marketplaceUiAgentE2e', {
       click('סאב-אייג׳נטים'),
       waitForText('סאב-אייג׳נט חדש'),
       click('סאב-אייג׳נט חדש'),
+      click('הנחיות'),
       waitForText('README (creation only)'),
       wonderPlatformSetControl({ selector: '[aria-label="display_name"]', value: 'E2E Agent' }),
+      click('כללי'),
       wonderPlatformSetControl('id', { value: 'e2eAgent' }),
+      click('הנחיות'),
       wonderPlatformSetControl('system_prompt', {
         value: 'Use the attached plugin. Return its skill fact and exact tool result.'
       }),
       click('aria-label="שמירת סביבת עבודה"'),
+      click('כללי'),
       waitForText('Marketplace API'),
+      click('חיבורים'),
       wonderPlatformClickInSection('פלאגינים', 'הוספה'),
       waitForText('E2E Plugin'),
       click('E2E Plugin'),
