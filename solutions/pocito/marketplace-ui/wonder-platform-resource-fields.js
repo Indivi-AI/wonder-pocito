@@ -86,7 +86,7 @@ ReactComp('wonderPlatformResourceFields', {
       const currentPackage = pkg || repo.flowPackages.find(value => value.Id == item.packageId)
       const setCube = (index, patch) => update({...item, outputCubes: item.outputCubes.map((value, cubeIndex) =>
         cubeIndex == index ? {...value, ...patch} : value)})
-      const quickParamRow = (row, index) => h('div:mt-3 rounded-lg border border-[#e8e8ea] p-2', {key: row.Name},
+      const quickParamRow = (row, index) => h('div:py-3', {key: row.Name},
         h('div:flex flex-wrap items-center justify-between gap-2', {}, h('span', {}, h('b:text-sm', {}, row.DisplayName),
           h('span:mr-2 font-mono text-xs text-[#6b6b6f]', {dir: 'ltr'}, row.Name)), h('span:text-xs text-[#6b6b6f]', {}, row.Type)),
         h('div:mt-1 flex flex-wrap gap-1.5', {}, row.IsRequired && h(`span:${classes.chip}`, {}, 'נדרש'),
@@ -95,8 +95,9 @@ ReactComp('wonderPlatformResourceFields', {
           onInput: event => update({...item, inputSchema: item.inputSchema.map((value, rowIndex) => rowIndex == index
             ? {...value, Description: event.target.value} : value)})}))
       const inputSchemaSection = () => h('section:rounded-2xl border border-[#e8e8ea] p-4', {},
-        h('b:text-sm', {}, 'סכמת קלט — פרמטרים מהירים'), (item.inputSchema || []).map(quickParamRow))
-      const cubeRow = (cube, index) => h('div:mt-3 space-y-2 rounded-lg border border-[#e8e8ea] p-2', {key: cube.id},
+        h('b:text-sm', {}, 'סכמת קלט — פרמטרים מהירים'),
+        h('div:mt-2 divide-y divide-[#f0f0f1]', {}, (item.inputSchema || []).map(quickParamRow)))
+      const cubeRow = (cube, index) => h('div:space-y-2 py-3', {key: cube.id},
         h('div:flex items-center justify-between', {}, h('span:text-sm font-semibold', {}, cube.Name),
           h('button:text-xs text-[#6b6b6f] hover:text-red-600', {onClick: () => update({...item,
             outputCubes: item.outputCubes.filter((value, cubeIndex) => cubeIndex != index)}), 'aria-label': `הסרת ${cube.Name}`}, '✕')),
@@ -121,7 +122,7 @@ ReactComp('wonderPlatformResourceFields', {
           h('div:mt-3', {}, hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {items: allCubes.map(cube =>
             ({id: cube.id, name: cube.Name})), value: (item.outputCubes || []).map(cube => cube.id), onChange: pickCubes, multi: true,
             placeholder: 'בחר קוביות פלט'})),
-          (item.outputCubes || []).map(cubeRow))
+          h('div:mt-2 divide-y divide-[#f0f0f1]', {}, (item.outputCubes || []).map(cubeRow)))
       }
       const removeFile = index => update({...item, files: item.files.filter((value, row) => row != index),
         deletedContentIds: item.files[index].id ? [...(item.deletedContentIds || []), item.files[index].id] : item.deletedContentIds})
