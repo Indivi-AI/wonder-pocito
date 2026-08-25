@@ -1,0 +1,68 @@
+- generic [ref=f27e6]:
+  - complementary [ref=f27e9]:
+    - generic [ref=f27e10]: Wonder Agents
+    - generic [ref=f27e16]:
+      - button "שיחה חדשה" [ref=f27e17] [cursor=pointer]
+      - button "סוכנים" [ref=f27e19] [cursor=pointer]
+      - button "פלאגינים" [ref=f27e23] [cursor=pointer]
+      - button "צ׳אט" [ref=f27e30] [cursor=pointer]
+      - button "אבלואציה" [ref=f27e33] [cursor=pointer]
+      - button "ספרייה" [ref=f27e37] [cursor=pointer]
+      - generic [ref=f27e40]:
+        - button "מיומנויות" [ref=f27e41] [cursor=pointer]
+        - button "כלים" [ref=f27e44] [cursor=pointer]
+        - button "ידע" [active] [ref=f27e47] [cursor=pointer]
+      - generic [ref=f27e52]:
+        - generic [ref=f27e53]: שיחות אחרונות
+        - button "מוכנות תוכנית שחר" [ref=f27e54] [cursor=pointer]
+        - button "פערי מפרט מוקד צפון" [ref=f27e56] [cursor=pointer]
+        - button "חריגות שבוע 33" [ref=f27e58] [cursor=pointer]
+    - generic [ref=f27e60]:
+      - generic [ref=f27e61]: הגדרות
+      - generic [ref=f27e65]: עזרה
+  - main [ref=f27e70]:
+    - generic [ref=f27e72]:
+      - generic [ref=f27e73]:
+        - generic [ref=f27e74]:
+          - heading "ידע" [level=1] [ref=f27e75]
+          - paragraph [ref=f27e76]: מקורות מידע ומסמכים המשמשים ל-RAG ומשפרים דיוק סוכנים.
+        - button "Knowledge חדש" [ref=f27e77] [cursor=pointer]
+      - generic [ref=f27e79]:
+        - generic [ref=f27e80]:
+          - button "קטלוג גלובלי" [ref=f27e81] [cursor=pointer]
+          - button "שלי" [ref=f27e83] [cursor=pointer]
+          - button "מיובאים" [ref=f27e84] [cursor=pointer]
+        - textbox "חיפוש…" [ref=f27e89]
+      - generic [ref=f27e90]:
+        - button "נהלי שירות לקוחות ידע V0 אוסף נהלי שירות, תסריטי שיחה ומדיניות החזרות עדכנית. עודכן היום שלי" [ref=f27e91] [cursor=pointer]:
+          - generic [ref=f27e92]:
+            - generic [ref=f27e93]:
+              - heading "נהלי שירות לקוחות" [level=3] [ref=f27e94]
+              - generic [ref=f27e95]: ידע
+            - generic [ref=f27e96]: V0
+          - paragraph [ref=f27e97]: אוסף נהלי שירות, תסריטי שיחה ומדיניות החזרות עדכנית.
+          - generic [ref=f27e98]:
+            - generic [ref=f27e99]: עודכן היום
+            - generic [ref=f27e100]: שלי
+        - button "מחקרי שוק גלובליים ידע V0 מחקרי שוק וסיכומי מגמות ממקורות חיצוניים. עודכן היום גלובלי ייבוא" [ref=f27e102] [cursor=pointer]:
+          - generic [ref=f27e103]:
+            - generic [ref=f27e104]:
+              - heading "מחקרי שוק גלובליים" [level=3] [ref=f27e105]
+              - generic [ref=f27e106]: ידע
+            - generic [ref=f27e107]: V0
+          - paragraph [ref=f27e108]: מחקרי שוק וסיכומי מגמות ממקורות חיצוניים.
+          - generic [ref=f27e109]:
+            - generic [ref=f27e110]: עודכן היום
+            - generic [ref=f27e111]:
+              - generic [ref=f27e112]: גלובלי
+              - button "ייבוא" [ref=f27e113]
+        - button "מסמכים אישיים ידע V0 טיוטות מחקר וסיכומים אישיים. עודכן היום מיובא" [ref=f27e114] [cursor=pointer]:
+          - generic [ref=f27e115]:
+            - generic [ref=f27e116]:
+              - heading "מסמכים אישיים" [level=3] [ref=f27e117]
+              - generic [ref=f27e118]: ידע
+            - generic [ref=f27e119]: V0
+          - paragraph [ref=f27e120]: טיוטות מחקר וסיכומים אישיים.
+          - generic [ref=f27e121]:
+            - generic [ref=f27e122]: עודכן היום
+            - generic [ref=f27e123]: מיובא
