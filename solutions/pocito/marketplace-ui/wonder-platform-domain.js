@@ -143,7 +143,7 @@ Data('wonderPlatformTrace', {
 Data('wonderPlatformUi', {
   impl: () => ({
     resources: {
-      plugins: {title: 'פלאגינים', subtitle: 'פלאגין אורז מיומנויות, כלים וידע ליחידה אחת.',
+      plugins: {title: 'פלאגינים', subtitle: 'פלאגין אורז מיומנויות, כלים וידע ליחידה אחת',
         create: 'פלאגין חדש',
         icon: 'PlugZap', label: 'פלאגין', relations: [['skillIds', 'skills', 'מיומנויות'], ['toolIds', 'tools', 'כלים'],
           ['knowledgeIds', 'knowledge', 'ידע']]},
@@ -151,9 +151,9 @@ Data('wonderPlatformUi', {
         label: 'מיומנות', relations: [['toolIds', 'tools', 'כלים']]},
       tools: {title: 'כלים', subtitle: 'ארגז הכלים שעומד ברשות הסוכנים',
         create: 'כלי ממארז Flow', icon: 'Wrench', label: 'כלי'},
-      subagents: {title: 'סאב-אייג׳נטים', subtitle: 'ספרייה משותפת של יעדי האצלה ממוקדים.', create: 'סאב-אייג׳נט חדש',
+      subagents: {title: 'סאב-אייג׳נטים', subtitle: 'ספרייה משותפת של יעדי האצלה ממוקדים', create: 'סאב-אייג׳נט חדש',
         icon: 'Network', label: 'סאב-אייג׳נט', relations: [['skillIds', 'skills', 'מיומנויות'], ['toolIds', 'tools', 'כלים']]},
-      knowledge: {title: 'ידע', subtitle: 'מקורות מידע ומסמכים המשמשים ל-RAG ומשפרים דיוק סוכנים.', create: 'Knowledge חדש',
+      knowledge: {title: 'ידע', subtitle: 'מקורות מידע ומסמכים המשמשים ל-RAG ומשפרים דיוק סוכנים', create: 'Knowledge חדש',
         icon: 'Database', label: 'ידע'},
       agents: {title: 'סוכנים', subtitle: 'סוכנים מותאמים אישית עבור כל מטרה',
         create: 'סוכן חדש', icon: 'Bot', label: 'סוכן',
