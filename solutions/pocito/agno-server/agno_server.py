@@ -162,6 +162,16 @@ class MarketplaceAgentRuntime:
         return plugin | {'config': {'system_prompt': plugin.get('readme') or plugin['description'],
           'backend_config': {'harness_type': 'deepagents'}, 'plugins': [name]}}
 
+    def agent_manifest(self, room, name):
+        try:
+            return self.repo.get(room, 'agent', name)
+        except HTTPException as error:
+            if error.status_code != 404:
+                raise
+        plugin = self.repo.get(room, 'plugin', name)
+        return plugin | {'config': {'system_prompt': plugin.get('readme') or plugin['description'],
+          'backend_config': {'harness_type': 'deepagents'}, 'plugins': [name]}}
+
     def materialize_skill(self, room, name):
         manifest = self.repo.get(room, 'skill', name, include_assets=True)
         digest = hashlib.sha256(json.dumps(manifest, sort_keys=True).encode()).hexdigest()[:12]

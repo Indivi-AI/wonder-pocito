@@ -87,7 +87,7 @@ ReactComp('wonderPlatformChatComposer', {
         onInput: event => setMessage(event.target.value),
         onKeyDown: event => event.key == 'Enter' && !event.shiftKey && (event.preventDefault(), submit())}),
       h('button:grid h-8 w-8 shrink-0 place-items-center rounded-[8px] bg-[#0f0f10] text-white transition-opacity ' +
-        'hover:opacity-85 disabled:opacity-25', {disabled: !message.trim() || busy, onClick: submit,
+        'hover:opacity-85 disabled:opacity-25', {disabled: !message.trim() || busy || !ready, onClick: submit,
         'aria-label': 'שליחה'}, h('L:ArrowUp', {size: 15}))))
     }
   })
