@@ -18,7 +18,7 @@ ReactComp('wonderPlatformChatContext', {
           {onClick: () => setClosed(closed == id ? '' : id)}, label,
           h(`L:${closed == id ? 'ChevronDown' : 'ChevronUp'}`, {size: 16})),
         closed != id && h('div:pt-3', {}, body))
-      return h('aside:hidden w-[280px] shrink-0 overflow-y-auto border-r border-[#e8e8ea] bg-white px-4 py-5 lg:block', {},
+      return h('aside:hidden w-[280px] shrink-0 overflow-y-auto bg-white px-4 py-5 shadow-[-8px_0_24px_rgba(0,0,0,0.07)] lg:block', {},
         h('div:mb-5 text-[13px] font-semibold text-[#0f0f10]', {}, 'הקשר השיחה'),
         section('agent', 'סוכן', select({items: repo.agents, value: conversation?.agentId || '', onChange: selectAgent,
           placeholder: 'בחר סוכן', empty: 'ללא סוכן', testId: 'agent-selector'})),
@@ -36,12 +36,11 @@ ReactComp('wonderPlatformChatComposer', {
     hFunc: (ctx, {react: {h, useEffect, useRef}}) => ({message, setMessage, busy, ready, send}) => {
       const ref = useRef(), submit = () => message.trim() && !busy && send()
       useEffect(() => { if (ref.current) ref.current.style.height = 'auto', ref.current.style.height = `${Math.min(ref.current.scrollHeight, 144)}px` }, [message])
-      return h('div:border-t border-[#e8e8ea] bg-white px-5 py-4', {}, !ready && h(
-        'p:mx-auto mb-2 max-w-3xl text-[12px] text-[#6b6b6f]', {id: 'chat-agent-required'}, 'בחרו סוכן כדי להתחיל שיחה'),
-      h('div:mx-auto flex max-w-3xl items-end gap-2 rounded-[12px] ' +
-        'border border-[#e8e8ea] bg-white p-2 transition-colors focus-within:border-[#0f0f10]', {},
+      return h('div:px-5 py-4', {}, h('div:mx-auto flex max-w-3xl items-end gap-2 rounded-[12px] ' +
+        'border border-[#e8e8ea] bg-white p-2 shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-colors ' +
+        'focus-within:border-[#0f0f10]', {},
       h('textarea:min-h-10 flex-1 resize-none px-2 py-1.5 text-[13px] outline-none placeholder:text-[#9b9ba0]', {ref, rows: 1,
-        value: message, disabled: !ready, 'data-testid': 'chat-input', 'aria-describedby': !ready ? 'chat-agent-required' : undefined,
+        value: message, disabled: !ready, 'data-testid': 'chat-input',
         placeholder: ready ? 'כתוב הודעה…' : 'יש לבחור סוכן תחילה',
         onInput: event => setMessage(event.target.value),
         onKeyDown: event => event.key == 'Enter' && !event.shiftKey && (event.preventDefault(), submit())}),
