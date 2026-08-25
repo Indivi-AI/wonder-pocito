@@ -5,6 +5,7 @@ import './wonder-platform-marketplace-api.js'
 import './wonder-platform-repository.js'
 import './wonder-platform-views.js'
 import './wonder-platform-resource-page.js'
+import './evaluation-page.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 const { wonderPlatformRunAgent, wonderPlatformListSkills, wonderPlatformLoadSkill, wonderPlatformMarketplaceCall,
@@ -268,10 +269,8 @@ ReactComp('wonderPlatform', {
         back: () => openView(workspace.resource), saveWorkspace, deleteWorkspace, openPicker: openWorkspacePicker, setDirty: setWorkspaceDirty,
         openEditor: openWorkspaceEditor, runTarget, runEval}) : view == 'chat' ? hh(ctx, dsls.react['react-comp'].wonderPlatformChat, {
         repo, conversation, message, setMessage, busy, send, selectAgent, setContext})
-        : view == 'evaluations' && !(editors[0]?.standalone) ? hh(ctx, dsls.react['react-comp'].wonderPlatformEvaluation, {repo, search, setSearch,
-          openSet: item => setEditors([editorEntry('evaluations', {...item, originalId: item.id}, {standalone: true})]),
-          createSet: () => setEditors([editorEntry('evaluations', blank('evaluations'), {createLabel: 'סט חדש', standalone: true})]),
-          runningSet, runSet})
+        : view == 'evaluations' ? hh(ctx, dsls.react['react-comp'].EvaluationPage, {embedded: true, roomWUrl: repositoryRoomWUrl,
+          marketplaceBaseUrl: marketplaceUrl, agentOsBaseUrl: agentUrl, agentOsToken: token})
           : editors[0]?.standalone ? hh(ctx, dsls.react['react-comp'].wonderPlatformResourcePage, {active: editors[0], update: updateBase,
               save: saveBase, deleteItem: deleteBase, back: () => requestLeave(() => setEditors([])), repo, openPicker: openEditorPicker,
               saveAndRun, runningSet})
