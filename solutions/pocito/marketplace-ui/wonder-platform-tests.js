@@ -631,6 +631,16 @@ UiAction('wonderPlatformUploadAsset', {
 const { wonderPlatformClickInSection, wonderPlatformSetControl, wonderPlatformUploadAsset, wonderPlatformWaitForButtonGone } =
   dsls.react['ui-action']
 
+Test('wonderPlatform.navGuardPrompts', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformMarketplaceTestApp(),
+    and(contains('ארגז הכלים שעומד ברשות הסוכנים'), notContains('שינויים שלא נשמרו')), {
+      userActions: actions(waitForText('פלאגין ראיות'), click('מיומנויות'), waitForText('מיומנות ראיות'), click('מיומנות ראיות'),
+        waitForText('Marketplace API'),
+        wonderPlatformSetControl({selector: '[aria-label="display_name"]', value: 'מיומנות ששונתה'}),
+        click('כלים'), waitForText('שינויים שלא נשמרו'), click('עזיבה בלי שמירה'),
+        waitForText('ארגז הכלים שעומד ברשות הסוכנים'))})
+})
+
 Test('wonderPlatform.flowToolWizard', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformMarketplaceTestApp(),
     and(contains('קוביות פלט'), contains('בחר קוביות פלט'), contains('פרמטרים'), notContains('טעינת מארז')), {
@@ -664,6 +674,8 @@ Test('wonderPlatform.workspaceSavesOnlyFromButton', {
       waitForText('חיבורים'),
       wonderPlatformSetControl({selector: '[aria-label="display_name"]', value: 'טיוטה שלא נשמרה'}),
       click('aria-label="חזרה לפלאגינים"'),
+      waitForText('שינויים שלא נשמרו'),
+      click('עזיבה בלי שמירה'),
       waitForText('אנליסט הוכחת קיום'),
       click('אנליסט הוכחת קיום'),
       wonderPlatformSetControl({selector: '[aria-label="display_name"]', value: 'פלאגין שנשמר'}),
