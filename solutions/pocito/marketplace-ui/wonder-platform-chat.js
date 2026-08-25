@@ -11,7 +11,7 @@ ReactComp('wonderPlatformChatContext', {
     hFunc: (ctx, {react: {h, hh, useState}}) => ({repo, conversation, selectAgent, setContext}) => {
       const rows = [['pluginIds', 'plugins', 'פלאגינים'], ['skillIds', 'skills', 'מיומנויות'],
         ['toolIds', 'tools', 'כלים'], ['knowledgeIds', 'knowledge', 'ידע']]
-      const [open, setOpen] = useState('agent')
+      const [open, setOpen] = useState('')
       const section = (id, label, body) => h('div', {key: id},
         h(`button:flex w-full items-center justify-between border-b border-[#e8e8ea] py-2 text-base font-semibold text-[#0f0f10]`,
           {onClick: () => setOpen(open == id ? '' : id)}, label,
