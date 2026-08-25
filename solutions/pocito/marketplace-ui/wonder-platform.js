@@ -55,7 +55,7 @@ ReactComp('wonderPlatform', {
       const config = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx), [view, setView] = useState(defaultView)
       const [repo, setRepo] = useState(), [loadError, setLoadError] = useState(), [search, setSearch] = useState('')
       const [workspace, setWorkspace] = useState()
-      const [editors, setEditors] = useState([]), [picker, setPicker] = useState()
+      const [editors, setEditors] = useState([]), [picker, setPicker] = useState(), [pendingNav, setPendingNav] = useState()
       const [conversationId, setConversationId] = useState('c1'), [message, setMessage] = useState(''), [busy, setBusy] = useState(false)
       const [runningSet, setRunningSet] = useState(''), [notice, setNotice] = useState('')
       useEffect(() => { void Promise.resolve(loadRepo(ctx.setVars({roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))).then(setRepo, setLoadError) }, [])
@@ -101,7 +101,16 @@ ReactComp('wonderPlatform', {
         const loaded = await loadSkill(ctx.setVars({roomWUrl: repositoryRoomWUrl, docletWUrl: `${item.docletUrl}?v=${item.version}`}))
         return {...item, content: loaded?.content || '', publishVersion: dsls.common.data.wonderPlatformNextVersion.$run(item.version)}
       }
-      const openView = id => (setView(id), setWorkspace(), setSearch(''))
+      const navigate = id => (setView(id), setWorkspace(), setSearch(''))
+      const dirty = (resource, item) => {
+        const skip = ['originalId', 'syncStatus', 'fileCount', 'updated', 'publishVersion', 'versions', 'audit', 'references', 'configYaml',
+          'contents', ...(resource == 'skills' && !repo.marketplace ? ['content'] : [])]
+        const strip = value => Object.fromEntries(Object.entries(value).filter(([key]) => !skip.includes(key)))
+        const stored = item.originalId ? repo[resource]?.find(value => value.id == item.originalId) : {...blank(resource), id: item.id}
+        return JSON.stringify(strip(item)) != JSON.stringify(strip(stored || {}))
+      }
+      const leave = id => (setEditors([]), navigate(id), setPendingNav())
+      const openView = id => editors.at(-1) && dirty(editors.at(-1).resource, editors.at(-1).item) ? setPendingNav(id) : leave(id)
       const openItem = async (resource, item) => {
         if (repo.marketplace && marketResources.includes(resource)) item = await marketplaceDetail(
           ctx.setVars({resource, id: item.id, roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))
@@ -179,6 +188,9 @@ ReactComp('wonderPlatform', {
         setEditors(resource == 'evaluations' ? [{...editors[0], item: {...saved, originalId: saved.id}}] : [])
         flash('נשמר בקטלוג המשותף'); return saved
       }
+      const saveAndLeave = async () => { const id = pendingNav
+        try { await (editors[0]?.standalone ? saveBase() : saveEditor()) } catch (error) { return }
+        leave(id) }
       const deleteBase = async () => {
         const {resource, item} = editors[0]
         if (repo.marketplace && marketResources.includes(resource)) await marketplaceCall(ctx.setVars({operation: 'delete', resource, id: item.originalId,
@@ -273,6 +285,13 @@ ReactComp('wonderPlatform', {
       editors.length > (editors[0]?.standalone ? 1 : 0) && hh(ctx,
         dsls.react['react-comp'].wonderPlatformResourceEditor, {editors, setEditors, repo, saveEditor, deleteEditor, openPicker: openEditorPicker}),
       picker && hh(ctx, dsls.react['react-comp'].wonderPlatformAttachPicker, {picker, repo, setPicker, attachSelected, createNested}),
+      pendingNav && h('div:fixed inset-0 z-[90] grid place-items-center bg-black/25 p-4', {}, h(
+        'section:w-full max-w-md rounded-2xl border border-[#e8e8ea] bg-white p-5 shadow-2xl', {}, h(
+        'div:flex items-center justify-between', {}, h('b:text-base font-semibold', {}, 'שינויים שלא נשמרו'),
+        h('button:rounded-lg p-1.5 hover:bg-gray-100', {onClick: () => setPendingNav(), 'aria-label': 'סגירה'}, h('L:X'))),
+        h('p:mt-2 text-sm text-[#6b6b6f]', {}, 'ערכתם פריט שעדיין לא נשמר. מה תרצו לעשות?'),
+        h('div:mt-5 flex flex-wrap gap-2', {}, h(`button:${config.classes.primary}`, {onClick: saveAndLeave}, 'שמירה ועזיבה'),
+          h(`button:${config.classes.button}`, {onClick: () => leave(pendingNav)}, 'עזיבה בלי שמירה')))),
       notice && h('div:fixed bottom-5 left-5 z-[100] rounded-xl border border-[#d8d8dc] bg-[#f4f4f5] px-4 py-2 text-sm text-[#0f0f10]', {}, notice))
     }
   })
