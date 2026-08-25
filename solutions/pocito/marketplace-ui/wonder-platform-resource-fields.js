@@ -1,7 +1,6 @@
 import { dsls } from '@jb6/core'
 import '@jb6/react'
 import './wonder-platform-domain.js'
-import './wonder-platform-flapi.js'
 import './wonder-platform-searchable-select.js'
 import './wonder-platform-wizard.js'
 
@@ -70,9 +69,12 @@ ReactComp('wonderPlatformResourceFields', {
         {id: 'files', label: 'קבצים', render: knowledgeSection}
       ] : resource == 'plugins' ? [
         {id: 'general', label: 'כללי', render: generalStep},
-        {id: 'instructions', label: 'הנחיות בסיס', render: () => field('הנחיות בסיס', h(
+        {id: 'instructions', label: 'הנחיות', render: () => field('הנחיות בסיס', h(
           `textarea:${classes.field} min-h-40 resize-y`, {value: item.instructions || '',
-            onInput: event => update({...item, instructions: event.target.value})}))}
+            onInput: event => update({...item, instructions: event.target.value})}))},
+        {id: 'skills', label: 'מיומנויות', render: () => relation('skillIds', 'skills', 'מיומנויות')},
+        {id: 'tools', label: 'כלים', render: () => relation('toolIds', 'tools', 'כלים')},
+        {id: 'knowledge', label: 'ידע', render: () => relation('knowledgeIds', 'knowledge', 'ידע')}
       ] : [
         {id: 'general', label: 'כללי', render: generalStep},
         {id: 'instructions', label: 'הנחיות בסיס', render: () => field('הנחיות בסיס', h(
