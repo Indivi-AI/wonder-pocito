@@ -11,7 +11,7 @@ const {
   common: { Data, data: { asIs, wFetch, wonderPlatformAnswer, wonderPlatformListSkills, wonderPlatformLoadSkill,
     wonderPlatformLoadTargetSkills, wonderPlatformMarketplaceCall, wonderPlatformMarketplaceItem, wonderPlatformMarketplaceManifest,
     wonderPlatformNormalize, wonderPlatformPublishSkill, wonderPlatformSeed, wonderPlatformUpsert, wonderPlatformAgentOsRun },
-    boolean: { and, contains, equals } },
+    boolean: { and, contains, equals, notContains } },
   react: { ReactComp, UiAction, 'react-comp': { comp, wonderPlatform },
     'ui-action': { actions, click, waitForText } },
   test: { Test, test: { dataTest, reactTest } },
@@ -448,9 +448,9 @@ Test('wonderPlatform.marketplaceSkillEditor', {
 
 Test('wonderPlatform.marketplaceToolEditor', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformMarketplaceTestApp(),
-    and(contains('tool_type'), contains('tracable'), contains('Code files'), contains('dedicated_tool_config')), {
+    and(contains('חיפוש ראיות'), contains('Connector מנוהל'), notContains('tool_type'), notContains('Code files')), {
       userActions: actions(waitForText('פלאגין ראיות'), click('כלים'), waitForText('חיפוש ראיות'), click('חיפוש ראיות'),
-        waitForText('Code files'))})
+        waitForText('לא ניתן לעריכה'))})
 })
 
 Test('wonderPlatform.marketplaceAgentWorkspace', {
