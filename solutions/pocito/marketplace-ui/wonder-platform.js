@@ -69,10 +69,9 @@ ReactComp('wonderPlatform', {
         version: resource == 'skills' ? '1.0.0' : 'V0', publishVersion: resource == 'skills' ? '1.0.0' : undefined, content: '',
         created: 'היום', updated: 'עכשיו', skillIds: [], toolIds: [], subagentIds: [], knowledgeIds: [], evaluationId: '',
         rows: resource == 'evaluations' ? [{input: '', expected: '', notes: ''}] : [], rubric: '',
-        kind: resource == 'tools' ? 'connector' : undefined, managed: false, tags: [], readme: '',
+        kind: resource == 'tools' ? 'flow' : undefined, managed: false, tags: [], readme: '',
         backendConfig: {harness: 'agno', harness_type: 'deepagents'},
-        pluginIds: [], assets: [], toolType: resource == 'tools' ? 'code' : undefined, jsonSchema: {}, isAsync: true, tracable: true,
-        dedicatedToolConfig: {}, codeFiles: [], packageId: '', inputSchema: [], outputCubes: [],
+        pluginIds: [], assets: [], toolType: resource == 'tools' ? 'flow_package' : undefined, packageId: '', inputSchema: [], outputCubes: [],
         fileCount: 0, syncStatus: 'טיוטה מקומית'})
       const saveRemote = async (resource, item) => {
         const operation = item.originalId ? 'update' : 'create', body = manifest(ctx.setVars({resource, item, operation}))
