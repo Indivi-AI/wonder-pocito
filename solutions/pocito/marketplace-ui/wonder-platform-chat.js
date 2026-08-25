@@ -12,7 +12,7 @@ ReactComp('wonderPlatformChatContext', {
       const rows = [['pluginIds', 'plugins', 'פלאגינים'], ['skillIds', 'skills', 'מיומנויות'],
         ['toolIds', 'tools', 'כלים'], ['knowledgeIds', 'knowledge', 'ידע']]
       const [closed, setClosed] = useState('')
-      const select = props => hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {bare: true, ...props})
+      const select = props => hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {bare: true, tall: true, ...props})
       const section = (id, label, body) => h('div:mb-4', {key: id},
         h(`button:flex w-full items-center justify-between border-b border-[#e8e8ea] py-2 text-base font-semibold text-[#0f0f10]`,
           {onClick: () => setClosed(closed == id ? '' : id)}, label,
