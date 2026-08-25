@@ -15,7 +15,8 @@ Convert every resource form in the Wonder Platform editor (`solutions/pocito/mar
 
 ## Architecture (Approach B, chosen per project docs)
 
-- New registered component `wonderPlatformWizard` in new file `solutions/pocito/marketplace-ui/wonder-platform-wizard.js`.
+- New registered component `wonderPlatformWizard` in new file `solutions/pocito/marketplace-ui/wonder-platform-wizard.js`. The step rail sits at the TOP of the form as a horizontal tab row (user moved it from the right rail on 2026-08-25).
+- Agents/plugins/subagents click through to the WORKSPACE page (`wonder-platform-workspace.js`), so their wizard lives in the workspace form (Task 12), not in the resource editor.
 - `wonderPlatformResourceFields` (`wonder-platform-resource-fields.js`) defines per-resource step lists as declarative data: `steps = [{id, label, render}]`, where `render` returns the step's form content using the existing in-scope helpers (`input`, `field`, `relation`, `packageStep`, `inputSchemaSection`, `outputCubesSection`, `knowledgeSection`, history/scenario sections, marketplace fields).
 - `wonderPlatformWizard` props: `{steps, activeId, onStep}`. It renders the rail (slim, right side, RTL-first) and the active step content; it owns no domain logic. Hooks live only in its returned function (solutions/pocito/CLAUDE.md rule).
 - Active-step state lives in `wonderPlatformResourceFields` via `useState`, reset when the edited resource changes.
@@ -42,9 +43,10 @@ Convert every resource form in the Wonder Platform editor (`solutions/pocito/mar
 **Skills** — steps:
 1. `כללי` — description + hebrew description
 2. `תוכן המיומנות` — SKILL.md content (marketplace: `SKILL.md` field; local: `תוכן המיומנות`)
-3. `גרסה` (local only: גרסה נוכחית/גרסה חדשה) — marketplace: `min_agent_version` + `license`
-4. `Assets` (marketplace only)
-5. `כלים` — `relation('toolIds', ...)`
+3. `Assets` (marketplace only)
+4. `כלים` — `relation('toolIds', ...)`
+
+(No version tab — user removed גרסה tab and its contents on 2026-08-25. New local skills keep the blank `publishVersion` default `1.0.0`, so save still works.)
 
 **Knowledge** — steps:
 1. `כללי` — description + hebrew description
@@ -52,7 +54,12 @@ Convert every resource form in the Wonder Platform editor (`solutions/pocito/mar
 
 **Plugins** — steps:
 1. `כללי` — description + hebrew description
-2. `הנחיות בסיס` — instructions textarea
+2. `הנחיות` — instructions textarea
+3. `מיומנויות` — `relation('skillIds', ...)`
+4. `כלים` — `relation('toolIds', ...)`
+5. `ידע` — `relation('knowledgeIds', ...)`
+
+(User added the relation steps on 2026-08-25.)
 
 **Subagents** — steps:
 1. `כללי` — description + hebrew description
@@ -70,7 +77,7 @@ Marketplace-API section (non-tool resources, `repo.marketplace && item._marketpl
 
 ## Visual (refined light)
 
-- Rail: slim (`w-44`), right side, `border-l` separator; step rows text-sm, vertical list, active step highlighted (soft accent background + accent right border), disabled steps greyed with reduced opacity, click any enabled step.
+- Tabs: horizontal row at the top of the form (text-sm, active highlighted with accent background, disabled greyed), `border-b` separator under the row, click any enabled step. No vertical rail.
 - Content: `rounded-2xl border border-[#e8e8ea]` card, section titles `text-base font-semibold`, generous spacing, existing Tailwind token palette (`#e8e8ea`, `#6b6b6f`, `#0f0f10`), existing `classes` object from `wonderPlatformUi`.
 - No dark theme, no new dependencies, no new fonts.
 
