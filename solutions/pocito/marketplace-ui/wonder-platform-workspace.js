@@ -10,7 +10,7 @@ const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 ReactComp('wonderPlatformWorkspace', {
   impl: comp({
     hFunc: (ctx, {react: {h, hh, useEffect, useState}}) => props => {
-      const {workspace, repo, back, saveWorkspace, openPicker, openEditor, runTarget, runEval} = props
+      const {workspace, repo, back, saveWorkspace, openPicker, openEditor, runTarget, runEval, setDirty} = props
       const {classes, labels} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx), [draft, setDraft] = useState({...workspace.item})
       const [panelOpen, setPanelOpen] = useState(true), [tab, setTab] = useState('test'), [testInput, setTestInput] = useState('')
       const [runs, setRuns] = useState([]), [evaluationId, setEvaluationId] = useState(workspace.item.evaluationId || '')
@@ -21,6 +21,7 @@ ReactComp('wonderPlatformWorkspace', {
       const [sessionConfig, setSessionConfig] = useState(savedConfig), draftConfig = runtimeConfig(draft)
       const draftDirty = draftConfig != savedConfig, sessionOutdated = runs.length > 0 && sessionConfig != savedConfig
       useEffect(() => { setDraft({...workspace.item}); setEvaluationId(workspace.item.evaluationId || ''); setStepId('general') }, [workspace.item])
+      useEffect(() => { setDirty?.(draftDirty) }, [draftDirty])
       useEffect(() => {
         setRuns([]); setChatSessionId(`${workspace.item.id}-${Date.now()}`); setSessionConfig(runtimeConfig(workspace.item))
       }, [workspace.item.id])
