@@ -149,7 +149,7 @@ Data('wonderPlatformUi', {
           ['knowledgeIds', 'knowledge', 'ידע']]},
       skills: {title: 'מיומנויות', subtitle: 'ספרייה של תהליכי ביצוע למשימות מורכבות', create: 'מיומנות חדשה', icon: 'BookOpenText',
         label: 'מיומנות', relations: [['toolIds', 'tools', 'כלים']]},
-      tools: {title: 'כלים', subtitle: 'כלי Connector מנוהלים וכלי Flow ניתנים לעריכה.',
+      tools: {title: 'כלים', subtitle: 'ארגז הכלים שעומד ברשות הסוכנים',
         create: 'כלי ממארז Flow', icon: 'Wrench', label: 'כלי'},
       subagents: {title: 'סאב-אייג׳נטים', subtitle: 'ספרייה משותפת של יעדי האצלה ממוקדים.', create: 'סאב-אייג׳נט חדש',
         icon: 'Network', label: 'סאב-אייג׳נט', relations: [['skillIds', 'skills', 'מיומנויות'], ['toolIds', 'tools', 'כלים']]},
