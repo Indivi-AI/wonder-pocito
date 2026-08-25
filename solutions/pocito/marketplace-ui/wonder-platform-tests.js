@@ -627,6 +627,15 @@ UiAction('wonderPlatformUploadAsset', {
 const { wonderPlatformClickInSection, wonderPlatformSetControl, wonderPlatformUploadAsset, wonderPlatformWaitForButtonGone } =
   dsls.react['ui-action']
 
+Test('wonderPlatform.flowToolWizard', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformMarketplaceTestApp(),
+    and(contains('קוביות פלט'), contains('בחר קוביות פלט'), contains('פרמטרים'), notContains('טעינת מארז')), {
+      userActions: actions(waitForText('פלאגין ראיות'), click('כלים'), waitForText('כלי ממארז Flow'),
+        click('כלי ממארז Flow'), waitForText('טעינת מארז'), wonderPlatformSetControl('id', {value: '12345678'}),
+        click('טעינת מארז'), waitForText('נבחר:'), click('פרמטרים'), waitForText('סכמת קלט — פרמטרים מהירים'),
+        click('קוביות פלט'), waitForText('בחר קוביות פלט'))})
+})
+
 Test('wonderPlatform.marketplaceSkillAssetUpload', {
   impl: reactTest(wonderPlatformMarketplaceTestApp(), and(contains('checklist.md'), contains('text/markdown')), {
     userActions: actions(

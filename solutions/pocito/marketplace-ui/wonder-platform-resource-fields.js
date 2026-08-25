@@ -12,7 +12,6 @@ ReactComp('wonderPlatformResourceFields', {
     hFunc: (ctx, {react: {h, hh, useState}}) => ({resource, item, update, repo, openPicker, saveAndRun, runningSet}) => {
       const {classes} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
       const [historyDetail, setHistoryDetail] = useState(-1)
-      const [packageQuery, setPackageQuery] = useState(''), [packageResults, setPackageResults] = useState([])
       const [pkg, setPkg] = useState()
       const [activeId, setActiveId] = useState('general')
       const field = (label, control) => h('label:block text-xs font-semibold text-[#2e2e2e]', {}, label, control)
@@ -82,28 +81,7 @@ ReactComp('wonderPlatformResourceFields', {
         {id: 'skills', label: 'מיומנויות', render: () => relation('skillIds', 'skills', 'מיומנויות')},
         {id: 'tools', label: 'כלים', render: () => relation('toolIds', 'tools', 'כלים')}
       ]
-      const flapiBaseUrl = ctx.vars.flapiBaseUrl
-      const flapiCall = (operation, vars) => dsls.common.data.wonderPlatformFlapiCall.$runWithCtx(ctx, {operation, flapiBaseUrl, ...vars})
       const currentPackage = pkg || repo.flowPackages.find(value => value.Id == item.packageId)
-      const searchPackages = async query => { setPackageQuery(query); setPackageResults(query.trim() ? (flapiBaseUrl
-        ? await flapiCall('search', {partial: query}) : repo.flowPackages.filter(value => value.Name.includes(query))) : []) }
-      const pickPackage = async result => {
-        setPackageQuery(''); setPackageResults([])
-        const [quick, metadata] = flapiBaseUrl
-          ? await Promise.all([flapiCall('quick', {packageId: String(result.Id)}), flapiCall('metadata', {packageId: String(result.Id)})])
-          : [result.Quick, result]
-        setPkg(metadata)
-        update({...item, packageId: String(result.Id), name: item.name || metadata?.Name || '', desc: item.desc || metadata?.Description || '',
-          inputSchema: Object.values(quick || {}).flat().map(value => ({...value, Description: value.Description || ''})), outputCubes: []})
-      }
-      const pickPackageResult = result => h('button:block w-full px-3 py-2 text-right text-xs hover:bg-gray-50', {key: result.Id,
-        onClick: () => pickPackage(result)}, result.Name)
-      const packageStep = () => h('div:space-y-2', {},
-        field('חיפוש מארז Flow', h('div:relative', {}, h(`input:${classes.field}`, {value: packageQuery, placeholder: 'חיפוש מארז...',
-          onInput: event => searchPackages(event.target.value)}), packageResults.length > 0 && h(
-          'div:absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-[#e8e8ea] bg-white shadow-lg', {},
-          packageResults.map(pickPackageResult)))),
-        item.packageId && h('p:text-xs text-[#6b6b6f]', {dir: 'ltr'}, `נבחר: ${currentPackage?.Name || item.packageId} (#${item.packageId})`))
       const setCube = (index, patch) => update({...item, outputCubes: item.outputCubes.map((value, cubeIndex) =>
         cubeIndex == index ? {...value, ...patch} : value)})
       const quickParamRow = (row, index) => h('div:mt-3 rounded-lg border border-[#e8e8ea] p-2', {key: row.Name},
@@ -207,18 +185,31 @@ ReactComp('wonderPlatformResourceFields', {
           field('description', h(`div:${classes.field} text-[#6b6b6f]`, {dir: 'ltr'}, item.apiDescription || '—')),
           field('hebrew_description', h(`div:${classes.field} text-[#6b6b6f]`, {}, item.desc || '—'))),
         h('p:text-xs leading-5 text-[#6b6b6f]', {}, 'כלי Connector מנוהל — לא ניתן לעריכה מכאן.'))
-      const toolFields = () => item.originalId && item.kind != 'flow' ? legacyTool() : h('div:space-y-5', {},
-        field('id', input('id', {dir: 'ltr', placeholder: 'uiRenderingSkill', disabled: !!item.originalId})),
-        field('description', h(`textarea:${classes.field} min-h-24 resize-y`, {dir: 'ltr', value: item.apiDescription || '',
-          onInput: event => update({...item, apiDescription: event.target.value})})),
-        field('hebrew_description', h(`textarea:${classes.field} min-h-24 resize-y`, {value: item.desc || '',
-          onInput: event => update({...item, desc: event.target.value})})),
-        packageStep(),
-        item.packageId && (item.inputSchema || []).length > 0 && h(
-          'div:rounded-lg border border-[#d8d8dc] bg-[#f4f4f5] px-3 py-2 text-xs text-[#0f0f10]', {},
-          `נקראו ${item.inputSchema.length} פרמטרים מהירים ו-${currentPackage?.Queries?.length || 0} קוביות.`),
-        item.packageId && (item.inputSchema || []).length > 0 && inputSchemaSection(),
-        item.packageId && (item.inputSchema || []).length > 0 && outputCubesSection())
+      const mockLoadPackage = () => {
+        const seed = repo.flowPackages.find(value => String(value.Id) == item.id) || repo.flowPackages[0]
+        setPkg(seed)
+        update({...item, packageId: item.id, inputSchema: Object.values(seed.Quick || {}).flat().map(value =>
+          ({...value, Description: value.Description || ''})), outputCubes: []})
+      }
+      const loaded = !!(item.packageId && (item.inputSchema || []).length)
+      const toolSteps = [
+        {id: 'general', label: 'כללי', render: () => h('div:space-y-4', {},
+          h('div:flex items-end gap-2', {}, h('div:flex-1', {},
+            field('id', input('id', {dir: 'ltr', placeholder: '12345678', inputMode: 'numeric'}))),
+            h(`button:${classes.button}`, {onClick: mockLoadPackage}, 'טעינת מארז')),
+          field('description', h(`textarea:${classes.field} min-h-24 resize-y`, {dir: 'ltr', value: item.apiDescription || '',
+            onInput: event => update({...item, apiDescription: event.target.value})})),
+          field('hebrew_description', h(`textarea:${classes.field} min-h-24 resize-y`, {value: item.desc || '',
+            onInput: event => update({...item, desc: event.target.value})})),
+          item.packageId && h('p:text-xs text-[#6b6b6f]', {dir: 'ltr'}, `נבחר: ${currentPackage?.Name || item.packageId} (#${item.packageId})`))},
+        {id: 'params', label: 'פרמטרים', disabled: !loaded, render: () => h('div:space-y-4', {},
+          h('div:rounded-lg border border-[#d8d8dc] bg-[#f4f4f5] px-3 py-2 text-xs text-[#0f0f10]', {},
+            `נקראו ${item.inputSchema.length} פרמטרים מהירים ו-${currentPackage?.Queries?.length || 0} קוביות.`),
+          inputSchemaSection())},
+        {id: 'cubes', label: 'קוביות פלט', disabled: !loaded, render: outputCubesSection}
+      ]
+      const toolFields = () => item.originalId && item.kind != 'flow' ? legacyTool() : hh(ctx,
+        dsls.react['react-comp'].wonderPlatformWizard, {steps: toolSteps, activeId, onStep: setActiveId})
       if (resource == 'tools') return toolFields()
       if (resource == 'evaluations') {
         const target = repo.agents.find(agent => agent.id == item.targetId), running = runningSet == item.id
