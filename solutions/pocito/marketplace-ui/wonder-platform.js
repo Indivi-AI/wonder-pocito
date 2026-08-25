@@ -46,7 +46,7 @@ ReactComp('wonderPlatform', {
     })}
   ],
   impl: comp({
-    hFunc: (ctx, {react: {h, hh, useEffect, useState}},
+    hFunc: (ctx, {react: {h, hh, useEffect, useState, useRef}},
       {roomWUrl, marketplaceBaseUrl, agentOsBaseUrl, agentOsToken, defaultView, brand, brandTagline, brandIcon, extraPrimaryNav,
         extraLibraryNav, loadRepo, saveRepo, upsert, loadSkill, listSkills, publishSkill,
         marketplaceCall, marketplaceDetail, manifest, runAgent}) => () => {
@@ -56,6 +56,8 @@ ReactComp('wonderPlatform', {
       const [repo, setRepo] = useState(), [loadError, setLoadError] = useState(), [search, setSearch] = useState('')
       const [workspace, setWorkspace] = useState(), [workspaceDirty, setWorkspaceDirty] = useState(false)
       const [editors, setEditors] = useState([]), [picker, setPicker] = useState(), [pendingLeave, setPendingLeave] = useState(), [saving, setSaving] = useState(false)
+      const editorsRef = useRef([]), dirtyRef = useRef(false), viewRef = useRef(view)
+      editorsRef.current = editors; dirtyRef.current = workspaceDirty; viewRef.current = view
       const [conversationId, setConversationId] = useState('c1'), [message, setMessage] = useState(''), [busy, setBusy] = useState(false)
       const [runningSet, setRunningSet] = useState(''), [notice, setNotice] = useState('')
       useEffect(() => { void Promise.resolve(loadRepo(ctx.setVars({roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))).then(setRepo, setLoadError) }, [])
@@ -104,7 +106,7 @@ ReactComp('wonderPlatform', {
       const navigate = id => (setView(id), setWorkspace(), setSearch(''))
       const editorEntry = (resource, item, extra = {}) => ({resource, item, baseline: JSON.stringify(item), ...extra})
       const dirty = entry => JSON.stringify(entry.item) != entry.baseline
-      const requestLeave = action => { const active = editors.at(-1); (active && dirty(active)) || (view == 'workspace' && workspaceDirty) ? setPendingLeave(action) : action() }
+      const requestLeave = action => { const active = editorsRef.current.at(-1); (active && dirty(active)) || (viewRef.current == 'workspace' && dirtyRef.current) ? setPendingLeave(action) : action() }
       const openView = id => requestLeave(() => (setEditors([]), navigate(id)))
       const openItem = async (resource, item) => {
         if (repo.marketplace && marketResources.includes(resource)) item = await marketplaceDetail(
