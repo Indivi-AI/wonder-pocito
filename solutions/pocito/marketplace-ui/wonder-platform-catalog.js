@@ -35,7 +35,7 @@ ReactComp('wonderPlatformCatalog', {
           : h('span'),
         h('div:relative w-64 max-w-full', {}, h('L:Search', {size: 14, className: 'absolute right-3 top-2.5 text-[#9b9ba0]'}),
           h('input:w-full rounded-[10px] border border-[#e8e8ea] bg-white py-2 pl-3 pr-9 text-[13px] outline-none ' +
-            'transition-colors placeholder:text-[#9b9ba0] focus:border-[#0f0f10]', {value: search,
+            'transition-colors placeholder:text-[#9b9ba0] focus:border-[#c9c9ce]', {value: search,
             placeholder: 'חיפוש…', onInput: event => setSearch(event.target.value)}))),
       h('div:mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3', {}, items.map(item => {
         const editable = !(view == 'tools' && item.managed), users = usedBy(item)

@@ -38,7 +38,7 @@ ReactComp('wonderPlatformChatComposer', {
       useEffect(() => { if (ref.current) ref.current.style.height = 'auto', ref.current.style.height = `${Math.min(ref.current.scrollHeight, 144)}px` }, [message])
       return h('div:px-5 py-4', {}, h('div:mx-auto flex max-w-3xl items-end gap-2 rounded-[12px] ' +
         'border border-[#e8e8ea] bg-white p-2 shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-colors ' +
-        'focus-within:border-[#0f0f10]', {},
+        'focus-within:border-[#c9c9ce]', {},
       h('textarea:min-h-10 flex-1 resize-none px-2 py-1.5 text-[13px] outline-none placeholder:text-[#9b9ba0]', {ref, rows: 1,
         value: message, disabled: !ready, 'data-testid': 'chat-input',
         placeholder: ready ? 'כתוב הודעה…' : 'יש לבחור סוכן תחילה',
