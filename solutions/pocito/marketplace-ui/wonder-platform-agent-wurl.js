@@ -10,7 +10,7 @@ Data('wonderPlatformMarketplaceApiBase', {
     {id: 'baseUrl', as: 'string'}
   ],
   impl: ({}, {}, {baseUrl}) => (baseUrl || globalThis.MARKETPLACE_API_URL || globalThis.process?.env?.MARKETPLACE_API_URL
-    || (globalThis.location ? `${location.protocol}//${location.hostname}:7777` : 'http://localhost:7777')).replace(/\/$/, '')
+    || (globalThis.location ? `${location.protocol}//${location.hostname}:58046` : 'http://localhost:58046')).replace(/\/$/, '')
 })
 
 Data('wonderPlatformAgnoApiBase', {
@@ -19,7 +19,7 @@ Data('wonderPlatformAgnoApiBase', {
     {id: 'baseUrl', as: 'string'}
   ],
   impl: ({}, {}, {baseUrl}) => (baseUrl || globalThis.AGNO_API_URL || globalThis.process?.env?.AGNO_API_URL
-    || (globalThis.location ? `${location.protocol}//${location.hostname}:7778` : 'http://localhost:7778')).replace(/\/$/, '')
+    || (globalThis.location ? `${location.protocol}//${location.hostname}:58049` : 'http://localhost:58049')).replace(/\/$/, '')
 })
 
 const { wonderPlatformAgnoApiBase, wonderPlatformMarketplaceApiBase } = dsls.common.data

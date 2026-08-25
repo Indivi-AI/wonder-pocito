@@ -132,6 +132,12 @@ def make_flow_package_executor(package_id):
     return execute
 
 
+def knowledge_reader(path):
+    reader = ReaderFactory.get_reader_for_extension(path.suffix)
+    reader.chunking_strategy = FixedSizeChunking(3000, 300)
+    return reader
+
+
 class MarketplaceAgentRuntime:
     def __init__(self, repo, runtime_dir, model_factory=None, embedder=None):
         self.repo, self.runtime_dir = repo, Path(runtime_dir)
