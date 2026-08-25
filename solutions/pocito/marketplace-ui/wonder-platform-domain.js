@@ -147,7 +147,7 @@ Data('wonderPlatformUi', {
         create: 'פלאגין חדש',
         icon: 'PlugZap', label: 'פלאגין', relations: [['skillIds', 'skills', 'מיומנויות'], ['toolIds', 'tools', 'כלים'],
           ['knowledgeIds', 'knowledge', 'ידע']]},
-      skills: {title: 'מיומנויות', subtitle: 'ספרייה משותפת של תהליכי ביצוע.', create: 'מיומנות חדשה', icon: 'BookOpenText',
+      skills: {title: 'מיומנויות', subtitle: 'ספרייה של תהליכי ביצוע למשימות מורכבות', create: 'מיומנות חדשה', icon: 'BookOpenText',
         label: 'מיומנות', relations: [['toolIds', 'tools', 'כלים']]},
       tools: {title: 'כלים', subtitle: 'כלי Connector מנוהלים וכלי Flow ניתנים לעריכה.',
         create: 'כלי ממארז Flow', icon: 'Wrench', label: 'כלי'},
