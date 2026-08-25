@@ -2913,16 +2913,23 @@
             },
             "title": "Skills"
           },
-          "tools": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "title": "Tools"
-          }
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "Tools"
         },
-        "title": "PluginConfig",
-        "description": "Flat skill/tool IDs stored in config.yaml with forward-compatible extra fields."
+        "knowledge_bases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "Knowledge Bases"
+        }
+      },
+      "title": "PluginConfig",
+      "description": "Flat resource IDs stored in config.yaml with forward-compatible extra fields."
       },
       "TagRef": {
         "type": "object",

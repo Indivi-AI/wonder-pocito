@@ -190,21 +190,25 @@ Test('wonderPlatform.marketplaceApiRoutes', {
         ...args,
         request
       })
-      const [list, version, audit, update, upload] = await Promise.all([
+      const [list, version, audit, update, upload, contents, deleteContent] = await Promise.all([
         call({operation: 'list', resource: 'plugins'}),
         call({operation: 'version', resource: 'subagents', id: 'a b', version: 2}),
         call({operation: 'audit', resource: 'skills', id: 'skill-1'}),
         call({operation: 'update', resource: 'tools', id: 'tool-1', body: {tracable: true}}),
-        call({operation: 'presignUpload', body: {key: 'assets/a'}})
+        call({operation: 'presignUpload', body: {key: 'assets/a'}}),
+        call({operation: 'listContent', resource: 'knowledge', id: 'kb 1'}),
+        call({operation: 'deleteContent', resource: 'knowledge', id: 'kb 1', contentId: 'doc/1'})
       ])
-      return {result: {list, version, audit, update, upload}, ...coreUtils.harvestLogs(ctx)}
+      return {result: {list, version, audit, update, upload, contents, deleteContent}, ...coreUtils.harvestLogs(ctx)}
     },
     expectedResult: equals('%result%', asIs({
         list: {method: 'GET', wUrl: 'room://tenant-a/plugins/'},
         version: {method: 'GET', wUrl: 'room://tenant-a/agents/a%20b/versions/2'},
         audit: {method: 'GET', wUrl: 'room://tenant-a/audit/skill/skill-1'},
         update: {method: 'PUT', wUrl: 'room://tenant-a/tools/tool-1', body: {tracable: true}},
-        upload: {method: 'POST', wUrl: 'room://tenant-a/presign/upload', body: {key: 'assets/a'}}
+        upload: {method: 'POST', wUrl: 'room://tenant-a/presign/upload', body: {key: 'assets/a'}},
+        contents: {method: 'GET', wUrl: 'room://tenant-a/knowledge/kb%201/content'},
+        deleteContent: {method: 'DELETE', wUrl: 'room://tenant-a/knowledge/kb%201/content/doc%2F1'}
     })),
     logger: 'marketplaceLogger'
   })
@@ -216,12 +220,50 @@ Test('wonderPlatform.marketplaceManifest', {
       plugin: wonderPlatformMarketplaceManifest.$run({resource: 'plugins', item: {id: 'p', name: 'פ', desc: 'ת', skillIds: ['s'],
         toolIds: ['t'], subagentIds: ['a']}}), tool: wonderPlatformMarketplaceManifest.$run({resource: 'tools', item: {id: 't', name: 'כ',
           desc: 'ת', toolType: 'code', tracable: true}}), agentCreateReadme: wonderPlatformMarketplaceManifest.$run({resource: 'subagents',
-            item: {id: 'a', readme: '# Agent'}}).readme, agentUpdateHasReadme: 'readme' in wonderPlatformMarketplaceManifest.$run({
-              resource: 'subagents', operation: 'update', item: {id: 'a', readme: '# Agent'}})}}),
-    expectedResult: equals('%result%', asIs({plugin: {id: 'p', display_name: 'פ', description: 'ת', hebrew_description: 'ת',
-      tags: [], config: {skills: ['s'], tools: ['t']}, readme: ''}, tool: {id: 't', display_name: 'כ',
-      description: 'ת', hebrew_description: 'ת', tool_type: 'code', json_schema: {}, is_async: true,
-      tracable: true, dedicated_tool_config: {}, code_files: []}, agentCreateReadme: '# Agent', agentUpdateHasReadme: false}))
+            item: {id: 'a', readme: '# Agent'}}).readme, agentKnowledge: wonderPlatformMarketplaceManifest.$run({resource: 'agents',
+              item: {id: 'a', knowledgeIds: ['finance', 'legal']}}).config.knowledge_bases,
+          knowledge: wonderPlatformMarketplaceManifest.$run({resource: 'knowledge', item: {id: 'k', name: 'י', desc: 'ת'}}),
+          agentUpdateHasReadme: 'readme' in wonderPlatformMarketplaceManifest.$run({resource: 'subagents', operation: 'update',
+            item: {id: 'a', readme: '# Agent'}})}}),
+    expectedResult: equals('%result%', asIs({
+        plugin: {
+          id: 'p',
+          display_name: 'פ',
+          description: 'ת',
+          hebrew_description: 'ת',
+          tags: [],
+          config: {skills: ['s'], tools: ['t']},
+          readme: ''
+        },
+        tool: {
+          id: 't',
+          display_name: 'כ',
+          description: 'ת',
+          hebrew_description: 'ת',
+          tool_type: 'code',
+          json_schema: {},
+          is_async: true,
+          tracable: true,
+          dedicated_tool_config: {},
+          code_files: []
+        },
+        agentCreateReadme: '# Agent',
+        agentKnowledge: ['finance','legal'],
+        knowledge: {id: 'k', display_name: 'י', description: 'ת', hebrew_description: 'ת', tags: []},
+        agentUpdateHasReadme: false
+    }))
+  })
+})
+
+Test('wonderPlatform.marketplaceKnowledgeItem', {
+  impl: dataTest({
+    calculate: () => ({result: wonderPlatformMarketplaceItem.$run({resource: 'knowledge', item: {id: 'policies', display_name: 'נהלים',
+      description: 'Policies', contents: {data: [{id: 'doc-1', name: 'policy.pdf', size: '1024', status: 'ready'}]}}})}),
+    expectedResult: and(
+      equals('%result/knowledgeIds/length%', 0),
+      equals('%result/files/0/id%', 'doc-1'),
+      equals('%result/files/0/status%', 'ready')
+    )
   })
 })
 
@@ -453,22 +495,28 @@ Test('wonderPlatform.marketplaceWUrlInterceptor', {
       })
       await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
       try {
-        const result = await dsls.common.data.wonderPlatformMarketplaceRequest.$runWithCtx(ctx, {
+        const skill = await dsls.common.data.wonderPlatformMarketplaceRequest.$runWithCtx(ctx, {
           method: 'PUT',
           wUrl: 'room://tenant-x/skills/skill-a?includeAssets=true',
           body: {skill_md: 'room scoped'},
           baseUrl: `http://127.0.0.1:${server.address().port}`
         })
-        return {result, ...coreUtils.harvestLogs(ctx)}
+        const knowledge = await dsls.common.data.wonderPlatformMarketplaceRequest.$runWithCtx(ctx, {
+          wUrl: 'room://tenant-x/knowledge/', baseUrl: `http://127.0.0.1:${server.address().port}`
+        })
+        return {result: {skill, knowledge}, ...coreUtils.harvestLogs(ctx)}
       } finally {
         await new Promise(resolve => server.close(resolve))
       }
     },
     expectedResult: equals('%result%', asIs({
-        path: '/api/v1/skills/skill-a?includeAssets=true',
-        room: 'tenant-x',
-        method: 'PUT',
-        body: {skill_md: 'room scoped'}
+        skill: {
+          path: '/api/v1/skills/skill-a?includeAssets=true',
+          room: 'tenant-x',
+          method: 'PUT',
+          body: {skill_md: 'room scoped'}
+        },
+        knowledge: {path: '/api/v1/knowledge/', room: 'tenant-x', method: 'GET', body: null}
     })),
     timeout: 10000,
     logger: 'marketplaceLogger'

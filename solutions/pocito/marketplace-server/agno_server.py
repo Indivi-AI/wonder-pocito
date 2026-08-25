@@ -2,6 +2,7 @@
 The two servers share only the S3 object store (through marketplace_storage) - agents created or
 deleted there are picked up here per request by sync_factories, so neither server ever calls the other."""
 import base64
+import asyncio
 import hashlib
 import importlib
 import importlib.util
@@ -10,6 +11,7 @@ import os
 import re
 import sys
 from collections import defaultdict
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
 from agno.agent import Agent
@@ -26,8 +28,10 @@ from agno.vectordb.search import SearchType
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from mcp.server.transport_security import TransportSecuritySettings
 
 from marketplace_storage import DEFAULT_ROOM, ROOM_CONTEXT, ROOT, MarketplaceRepository, S3ObjectStore, safe_name, safe_path
+from knowledge_mcp import BearerAuthMiddleware, create_knowledge_mcp
 
 
 class MarketplaceAgentRuntime:
@@ -37,7 +41,7 @@ class MarketplaceAgentRuntime:
         self.room_dbs = defaultdict(InMemoryDb)
         self.model_factory = model_factory or self.openai_model
         self.embedder = embedder or OpenAIEmbedder(api_key=os.getenv('OPENAI_API_KEY'), base_url=os.getenv('OPENAI_BASE_URL'))
-        self.room_knowledge, self.knowledge_digests = {}, {}
+        self.knowledge_instances, self.worker_id = {}, os.urandom(16).hex()
 
     def openai_model(self, manifest):
         model = manifest.get('config', {}).get('backend_config', {}).get('model') or os.getenv('OPENAI_MODEL', 'gpt-5-mini')
@@ -93,58 +97,87 @@ class MarketplaceAgentRuntime:
         return Function(name=re.sub(r'\W', '_', name), description=manifest['description'],
           parameters=manifest.get('json_schema') or {'type': 'object', 'properties': {}}, entrypoint=entrypoint)
 
-    def knowledge(self, room, names):
-        room_key = safe_name(room)
-        knowledge = self.room_knowledge.setdefault(room_key, Knowledge(name=room_key,
-          vector_db=LanceDb(uri=str(self.runtime_dir / 'knowledge'), table_name=f'knowledge_{hashlib.sha256(room.encode()).hexdigest()[:16]}',
+    def knowledge(self, room, name, validate=True):
+        if validate:
+            self.repo.get(room, 'knowledge', name)
+        key = safe_name(room), safe_name(name)
+        return self.knowledge_instances.setdefault(key, Knowledge(name=name,
+          vector_db=LanceDb(uri=str(self.runtime_dir / 'knowledge'),
+            table_name=f"knowledge_{hashlib.sha256(f'{room}:{name}'.encode()).hexdigest()[:20]}",
             search_type=SearchType.vector, embedder=self.embedder)))
+
+    def process_content_job(self, job):
+        knowledge = self.knowledge(job['room'], job['knowledge_id'], job['action'] != 'delete')
+        if knowledge.vector_db.exists():
+            knowledge.vector_db.delete_by_metadata({'content_id': job['content_id']})
+        if job['action'] == 'delete':
+            return
+        item = self.repo.content(job['room'], job['knowledge_id'], job['content_id'])
+        if item.get('_ingestion_revision') != job['revision']:
+            return
+        body, artifact = self.repo.content_file(job['room'], job['knowledge_id'], job['content_id'])
+        path = self.runtime_dir / 'knowledge-content' / safe_name(job['room']) / safe_name(job['knowledge_id'])
+        path = path / job['content_id'] / artifact['path']
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(body)
+        count = knowledge.vector_db.get_count() if knowledge.vector_db.exists() else 0
+        knowledge.insert(name=item['name'], description=item.get('description'), path=str(path),
+          metadata=(item.get('metadata') or {}) | {'knowledge_id': job['knowledge_id'], 'content_id': job['content_id']})
+        if knowledge.vector_db.get_count() <= count:
+            raise RuntimeError('content was not indexed')
+
+    def process_content_jobs(self):
+        for pending in self.repo.content_jobs():
+            if not self.repo.claim_content_job(pending, self.worker_id):
+                continue
+            job = None
+            try:
+                job = self.repo.start_content_job(pending)
+                if job:
+                    self.process_content_job(job)
+                    self.repo.finish_content_job(job)
+            except Exception as error:
+                self.repo.finish_content_job(job or pending, error)
+            finally:
+                self.repo.release_content_job(pending, self.worker_id)
+
+    def assigned_knowledge_names(self, room, agent_name):
+        config = self.repo.get(room, 'agent', agent_name)['config']
+        names = set(config.get('knowledge_bases', []))
+        for plugin_name in config.get('plugins', []):
+            names.update((self.repo.get(room, 'plugin', plugin_name).get('config') or {}).get('knowledge_bases', []))
         for name in names:
             self.repo.get(room, 'knowledge', name)
-            contents = self.repo.contents(room, name)
-            digest = hashlib.sha256(json.dumps([{key: item.get(key) for key in ('id', 'name', 'description', 'metadata')}
-              | {'hash': self.repo.content(room, name, item['id'])['_content_hash']} for item in contents],
-              sort_keys=True).encode()).hexdigest()
-            if self.knowledge_digests.get((room, name)) == digest:
-                continue
-            if knowledge.vector_db.exists():
-                knowledge.vector_db.delete_by_metadata({'knowledge_id': name})
-            for item in contents:
-                body, artifact = self.repo.content_file(room, name, item['id'])
-                path = self.runtime_dir / 'knowledge-content' / room_key / safe_name(name) / item['id'] / artifact['path']
-                path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_bytes(body)
-                self.repo.set_content_status(room, name, item['id'], 'processing')
-                try:
-                    count = knowledge.vector_db.get_count() if knowledge.vector_db.exists() else 0
-                    knowledge.insert(name=item['name'], description=item.get('description'), path=str(path),
-                      metadata=(item.get('metadata') or {}) | {'knowledge_id': name, 'content_id': item['id']})
-                    if knowledge.vector_db.get_count() <= count:
-                        raise RuntimeError('content was not indexed')
-                except Exception as error:
-                    self.repo.set_content_status(room, name, item['id'], 'failed', str(error))
-                    raise
-                self.repo.set_content_status(room, name, item['id'], 'completed')
-            self.knowledge_digests[(room, name)] = digest
-        return knowledge
+        return sorted(names)
+
+    def search_one_knowledge(self, room, name, query, limit):
+        return [document.to_dict() for document in self.knowledge(room, name).retrieve(query, max_results=limit)]
+
+    def search_knowledge(self, room, names, query, limit):
+        ranked = []
+        for name in names:
+            for rank, item in enumerate(self.search_one_knowledge(room, name, query, max(limit, 8)), 1):
+                item['meta_data'] = (item.get('meta_data') or {}) | {'knowledge_id': name, 'source_rank': rank,
+                  'fused_score': 1 / (60 + rank)}
+                ranked.append(item)
+        return sorted(ranked, key=lambda item: (-item['meta_data']['fused_score'], item['meta_data']['knowledge_id']))[:limit]
 
     def retrieve_knowledge(self, knowledge, names, query, num_documents=None, **_):
         limit = num_documents or knowledge.max_results
-        documents = [document for name in names for document in knowledge.retrieve(query, max_results=limit,
-          filters={'knowledge_id': name})]
-        return [document.to_dict() for document in documents[:limit]]
+        return self.search_knowledge(ROOM_CONTEXT.get(), sorted(names), query, limit)
 
     def agent(self, room, name):
         manifest = self.repo.get(room, 'agent', name)
         config, skill_names, tool_names = manifest['config'], set(), set()
+        knowledge_names = set(self.assigned_knowledge_names(room, name))
         for plugin_name in config.get('plugins', []):
             plugin = self.repo.get(room, 'plugin', plugin_name).get('config') or {}
             skill_names.update(plugin.get('skills', []))
             tool_names.update(plugin.get('tools', []))
         skill_names.update(config.get('skills', []))
         tool_names.update(config.get('tools', []))
-        knowledge_names = config.get('knowledge_bases', [])
         skills = Skills([LocalSkills(str(self.materialize_skill(room, item)), validate=False) for item in sorted(skill_names)])
-        knowledge = self.knowledge(room, knowledge_names) if knowledge_names else None
+        knowledge = self.knowledge(room, sorted(knowledge_names)[0]) if knowledge_names else None
         return Agent(id=name, name=manifest['display_name'], model=self.model_factory(manifest),
           db=self.room_dbs[room],
           tools=[self.tool(room, item) for item in sorted(tool_names)], skills=skills,
@@ -165,7 +198,29 @@ def create_app(data_dir=None, model_factory=None, embedder=None):
     data_dir = Path(data_dir or os.getenv('MARKETPLACE_DATA_DIR', ROOT / '.marketplace-data'))
     repo = MarketplaceRepository(S3ObjectStore())
     runtime = MarketplaceAgentRuntime(repo, data_dir / 'runtime', model_factory or configured_model_factory(), embedder)
-    base = FastAPI(title='agno', version='0.1.0')
+    mcp = create_knowledge_mcp(runtime)
+    site_host = os.getenv('SITE_HOST', 'localhost')
+    mcp_app = mcp.streamable_http_app(streamable_http_path='/mcp', json_response=True, stateless_http=True,
+      transport_security=TransportSecuritySettings(allowed_hosts=[f'{site_host}:*', 'localhost:*', '127.0.0.1:*'],
+        allowed_origins=os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')))
+
+    @asynccontextmanager
+    async def lifespan(_):
+        async with mcp_app.router.lifespan_context(mcp_app):
+            async def ingest():
+                await asyncio.to_thread(repo.bootstrap_content_jobs)
+                while True:
+                    await asyncio.to_thread(runtime.process_content_jobs)
+                    await asyncio.sleep(float(os.getenv('KNOWLEDGE_WORKER_INTERVAL', '1')))
+            worker = asyncio.create_task(ingest())
+            try:
+                yield
+            finally:
+                worker.cancel()
+                with suppress(asyncio.CancelledError):
+                    await worker
+
+    base = FastAPI(title='agno', version='0.1.0', lifespan=lifespan)
     factories = []
 
     def sync_factories():
@@ -200,6 +255,7 @@ def create_app(data_dir=None, model_factory=None, embedder=None):
     app.user_middleware = [middleware for middleware in app.user_middleware if middleware.cls is not CORSMiddleware]
     app.add_middleware(CORSMiddleware, allow_origins=os.getenv('CORS_ALLOWED_ORIGINS', '*').lower().split(','),
       allow_methods=['*'], allow_headers=['*'], allow_private_network=True)
+    app.mount('/', BearerAuthMiddleware(mcp_app, os.getenv('MCP_BEARER_TOKEN', '')))
     app.state.marketplace_repo, app.state.marketplace_runtime = repo, runtime
     return app
 

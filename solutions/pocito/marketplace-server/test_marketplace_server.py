@@ -189,11 +189,12 @@ class MarketplaceServerTest(unittest.TestCase):
             content = self.request('POST', f'/api/v1/knowledge/{id}/content',
               data={'name': f'{id} facts', 'text_content': fact, 'metadata': json.dumps({'domain': id})})
             self.assertEqual(content.status_code, 202, content.text)
-            self.assertEqual(content.json()['status'], 'processing')
+            self.assertEqual(content.json()['status'], 'pending')
         agent = self.agent()
         agent['config'] |= {'plugins': [], 'knowledge_bases': ['finance', 'legal']}
         self.assertEqual(self.request('POST', '/api/v1/agents/', json=agent).status_code, 201)
         self.assertTrue(self.request('GET', '/api/v1/agents/roomAgent/references').json()['valid'])
+        self.agno.app.state.marketplace_runtime.process_content_jobs()
         run = self.agno.post('/agents/roomAgent/runs', data={'message': 'Find FINANCE_CODE_GOLD_41 and LEGAL_CODE_BLUE_92.',
           'session_id': 'knowledge', 'user_id': 'tester', 'stream': 'false'})
         self.assertEqual(run.status_code, 200, run.text)

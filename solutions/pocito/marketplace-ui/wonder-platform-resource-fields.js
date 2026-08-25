@@ -89,12 +89,15 @@ ReactComp('wonderPlatformResourceFields', {
               cubeQuery.trim() ? 'אין קוביות נוספות תואמות לחיפוש' : 'כל הקוביות נבחרו'))),
           (item.outputCubes || []).map(cubeRow))
       }
-      const removeFile = index => update({...item, files: item.files.filter((value, row) => row != index)})
+      const removeFile = index => update({...item, files: item.files.filter((value, row) => row != index),
+        deletedContentIds: item.files[index].id ? [...(item.deletedContentIds || []), item.files[index].id] : item.deletedContentIds})
       const pickedFile = (file, index) => h('li:flex items-center justify-between text-xs text-[#2e2e2e]', {key: index},
-        h('span:truncate', {}, `${file.name} (${Math.round(file.size / 1024)}KB)`),
+        h('span:truncate', {}, `${file.name} (${Math.round(file.size / 1024)}KB)`, file.status && h(
+          `span:${classes.chip} mr-2`, {}, {pending: 'ממתין', processing: 'בעיבוד', completed: 'מוכן', failed: 'נכשל'}[file.status]
+            || file.status)),
         h('button', {onClick: () => removeFile(index), 'aria-label': `הסרת ${file.name}`}, h('L:X', {size: 12})))
       const addFiles = event => update({...item, files: [...(item.files || []), ...[...event.target.files].map(file =>
-        ({name: file.name, size: file.size}))]})
+        ({name: file.name, size: file.size, file}))]})
       const knowledgeSection = () => h('section:rounded-2xl border border-[#e8e8ea] p-4', {},
         h('div:flex items-center justify-between', {}, h('b:text-sm', {}, `קבצים (${(item.files || []).length})`),
           h(`label:${classes.button} cursor-pointer`, {}, h('L:Plus', {size: 14}), 'הוספת קבצים',

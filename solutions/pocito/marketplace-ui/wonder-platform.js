@@ -28,6 +28,7 @@ ReactComp('wonderPlatform', {
     {id: 'publishSkill', dynamic: true, defaultValue: wonderPlatformPublishSkill('%$roomWUrl%', '%$skill%')},
     {id: 'marketplaceCall', dynamic: true, defaultValue: wonderPlatformMarketplaceCall('%$operation%', '%$resource%', {
       id: '%$id%',
+      contentId: '%$contentId%',
       body: '%$body%',
       roomWUrl: '%$roomWUrl%',
       baseUrl: '%$marketplaceBaseUrl%'
@@ -61,7 +62,7 @@ ReactComp('wonderPlatform', {
       const [runningSet, setRunningSet] = useState(''), [notice, setNotice] = useState('')
       useEffect(() => { void Promise.resolve(loadRepo(ctx.setVars({roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))).then(setRepo, setLoadError) }, [])
       const flash = text => (setNotice(text), setTimeout(() => setNotice(''), 1800))
-      const marketResources = ['plugins', 'skills', 'tools', 'subagents']
+      const marketResources = ['plugins', 'skills', 'tools', 'subagents', 'agents', 'knowledge']
       const importItem = (resource, item) => persistRepo({...repo, [resource]: repo[resource].map(value =>
         value.id == item.id ? {...value, owner: 'imported'} : value)})
       const persistRepo = async next => (setRepo(next), next.marketplace || await saveRepo(
@@ -78,6 +79,17 @@ ReactComp('wonderPlatform', {
         const operation = item.originalId ? 'update' : 'create', body = manifest(ctx.setVars({resource, item, operation}))
         const response = await marketplaceCall(ctx.setVars({operation, resource, id: item.originalId, body,
           roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))
+        if (resource == 'knowledge') {
+          await Promise.all([...(item.deletedContentIds || []).map(contentId => marketplaceCall(ctx.setVars({operation: 'deleteContent', resource,
+            id: response.id, contentId, roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))),
+          ...(item.files || []).filter(content => content.file).map(content => {
+            const upload = new FormData(); upload.append('file', content.file)
+            return marketplaceCall(ctx.setVars({operation: 'uploadContent', resource, id: response.id, body: upload,
+              roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))
+          })])
+          return {...await marketplaceDetail(ctx.setVars({resource, id: response.id, roomWUrl: repositoryRoomWUrl,
+            marketplaceBaseUrl: marketplaceUrl})), originalId: item.originalId}
+        }
         return {...dsls.common.data.wonderPlatformMarketplaceItem.$runWithCtx(ctx, {resource, item: {...body, ...response}}),
           originalId: item.originalId}
       }

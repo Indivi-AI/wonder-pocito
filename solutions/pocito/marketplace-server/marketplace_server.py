@@ -85,11 +85,12 @@ class AgentConfig(BaseModel):
 
 
 class PluginConfig(BaseModel):
-    """Flat skill/tool IDs stored in config.yaml with forward-compatible extra fields."""
+    """Flat resource IDs stored in config.yaml with forward-compatible extra fields."""
 
     model_config = ConfigDict(extra='allow')
     skills: list[str] = Field(default_factory=list)
     tools: list[str] = Field(default_factory=list)
+    knowledge_bases: list[str] = Field(default_factory=list)
 
 
 class DescribedModel(NamedModel):

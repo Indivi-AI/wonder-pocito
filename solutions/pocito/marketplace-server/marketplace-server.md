@@ -10,8 +10,13 @@ direct clients may send the bare room ID themselves. Omitting the header preserv
 Resource manifests use a stable semantic `id` such as `uiRenderingSkill` in URLs and relationships, plus one editable `display_name` for UI.
 
 Knowledge Bases use `/api/v1/knowledge/`. Their `/content` endpoint accepts either a file or `text_content`; common PDF, DOCX, PPTX, CSV,
-Markdown, JSON, and text formats are handled by Agno. Agents connect to any number of bases through `config.knowledge_bases`. AgentOS builds a
-room-scoped LanceDB cache from the S3 source content and refreshes only a changed base before an agent runs.
+Markdown, JSON, and text formats are handled by Agno. Uploads enqueue durable S3 jobs and move through `pending`, `processing`, `completed`,
+or `failed`; the AgentOS worker retries failures without delaying an agent run. Every room/Knowledge pair has an isolated LanceDB table.
+Agents connect to any number of bases through `config.knowledge_bases`; plugin assignments are inherited.
+
+AgentOS also exposes authenticated Streamable HTTP MCP at `/mcp`. Send `Authorization: Bearer $MCP_BEARER_TOKEN`, `x-wonder-room`, and
+`x-wonder-agent`. `list_knowledges` returns only that agent's direct and plugin assignments. `search_knowledge` accepts one to five IDs,
+revalidates every ID fail-closed, searches each isolated Knowledge independently, and merges results with reciprocal-rank fusion.
 
 Setup from zero (dev and deployment): `solutions/pocito/wonder-platform/README.md`. All marketplace state lives in
 MinIO/S3 — manifests, version snapshots, audit events, users, and artifacts are

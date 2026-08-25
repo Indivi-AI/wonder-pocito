@@ -26,6 +26,24 @@ Data('wonderPlatformAgnoApiBase', {
 
 const { wonderPlatformAgnoApiBase, wonderPlatformMarketplaceApiBase } = dsls.common.data
 
+Data('wonderPlatformAgentContent', {
+  params: [{id: 'content'}],
+  impl: ({}, {}, {content}) => {
+    let value = content
+    for (let depth = 0; depth < 3; depth++) {
+      if (typeof value == 'string') {
+        try { value = JSON.parse(value) } catch { return value.trim() }
+      } else {
+        const nested = value?.text ?? value?.answer ?? value?.message ?? value?.content
+        if (nested == null) break
+        value = nested
+      }
+    }
+    return typeof value == 'string' ? value.trim() : Object.entries(value || {}).map(([key, item]) =>
+      `${key}: ${Array.isArray(item) && !item.length ? '—' : typeof item == 'object' ? JSON.stringify(item) : item}`).join('\n')
+  }
+})
+
 Data('wonderPlatformAgentWUrlResponse', {
   params: [
     {id: 'url', as: 'string', mandatory: true},
@@ -129,7 +147,7 @@ Data('wonderPlatformWUrlResponse', {
     const agent = await agentResponse(ctx.setVars({url, fileName, opts, baseUrl, agnoBaseUrl}))
     if (agent) return agent
     let path = String(fileName || '').replace(/^\/+/, '')
-    if (!/^(healthz$|plugins(?:\/|$)|skills(?:\/|$)|tools(?:\/|$)|agents(?:\/|$)|subagents(?:\/|$)|audit(?:\/|$)|presign(?:\/|$)|users(?:\/|$))/.test(path))
+    if (!/^(healthz$|plugins(?:\/|$)|skills(?:\/|$)|tools(?:\/|$)|agents(?:\/|$)|subagents(?:\/|$)|knowledge(?:\/|$)|audit(?:\/|$)|presign(?:\/|$)|users(?:\/|$))/.test(path))
       return
     path = path.replace(/^subagents(?=\/|$)/, 'agents')
     const query = url.includes('?') ? `?${url.split('?').slice(1).join('?')}` : ''
@@ -179,9 +197,8 @@ Data('wonderPlatformRunAgent', {
       text, target, sessionId, history, roomWUrl, baseUrl, token, repo, selectedHarness
     }))
     if (run.harness == 'llmflow') return run
-    const output = typeof run.content == 'string' ? run.content : JSON.stringify(run.content || '')
     return {
-      harness: 'agno', text: output.trim(),
+      harness: 'agno', text: dsls.common.data.wonderPlatformAgentContent.$run(run.content),
       status: String(run.status || '').toLowerCase().includes('fail') ? 'נכשל' : 'הושלם',
       duration: `${Math.max(1, Math.round((Date.now() - startedAt) / 1000))} שנ׳`,
       runId: run.run_id || run.runId, sessionId: run.sessionId,

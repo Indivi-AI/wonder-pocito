@@ -7,7 +7,7 @@ import json
 import logging
 import os
 from contextvars import ContextVar
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path, PurePosixPath
 
 import yaml
@@ -18,6 +18,7 @@ from fastapi import HTTPException
 
 ROOT = Path(__file__).parent
 DEFAULT_ROOM = 'marketplace'
+KNOWLEDGE_INDEX_VERSION = 'isolated-v1'
 ROOM_CONTEXT = ContextVar('room', default=DEFAULT_ROOM)
 logger = logging.getLogger(__name__)
 
@@ -87,6 +88,9 @@ class S3ObjectStore:
         keys = [{'Key': key} for key in self.list(prefix)]
         for offset in range(0, len(keys), 1000):
             self.client.delete_objects(Bucket=self.bucket, Delete={'Objects': keys[offset:offset + 1000]})
+
+    def delete(self, key):
+        self.client.delete_object(Bucket=self.bucket, Key=safe_path(key))
 
     def healthy(self):
         try:
@@ -233,6 +237,9 @@ class MarketplaceRepository:
 
     def delete(self, room, kind, name):
         envelope = self.envelope(room, kind, name)
+        if kind == 'knowledge':
+            for content in self.contents(room, name):
+                self.enqueue_content(room, name, content['id'], 'delete')
         self.audit(room, kind, name, 'delete', envelope['version'], {}, now())
         self.objects.delete_prefix(self.resource_key(room, kind, name, ''))
 
@@ -302,6 +309,118 @@ class MarketplaceRepository:
         keys = [key for key in self.objects.list(prefix) if key.endswith('/manifest.json')]
         return [self.public_content(self.read_json(key)) for key in keys]
 
+    def job_key(self, room, content, revision=None):
+        prefix = f'_system/knowledge-jobs/{safe_name(room)}/{safe_name(content)}-'
+        return f'{prefix}{hashlib.sha256(revision.encode()).hexdigest()[:16]}.json' if revision else prefix
+
+    def enqueue_content(self, room, knowledge, content, action, revision=None):
+        timestamp = now()
+        revision = revision or timestamp
+        job = {'room': room, 'knowledge_id': knowledge, 'content_id': content, 'action': action,
+          'revision': revision, 'status': 'pending', 'attempts': 0, 'retry_at': timestamp,
+          'index_version': KNOWLEDGE_INDEX_VERSION, 'created_at': timestamp, 'updated_at': timestamp}
+        self.write_json(self.job_key(room, content, revision), job)
+        return job
+
+    def content_jobs(self):
+        jobs = []
+        for key in self.objects.list('_system/knowledge-jobs/'):
+            parts = key.split('/')
+            if len(parts) == 4 and parts[1] == 'knowledge-jobs' and parts[3].endswith('.json'):
+                try:
+                    jobs.append(self.read_json(key) | {'_job_key': key})
+                except (FileNotFoundError, json.JSONDecodeError):
+                    pass
+        timestamp = datetime.now(timezone.utc)
+        return sorted((job for job in jobs if job['attempts'] < 5 and
+          (job['status'] in {'pending', 'failed'} and datetime.fromisoformat(job['retry_at']) <= timestamp or
+           job['status'] == 'processing' and datetime.fromisoformat(job['lease_until']) <= timestamp)),
+          key=lambda job: (job['created_at'], job['content_id']))
+
+    def bootstrap_content_jobs(self):
+        for key in self.objects.list(''):
+            parts = key.split('/')
+            if len(parts) != 6 or parts[1] != 'knowledges' or parts[3] != 'contents' or parts[5] != 'manifest.json':
+                continue
+            record = self.read_json(key)
+            if record.get('_index_version') == KNOWLEDGE_INDEX_VERSION or self.objects.list(self.job_key(parts[0], parts[4])):
+                continue
+            revision = record.get('_ingestion_revision') or now()
+            record |= {'status': 'pending', 'status_message': '', '_ingestion_revision': revision}
+            self.write_json(key, record)
+            self.enqueue_content(parts[0], parts[2], parts[4], 'index', revision)
+
+    def claim_content_job(self, job, owner, lease_seconds=300):
+        key = f"_system/knowledge-claims/{safe_name(job['room'])}/{safe_name(job['content_id'])}.json"
+        timestamp = datetime.now(timezone.utc)
+        claim = {'owner': owner, 'expires_at': (timestamp + timedelta(seconds=lease_seconds)).isoformat()}
+        try:
+            self.write_json(key, claim, if_absent=True)
+            return True
+        except FileExistsError:
+            try:
+                if datetime.fromisoformat(self.read_json(key)['expires_at']) > timestamp:
+                    return False
+            except (FileNotFoundError, KeyError, ValueError):
+                pass
+            self.objects.delete(key)
+            try:
+                self.write_json(key, claim, if_absent=True)
+                return True
+            except FileExistsError:
+                return False
+
+    def start_content_job(self, job, lease_seconds=300):
+        key = job.get('_job_key') or self.job_key(job['room'], job['content_id'], job['revision'])
+        current = self.read_json(key)
+        if current['action'] == 'index':
+            try:
+                revision = self.content(current['room'], current['knowledge_id'], current['content_id']).get('_ingestion_revision')
+            except HTTPException:
+                revision = None
+            if revision != current['revision']:
+                self.objects.delete(key)
+                return None
+        timestamp = datetime.now(timezone.utc)
+        current |= {'status': 'processing', 'attempts': current['attempts'] + 1,
+          'lease_until': (timestamp + timedelta(seconds=lease_seconds)).isoformat(), 'updated_at': timestamp.isoformat()}
+        self.write_json(key, current)
+        if current['action'] == 'index':
+            self.set_content_status(current['room'], current['knowledge_id'], current['content_id'], 'processing',
+              revision=current['revision'])
+        return current | {'_job_key': key}
+
+    def finish_content_job(self, job, error=None):
+        key = job.get('_job_key') or self.job_key(job['room'], job['content_id'], job['revision'])
+        try:
+            current = self.read_json(key)
+        except FileNotFoundError:
+            return
+        if current['revision'] != job['revision']:
+            return
+        if error:
+            delay = min(300, 2 ** current['attempts'])
+            timestamp = datetime.now(timezone.utc)
+            current |= {'status': 'failed', 'retry_at': (timestamp + timedelta(seconds=delay)).isoformat(),
+              'updated_at': timestamp.isoformat(), 'error': str(error)}
+            self.write_json(key, current)
+            if current['action'] == 'index':
+                self.set_content_status(current['room'], current['knowledge_id'], current['content_id'], 'failed', str(error),
+                  current['revision'])
+        else:
+            if current['action'] == 'index':
+                self.set_content_status(current['room'], current['knowledge_id'], current['content_id'], 'completed',
+                  revision=current['revision'], index_version=current['index_version'])
+            self.objects.delete(key)
+
+    def release_content_job(self, job, owner):
+        key = f"_system/knowledge-claims/{safe_name(job['room'])}/{safe_name(job['content_id'])}.json"
+        try:
+            if self.read_json(key).get('owner') == owner:
+                self.objects.delete(key)
+        except FileNotFoundError:
+            pass
+
     def content(self, room, knowledge, content):
         self.envelope(room, 'knowledge', knowledge)
         try:
@@ -317,30 +436,39 @@ class MarketplaceRepository:
         content_id, timestamp = os.urandom(16).hex(), now()
         file_name = safe_name(PurePosixPath(file_name).name)
         record = {'id': content_id, 'name': name or file_name, 'description': description, 'type': content_type,
-          'size': str(len(body)), 'linked_to': knowledge, 'metadata': metadata, 'access_count': 0, 'status': 'processing',
+          'size': str(len(body)), 'linked_to': knowledge, 'metadata': metadata, 'access_count': 0, 'status': 'pending',
           'status_message': '', 'created_at': timestamp, 'updated_at': timestamp,
-          '_content_hash': hashlib.sha256(body).hexdigest(), '_artifact': {'path': file_name, 'mime_type': content_type}}
+          '_content_hash': hashlib.sha256(body).hexdigest(), '_ingestion_revision': timestamp,
+          '_artifact': {'path': file_name, 'mime_type': content_type}}
         self.objects.put(self.content_key(room, knowledge, content_id, file_name), body, content_type)
         self.write_json(self.content_key(room, knowledge, content_id, 'manifest.json'), record, if_absent=True)
+        self.enqueue_content(room, knowledge, content_id, 'index', timestamp)
         self.audit(room, 'knowledge', knowledge, 'content.create', self.envelope(room, 'knowledge', knowledge)['version'],
           self.public_content(record), timestamp)
         return self.public_content(record)
 
     def update_content(self, room, knowledge, content, changes):
         record, timestamp = self.content(room, knowledge, content), now()
-        record |= changes | {'status': 'processing', 'status_message': '', 'updated_at': timestamp}
+        record |= changes | {'status': 'pending', 'status_message': '', 'updated_at': timestamp, '_ingestion_revision': timestamp}
         self.write_json(self.content_key(room, knowledge, content, 'manifest.json'), record)
+        self.enqueue_content(room, knowledge, content, 'index', timestamp)
         self.audit(room, 'knowledge', knowledge, 'content.update', self.envelope(room, 'knowledge', knowledge)['version'],
           changes, timestamp)
         return self.public_content(record)
 
-    def set_content_status(self, room, knowledge, content, status, message=''):
-        record = self.content(room, knowledge, content) | {'status': status, 'status_message': message, 'updated_at': now()}
+    def set_content_status(self, room, knowledge, content, status, message='', revision=None, index_version=None):
+        record = self.content(room, knowledge, content)
+        if revision and record.get('_ingestion_revision') != revision:
+            return self.public_content(record)
+        record |= {'status': status, 'status_message': message, 'updated_at': now()}
+        if index_version:
+            record['_index_version'] = index_version
         self.write_json(self.content_key(room, knowledge, content, 'manifest.json'), record)
         return self.public_content(record)
 
     def delete_content(self, room, knowledge, content):
         record = self.content(room, knowledge, content)
+        self.enqueue_content(room, knowledge, content, 'delete')
         self.objects.delete_prefix(self.content_key(room, knowledge, content, ''))
         self.audit(room, 'knowledge', knowledge, 'content.delete', self.envelope(room, 'knowledge', knowledge)['version'],
           {'id': content}, now())
