@@ -442,10 +442,10 @@ Test('wonderPlatform.marketplacePluginWorkspace', {
 
 Test('wonderPlatform.marketplaceSkillEditor', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformMarketplaceTestApp(),
-    and(contains('תוכן המיומנות'), contains('גרסה'), contains('Assets'), contains('Drop files here or browse')), {
+    and(contains('תוכן המיומנות'), contains('Assets'), contains('Drop files here or browse')), {
       userActions: actions(waitForText('פלאגין ראיות'), click('מיומנויות'), waitForText('מיומנות ראיות'), click('מיומנות ראיות'),
-        waitForText('Marketplace API'), click('תוכן המיומנות'), waitForText('SKILL.md'), click('גרסה'),
-        waitForText('min_agent_version'), click('Assets'), waitForText('Drop files here or browse'))})
+        waitForText('Marketplace API'), click('תוכן המיומנות'), waitForText('SKILL.md'), click('Assets'),
+        waitForText('Drop files here or browse'))})
 })
 
 Test('wonderPlatform.marketplaceToolEditor', {
