@@ -72,7 +72,8 @@ Data('wonderPlatformSeed', {
     const agents = rows(['id', 'name', 'mark', 'desc', 'pluginIds', 'skillIds', 'toolIds', 'knowledgeIds', 'owner'], [
       ['ag1', 'סוכן תמיכת לקוחות B2B', 'סת', 'עונה לפניות לקוחות עסקיים ומנתב תקלות מורכבות לצוות אנושי.',
         ['p2'], [], [], ['k1'], 'me'],
-      ['ag2', 'סוכן ביקורת ספקים', 'סב', 'עוקב אחר בקרת ספקים ומחזיר תמונת מצב מבוססת ראיות.', ['p1', 'p4'], [], [], [], 'other'],
+      ['ag2', 'סוכן ביקורת ספקים', 'סב', 'עוקב אחר בקרת ספקים ומחזיר תמונת מצב מבוססת ראיות.',
+        ['p1', 'p4'], [], [], [], 'other'],
       ['ag3', 'סוכן אנליטיקת שוק', 'סש', 'מנתח נתוני שוק גלובליים וממליץ על הזדמנויות.', [], [], [], ['k2'], 'global']
     ]).map(item => ({...item, version: 'V0', created: '08/2026', updated: 'היום', evaluationId: '',
       instructions: 'ענה על בסיס המקורות המצורפים בלבד וציין כל פער מידע.',
@@ -107,7 +108,7 @@ Data('wonderPlatformNormalize', {
     agents: list('agents').map(item => stamp({...item, pluginIds: item.pluginIds || [], skillIds: item.skillIds || [],
       toolIds: item.toolIds || [], knowledgeIds: item.knowledgeIds || [], evaluationId: item.evaluationId || ''})),
     knowledge: list('knowledge').map(item => stamp({...item, files: item.files || []})),
-    evaluations: list('evaluations').map(item => stamp({...item, rubric: item.rubric || '', rows: item.rows || []})),
+    evaluations: list('evaluations').map(item => stamp({...item, targetId: item.targetId || '', rubric: item.rubric || '', rows: item.rows || []})),
     evalRuns: list('evalRuns'), conversations: list('conversations').map(({pluginId, ...item}) => ({...item,
       agentId: item.agentId || '', pluginIds: item.pluginIds || [], skillIds: item.skillIds || [], toolIds: item.toolIds || [],
       knowledgeIds: item.knowledgeIds || [], messages: item.messages || []})),

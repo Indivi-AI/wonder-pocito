@@ -29,18 +29,20 @@ ReactComp('wonderPlatformChatContext', {
 
 ReactComp('wonderPlatformChatComposer', {
   impl: comp({
-    hFunc: (ctx, {react: {h, useEffect, useRef}}) => ({message, setMessage, busy, send}) => {
+    hFunc: (ctx, {react: {h, useEffect, useRef}}) => ({message, setMessage, busy, ready, send}) => {
       const ref = useRef(), submit = () => message.trim() && !busy && send()
       useEffect(() => { if (ref.current) ref.current.style.height = 'auto', ref.current.style.height = `${Math.min(ref.current.scrollHeight, 144)}px` }, [message])
-      return h('div:border-t border-[#e8e8ea] bg-white px-5 py-4', {}, h('div:mx-auto flex max-w-3xl items-end gap-2 rounded-[12px] ' +
+      return h('div:border-t border-[#e8e8ea] bg-white px-5 py-4', {}, !ready && h(
+        'p:mx-auto mb-2 max-w-3xl text-[12px] text-[#6b6b6f]', {id: 'chat-agent-required'}, 'בחרו סוכן כדי להתחיל שיחה'),
+      h('div:mx-auto flex max-w-3xl items-end gap-2 rounded-[12px] ' +
         'border border-[#e8e8ea] bg-white p-2 transition-colors focus-within:border-[#0f0f10]', {},
       h('textarea:min-h-10 flex-1 resize-none px-2 py-1.5 text-[13px] outline-none placeholder:text-[#9b9ba0]', {ref, rows: 1,
-        value: message, 'data-testid': 'chat-input',
-        placeholder: 'כתוב הודעה…',
+        value: message, disabled: !ready, 'data-testid': 'chat-input', 'aria-describedby': !ready ? 'chat-agent-required' : undefined,
+        placeholder: ready ? 'כתוב הודעה…' : 'יש לבחור סוכן תחילה',
         onInput: event => setMessage(event.target.value),
         onKeyDown: event => event.key == 'Enter' && !event.shiftKey && (event.preventDefault(), submit())}),
       h('button:grid h-8 w-8 shrink-0 place-items-center rounded-[8px] bg-[#0f0f10] text-white transition-opacity ' +
-        'hover:opacity-85 disabled:opacity-25', {disabled: !message.trim() || busy, onClick: submit,
+        'hover:opacity-85 disabled:opacity-25', {disabled: !message.trim() || busy || !ready, onClick: submit,
         'aria-label': 'שליחה'}, h('L:ArrowUp', {size: 15}))))
     }
   })
@@ -73,7 +75,7 @@ ReactComp('wonderPlatformChat', {
                 hh(ctx, dsls.react['react-comp'].wonderPlatformAgentResult, {result: item, setMessage}))),
             busy && h('div:flex items-center gap-2 rounded-[10px] border border-[#e8e8ea] bg-white p-4 text-[13px] text-[#6b6b6f]', {},
               h('L:Loader2', {size: 15, className: 'animate-spin'}), 'הסוכן פועל…'))),
-          hh(ctx, dsls.react['react-comp'].wonderPlatformChatComposer, {message, setMessage, busy, send})),
+          hh(ctx, dsls.react['react-comp'].wonderPlatformChatComposer, {message, setMessage, busy, ready: !!agent, send})),
         hh(ctx, dsls.react['react-comp'].wonderPlatformChatContext, {repo, conversation, selectAgent, setContext})))
     }
   })

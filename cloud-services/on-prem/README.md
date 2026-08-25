@@ -34,7 +34,7 @@ Browser check: `http://$SITE_HOST:58045/room/<room>/applet/<name>`.
 
 ```sh
 source cloud-services/on-prem/.env.site
-docker save wonder-server:<tag> marketplace-server:<tag> "$LLM_LITE_IMAGE" | gzip > wonder-images.tar.gz
+docker save wonder-server:<tag> marketplace-server:<tag> "$LLM_LITE_IMAGE" "$PGVECTOR_IMAGE" | gzip > wonder-images.tar.gz
 git bundle create wonder.bundle HEAD <branch>          # source: enables in-gap edits and image rebuilds
 sha256sum wonder-images.tar.gz wonder.bundle > SHA256SUMS
 ```
@@ -56,7 +56,8 @@ Fill `.env.site` with: `SITE_HOST` (the name browsers use for this machine), `IM
 site's **global MinIO** url (browser-reachable), its S3 creds, `MARKETPLACE_S3_STORAGE_CLASS` (site S3 only — MinIO
 rejects `STANDARD_IA` with `InvalidStorageClass`; `sim-check.sh` proves whatever the site sets),
 `LLM_UPSTREAM_BASE` = the internal OpenAI-compatible endpoint, `LLM_UPSTREAM_KEY`, and an invented `LLM_PROXY_KEY`
-(gates the published llm-lite port). Wonder's global MinIO needs buckets `indiviai-wonder` and
+(gates the published llm-lite port). `pgvector` is durable in `pgvector-data`; set `PGVECTOR_URL` only for an external PostgreSQL.
+Wonder's global MinIO needs buckets `indiviai-wonder` and
 `wonder-code-packages` with anonymous read+write.
 
 In-gap code edits: update source from `wonder.bundle`, run `build-images.sh` (COPY-only layers, fully offline from

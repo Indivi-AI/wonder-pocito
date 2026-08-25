@@ -10,13 +10,6 @@ const {
   react: { ReactComp, 'react-comp': { comp } },
   test: { Test, test: { dataTest, reactTest } }
 } = dsls
-Data('wonderPlatformAgentRepoFixture', {
-  impl: () => ({subagents: [{id: 'agent-a', name: 'Agent A'}], plugins: []})
-})
-Data('wonderPlatformLlmFlowFixture', {
-  impl: () => ({text: 'Flow answer', followUps: ['Next step'],
-    runtimeSteps: [{kind: 'מודל', title: 'LLM Flow'}], runId: 'not-a-flow-field'})
-})
 ReactComp('wonderPlatformAgentResultTestHost', {
   impl: comp({
     hFunc: (ctx, {react: {h, hh}}) => () => h('div', {},
@@ -27,22 +20,19 @@ ReactComp('wonderPlatformAgentResultTestHost', {
           runtimeSteps: [{kind: 'מודל'}]}}))
   })
 })
-Test('wonderPlatform.agentWUrlLlmFlow', {
+Test('wonderPlatform.agentWUrlRejectsLlmFlow', {
   impl: dataTest({
     calculate: async ctx => {
       const response = await dsls.common.data.wonderPlatformAgentWUrlResponse.$runWithCtx(ctx, {
         url: 'room://room-a/agent/agent-a?harness=llmflow', fileName: 'agent/agent-a',
-        opts: {method: 'POST', body: {message: 'Question'}},
-        loadRepository: dsls.common.data.wonderPlatformAgentRepoFixture(),
-        runLlmFlow: dsls.common.data.wonderPlatformLlmFlowFixture()
+        opts: {method: 'POST', body: {message: 'Question'}}
       })
       const result = await response.json()
-      return {result, ...coreUtils.harvestLogs(ctx)}
+      return {status: response.status, result, ...coreUtils.harvestLogs(ctx)}
     },
     expectedResult: and(
-      equals('%result/harness%', 'llmflow'),
-      equals('%result/text%', 'Flow answer'),
-      equals('%result/runId%', 'not-a-flow-field'),
+      equals('%status%', 400),
+      equals('%result/detail%', 'harness must be agno'),
       equals('%agentLogger/agentLog/0/t%', 'agentWUrl')
     ),
     logger: 'agentLogger'
@@ -61,7 +51,7 @@ Test('wonderPlatform.agentWUrlAgno', {
       await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
       try {
         const result = await dsls.common.data.wonderPlatformAgentWUrlRequest.$runWithCtx(ctx, {
-          agentId: 'agent-a', message: 'Question', harness: 'agno', sessionId: 'session-1', roomWUrl: 'room://room-a',
+          agentId: 'agent-a', message: 'Question', sessionId: 'session-1', roomWUrl: 'room://room-a',
           baseUrl: `http://127.0.0.1:${server.address().port}`
         })
         return {result, ...coreUtils.harvestLogs(ctx)}
@@ -82,12 +72,12 @@ Test('wonderPlatform.agentResultComponents', {
   impl: reactTest({$: 'react-comp<react>wonderPlatformAgentResultTestHost'},
     and(contains('תשובת AgentOS'), contains('run-1'), contains('תשובת LLM Flow'), contains('Next step')))
 })
-Test('wonderPlatform.agentHarnessSelection', {
+Test('wonderPlatform.agentUsesAgno', {
   impl: dataTest({
     calculate: ctx => dsls.common.data.wonderPlatformRunAgent.$runWithCtx(ctx, {
       text: 'Question', target: {id: 'agent-a', backendConfig: {harness: 'llmflow'}},
-      request: requestCtx => ({harness: requestCtx.vars.selectedHarness, runId: 'native-flow'})
+      request: () => ({harness: 'agno', content: 'Agno answer', runId: 'agno-run'})
     }),
-    expectedResult: and(equals('%harness%', 'llmflow'), equals('%runId%', 'native-flow'))
+    expectedResult: and(equals('%harness%', 'agno'), equals('%text%', 'Agno answer'), equals('%runId%', 'agno-run'))
   })
 })

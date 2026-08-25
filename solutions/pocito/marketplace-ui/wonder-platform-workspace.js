@@ -15,7 +15,14 @@ ReactComp('wonderPlatformWorkspace', {
       const [runs, setRuns] = useState([]), [evaluationId, setEvaluationId] = useState(workspace.item.evaluationId || '')
       const [evaluationRun, setEvaluationRun] = useState(), [detail, setDetail] = useState(-1)
       const [activeTab, setActiveTab] = useState('settings')
+      const runtimeConfig = item => JSON.stringify(item)
+      const savedConfig = runtimeConfig(workspace.item), [chatSessionId, setChatSessionId] = useState(`${workspace.item.id}-${Date.now()}`)
+      const [sessionConfig, setSessionConfig] = useState(savedConfig), draftConfig = runtimeConfig(draft)
+      const draftDirty = draftConfig != savedConfig, sessionOutdated = runs.length > 0 && sessionConfig != savedConfig
       useEffect(() => { setDraft({...workspace.item}); setEvaluationId(workspace.item.evaluationId || '') }, [workspace.item])
+      useEffect(() => {
+        setRuns([]); setChatSessionId(`${workspace.item.id}-${Date.now()}`); setSessionConfig(runtimeConfig(workspace.item))
+      }, [workspace.item.id])
       const targetLabels = {plugins: 'הפלאגין', subagents: 'הסאב-אייג׳נט', agents: 'הסוכן'}, targetLabel = targetLabels[workspace.resource]
       const relationRows = workspace.resource == 'plugins' ? [['skillIds', 'skills', 'מיומנויות'], ['toolIds', 'tools', 'כלים'],
           ['knowledgeIds', 'knowledge', 'ידע']]
@@ -31,7 +38,7 @@ ReactComp('wonderPlatformWorkspace', {
         const id = `test-${Date.now()}`, pending = {id, input: text, status: 'מריץ…', trace: semanticTrace}
         setRuns(items => [...items, pending]); setTestInput('')
         try {
-          const result = await runTarget(text, draft, undefined, workspace.resource == 'plugins' ? 'llmflow' : undefined)
+          const result = await runTarget(text, draft, chatSessionId)
           setRuns(items => items.map(run => run.id == id ? {...run, ...result, output: result.text || result.output, status: result.status || 'הושלם',
             trace: [...semanticTrace, ...(result.runtimeSteps || [])]} : run))
         } catch (error) {
@@ -65,26 +72,34 @@ ReactComp('wonderPlatformWorkspace', {
             h('span:text-[10px] text-[#6b6b6f]', {}, `נכנס דרך ${labels[resource]}`), h('div:mt-2 flex flex-wrap gap-2', {},
               inherited.filter(value => value[1]).map(([kind, name]) => h(`span:${classes.chip}`, {key: kind + name}, `${kind} · ${name}`)))) )
         })))
-      const testPanel = h('div:flex h-full flex-col', {}, h('div:flex-1 space-y-4 overflow-y-auto p-4', {}, runs.length ? runs.map((run, index) => h(
-        'article:overflow-hidden rounded-xl border border-[#e8e8ea] bg-white', {key: run.id}, h('div:flex items-center justify-between border-b ' +
-          'bg-[#fafafa] px-4 py-3', {}, h('div', {}, h('b:font-mono text-xs', {}, `RUN ${String(index + 1).padStart(2, '0')}`),
-          h('div:mt-1 text-[10px] text-[#6b6b6f]', {}, 'הרצה עצמאית · ללא הקשר מהרצות קודמות')), h('div:flex items-center gap-2', {},
-          h(`span:${classes.chip}`, {}, run.status), run.opikUrl && h('a:text-xs text-[#0f0f10]', {href: run.opikUrl}, 'Opik ↗'))),
-        h('div:space-y-3 p-4', {}, h('div', {}, h('b:text-[10px] text-[#6b6b6f]', {}, 'קלט ההרצה'), h('p:mt-1 text-sm', {}, run.input)),
-          h('div', {}, h('b:text-[10px] text-[#6b6b6f]', {}, 'מעקב הרצה'), h('div:mt-2 space-y-1', {}, (run.trace || []).map((step, stepIndex) => h(
-            'div:flex items-center gap-2 rounded-lg bg-[#fafafa] px-3 py-2', {key: `${step.kind}-${step.id || stepIndex}`},
-            h(`span:${classes.chip}`, {}, step.kind), h('span:flex-1 text-xs', {}, step.title), step.id && step.resource != 'tools' && h(
-              'button:text-xs text-[#0f0f10]', {onClick: () => openEditor(step.resource, repo[step.resource].find(item => item.id == step.id))}, 'עריכה')))),
-          run.output && hh(ctx, dsls.react['react-comp'].wonderPlatformAgentResult, {result: run})))))
+      const newChat = () => {
+        if (draftDirty) return
+        setRuns([]); setChatSessionId(`${draft.id}-${Date.now()}`); setSessionConfig(savedConfig)
+      }
+      const configNotice = draftDirty ? 'יש שינויי תצורה שלא נשמרו' : sessionOutdated
+        ? 'תצורת הפלאגין עודכנה — פתח שיחה חדשה' : 'שיחת AgentOS פעילה'
+      const chatRun = run => h('div:space-y-3', {key: run.id}, h('div:flex justify-end', {}, h(
+        'div:max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-sm bg-[#0f0f10] px-4 py-3 text-sm text-white', {}, run.input)), h(
+        'div:flex justify-start', {}, h('div:max-w-[85%] rounded-2xl rounded-bl-sm border border-[#e8e8ea] bg-white px-4 py-3', {}, h(
+          'div:flex items-center gap-2', {}, h(`span:${classes.chip}`, {}, run.status), run.opikUrl && h(
+            'a:text-xs text-[#0f0f10]', {href: run.opikUrl}, 'Opik ↗')), h(
+          'p:mt-3 whitespace-pre-wrap break-words text-sm leading-7', {}, run.output || run.status), (run.trace || []).length > 0 && h(
+          'details:mt-3', {}, h('summary:cursor-pointer text-xs text-[#6b6b6f]', {}, 'מעקב הרצה'), (run.trace || []).map((step, stepIndex) => h(
+            'div:mt-2 flex items-center gap-2 text-xs', {key: `${step.kind}-${step.id || stepIndex}`}, h(
+              `span:${classes.chip}`, {}, step.kind), h('span:flex-1', {}, step.title)))))))
+      const testPanel = h('div:flex h-full flex-col', {}, h('div:flex items-center justify-between gap-3 border-b border-[#e8e8ea] bg-white p-3', {},
+        h(`span:text-xs ${draftDirty || sessionOutdated ? 'text-amber-700' : 'text-[#6b6b6f]'}`, {}, configNotice), h(
+          `button:${classes.button}`, {disabled: draftDirty, onClick: newChat}, draftDirty ? 'שמור תחילה' : 'שיחה חדשה')),
+      h('div:flex-1 space-y-5 overflow-y-auto p-4', {}, runs.length ? runs.map(chatRun)
         : h('div:grid min-h-64 place-items-center text-center text-sm text-[#6b6b6f]', {},
-          h('div', {}, h('L:PlayCircle', {size: 28, className: 'mx-auto mb-3'}), `נסה את ${targetLabel} תוך כדי בנייה`))),
+          h('div', {}, h('L:MessageCircle', {size: 28, className: 'mx-auto mb-3'}), `התחל שיחה עם ${targetLabel}`))),
       h('div:border-t border-[#e8e8ea] bg-white p-3', {}, h('div:flex items-end gap-2 rounded-xl border border-[#e8e8ea] p-2', {},
         h('textarea:min-h-12 flex-1 resize-none p-2 text-sm outline-none', {value: testInput, placeholder: `נסה את ${targetLabel}…`,
           onInput: event => setTestInput(event.target.value), onKeyDown: event => event.key == 'Enter' && !event.shiftKey &&
             (event.preventDefault(), sendTest(testInput)), 'data-testid': 'workspace-test-input'}),
         h('button:grid h-9 w-9 place-items-center rounded-full bg-[#0f0f10] text-white disabled:opacity-40', {disabled: !testInput.trim(),
           onClick: () => sendTest(testInput), 'aria-label': 'הרצה'}, h('L:ArrowUp', {size: 15}))),
-      h('p:mt-2 text-[10px] text-[#6b6b6f]', {}, 'כל שליחה היא הרצה עצמאית ב-harness שהוגדר לסוכן')))
+      h('p:mt-2 text-[10px] text-[#6b6b6f]', {}, 'ההקשר נשמר לאורך השיחה ב-AgentOS')))
       const shownRun = evaluationRun || repo.evalRuns.filter(run => run.evaluationId == evaluationId && run.targetId == draft.id)
         .sort((a, b) => b.startedAt - a.startedAt)[0]
       const evalRow = (row, index) => h('article:rounded-xl border border-[#e8e8ea] bg-white p-3', {key: index},

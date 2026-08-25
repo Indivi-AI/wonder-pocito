@@ -22,6 +22,8 @@ wait_ready "$market/healthz" || exit 1
 wait_ready "$agno/healthz" || exit 1
 curl -fsS --max-time 10 "$market/healthz" | grep -q '"object_store":"ok"' \
   && pass "marketplace object store" || flunk "marketplace object store"
+curl -fsS --max-time 10 "$agno/healthz" | grep -q '"vector_store":"ok"' \
+  && pass "agno pgvector store" || flunk "agno pgvector store"
 
 for bucket in indiviai-wonder wonder-code-packages; do
   curl -fsS --max-time 10 -X PUT "$minio_url/$bucket/$room/probe.json" -d '{"probe":true}' > /dev/null \

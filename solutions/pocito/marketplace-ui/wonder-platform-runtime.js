@@ -33,14 +33,14 @@ followUps contains two short, useful next questions.
 Doclet('essentialOutputFormat.wonderPlatform', {
   impl: `
 Return one javascript code block containing one flow.
-The flow has one setCtxData element whose jqSingle exp is a literal object.
+The flow has one setCtxData element whose asIs val is a literal object.
 The object shape is {text: string, followUps: string[]}.
-Escape quotes for one jq string and emit no other code.
+Emit no other code.
 Example:
 \`\`\`javascript
 {$: 'flow-elem<ai>flow', elems: [
   {$: 'flow-elem<ai>setCtxData', goal: 'Compose grounded answer', status: 'מנסח תשובה מאומתת...',
-    value: {$: 'data<common>jqSingle', exp: '{text:"המסקנה המבוססת",followUps:["בדוק פער","הצג מקורות"]}'}}
+    value: {$: 'data<common>asIs', val: {text: 'המסקנה המבוססת', followUps: ['בדוק פער', 'הצג מקורות']}}}
 ]}
 \`\`\`
 `

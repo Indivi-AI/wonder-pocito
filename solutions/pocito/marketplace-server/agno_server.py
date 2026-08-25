@@ -23,12 +23,14 @@ from agno.models.openai import OpenAIResponses
 from agno.os import AgentOS
 from agno.skills import LocalSkills, Skills
 from agno.tools.function import Function
-from agno.vectordb.lancedb import LanceDb
+from agno.vectordb.pgvector import PgVector
 from agno.vectordb.search import SearchType
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from mcp.server.transport_security import TransportSecuritySettings
+from sqlalchemy import Index, create_engine, text
+from sqlalchemy.engine import URL
 
 from marketplace_storage import DEFAULT_ROOM, ROOM_CONTEXT, ROOT, MarketplaceRepository, S3ObjectStore, safe_name, safe_path
 from knowledge_mcp import BearerAuthMiddleware, create_knowledge_mcp
@@ -40,12 +42,29 @@ class MarketplaceAgentRuntime:
         self.db = InMemoryDb()
         self.room_dbs = defaultdict(InMemoryDb)
         self.model_factory = model_factory or self.openai_model
-        self.embedder = embedder or OpenAIEmbedder(api_key=os.getenv('OPENAI_API_KEY'), base_url=os.getenv('OPENAI_BASE_URL'))
+        self.embedder = embedder or OpenAIEmbedder(id=os.getenv('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small'),
+          dimensions=int(os.getenv('OPENAI_EMBEDDING_DIMENSIONS', '1536')), api_key=os.getenv('OPENAI_API_KEY'),
+          base_url=os.getenv('OPENAI_BASE_URL'))
+        pgvector_url = os.getenv('PGVECTOR_URL') or URL.create('postgresql+psycopg',
+          username=os.getenv('POSTGRES_USER', 'wonder'), password=os.getenv('POSTGRES_PASSWORD', 'wonder-pg-local'),
+          host=os.getenv('PGVECTOR_HOST', '127.0.0.1'), port=int(os.getenv('PGVECTOR_PORT', '5432')),
+          database=os.getenv('POSTGRES_DB', 'wonder'))
+        self.vector_db_engine = create_engine(pgvector_url, pool_pre_ping=True)
         self.knowledge_instances, self.worker_id = {}, os.urandom(16).hex()
 
     def openai_model(self, manifest):
         model = manifest.get('config', {}).get('backend_config', {}).get('model') or os.getenv('OPENAI_MODEL', 'gpt-5-mini')
         return OpenAIResponses(id=model, api_key=os.getenv('OPENAI_API_KEY'), base_url=os.getenv('OPENAI_BASE_URL'))
+
+    def agent_manifest(self, room, name):
+        try:
+            return self.repo.get(room, 'agent', name)
+        except HTTPException as error:
+            if error.status_code != 404:
+                raise
+        plugin = self.repo.get(room, 'plugin', name)
+        return plugin | {'config': {'system_prompt': plugin.get('readme') or plugin['description'],
+          'backend_config': {'harness_type': 'deepagents'}, 'plugins': [name]}}
 
     def materialize_skill(self, room, name):
         manifest = self.repo.get(room, 'skill', name, include_assets=True)
@@ -102,9 +121,9 @@ class MarketplaceAgentRuntime:
             self.repo.get(room, 'knowledge', name)
         key = safe_name(room), safe_name(name)
         return self.knowledge_instances.setdefault(key, Knowledge(name=name,
-          vector_db=LanceDb(uri=str(self.runtime_dir / 'knowledge'),
+          vector_db=PgVector(db_engine=self.vector_db_engine,
             table_name=f"knowledge_{hashlib.sha256(f'{room}:{name}'.encode()).hexdigest()[:20]}",
-            search_type=SearchType.vector, embedder=self.embedder)))
+            search_type=SearchType.vector, vector_index=None, embedder=self.embedder)))
 
     def process_content_job(self, job):
         knowledge = self.knowledge(job['room'], job['knowledge_id'], job['action'] != 'delete')
@@ -123,6 +142,10 @@ class MarketplaceAgentRuntime:
         count = knowledge.vector_db.get_count() if knowledge.vector_db.exists() else 0
         knowledge.insert(name=item['name'], description=item.get('description'), path=str(path),
           metadata=(item.get('metadata') or {}) | {'knowledge_id': job['knowledge_id'], 'content_id': job['content_id']})
+        table = knowledge.vector_db.table
+        Index(f'{table.name}_hnsw_index', table.c.embedding, postgresql_using='hnsw',
+          postgresql_ops={'embedding': 'vector_cosine_ops'}, postgresql_with={'m': 16, 'ef_construction': 200}).create(
+          self.vector_db_engine, checkfirst=True)
         if knowledge.vector_db.get_count() <= count:
             raise RuntimeError('content was not indexed')
 
@@ -142,7 +165,7 @@ class MarketplaceAgentRuntime:
                 self.repo.release_content_job(pending, self.worker_id)
 
     def assigned_knowledge_names(self, room, agent_name):
-        config = self.repo.get(room, 'agent', agent_name)['config']
+        config = self.agent_manifest(room, agent_name)['config']
         names = set(config.get('knowledge_bases', []))
         for plugin_name in config.get('plugins', []):
             names.update((self.repo.get(room, 'plugin', plugin_name).get('config') or {}).get('knowledge_bases', []))
@@ -167,7 +190,7 @@ class MarketplaceAgentRuntime:
         return self.search_knowledge(ROOM_CONTEXT.get(), sorted(names), query, limit)
 
     def agent(self, room, name):
-        manifest = self.repo.get(room, 'agent', name)
+        manifest = self.agent_manifest(room, name)
         config, skill_names, tool_names = manifest['config'], set(), set()
         knowledge_names = set(self.assigned_knowledge_names(room, name))
         for plugin_name in config.get('plugins', []):
@@ -179,7 +202,7 @@ class MarketplaceAgentRuntime:
         skills = Skills([LocalSkills(str(self.materialize_skill(room, item)), validate=False) for item in sorted(skill_names)])
         knowledge = self.knowledge(room, sorted(knowledge_names)[0]) if knowledge_names else None
         return Agent(id=name, name=manifest['display_name'], model=self.model_factory(manifest),
-          db=self.room_dbs[room],
+          db=self.room_dbs[room], add_history_to_context=True,
           tools=[self.tool(room, item) for item in sorted(tool_names)], skills=skills,
           knowledge=knowledge, knowledge_retriever=(lambda agent, query, num_documents=None, **kwargs:
             self.retrieve_knowledge(knowledge, knowledge_names, query, num_documents, **kwargs)) if knowledge else None,
@@ -223,8 +246,8 @@ def create_app(data_dir=None, model_factory=None, embedder=None):
     base = FastAPI(title='agno', version='0.1.0', lifespan=lifespan)
     factories = []
 
-    def sync_factories():
-        names = set(repo.agent_names())
+    def sync_factories(room=DEFAULT_ROOM):
+        names = set(repo.agent_names(room)) | {item['id'] for item in repo.list(room, 'plugin')}
         factories[:] = [item for item in factories if item.id in names]
         for name in sorted(names - {item.id for item in factories}):
             factories.append(AgentFactory(id=name, db=runtime.db,
@@ -236,17 +259,24 @@ def create_app(data_dir=None, model_factory=None, embedder=None):
             room = safe_name(request.headers.get('x-wonder-room', DEFAULT_ROOM))
         except ValueError as error:
             return JSONResponse({'detail': str(error)}, status_code=422)
-        if request.url.path.startswith('/agents'):
-            sync_factories()
         token = ROOM_CONTEXT.set(room)
         try:
+            if request.url.path.startswith('/agents'):
+                sync_factories(room)
             return await call_next(request)
         finally:
             ROOM_CONTEXT.reset(token)
 
     @base.get('/healthz', tags=['health'])
     def healthz():
-        return {'status': 'ok', 'object_store': 'ok' if repo.objects.healthy() else 'unreachable'}
+        try:
+            with runtime.vector_db_engine.connect() as connection:
+                connection.execute(text('SELECT 1'))
+            vector_store = 'ok'
+        except Exception:
+            vector_store = 'unreachable'
+        return {'status': 'ok' if vector_store == 'ok' else 'degraded',
+          'object_store': 'ok' if repo.objects.healthy() else 'unreachable', 'vector_store': vector_store}
 
     sync_factories()
     agent_os = AgentOS(name='Wonder AgentOS', agents=factories, db=runtime.db, base_app=base,

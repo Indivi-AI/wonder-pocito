@@ -11,18 +11,17 @@ Resource manifests use a stable semantic `id` such as `uiRenderingSkill` in URLs
 
 Knowledge Bases use `/api/v1/knowledge/`. Their `/content` endpoint accepts either a file or `text_content`; common PDF, DOCX, PPTX, CSV,
 Markdown, JSON, and text formats are handled by Agno. Uploads enqueue durable S3 jobs and move through `pending`, `processing`, `completed`,
-or `failed`; the AgentOS worker retries failures without delaying an agent run. Every room/Knowledge pair has an isolated LanceDB table.
+or `failed`; the AgentOS worker retries failures without delaying an agent run. Every room/Knowledge pair has an isolated pgvector table.
 Agents connect to any number of bases through `config.knowledge_bases`; plugin assignments are inherited.
 
 AgentOS also exposes authenticated Streamable HTTP MCP at `/mcp`. Send `Authorization: Bearer $MCP_BEARER_TOKEN`, `x-wonder-room`, and
 `x-wonder-agent`. `list_knowledges` returns only that agent's direct and plugin assignments. `search_knowledge` accepts one to five IDs,
 revalidates every ID fail-closed, searches each isolated Knowledge independently, and merges results with reciprocal-rank fusion.
 
-Setup from zero (dev and deployment): `solutions/pocito/wonder-platform/README.md`. All marketplace state lives in
-MinIO/S3 — manifests, version snapshots, audit events, users, and artifacts are
-room-prefixed objects in one bucket; there is no sqlite. Defaults: `MARKETPLACE_S3_BUCKET=wonder-marketplace`,
+Setup from zero (dev and deployment): `solutions/pocito/wonder-platform/README.md`. Marketplace manifests, version snapshots, audit events,
+users, and artifacts live in MinIO/S3; knowledge vectors live in PostgreSQL/pgvector. Defaults: `MARKETPLACE_S3_BUCKET=wonder-marketplace`,
 `MARKETPLACE_S3_ENDPOINT=http://127.0.0.1:9000`, `MARKETPLACE_S3_ACCESS_KEY=wonder`, `MARKETPLACE_S3_SECRET_KEY=wonder-minio-local`.
-Presigned upload/download URLs point at room-prefixed MinIO keys. `MARKETPLACE_DATA_DIR` (agno only) hosts runtime materialization, and
+Presigned upload/download URLs point at room-prefixed MinIO keys. `PGVECTOR_URL` selects PostgreSQL, `MARKETPLACE_DATA_DIR` hosts runtime materialization, and
 each room's agent chat sessions use a separate Agno in-memory db, so both reset without data loss. `MARKETPLACE_HOST`/`MARKETPLACE_PORT`
 (default 127.0.0.1:7777), `AGENT_OS_HOST`/`AGENT_OS_PORT` (default 127.0.0.1:7778), `CORS_ALLOWED_ORIGINS`, and
 `MARKETPLACE_S3_STORAGE_CLASS` (sent as `StorageClass` on every put when set) are optional.

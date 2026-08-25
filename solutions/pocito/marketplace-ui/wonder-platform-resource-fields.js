@@ -2,12 +2,13 @@ import { dsls } from '@jb6/core'
 import '@jb6/react'
 import './wonder-platform-domain.js'
 import './wonder-platform-flapi.js'
+import './wonder-platform-searchable-select.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
 ReactComp('wonderPlatformResourceFields', {
   impl: comp({
-    hFunc: (ctx, {react: {h, useState}}) => ({resource, item, update, repo, openPicker}) => {
+    hFunc: (ctx, {react: {h, hh, useState}}) => ({resource, item, update, repo, openPicker, saveAndRun, runningSet}) => {
       const {classes} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
       const [cubeQuery, setCubeQuery] = useState('')
       const [historyDetail, setHistoryDetail] = useState(-1)
@@ -114,7 +115,7 @@ ReactComp('wonderPlatformResourceFields', {
       }
       const historyRow = (run, runIndex) => {
         const targetName = repo.plugins.find(plugin => plugin.id == run.targetId)?.name
-          || repo.subagents.find(agent => agent.id == run.targetId)?.name
+          || repo.subagents.find(agent => agent.id == run.targetId)?.name || repo.agents.find(agent => agent.id == run.targetId)?.name
         const summary = h('button:flex w-full flex-wrap items-center gap-3 text-xs', {
           onClick: () => setHistoryDetail(historyDetail == runIndex ? -1 : runIndex)},
           h('b', {}, run.started), h('span', {}, targetName), h('span', {}, `${run.completed || 0}/${run.total}`),
@@ -126,6 +127,49 @@ ReactComp('wonderPlatformResourceFields', {
         const runs = repo.evalRuns.filter(run => run.evaluationId == item.id).sort((a, b) => b.startedAt - a.startedAt)
         return h('section:rounded-2xl border border-[#e8e8ea] p-4', {}, h('b:text-sm', {}, 'היסטוריית הרצות'),
           runs.length ? runs.map(historyRow) : h('p:mt-3 text-xs text-[#6b6b6f]', {}, 'עדיין אין הרצות'))
+      }
+      if (resource == 'evaluations') {
+        const target = repo.agents.find(agent => agent.id == item.targetId), running = runningSet == item.id
+        const ready = item.name?.trim() && target && item.rows?.some(row => row.input?.trim())
+        const scenario = (row, index) => h('article:rounded-xl border border-[#e8e8ea] bg-white p-4', {key: index}, h(
+          'div:flex items-center justify-between', {}, h('b:text-sm', {}, `תרחיש ${index + 1}`), h(
+            'button:rounded-lg p-1.5 text-[#6b6b6f] hover:bg-red-50 hover:text-red-600', {onClick: () => update({...item,
+              rows: item.rows.filter((value, rowIndex) => rowIndex != index)}), 'aria-label': `מחיקת תרחיש ${index + 1}`}, h(
+              'L:Trash2', {size: 14}))), h('div:mt-3 grid gap-3 md:grid-cols-2', {}, field('מה שולחים לסוכן?', h(
+            `textarea:${classes.field} min-h-28 resize-y`, {value: row.input || '', placeholder: 'לדוגמה: סכם את מדיניות ההחזרות',
+              onInput: event => update({...item, rows: item.rows.map((value, rowIndex) => rowIndex == index
+                ? {...value, input: event.target.value} : value)})})), field('מהי תשובה טובה?', h(
+            `textarea:${classes.field} min-h-28 resize-y`, {value: row.expected || '',
+              placeholder: 'הגדירו עובדות, מבנה או תנאים שחייבים להופיע',
+              onInput: event => update({...item, rows: item.rows.map((value, rowIndex) => rowIndex == index
+                ? {...value, expected: event.target.value} : value)})}))), h('details:mt-3', {}, h(
+          'summary:cursor-pointer text-xs text-[#6b6b6f]', {}, 'הערות פנימיות'), h(`textarea:${classes.field}`, {
+            value: row.notes || '', placeholder: 'הקשר נוסף לצוות', onInput: event => update({...item,
+              rows: item.rows.map((value, rowIndex) => rowIndex == index ? {...value, notes: event.target.value} : value)})})))
+        return h('div:space-y-5', {}, h('section:rounded-2xl border border-[#e8e8ea] p-5', {}, h(
+          'h2:text-base font-semibold', {}, 'מה רוצים לבדוק?'), h(`textarea:${classes.field} min-h-20 resize-y`, {value: item.desc || '',
+            placeholder: 'תארו בקצרה את מטרת הבדיקה', onInput: event => update({...item, desc: event.target.value})})), h(
+          'section:rounded-2xl border border-[#e8e8ea] p-5', {}, h('div:flex items-start gap-3', {}, h(
+            'span:grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#f4f4f5]', {}, h('L:Bot', {size: 17})), h(
+            'div:flex-1', {}, h('h2:text-base font-semibold', {}, 'איזה סוכן בודקים?'), h(
+              'p:mt-1 text-xs text-[#6b6b6f]', {}, 'כל התרחישים ירוצו מול אותו סוכן דרך Agno'), h('div:mt-3', {}, hh(
+              ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {items: repo.agents, value: item.targetId || '',
+                onChange: targetId => update({...item, targetId}), placeholder: 'בחרו סוכן', empty: 'אין סוכנים זמינים'}))))), h(
+          'section:rounded-2xl border border-[#e8e8ea] bg-[#fafafa] p-5', {}, h('div:flex items-center justify-between gap-3', {}, h(
+            'div', {}, h('h2:text-base font-semibold', {}, 'תרחישי בדיקה'), h('p:mt-1 text-xs text-[#6b6b6f]', {},
+              'כל תרחיש הוא שאלה אחת ותיאור של התוצאה הרצויה')), h(`button:${classes.button}`, {onClick: () => update({...item,
+              rows: [...(item.rows || []), {input: '', expected: '', notes: ''}]})}, h('L:Plus', {size: 14}), 'תרחיש')), h(
+            'div:mt-4 space-y-3', {}, (item.rows || []).map(scenario), !item.rows?.length && h(
+              'div:rounded-xl border border-dashed border-[#d8d8dc] p-8 text-center text-sm text-[#6b6b6f]', {},
+              'הוסיפו תרחיש ראשון כדי להתחיל'))), h('details:rounded-2xl border border-[#e8e8ea] p-4', {}, h(
+            'summary:cursor-pointer text-sm font-semibold', {}, 'אפשרויות מתקדמות'), field('הנחיות הערכה', h(
+              `textarea:${classes.field} min-h-24`, {value: item.rubric || '', placeholder: 'קריטריונים נוספים לשימוש עתידי',
+                onInput: event => update({...item, rubric: event.target.value})}))), historySection(), h(
+          'div:sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#d8d8dc] bg-white p-4 shadow-lg', {}, h(
+            'p:text-xs text-[#6b6b6f]', {}, !item.name?.trim() ? 'הוסיפו שם לבדיקה' : !target ? 'בחרו סוכן כדי להריץ'
+              : !item.rows?.some(row => row.input?.trim()) ? 'הוסיפו לפחות תרחיש אחד עם קלט' : 'מוכן להרצה'), h(
+            `button:${classes.primary}`, {disabled: !ready || running, onClick: () => saveAndRun(item, target)},
+            running ? 'מריץ…' : 'שמירה והרצה')))
       }
       return h('div:space-y-5', {}, resource == 'tools' && !repo.marketplace && packageStep(),
       resource == 'tools' && !repo.marketplace && item.packageId && (item.inputSchema || []).length > 0 && h(
@@ -186,20 +230,6 @@ ReactComp('wonderPlatformResourceFields', {
             'button', {onClick: () => update({...item, codeFiles: item.codeFiles.filter((value, row) => row != index)}),
               'aria-label': 'מחיקת קובץ'}, h('L:Trash2', {size: 14}))))), resource == 'tools' && !repo.marketplace && h(
         'div:space-y-5', {}, inputSchemaSection(), outputCubesSection()),
-      resource == 'evaluations' && h('div:space-y-4', {}, field('מדרג לשופט (נשמר לשימוש עתידי — הסטודיו אינו שופט)',
-        h(`textarea:${classes.field} min-h-24`, {value: item.rubric || '', onInput: event => update({...item, rubric: event.target.value})})),
-      h('section:rounded-2xl border border-[#e8e8ea] p-4', {}, h('div:flex items-center justify-between', {}, h('b:text-sm', {}, 'רשומות הסט'),
-        h(`button:${classes.button}`, {onClick: () => update({...item, rows: [...(item.rows || []), {input: '', expected: '', notes: ''}]})},
-          h('L:Plus', {size: 14}), 'רשומה')), (item.rows || []).map((row, index) => h(
-        'div:mt-3 grid grid-cols-[28px_1fr_1fr_1fr_28px] gap-2 max-sm:grid-cols-1', {key: index},
-        h('span:text-xs text-[#6b6b6f]', {}, String(index + 1).padStart(2, '0')), ...['input', 'expected', 'notes'].map(key => h(
-          'textarea:min-h-20 rounded-lg border border-[#e8e8ea] p-2 text-sm', {key, value: row[key] || '',
-            placeholder: {input: 'קלט לדוגמה', expected: 'מה מצופה שיחזור', notes: 'הערות'}[key],
-            onInput: event => update({...item, rows: item.rows.map((value, rowIndex) => rowIndex == index
-              ? {...value, [key]: event.target.value} : value)})})), h('button', {onClick: () => update({...item,
-          rows: item.rows.filter((value, rowIndex) => rowIndex != index)}), 'aria-label': 'מחיקת רשומה'}, h('L:Trash2', {size: 14})))),
-        (item.rows || []).length == 0 && h('p:mt-3 text-xs text-[#6b6b6f]', {}, 'הוסיפו רשומה ראשונה כדי להתחיל')),
-      historySection()),
       repo.marketplace && item._marketplace && h('section:rounded-2xl border border-[#e8e8ea] p-4', {}, h(
         'div:flex flex-wrap items-center gap-2', {}, h('b:text-sm', {}, 'Marketplace API'), h(`span:${classes.chip}`, {},
           `${item.versions?.length || 0} גרסאות`), h(`span:${classes.chip}`, {}, `${item.audit?.length || 0} אירועי audit`)),

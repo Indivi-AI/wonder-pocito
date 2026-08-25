@@ -19,6 +19,7 @@ x-marketplace-s3-env: &marketplace-s3-env   # marketplace + agno share ONLY this
 volumes:
   minio-data: {}
   agno-runtime: {}
+  pgvector-data: {}
 
 services:
   wonder:
@@ -59,6 +60,8 @@ services:
     networks: [edge]
     extra_hosts: ["${SITE_HOST}:host-gateway"]
     volumes: [agno-runtime:/data]
+    depends_on:
+      pgvector: {condition: service_healthy}
     environment:
       <<: *marketplace-s3-env
       AGENT_OS_HOST: 0.0.0.0
@@ -68,8 +71,34 @@ services:
       OPENAI_BASE_URL: ${SITE_SCHEME}://${SITE_HOST}:${LLM_LITE_PUBLISHED_PORT}/v1
       OPENAI_API_KEY: ${LLM_PROXY_KEY}
       OPENAI_MODEL: ${OPENAI_MODEL}
+      OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      OPENAI_EMBEDDING_DIMENSIONS: ${OPENAI_EMBEDDING_DIMENSIONS:-1536}
+      PGVECTOR_URL: ${PGVECTOR_URL:-}
+      PGVECTOR_HOST: ${SITE_HOST}
+      PGVECTOR_PORT: ${PGVECTOR_PUBLISHED_PORT:-58050}
+      POSTGRES_DB: ${POSTGRES_DB:-wonder}
+      POSTGRES_USER: ${POSTGRES_USER:-wonder}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wonder-pg-local}
       MARKETPLACE_MODEL_FACTORY: ${MARKETPLACE_MODEL_FACTORY}
       MCP_BEARER_TOKEN: ${MCP_BEARER_TOKEN:-${LLM_PROXY_KEY}}
+
+  pgvector:
+    image: ${PGVECTOR_IMAGE:-pgvector/pgvector:0.8.6-pg16-bookworm}
+    restart: unless-stopped
+    command: ["postgres", "-c", "maintenance_work_mem=1GB"]
+    shm_size: 1gb
+    ports: ["${PGVECTOR_PUBLISHED_PORT:-58050}:5432"]
+    networks: [edge]
+    volumes: [pgvector-data:/var/lib/postgresql/data]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-wonder}
+      POSTGRES_USER: ${POSTGRES_USER:-wonder}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wonder-pg-local}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wonder} -d ${POSTGRES_DB:-wonder}"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
 
   llm-lite:
     image: ${LLM_LITE_IMAGE}

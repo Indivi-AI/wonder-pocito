@@ -1,10 +1,8 @@
 import { dsls, jb } from '@jb6/core'
 import '@jb6/common'
 import '@wonder/db/db-drivers.js'
-import './wonder-platform-repository.js'
-import './wonder-platform-runtime.js'
 
-const { common: { Data, data: { wonderPlatformAnswer, wonderPlatformLoadRepository } } } = dsls
+const { common: { Data } } = dsls
 
 Data('wonderPlatformMarketplaceApiBase', {
   description: 'single source of truth: explicit baseUrl, else MARKETPLACE_API_URL (page global or server env), else marketplace on the page host at 7777',
@@ -52,15 +50,9 @@ Data('wonderPlatformAgentWUrlResponse', {
     {id: 'baseUrl', as: 'string'},
     {id: 'agnoBaseUrl', as: 'string'},
     {id: 'resolveApiBase', dynamic: true, defaultValue: wonderPlatformMarketplaceApiBase('%$baseUrl%')},
-    {id: 'resolveAgnoBase', dynamic: true, defaultValue: wonderPlatformAgnoApiBase('%$agnoBaseUrl%')},
-    {id: 'loadRepository', dynamic: true, defaultValue: wonderPlatformLoadRepository('%$roomWUrl%')},
-    {id: 'runLlmFlow', dynamic: true, defaultValue: wonderPlatformAnswer('%$message%', '%$target%', {
-      repo: '%$repo%',
-      history: '%$history%',
-      roomWUrl: '%$roomWUrl%'
-    })}
+    {id: 'resolveAgnoBase', dynamic: true, defaultValue: wonderPlatformAgnoApiBase('%$agnoBaseUrl%')}
   ],
-  impl: async (ctx, {}, {url, fileName, opts, baseUrl, agnoBaseUrl, resolveApiBase, resolveAgnoBase, loadRepository, runLlmFlow}) => {
+  impl: async (ctx, {}, {url, fileName, opts, baseUrl, agnoBaseUrl, resolveApiBase, resolveAgnoBase}) => {
     const match = String(fileName).match(/^agent\/([^/]+)$/)
     if (!match) return
     const method = (opts.method || 'GET').toUpperCase(), harness = new URL(url).searchParams.get('harness')
@@ -69,21 +61,8 @@ Data('wonderPlatformAgentWUrlResponse', {
       return new Response(JSON.stringify(payload), {status, headers: {'content-type': 'application/json'}})
     }
     const agentId = decodeURIComponent(match[1])
-    if (!['agno', 'llmflow'].includes(harness)) return json({detail: 'harness must be agno or llmflow'}, 400)
+    if (harness != 'agno') return json({detail: 'harness must be agno'}, 400)
     if (!['GET', 'POST'].includes(method)) return json({detail: `Method ${method} not allowed`}, 405)
-    const roomWUrl = String(url).split('?')[0].replace(/\/agent\/[^/]+$/, '')
-    if (harness == 'llmflow') {
-      const repo = ctx.vars.agentRepo || await loadRepository(ctx.setVars({roomWUrl}))
-      const target = ctx.vars.agentTarget?.id == agentId ? ctx.vars.agentTarget
-        : repo.subagents?.find(item => item.id == agentId) || repo.plugins?.find(item => item.id == agentId)
-      if (!target) return json({detail: `Agent ${agentId} not found`}, 404)
-      if (method == 'GET') return json({harness, agentId, agent: target})
-      const body = opts.body || {}
-      if (!String(body.message || '').trim()) return json({detail: 'message is required'}, 422)
-      const result = await runLlmFlow(ctx.setVars({roomWUrl, repo, target,
-        message: body.message, history: body.history || []}))
-      return json({...result, harness, agentId})
-    }
     const apiBase = method == 'GET' ? resolveApiBase(ctx.setVars({baseUrl})) : resolveAgnoBase(ctx.setVars({agnoBaseUrl}))
     const apiPath = method == 'GET' ? `/api/v1/agents/${encodeURIComponent(agentId)}`
       : `/agents/${encodeURIComponent(agentId)}/runs`
@@ -108,20 +87,16 @@ Data('wonderPlatformAgentWUrlRequest', {
   params: [
     {id: 'agentId', as: 'string', mandatory: true},
     {id: 'message', as: 'string', mandatory: true},
-    {id: 'harness', as: 'string', options: 'agno,llmflow', mandatory: true},
     {id: 'sessionId', as: 'string'},
-    {id: 'history', as: 'array', defaultValue: []},
     {id: 'roomWUrl', as: 'string', defaultValue: 'room://wonder-platform'},
     {id: 'baseUrl', as: 'string'},
-    {id: 'token', as: 'string'},
-    {id: 'repo', as: 'object'},
-    {id: 'target', as: 'object'}
+    {id: 'token', as: 'string'}
   ],
-  impl: async (ctx, {}, {agentId, message, harness, sessionId, history, roomWUrl, baseUrl, token, repo, target}) => {
-    const wUrl = `${roomWUrl.replace(/\/$/, '')}/agent/${encodeURIComponent(agentId)}?harness=${harness}`
+  impl: async (ctx, {}, {agentId, message, sessionId, roomWUrl, baseUrl, token}) => {
+    const wUrl = `${roomWUrl.replace(/\/$/, '')}/agent/${encodeURIComponent(agentId)}?harness=agno`
     const response = await jb.wonderUtils.wfetch2(wUrl, {
-      method: 'POST', headers: token ? {Authorization: `Bearer ${token}`} : {}, body: {message, sessionId, history}
-    }, ctx.setVars({marketplaceBaseUrl: baseUrl, agnoBaseUrl: baseUrl, agentRepo: repo, agentTarget: target}))
+      method: 'POST', headers: token ? {Authorization: `Bearer ${token}`} : {}, body: {message, sessionId}
+    }, ctx.setVars({marketplaceBaseUrl: baseUrl, agnoBaseUrl: baseUrl}))
     if (!response.ok) throw new Error(`Agent ${response.status}: ${await response.text()}`)
     return response.json()
   }
@@ -173,30 +148,20 @@ Data('wonderPlatformRunAgent', {
     {id: 'text', as: 'string', mandatory: true},
     {id: 'target', as: 'object', mandatory: true},
     {id: 'sessionId', as: 'string'},
-    {id: 'history', as: 'array', defaultValue: []},
     {id: 'roomWUrl', as: 'string', defaultValue: 'room://wonder-platform'},
     {id: 'baseUrl', as: 'string'},
     {id: 'token', as: 'string'},
-    {id: 'repo', as: 'object'},
-    {id: 'harness', as: 'string'},
     {id: 'request', dynamic: true, defaultValue: wonderPlatformAgentWUrlRequest('%$target/id%', '%$text%', {
-      harness: '%$selectedHarness%',
       sessionId: '%$sessionId%',
-      history: '%$history%',
       roomWUrl: '%$roomWUrl%',
       baseUrl: '%$baseUrl%',
-      token: '%$token%',
-      repo: '%$repo%',
-      target: '%$target%'
+      token: '%$token%'
     })}
   ],
-  impl: async (ctx, {}, {text, target, sessionId, history, roomWUrl, baseUrl, token, repo, harness, request}) => {
-    const selectedHarness = harness || target.backendConfig?.harness
-      || (target.backendConfig?.harness_type == 'llmflow' ? 'llmflow' : 'agno')
+  impl: async (ctx, {}, {text, target, sessionId, roomWUrl, baseUrl, token, request}) => {
     const startedAt = Date.now(), run = await request(ctx.setVars({
-      text, target, sessionId, history, roomWUrl, baseUrl, token, repo, selectedHarness
+      text, target, sessionId, roomWUrl, baseUrl, token
     }))
-    if (run.harness == 'llmflow') return run
     return {
       harness: 'agno', text: dsls.common.data.wonderPlatformAgentContent.$run(run.content),
       status: String(run.status || '').toLowerCase().includes('fail') ? 'נכשל' : 'הושלם',

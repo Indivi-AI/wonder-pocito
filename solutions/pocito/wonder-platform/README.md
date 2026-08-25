@@ -1,6 +1,6 @@
 # Wonder Platform
 
-A marketplace + agents platform: the `wonderPlatform` browser applet (`solutions/pocito/marketplace-ui/`) backed by five services.
+A marketplace + agents platform: the `wonderPlatform` browser applet (`solutions/pocito/marketplace-ui/`) backed by six services.
 
 | Service | Role | Local dev | Deployed (published on `SITE_HOST`) |
 |---|---|---|---|
@@ -8,7 +8,8 @@ A marketplace + agents platform: the `wonderPlatform` browser applet (`solutions
 | marketplace | resource CRUD, versions, audit, presign (`marketplace_server.py`) | :7777 | :58046 |
 | agno (AgentOS) | agent runs (`agno_server.py`, same package/image; shares only S3 with the marketplace) | :7778 | :58049 |
 | llm-lite (LiteLLM) | the one OpenAI-compatible gateway to the LLM | not needed (cloud proxy) | :58047 |
-| MinIO | all storage: marketplace objects, rooms, applet code | :9000 | the site's global MinIO |
+| MinIO | marketplace artifacts, rooms, applet code | :9000 | the site's global MinIO |
+| pgvector | durable knowledge embeddings | :5432 | :58050 |
 
 Everything talks through the same published URLs browsers use; applet pages receive `MARKETPLACE_API_URL`,
 `AGNO_API_URL` and `LLM_PROXY_URL` from the wonder server's env, so the browser calls each server directly.
@@ -19,7 +20,8 @@ mounted live. The paths below are the bare-process alternative and the deploymen
 
 ## 1. Local development — internet machine, from zero
 
-Prereqs: Node 24, Python 3.12, the [MinIO binary](https://min.io/docs/minio/macos/index.html) at `~/.local/bin/minio`.
+Prereqs: Node 24, Python 3.12, PostgreSQL with pgvector, and the
+[MinIO binary](https://min.io/docs/minio/macos/index.html) at `~/.local/bin/minio`.
 
 ```sh
 npm ci

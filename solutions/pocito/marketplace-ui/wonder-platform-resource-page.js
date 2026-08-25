@@ -7,7 +7,7 @@ const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
 ReactComp('wonderPlatformResourcePage', {
   impl: comp({
-    hFunc: (ctx, {react: {h, hh}}) => ({active, update, save, deleteItem, back, repo, openPicker}) => {
+    hFunc: (ctx, {react: {h, hh}}) => ({active, update, save, deleteItem, back, repo, openPicker, saveAndRun, runningSet}) => {
       const {classes, labels} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx), {resource, item} = active
       const saveDisabled = !item.name?.trim() || !item.id?.trim() || resource == 'skills' && !repo.marketplace && (!item.content?.trim()
         || !/^\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/.test(item.publishVersion))
@@ -20,7 +20,8 @@ ReactComp('wonderPlatformResourcePage', {
           h(`span:${classes.chip}`, {}, item.version || 'V0'),
           h(`button:${classes.primary}`, {disabled: saveDisabled, onClick: save, 'aria-label': 'שמירת עמוד'}, 'שמירה'),
           item.originalId && (resource != 'skills' || repo.marketplace) && h('button:text-sm text-red-600', {onClick: deleteItem}, 'מחיקה')),
-        h('div:mx-auto max-w-4xl p-5', {}, hh(ctx, dsls.react['react-comp'].wonderPlatformResourceFields, {resource, item, update, repo, openPicker})))
+        h('div:mx-auto max-w-4xl p-5', {}, hh(ctx, dsls.react['react-comp'].wonderPlatformResourceFields, {
+          resource, item, update, repo, openPicker, saveAndRun, runningSet})))
     }
   })
 })

@@ -18,7 +18,7 @@ from fastapi import HTTPException
 
 ROOT = Path(__file__).parent
 DEFAULT_ROOM = 'marketplace'
-KNOWLEDGE_INDEX_VERSION = 'isolated-v1'
+KNOWLEDGE_INDEX_VERSION = 'pgvector-v2'
 ROOM_CONTEXT = ContextVar('room', default=DEFAULT_ROOM)
 logger = logging.getLogger(__name__)
 
@@ -410,7 +410,7 @@ class MarketplaceRepository:
         else:
             if current['action'] == 'index':
                 self.set_content_status(current['room'], current['knowledge_id'], current['content_id'], 'completed',
-                  revision=current['revision'], index_version=current['index_version'])
+                  revision=current['revision'], index_version=KNOWLEDGE_INDEX_VERSION)
             self.objects.delete(key)
 
     def release_content_job(self, job, owner):

@@ -42,9 +42,7 @@ ReactComp('wonderPlatform', {
       sessionId: '%$sessionId%',
       roomWUrl: '%$roomWUrl%',
       baseUrl: '%$agentOsBaseUrl%',
-      token: '%$agentOsToken%',
-      repo: '%$repo%',
-      harness: '%$harness%'
+      token: '%$agentOsToken%'
     })}
   ],
   impl: comp({
@@ -67,10 +65,11 @@ ReactComp('wonderPlatform', {
         value.id == item.id ? {...value, owner: 'imported'} : value)})
       const persistRepo = async next => (setRepo(next), next.marketplace || await saveRepo(
         ctx.setVars({repo: next, roomWUrl: repositoryRoomWUrl})), next)
-      const blank = resource => ({id: '', name: '', desc: '', instructions: '', owner: 'me',
+      const blank = resource => ({id: resource == 'evaluations' ? `eval-${Date.now()}` : '', name: '', desc: '', instructions: '', owner: 'me',
         version: resource == 'skills' ? '1.0.0' : 'V0', publishVersion: resource == 'skills' ? '1.0.0' : undefined, content: '',
         created: 'היום', updated: 'עכשיו', skillIds: [], toolIds: [], subagentIds: [], knowledgeIds: [], evaluationId: '',
-        rows: [], rubric: '', kind: resource == 'tools' ? 'connector' : undefined, managed: false, tags: [], readme: '',
+        rows: resource == 'evaluations' ? [{input: '', expected: '', notes: ''}] : [], rubric: '',
+        kind: resource == 'tools' ? 'connector' : undefined, managed: false, tags: [], readme: '',
         backendConfig: {harness: 'agno', harness_type: 'deepagents'},
         pluginIds: [], assets: [], toolType: resource == 'tools' ? 'code' : undefined, jsonSchema: {}, isAsync: true, tracable: true,
         dedicatedToolConfig: {}, codeFiles: [], packageId: '', inputSchema: [], outputCubes: [],
@@ -177,7 +176,9 @@ ReactComp('wonderPlatform', {
         ? {...entry, item: typeof value == 'function' ? value(entry.item) : value} : entry))
       const saveBase = async () => {
         const {resource, item} = editors[0]
-        await saveItem(resource, item); setEditors([]); flash('נשמר בקטלוג המשותף')
+        const saved = await saveItem(resource, item)
+        setEditors(resource == 'evaluations' ? [{...editors[0], item: {...saved, originalId: saved.id}}] : [])
+        flash('נשמר בקטלוג המשותף'); return saved
       }
       const deleteBase = async () => {
         const {resource, item} = editors[0]
@@ -193,17 +194,17 @@ ReactComp('wonderPlatform', {
         await persistRepo({...repo, [active.resource]: repo[active.resource].filter(item => item.id != active.item.originalId)})
         setEditors(editors.slice(0, -1))
       }
-      const runTarget = (text, target, sessionId = `${target.id}-${Date.now()}`, harness) => runAgent(ctx.setVars({text, target, sessionId, harness,
-        roomWUrl: repositoryRoomWUrl, agentOsBaseUrl: agentUrl, agentOsToken: token, repo}))
-      const runEval = async (evaluation, targetResource, target) => {
+      const runTarget = (text, target, sessionId = `${target.id}-${Date.now()}`) => runAgent(ctx.setVars({text, target, sessionId,
+        roomWUrl: repositoryRoomWUrl, agentOsBaseUrl: agentUrl, agentOsToken: token}))
+      const runEval = async (evaluation, targetResource, target, runRepo = repo) => {
         const startedAt = Date.now(), id = `eval-${startedAt}`, started = new Date(startedAt).toLocaleString('he-IL', {
           dateStyle: 'short', timeStyle: 'short'}), pending = {id, evaluationId: evaluation.id, targetResource, targetId: target.id,
           started, startedAt, status: 'מריץ…', completed: 0, total: evaluation.rows.length, rows: []}
-        const pendingRepo = await persistRepo({...repo, evalRuns: [pending, ...repo.evalRuns]})
-        const semanticTrace = dsls.common.data.wonderPlatformTrace.$runWithCtx(ctx, {repo, target})
+        const pendingRepo = await persistRepo({...runRepo, evalRuns: [pending, ...runRepo.evalRuns]})
+        const semanticTrace = dsls.common.data.wonderPlatformTrace.$runWithCtx(ctx, {repo: runRepo, target})
         const rows = await Promise.all(evaluation.rows.map(async row => {
           try {
-            const result = await runTarget(row.input, target, undefined, targetResource == 'plugins' ? 'llmflow' : undefined)
+            const result = await runTarget(row.input, target)
             return {...row, actual: result.text, runId: result.runId, opikUrl: result.opikUrl,
               trace: [...semanticTrace, ...(result.runtimeSteps || [])]}
           } catch (error) { return {...row, actual: String(error.message || error), error: true, trace: semanticTrace} }
@@ -223,16 +224,14 @@ ReactComp('wonderPlatform', {
       const selectAgent = agentId => conversation.messages.length ? newConversation(agentId) : updateConversation({...conversation, agentId})
       const setContext = (field, value) => updateConversation({...conversation, [field]: value})
       const send = async () => {
-        const text = message.trim()
-        const agent = repo.agents.find(item => item.id == conversation?.agentId) || {id: 'freeChat', name: 'שיחה חופשית'}
-        if (!text || busy) return
+        const text = message.trim(), agent = repo.agents.find(item => item.id == conversation?.agentId)
+        if (!text || busy || !agent) return
         setMessage(''); setBusy(true)
         const pending = {...conversation, title: conversation.messages.length ? conversation.title : text.slice(0, 42), when: 'עכשיו',
           messages: [...conversation.messages, {id: `m-${Date.now()}`, role: 'user', text}]}
         await updateConversation(pending)
         try {
-          const harness = agent.backendConfig?.harness == 'llmflow' ? 'llmflow' : undefined
-          const result = await runTarget(text, agent, conversation.id, harness)
+          const result = await runTarget(text, agent, conversation.id)
           const steps = [...dsls.common.data.wonderPlatformTrace.$runWithCtx(ctx, {repo, target: agent}), ...(result.runtimeSteps || [])]
           await updateConversation({...pending, messages: [...pending.messages, {...result, id: `m-${Date.now() + 1}`, role: 'agent',
             text: result.text || result.output, steps}]})
@@ -242,8 +241,14 @@ ReactComp('wonderPlatform', {
         } finally { setBusy(false) }
       }
       const runSet = async (evaluation, target) => {
-        setRunningSet(evaluation.id); await runEval(evaluation, repo.plugins.some(item => item.id == target.id) ? 'plugins' : 'subagents', target)
+        const resource = ['agents', 'plugins', 'subagents'].find(name => repo[name].some(item => item.id == target.id))
+        setRunningSet(evaluation.id); await runEval(evaluation, resource, target)
         setRunningSet('')
+      }
+      const saveAndRun = async (evaluation, target) => {
+        const result = upsert(ctx.setVars({repo, resource: 'evaluations', item: evaluation})), next = await persistRepo(result.repo)
+        setEditors([{...editors[0], item: {...result.saved, originalId: result.saved.id}}]); flash('נשמר')
+        setRunningSet(result.saved.id); await runEval(result.saved, 'agents', target, next); setRunningSet('')
       }
       if (loadError) return h('div:grid min-h-screen place-items-center p-6 text-center', {}, h('div', {}, h(
         'L:CircleAlert', {size: 30, className: 'mx-auto mb-3 text-red-600'}), h('b:block', {}, 'המרקטפלייס אינו זמין'),
@@ -258,7 +263,7 @@ ReactComp('wonderPlatform', {
           createSet: () => setEditors([{resource: 'evaluations', item: blank('evaluations'), createLabel: 'סט חדש', standalone: true}]),
           runningSet, runSet})
           : editors[0]?.standalone ? hh(ctx, dsls.react['react-comp'].wonderPlatformResourcePage, {active: editors[0], update: updateBase,
-              save: saveBase, deleteItem: deleteBase, back: () => setEditors([]), repo, openPicker: openEditorPicker})
+              save: saveBase, deleteItem: deleteBase, back: () => setEditors([]), repo, openPicker: openEditorPicker, saveAndRun, runningSet})
               : hh(ctx, dsls.react['react-comp'].wonderPlatformCatalog, {view, repo, search, setSearch, openItem, createItem, importItem})
       return h('div:min-h-screen overflow-x-clip bg-white text-[#0f0f10] antialiased', {dir: 'rtl', lang: 'he', style: {
         fontFamily: '"Inter", "Assistant", system-ui, sans-serif', letterSpacing: '-0.005em'}},
