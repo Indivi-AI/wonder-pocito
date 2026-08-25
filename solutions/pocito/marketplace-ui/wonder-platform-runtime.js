@@ -16,10 +16,9 @@ Doclet('wonderPlatformAssets', {
   impl: `
 The ASSET_REPOSITORY in the prompt is authoritative room data.
 LOADED_SKILLS contains the selected published Markdown doclets and is authoritative for how to perform the task.
-Use only ASSET_REPOSITORY plugins, skill metadata, tools, subagents and reports.
+Use only ASSET_REPOSITORY plugins, skill metadata, tools and subagents.
 Honor the selected target instructions and connected asset IDs.
 Never claim that a connector ran when its room asset supplies no result.
-A verified report may be cited only by a real report id from ASSET_REPOSITORY.
 `
 })
 
@@ -27,7 +26,6 @@ Doclet('wonderPlatformResponse', {
   impl: `
 Answer in the user's language, concisely and professionally.
 Lead with the conclusion, then name supporting evidence and any material gap.
-Return zero to three reportIds that directly support the answer. Prefer status "מאומת" reports.
 followUps contains two short, useful next questions.
 `
 })
@@ -36,13 +34,13 @@ Doclet('essentialOutputFormat.wonderPlatform', {
   impl: `
 Return one javascript code block containing one flow.
 The flow has one setCtxData element whose jqSingle exp is a literal object.
-The object shape is {text: string, reportIds: string[], followUps: string[]}.
+The object shape is {text: string, followUps: string[]}.
 Escape quotes for one jq string and emit no other code.
 Example:
 \`\`\`javascript
 {$: 'flow-elem<ai>flow', elems: [
   {$: 'flow-elem<ai>setCtxData', goal: 'Compose grounded answer', status: 'מנסח תשובה מאומתת...',
-    value: {$: 'data<common>jqSingle', exp: '{text:"המסקנה המבוססת",reportIds:["r1"],followUps:["בדוק פער","הצג מקורות"]}'}}
+    value: {$: 'data<common>jqSingle', exp: '{text:"המסקנה המבוססת",followUps:["בדוק פער","הצג מקורות"]}'}}
 ]}
 \`\`\`
 `
@@ -58,7 +56,7 @@ CHAT_HISTORY: %$chatHistory%
 ASSET_REPOSITORY: %$assetRepoText%
 LOADED_SKILLS:
 %$loadedSkillDoclets%
-Return a grounded answer and relevant verified report ids.`,
+Return a grounded answer.`,
       instructions: `%$llmFlowBooklet%
 %$wonderPlatform%
 Use the exact structured response flow and no unavailable component.`,
@@ -84,7 +82,7 @@ Data('wonderPlatformAnswer', {
     const startedAt = Date.now(), loadedSkills = (await loadSkills(ctx.setVars({roomWUrl, target}))).filter(Boolean)
     const assetRepo = {target, skills: loadedSkills.map(({content, ...skill}) => skill),
       tools: repo.tools.filter(item => target.toolIds?.includes(item.id)),
-      subagents: repo.subagents.filter(item => target.subagentIds?.includes(item.id)), reports: repo.reports}
+      subagents: repo.subagents.filter(item => target.subagentIds?.includes(item.id))}
     const loadedSkillDoclets = loadedSkills.map(skill => jb.coreUtils.sourceRefs.wrap(
       `${skill.id}@${skill.version}`, skill.content)).join('\n\n')
     const workflowCtx = await jb.workflowUtils.extendWithWorkflowVars(ctx.setVars({userMessage: text, selectedTarget: JSON.stringify(target),
@@ -92,7 +90,7 @@ Data('wonderPlatformAnswer', {
       accumulatedContext: {chatHistory: history},
       llmProxyUrl: globalThis.LLM_PROXY_URL || 'https://node25-automations-server-365199207445.me-west1.run.app/llmProxy'}))
     const result = await agentWorkflow(ctx).calcWorkflow(workflowCtx), output = typeof result.runRes == 'string' ? {text: result.runRes} : result.runRes || {}
-    return {text: output.text || result.workflowErrors?.[0]?.t || 'ההרצה הסתיימה ללא תשובה.', reportIds: output.reportIds || [],
+    return {text: output.text || result.workflowErrors?.[0]?.t || 'ההרצה הסתיימה ללא תשובה.',
       followUps: output.followUps || [], status: result.workflowErrors?.length ? 'נכשל' : 'הושלם',
       duration: `${Math.max(1, Math.round((Date.now() - startedAt) / 1000))} שנ׳`, runId: result.runId || result.traceId,
       opikUrl: result.opikUrl, loadedSkillIds: loadedSkills.map(skill => skill.id),

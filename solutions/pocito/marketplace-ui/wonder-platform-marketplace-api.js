@@ -214,10 +214,8 @@ Data('wonderPlatformAgentOsRun', {
     const startedAt = Date.now(), run = await request(
       ctx.setVars({agentId: target.id, text, sessionId, roomWUrl, baseUrl, token}))
     const output = typeof run.content == 'string' ? run.content : JSON.stringify(run.content || '')
-    const markers = [...output.matchAll(/\[\[report:([\w-]+)\]\]/g)]
     return {
-      text: output.replace(/\s*\[\[report:[\w-]+\]\]/g, '').trim(),
-      reportIds: [...new Set(markers.map(([, id]) => id))],
+      text: output.trim(),
       followUps: [],
       status: String(run.status || '').toLowerCase().includes('fail') ? 'נכשל' : 'הושלם',
       duration: `${Math.max(1, Math.round((Date.now() - startedAt) / 1000))} שנ׳`,

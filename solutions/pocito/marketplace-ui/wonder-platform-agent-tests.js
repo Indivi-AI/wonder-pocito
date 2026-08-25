@@ -14,7 +14,7 @@ Data('wonderPlatformAgentRepoFixture', {
   impl: () => ({subagents: [{id: 'agent-a', name: 'Agent A'}], plugins: []})
 })
 Data('wonderPlatformLlmFlowFixture', {
-  impl: () => ({text: 'Flow answer', reportIds: ['r1'], followUps: ['Next step'],
+  impl: () => ({text: 'Flow answer', followUps: ['Next step'],
     runtimeSteps: [{kind: 'מודל', title: 'LLM Flow'}], runId: 'not-a-flow-field'})
 })
 ReactComp('wonderPlatformAgentResultTestHost', {

@@ -2,46 +2,46 @@ import { dsls } from '@jb6/core'
 import '@jb6/react'
 import './wonder-platform-domain.js'
 import './wonder-platform-agent-results.js'
+import './wonder-platform-searchable-select.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
-ReactComp('wonderPlatformVerifiedReport', {
+ReactComp('wonderPlatformChatContext', {
   impl: comp({
-    hFunc: (ctx, {react: {h}}) => ({report}) => report && h('section:mt-4 overflow-hidden rounded-xl border border-[#cfe0d5] bg-[#f8fbf9]', {
-      'data-report-id': report.id}, h('div:flex items-start justify-between border-b border-[#e1ebe4] bg-[#edf6f0] px-4 py-3', {}, h('div', {},
-      h('div:flex items-center gap-2 text-sm font-bold text-[#294f3b]', {}, h('L:BadgeCheck', {size: 16}), report.name),
-      h('div:mt-1 text-[11px] text-[#728078]', {}, `דוח מאומת · ${report.sourceCount} מקורות`)), h('span:rounded border border-[#c8d9ce] ' +
-        'px-1.5 py-0.5 text-[10px] text-[#52705e]', {}, report.status)), h('p:px-4 pt-3 text-xs leading-5 text-[#66706b]', {}, report.desc),
-      h('div:grid grid-cols-1 gap-2 p-4 sm:grid-cols-3', {}, report.rows.map(row => h('div:rounded-lg border border-[#e0e8e3] bg-white p-3', {
-        key: row.subject}, h('div:text-[10px] text-[#8b948f]', {}, row.subject), h('div:mt-1 font-bold text-[#2f6b4b]', {}, row.value),
-      h('div:mt-2 text-[10px] leading-4 text-[#7d8781]', {}, row.evidence)))))
-  })
-})
-
-ReactComp('wonderPlatformReport', {
-  impl: comp({
-    hFunc: (ctx, {react: {h, hh}}) => ({report, back}) => h('main:min-h-screen overflow-x-hidden px-5 pb-24 pt-8 sm:mr-[210px] sm:px-10', {},
-      h('div:mx-auto max-w-4xl', {}, h('button:mb-5 inline-flex items-center gap-2 text-sm text-[#2f6b4b]', {onClick: back},
-        h('L:ChevronRight', {size: 15}), 'חזרה לדוחות'), hh(ctx, dsls.react['react-comp'].wonderPlatformVerifiedReport, {report})))
+    hFunc: (ctx, {react: {h, hh}}) => ({repo, conversation, selectAgent, setContext}) => {
+      const rows = [['pluginIds', 'plugins', 'פלאגינים'], ['skillIds', 'skills', 'מיומנויות'],
+        ['toolIds', 'tools', 'כלים'], ['knowledgeIds', 'knowledge', 'ידע']]
+      const picker = (label, control) => h('div:mb-4', {},
+        h('span:mb-1.5 block text-[11px] font-medium uppercase tracking-[0.06em] text-[#9b9ba0]', {}, label), control)
+      return h('aside:hidden w-[280px] shrink-0 overflow-y-auto border-r border-[#e8e8ea] bg-white px-4 py-5 lg:block', {},
+        h('div:mb-5 text-[13px] font-semibold text-[#0f0f10]', {}, 'הקשר השיחה'),
+        picker('סוכן', hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {items: repo.agents,
+          value: conversation?.agentId || '', onChange: selectAgent, placeholder: 'בחר סוכן', empty: 'ללא סוכן',
+          testId: 'agent-selector'})),
+        rows.map(([field, resource, label]) => h('div', {key: field},
+          picker(label, hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {items: repo[resource], multi: true,
+            value: conversation?.[field] || [], onChange: value => setContext(field, value), placeholder: `בחר ${label}`})))),
+        h('p:mt-2 text-[11px] leading-5 text-[#9b9ba0]', {},
+          'הסוכן והנכסים שנבחרו מהווים את ההקשר שנשלח בכל פנייה בשיחה זו.'))
+    }
   })
 })
 
 ReactComp('wonderPlatformChatComposer', {
   impl: comp({
-    hFunc: (ctx, {react: {h, useEffect, useRef}}) => ({repo, conversation, message, setMessage, busy, send, selectAgent}) => {
-      const ref = useRef(), submit = () => message.trim() && conversation?.agentId && !busy && send()
+    hFunc: (ctx, {react: {h, useEffect, useRef}}) => ({message, setMessage, busy, send}) => {
+      const ref = useRef(), submit = () => message.trim() && !busy && send()
       useEffect(() => { if (ref.current) ref.current.style.height = 'auto', ref.current.style.height = `${Math.min(ref.current.scrollHeight, 144)}px` }, [message])
-      return h('div:border-t border-[#e3e7e4] bg-[#f8f9f8] p-4', {}, h('div:mx-auto max-w-3xl rounded-2xl border border-[#e0e5e2] ' +
-        'bg-white p-2 shadow-sm', {}, h('select:mb-2 max-w-full rounded-full border border-[#cfe0d5] bg-[#edf6f0] px-3 py-1 text-xs text-[#315e46]', {
-          value: conversation?.agentId || '', 'data-testid': 'agent-selector', onChange: event => selectAgent(event.target.value)},
-        h('option', {value: ''}, 'בחר סוכן'),
-        repo.subagents.map(agent => h('option', {key: agent.id, value: agent.id}, agent.name))), h('div:flex items-end gap-2', {},
-        h('textarea:min-h-11 flex-1 resize-none px-3 py-2 text-sm outline-none', {ref, rows: 1, value: message, 'data-testid': 'chat-input',
-          placeholder: conversation?.agentId ? 'כתוב הודעה לסוכן…' : 'בחר סוכן כדי להתחיל',
-          onInput: event => setMessage(event.target.value),
-          onKeyDown: event => event.key == 'Enter' && !event.shiftKey && (event.preventDefault(), submit())}),
-        h('button:grid h-10 w-10 place-items-center rounded-full bg-[#2f6b4b] text-white disabled:opacity-40', {
-          disabled: !message.trim() || !conversation?.agentId || busy, onClick: submit, 'aria-label': 'שליחה'}, h('L:ArrowUp', {size: 16})))))
+      return h('div:border-t border-[#e8e8ea] bg-white px-5 py-4', {}, h('div:mx-auto flex max-w-3xl items-end gap-2 rounded-[12px] ' +
+        'border border-[#e8e8ea] bg-white p-2 transition-colors focus-within:border-[#0f0f10]', {},
+      h('textarea:min-h-10 flex-1 resize-none px-2 py-1.5 text-[13px] outline-none placeholder:text-[#9b9ba0]', {ref, rows: 1,
+        value: message, 'data-testid': 'chat-input',
+        placeholder: 'כתוב הודעה…',
+        onInput: event => setMessage(event.target.value),
+        onKeyDown: event => event.key == 'Enter' && !event.shiftKey && (event.preventDefault(), submit())}),
+      h('button:grid h-8 w-8 shrink-0 place-items-center rounded-[8px] bg-[#0f0f10] text-white transition-opacity ' +
+        'hover:opacity-85 disabled:opacity-25', {disabled: !message.trim() || busy, onClick: submit,
+        'aria-label': 'שליחה'}, h('L:ArrowUp', {size: 15}))))
     }
   })
 })
@@ -49,34 +49,32 @@ ReactComp('wonderPlatformChatComposer', {
 ReactComp('wonderPlatformChat', {
   impl: comp({
     hFunc: (ctx, {react: {h, hh}}) => props => {
-      const {repo, conversation, message, setMessage, busy, send, selectAgent, newConversation, setConversation} = props
-      const agent = repo.subagents.find(item => item.id == conversation?.agentId)
+      const {repo, conversation, message, setMessage, busy, send, selectAgent, setContext} = props
+      const agent = repo.agents.find(item => item.id == conversation?.agentId)
       const opikUrl = conversation?.messages.filter(item => item.opikUrl).at(-1)?.opikUrl
-      return h('main:h-screen min-w-0 overflow-hidden pb-16 sm:mr-[210px] sm:pb-0', {}, h('div:flex h-full min-w-0', {},
-        h('section:flex min-w-0 flex-1 flex-col', {}, h('header:flex items-center justify-between border-b border-[#e5e8e6] bg-white px-6 py-4', {},
-          h('div:flex items-center gap-3', {}, h('span:grid h-8 w-8 place-items-center rounded-xl bg-[#e6f2ea] text-xs font-bold text-[#285a40]', {},
-            agent?.mark || '—'), h('b:text-sm', {}, agent?.name || 'בחר סוכן')),
-          opikUrl && h('a:text-xs text-[#37664e]', {href: opikUrl}, 'ה-trace המלא ב-Opik ↗')),
-        h('div:flex-1 overflow-y-auto overflow-x-hidden', {}, h('div:mx-auto max-w-3xl px-5 py-8', {}, conversation?.messages.length > 0 && h(
-          'div:mb-5 text-center text-xs text-[#a3a9a6]', {}, `שיחה מתמשכת · ${agent?.name} · ההקשר נשמר בין הפניות`),
-        conversation?.messages.map(item => item.role == 'user' ? h('div:mb-4 mr-auto max-w-[88%] rounded-2xl border border-[#cee2d6] ' +
-          'bg-[#eaf4ed] p-4 text-sm leading-7', {key: item.id, 'data-message-role': 'user'}, item.text) : h('div:mb-4', {key: item.id},
-          h('details:mb-3 rounded-xl border border-[#e3e7e4] bg-white', {}, h('summary:cursor-pointer px-4 py-3 text-xs font-semibold text-[#3c5548]', {},
-            `מעקב הרצה · ${item.steps?.length || 0} שלבים · ${item.status || 'הושלם'}`), h('div:border-t border-[#edf0ee] p-3', {},
-            (item.steps || []).map((step, index) => h('div:flex items-center gap-2 py-1 text-xs', {key: index},
-              h('span:rounded-full border px-2 py-0.5 text-[10px]', {}, step.kind), step.title || step.name)))),
-          hh(ctx, dsls.react['react-comp'].wonderPlatformAgentResult, {result: item, setMessage}),
-          (item.reportIds || []).map(id => hh(ctx, dsls.react['react-comp'].wonderPlatformVerifiedReport, {
-            key: id, report: repo.reports.find(report => report.id == id)})))), busy && h(
-          'div:flex items-center gap-2 rounded-2xl border border-[#e3e7e4] bg-white p-5 text-sm text-[#758078]', {},
-          h('L:Loader2', {size: 16, className: 'animate-spin'}), 'הסוכן פועל…'))),
-        hh(ctx, dsls.react['react-comp'].wonderPlatformChatComposer, {repo, conversation, message, setMessage, busy, send, selectAgent})),
-        h('aside:hidden w-[260px] shrink-0 overflow-y-auto border-r border-[#e4e8e5] bg-white p-4 lg:block', {},
-          h('button:w-full rounded-xl border border-[#cfe0d5] bg-[#edf6f0] py-2.5 text-sm font-semibold text-[#315e46]', {
-            onClick: () => newConversation()}, '＋ שיחה חדשה'), h('div:pb-3 pt-6 text-xs text-[#a1a7a4]', {}, 'היסטוריית שיחות'),
-          repo.conversations.map(item => h(`button:mb-1 w-full rounded-xl px-3 py-3 text-right text-sm ${item.id == conversation?.id
-            ? 'bg-[#e7f1eb]' : 'hover:bg-gray-50'}`, {key: item.id, onClick: () => setConversation(item.id)}, h('b:block', {}, item.title),
-          h('small:text-[#8b948f]', {}, `${repo.subagents.find(value => value.id == item.agentId)?.name || 'ללא בחירה'} · ${item.when || 'עכשיו'}`))))))
+      return h('main:h-screen min-w-0 overflow-hidden pb-16 sm:mr-[248px] sm:pb-0', {}, h('div:flex h-full min-w-0', {},
+        h('section:flex min-w-0 flex-1 flex-col', {},
+          h('header:flex items-center justify-between border-b border-[#e8e8ea] bg-white px-6 py-3.5', {},
+            h('div:min-w-0', {}, h('b:block truncate text-[14px] font-medium text-[#0f0f10]', {}, agent?.name || 'שיחה חופשית'),
+              conversation?.messages.length > 0 && h('span:text-[11px] text-[#9b9ba0]', {}, 'ההקשר נשמר בין הפניות')),
+            opikUrl && h('a:shrink-0 text-[12px] text-[#2e2e2e]', {href: opikUrl}, 'ה-trace המלא ב-Opik ↗')),
+          h('div:flex-1 overflow-y-auto overflow-x-hidden', {}, h('div:mx-auto max-w-3xl px-5 py-8', {},
+            conversation?.messages.map(item => item.role == 'user'
+              ? h('div:mb-4 mr-auto max-w-[88%] rounded-[12px] border border-[#e8e8ea] bg-[#fafafa] px-4 py-3 text-[13px] ' +
+                'leading-[1.7]', {key: item.id, 'data-message-role': 'user'}, item.text)
+              : h('div:mb-4', {key: item.id},
+                h('details:mb-3 rounded-[10px] border border-[#e8e8ea] bg-white', {},
+                  h('summary:cursor-pointer px-3.5 py-2.5 text-[12px] text-[#6b6b6f]', {},
+                    `מעקב הרצה · ${item.steps?.length || 0} שלבים · ${item.status || 'הושלם'}`),
+                  h('div:border-t border-[#e8e8ea] p-3', {}, (item.steps || []).map((step, index) =>
+                    h('div:flex items-center gap-2 py-1 text-[12px]', {key: index},
+                      h('span:rounded-md border border-[#e8e8ea] px-1.5 py-0.5 text-[10px] text-[#6b6b6f]', {}, step.kind),
+                      step.title || step.name)))),
+                hh(ctx, dsls.react['react-comp'].wonderPlatformAgentResult, {result: item, setMessage}))),
+            busy && h('div:flex items-center gap-2 rounded-[10px] border border-[#e8e8ea] bg-white p-4 text-[13px] text-[#6b6b6f]', {},
+              h('L:Loader2', {size: 15, className: 'animate-spin'}), 'הסוכן פועל…'))),
+          hh(ctx, dsls.react['react-comp'].wonderPlatformChatComposer, {message, setMessage, busy, send})),
+        hh(ctx, dsls.react['react-comp'].wonderPlatformChatContext, {repo, conversation, selectAgent, setContext})))
     }
   })
 })

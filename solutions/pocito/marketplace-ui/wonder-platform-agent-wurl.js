@@ -180,10 +180,8 @@ Data('wonderPlatformRunAgent', {
     }))
     if (run.harness == 'llmflow') return run
     const output = typeof run.content == 'string' ? run.content : JSON.stringify(run.content || '')
-    const markers = [...output.matchAll(/\[\[report:([\w-]+)\]\]/g)]
     return {
-      harness: 'agno', text: output.replace(/\s*\[\[report:[\w-]+\]\]/g, '').trim(),
-      reportIds: [...new Set(markers.map(([, id]) => id))],
+      harness: 'agno', text: output.trim(),
       status: String(run.status || '').toLowerCase().includes('fail') ? 'נכשל' : 'הושלם',
       duration: `${Math.max(1, Math.round((Date.now() - startedAt) / 1000))} שנ׳`,
       runId: run.run_id || run.runId, sessionId: run.sessionId,

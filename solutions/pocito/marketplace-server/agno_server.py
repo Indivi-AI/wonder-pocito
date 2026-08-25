@@ -198,8 +198,8 @@ def create_app(data_dir=None, model_factory=None, embedder=None):
       on_route_conflict='preserve_base_app', telemetry=False)
     app = agent_os.get_app()
     app.user_middleware = [middleware for middleware in app.user_middleware if middleware.cls is not CORSMiddleware]
-    app.add_middleware(CORSMiddleware, allow_origins=os.getenv('CORS_ALLOWED_ORIGINS', '*').split(','),
-      allow_methods=['*'], allow_headers=['*'])
+    app.add_middleware(CORSMiddleware, allow_origins=os.getenv('CORS_ALLOWED_ORIGINS', '*').lower().split(','),
+      allow_methods=['*'], allow_headers=['*'], allow_private_network=True)
     app.state.marketplace_repo, app.state.marketplace_runtime = repo, runtime
     return app
 

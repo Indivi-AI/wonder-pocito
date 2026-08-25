@@ -411,8 +411,8 @@ def create_app():
     def presign_upload(payload: UploadRequest):
         return presigned(payload.key, 'PUT', payload.expires_in, payload.content_type)
 
-    base.add_middleware(CORSMiddleware, allow_origins=os.getenv('CORS_ALLOWED_ORIGINS', '*').split(','),
-      allow_methods=['*'], allow_headers=['*'])
+    base.add_middleware(CORSMiddleware, allow_origins=os.getenv('CORS_ALLOWED_ORIGINS', '*').lower().split(','),
+      allow_methods=['*'], allow_headers=['*'], allow_private_network=True)
     base.state.marketplace_repo = repo
     base.openapi_schema = json.loads((ROOT / 'marketplace-openapi.json').read_text())
     base.openapi = lambda: base.openapi_schema

@@ -4,6 +4,7 @@ import '@jb6/react/automation.js'
 import '@jb6/react/tests/react-testers.js'
 import './wonder-platform-runtime.js'
 import './wonder-platform.js'
+import './wonder-agents.js'
 
 const {
   tgp: { CtxEnricher },
@@ -42,11 +43,11 @@ Data('wonderPlatformApiCapture', {
 })
 
 Data('wonderPlatformAgentOsCapture', {
-  impl: () => ({content: 'Grounded answer [[report:r1]]', run_id: 'run-1', status: 'COMPLETED'})
+  impl: () => ({content: 'Grounded answer', run_id: 'run-1', status: 'COMPLETED'})
 })
 
 Data('wonderPlatformChatAgentCapture', {
-  impl: ctx => ({harness: 'agno', text: `AGNO_AGENT:${ctx.vars.target.id}`, reportIds: [], runtimeSteps: []})
+  impl: ctx => ({harness: 'agno', text: `AGNO_AGENT:${ctx.vars.target.id}`, runtimeSteps: []})
 })
 
 const { wonderPlatformChatAgentCapture, wonderPlatformTestSave } = dsls.common.data
@@ -116,7 +117,7 @@ Data('wonderPlatformDocletRoundTrip', {
 })
 
 const wonderPlatformSkillProbeAgent = Workflow('wonderPlatformSkillProbeAgent', {
-  impl: () => ({calcWorkflow: async workflowCtx => ({runRes: {text: workflowCtx.vars.loadedSkillDoclets, reportIds: [], followUps: []},
+  impl: () => ({calcWorkflow: async workflowCtx => ({runRes: {text: workflowCtx.vars.loadedSkillDoclets, followUps: []},
     workflowErrors: [], workflowTrace: []})})
 })
 
@@ -166,7 +167,8 @@ ReactComp('wonderPlatformTestApp', {
 
 ReactComp('wonderPlatformMarketplaceTestApp', {
   impl: wonderPlatform({loadRepo: dsls.common.data.wonderPlatformMarketplaceFixture(), saveRepo: dsls.common.data.wonderPlatformTestSave(),
-    marketplaceDetail: dsls.common.data.wonderPlatformMarketplaceDetailFixture('%$resource%', '%$id%')})
+    marketplaceDetail: dsls.common.data.wonderPlatformMarketplaceDetailFixture('%$resource%', '%$id%'),
+    extraPrimaryNav: [['agents', 'Bot', 'סוכנים']]})
 })
 
 ReactComp('wonderPlatformAgentChatTestApp', {
@@ -227,7 +229,7 @@ Test('wonderPlatform.agentOsRun', {
   impl: dataTest({
     calculate: wonderPlatformAgentOsRun('Question', asIs({id: 'evidenceAgent', name: 'סוכן ראיות'}), 'session-1', {
       request: dsls.common.data.wonderPlatformAgentOsCapture()}),
-    expectedResult: and(equals('%text%', 'Grounded answer'), equals('%reportIds/0%', 'r1'), equals('%runId%', 'run-1'),
+    expectedResult: and(equals('%text%', 'Grounded answer'), equals('%runId%', 'run-1'),
       equals('%runtimeSteps/0/kind%', 'AgentOS'))
   })
 })
@@ -237,12 +239,11 @@ Test('wonderPlatform.seedShape', {
     calculate: () => {
       const repo = dsls.common.data.wonderPlatformSeed.$run()
       return {result: {plugins: repo.plugins.length, skills: repo.skills.length, tools: repo.tools.length, subagents: repo.subagents.length,
-        reports: repo.reports.length, evaluations: repo.evaluations.length, flowPackages: repo.flowPackages.length,
-        embeddedReports: repo.conversations[0].messages[1].reportIds.length, firstSkill: repo.skills[0].id,
+        evaluations: repo.evaluations.length, flowPackages: repo.flowPackages.length, firstSkill: repo.skills[0].id,
         skillWUrl: repo.skills[0].docletUrl}}
     },
-    expectedResult: equals('%result%', asIs({plugins: 4, skills: 4, tools: 6, subagents: 3, reports: 3, evaluations: 4,
-      flowPackages: 3, embeddedReports: 2, firstSkill: 'evidenceVerification',
+    expectedResult: equals('%result%', asIs({plugins: 4, skills: 4, tools: 6, subagents: 3, evaluations: 4,
+      flowPackages: 3, firstSkill: 'evidenceVerification',
       skillWUrl: 'room:minio//wonder-platform/doclets/evidenceVerification'}))
   })
 })
@@ -259,7 +260,7 @@ Test('wonderPlatform.migration', {
         evaluations: repo.evaluations.length, evalRuns: repo.evalRuns.length}}
     },
     expectedResult: equals('%result%', asIs({
-        version: 4,
+        version: 5,
         packageId: '4821037',
         managedKind: 'connector',
         skills: ['evidenceVerification','documentationGaps'],
@@ -296,7 +297,7 @@ Test('wonderPlatform.moduleContracts', {
       'data<common>wonderPlatformMarketplaceDetail', 'data<common>wonderPlatformAgentOsRequest', 'data<common>wonderPlatformAgentOsRun',
       'workflow<ai>wonderPlatformAgent', 'react-comp<react>wonderPlatformNavigation', 'react-comp<react>wonderPlatformCatalog',
       'react-comp<react>wonderPlatformAttachPicker', 'react-comp<react>wonderPlatformResourceEditor',
-      'react-comp<react>wonderPlatformWorkspace', 'react-comp<react>wonderPlatformVerifiedReport', 'react-comp<react>wonderPlatformChat',
+      'react-comp<react>wonderPlatformWorkspace', 'react-comp<react>wonderPlatformChat',
       'react-comp<react>wonderPlatformEvaluation', 'react-comp<react>wonderPlatform'].every(id => coreUtils.compByFullId(id))}),
     expectedResult: equals('%result%', true)
   })
@@ -306,7 +307,7 @@ Test('wonderPlatform.minioRoundTrip', {
   nodeOnly: true,
   impl: dataTest({
     calculate: dsls.common.data.wonderPlatformRepositoryRoundTrip('room:minio//wonder-platform-test/tests/%$testSessionId%/assets'),
-    expectedResult: and(equals('%plugins/0/name%', 'אנליסט הוכחת קיום'), equals('%reports/length%', 3), equals('%flowPackages/length%', 3)),
+    expectedResult: and(equals('%plugins/0/name%', 'אנליסט הוכחת קיום'), equals('%flowPackages/length%', 3)),
     logger: 'dbLogger'
   })
 })
@@ -371,16 +372,10 @@ Test('wonderPlatform.skillCatalog', {
       userActions: actions(waitForText('פלאגין חדש'), click('מיומנויות'), waitForText('הוכחת קיום — תהליך מלא'))})
 })
 
-Test('wonderPlatform.chatHistory', {
+Test('wonderPlatform.chatContextPanel', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(),
-    and(contains('שיחה מתמשכת'), contains('היסטוריית שיחות'), contains('דוח מאומת')), {
-    userActions: actions(waitForText('פלאגין חדש'), click('צ׳אט'), waitForText('שיחה מתמשכת'))})
-})
-
-Test('wonderPlatform.subagentWorkspace', {
-  impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(), and(contains('חיבורי הסאב-אייג׳נט'), contains('נסה את הסאב-אייג׳נט')), {
-    userActions: actions(waitForText('פלאגין חדש'), click('סאב-אייג׳נטים'), waitForText('מחלץ ישויות'), click('מחלץ ישויות'),
-      waitForText('חיבורי הסאב-אייג׳נט'))})
+    and(contains('הקשר השיחה'), contains('שיחה חופשית')), {
+    userActions: actions(waitForText('פלאגין חדש'), click('שיחה חדשה'), waitForText('הקשר השיחה'))})
 })
 
 Test('wonderPlatform.marketplacePluginWorkspace', {
@@ -407,24 +402,23 @@ Test('wonderPlatform.marketplaceAgentWorkspace', {
   impl: reactTest({
     testedComp: {$: 'react-comp<react>wonderPlatformMarketplaceTestApp'},
     expectedResult: and(
-      contains('Execution harness'),
-      contains('Agno · AgentOS'),
+      contains('חיבורי הסוכן'),
       contains('פלאגינים'),
-      contains('סאב-אייג׳נטים')
+      contains('ידע')
     ),
     userActions: actions(
       waitForText('פלאגין ראיות'),
-      click('סאב-אייג׳נטים'),
-      waitForText('סוכן ראיות'),
-      click('סוכן ראיות'),
-      waitForText('Execution harness')
+      click('סוכנים'),
+      waitForText('סוכן תמיכת לקוחות B2B'),
+      click('סוכן תמיכת לקוחות B2B'),
+      waitForText('חיבורי הסוכן')
     )
   })
 })
 
 Test('wonderPlatform.marketplaceAgentCreate', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformMarketplaceTestApp(), and(contains('README (creation only)'), contains('שמירה')), {
-    userActions: actions(waitForText('פלאגין ראיות'), click('סאב-אייג׳נטים'), waitForText('סוכן ראיות'), click('סאב-אייג׳נט חדש'),
+    userActions: actions(waitForText('פלאגין ראיות'), click('סוכנים'), waitForText('סוכן חדש'), click('סוכן חדש'),
       waitForText('README (creation only)'))})
 })
 
@@ -561,9 +555,9 @@ Test('wonderPlatform.marketplaceAgentCreateRelations', {
     expectedResult: and(contains('מיומנות ראיות'), contains('פלאגין ראיות'), contains('שמירה')),
     userActions: actions(
       waitForText('פלאגין ראיות'),
-      click('סאב-אייג׳נטים'),
-      waitForText('סוכן ראיות'),
-      click('סאב-אייג׳נט חדש'),
+      click('סוכנים'),
+      waitForText('סוכן חדש'),
+      click('סוכן חדש'),
       wonderPlatformClickInSection('מיומנויות', 'הוספה'),
       waitForText('אישור בחירה'),
       click('מיומנות ראיות'),
@@ -580,15 +574,17 @@ Test('wonderPlatform.marketplaceAgentCreateRelations', {
 })
 
 Test('wonderPlatform.chatRunsSelectedAgent', {
-  impl: reactTest(wonderPlatformAgentChatTestApp(), contains('AGNO_AGENT:a2'), {
+  impl: reactTest(wonderPlatformAgentChatTestApp(), contains('AGNO_AGENT:ag1'), {
     userActions: actions(
       waitForText('פלאגין חדש'),
-      click('צ׳אט'),
-      waitForText('מחלץ ישויות'),
-      wonderPlatformSetControl({ selector: '[data-testid="agent-selector"]', value: 'a2' }),
-      wonderPlatformSetControl({ placeholder: 'כתוב הודעה לסוכן', value: 'Question' }),
+      click('שיחה חדשה'),
+      waitForText('הקשר השיחה'),
+      click('בחר סוכן'),
+      waitForText('סוכן תמיכת לקוחות B2B'),
+      click('סוכן תמיכת לקוחות B2B'),
+      wonderPlatformSetControl({ placeholder: 'כתוב הודעה…', value: 'Question' }),
       click('aria-label="שליחה"'),
-      waitForText('AGNO_AGENT:a2')
+      waitForText('AGNO_AGENT:ag1')
     ),
     logger: 'uiLogger'
   })
