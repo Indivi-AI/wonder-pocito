@@ -27,6 +27,7 @@ ReactComp('wonderPlatformSearchableSelect', {
           'px-2 py-0.5 text-xs', {key: id}, chosenName(id))))
         : h('span:truncate', {}, label || 'בחירה'),
       h('L:ChevronDown', {size: 14, className: 'shrink-0 text-[#6b6b6f]'})),
+      open && h('div:fixed inset-0 z-10', {onClick: () => setOpen(false)}),
       open && h('div:absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-[#e8e8ea] bg-white shadow-lg', {},
         h('input:w-full border-b border-[#e8e8ea] px-3 py-2 text-sm outline-none', {value: query, autoFocus: true,
           placeholder: 'חיפוש…', onInput: event => setQuery(event.target.value)}),
