@@ -11,13 +11,13 @@ ReactComp('wonderPlatformChatContext', {
     hFunc: (ctx, {react: {h, hh, useState}}) => ({repo, conversation, selectAgent, setContext}) => {
       const rows = [['pluginIds', 'plugins', 'פלאגינים'], ['skillIds', 'skills', 'מיומנויות'],
         ['toolIds', 'tools', 'כלים'], ['knowledgeIds', 'knowledge', 'ידע']]
-      const [open, setOpen] = useState('')
+      const [closed, setClosed] = useState('')
       const select = props => hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {bare: true, ...props})
       const section = (id, label, body) => h('div:mb-4', {key: id},
         h(`button:flex w-full items-center justify-between border-b border-[#e8e8ea] py-2 text-base font-semibold text-[#0f0f10]`,
-          {onClick: () => setOpen(open == id ? '' : id)}, label,
-          h(`L:${open == id ? 'ChevronUp' : 'ChevronDown'}`, {size: 16})),
-        open == id && h('div:pt-3', {}, body))
+          {onClick: () => setClosed(closed == id ? '' : id)}, label,
+          h(`L:${closed == id ? 'ChevronDown' : 'ChevronUp'}`, {size: 16})),
+        closed != id && h('div:pt-3', {}, body))
       return h('aside:hidden w-[280px] shrink-0 overflow-y-auto border-r border-[#e8e8ea] bg-white px-4 py-5 lg:block', {},
         h('div:mb-5 text-[13px] font-semibold text-[#0f0f10]', {}, 'הקשר השיחה'),
         section('agent', 'סוכן', select({items: repo.agents, value: conversation?.agentId || '', onChange: selectAgent,

@@ -702,7 +702,6 @@ Test('wonderPlatform.chatRunsSelectedAgent', {
       waitForText('פלאגין חדש'),
       click('שיחה חדשה'),
       waitForText('הקשר השיחה'),
-      click('סוכן'),
       click('בחר סוכן'),
       waitForText('סוכן תמיכת לקוחות B2B'),
       click('סוכן תמיכת לקוחות B2B'),
