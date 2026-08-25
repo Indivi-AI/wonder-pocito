@@ -20,6 +20,21 @@ Your first applet: ask Claude Code (with the wonder MCP added) to call `uploadRo
 edits serve live, no rebuilds; after adding new server code run `docker compose restart wonder`.
 `./wonder-up.sh --clean` resets everything.
 
+## Integrating with FlowBolt (FLAPI)
+
+For executing dynamic Flow Package tools (e.g., Package 7/25), you must run the **FlowBolt** package service alongside Wonder:
+1. Clone and start **FlowBolt** (runs on port `6001` by default):
+   ```sh
+   git clone https://github.com/88roy88/FlowBolt.git
+   cd FlowBolt
+   # Refer to FlowBolt README to run the package API server.
+   ```
+2. Configure the FLAPI environment variables in your `cloud-services/on-prem/.env.site` file:
+   ```env
+   FLAPI_BASE_URL=http://<SITE_HOST>:6001
+   FLAPI_BEARER_TOKEN=mock-test-token
+   ```
+
 ## Going deeper
 
 - `solutions/pocito/wonder-platform/README.md` — the platform: bare-process dev, on-prem build/sim/deploy, env reference.
