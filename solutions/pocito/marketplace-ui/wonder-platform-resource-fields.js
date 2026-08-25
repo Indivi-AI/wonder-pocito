@@ -14,6 +14,7 @@ ReactComp('wonderPlatformResourceFields', {
       const [historyDetail, setHistoryDetail] = useState(-1)
       const [packageQuery, setPackageQuery] = useState(''), [packageResults, setPackageResults] = useState([])
       const [pkg, setPkg] = useState()
+      const [activeId, setActiveId] = useState('general')
       const field = (label, control) => h('label:block text-xs font-semibold text-[#2e2e2e]', {}, label, control)
       const input = (key, props = {}) => h(`input:${classes.field}`, {value: item[key] || '',
         onInput: event => update({...item, [key]: event.target.value}), ...props})
@@ -23,6 +24,72 @@ ReactComp('wonderPlatformResourceFields', {
         h('div:mt-3 flex flex-wrap gap-2', {}, (item[fieldName] || []).map(id => h(`span:${classes.chip} flex items-center gap-2`, {key: id},
           repo[target]?.find(value => value.id == id)?.name || id, h('button', {onClick: () => update({...item,
             [fieldName]: item[fieldName].filter(value => value != id)}), 'aria-label': 'הסרה'}, h('L:X', {size: 12}))))))
+      const generalStep = () => h('div:space-y-4', {},
+        field('id', input('id', {dir: 'ltr', placeholder: 'uiRenderingSkill', disabled: !!item.originalId})),
+        field('description', h(`textarea:${classes.field} min-h-24 resize-y`, {dir: 'ltr', value: item.apiDescription || '',
+          onInput: event => update({...item, apiDescription: event.target.value})})),
+        field('hebrew_description', h(`textarea:${classes.field} min-h-24 resize-y`, {value: item.desc || '',
+          onInput: event => update({...item, desc: event.target.value})})),
+        repo.marketplace && item._marketplace && h('section:rounded-2xl border border-[#e8e8ea] p-4', {}, h(
+          'div:flex flex-wrap items-center gap-2', {}, h('b:text-sm', {}, 'Marketplace API'), h(`span:${classes.chip}`, {},
+            `${item.versions?.length || 0} גרסאות`), h(`span:${classes.chip}`, {}, `${item.audit?.length || 0} אירועי audit`)),
+        (item.versions || []).length > 0 && h('div:mt-3 flex flex-wrap gap-2', {}, item.versions.map((version, index) => h(
+          `span:${classes.chip}`, {key: index}, `V${version.version ?? version.n ?? index + 1}`)))))
+      const stepsFor = resource => resource == 'agents' ? [
+        {id: 'general', label: 'כללי', render: generalStep},
+        {id: 'instructions', label: 'הנחיות', render: () => field('הנחיות', h(`textarea:${classes.field} min-h-40 resize-y`, {
+          value: item.instructions || '', onInput: event => update({...item, instructions: event.target.value})}))},
+        {id: 'plugins', label: 'פלאגינים', render: () => relation('pluginIds', 'plugins', 'פלאגינים')},
+        {id: 'skills', label: 'מיומנויות', render: () => relation('skillIds', 'skills', 'מיומנויות')},
+        {id: 'tools', label: 'כלים', render: () => relation('toolIds', 'tools', 'כלים')},
+        {id: 'knowledge', label: 'ידע', render: () => relation('knowledgeIds', 'knowledge', 'ידע')}
+      ] : resource == 'skills' ? [
+        {id: 'general', label: 'כללי', render: generalStep},
+        {id: 'content', label: 'תוכן המיומנות', render: () => field(repo.marketplace ? 'SKILL.md' : 'תוכן המיומנות', h(
+          `textarea:${classes.field} min-h-40 resize-y`, {value: item.content || '',
+            onInput: event => update({...item, content: event.target.value})}))},
+        {id: 'version', label: 'גרסה', render: () => h('div:space-y-4', {},
+          !repo.marketplace && h('div:grid grid-cols-1 gap-3 sm:grid-cols-2', {},
+            field('גרסה נוכחית', h(`div:${classes.field} text-[#6b6b6f]`, {}, item.originalId ? item.version : 'טרם פורסם')),
+            field('גרסה חדשה', input('publishVersion', {dir: 'ltr', placeholder: '1.0.0'})),
+            h('p:col-span-full text-xs leading-5 text-[#6b6b6f]', {},
+              'השמירה מפרסמת release חדש. גרסאות ותוכן שכבר פורסמו נשארים בלתי משתנים.')),
+          repo.marketplace && h('div:grid grid-cols-1 gap-3 sm:grid-cols-2', {},
+            field('min_agent_version', input('minAgentVersion', {dir: 'ltr'})), field('license', input('license', {dir: 'ltr'}))))},
+        {id: 'assets', label: 'Assets', render: () => repo.marketplace && h('section:rounded-2xl border border-[#e8e8ea] p-4', {},
+          h('div:flex items-start justify-between gap-3', {}, h('div', {}, h('b:text-sm', {}, `Assets (${(item.assets || []).length})`),
+            h('p:mt-1 text-xs text-[#6b6b6f]', {}, 'Files bundled with this skill. You can adjust their path before saving.'))),
+          h('label:mt-3 flex cursor-pointer flex-col items-center rounded-xl border-2 border-dashed border-[#d8d8dc] px-4 py-5 text-center hover:bg-[#fafafa]',
+            {onDragOver: event => event.preventDefault(), onDrop: event => (event.preventDefault(), addAssets(event.dataTransfer.files,
+              event.currentTarget.ownerDocument.defaultView))}, h('L:Upload', {size: 20}), h('b:mt-2 text-sm', {}, 'Drop files here or browse'),
+            h('span:mt-1 text-xs text-[#6b6b6f]', {}, 'Multiple files are supported'), h('input:hidden', {type: 'file', multiple: true,
+              'data-skill-assets': true, onChange: event => addAssets(event.target.files, event.currentTarget.ownerDocument.defaultView)})),
+          (item.assets || []).length ? h('div:mt-3 space-y-2', {}, item.assets.map((asset, index) => h(
+            'div:flex min-w-0 items-center gap-3 rounded-xl border border-[#e8e8ea] p-3', {key: `${asset.path}-${index}`},
+            h('L:File', {size: 18}), h('div:min-w-0 flex-1', {}, h('input:w-full min-w-0 bg-transparent text-sm font-medium outline-none', {
+              dir: 'ltr', value: asset.path || '', 'aria-label': `Asset path ${index + 1}`, onInput: event => update({...item,
+                assets: item.assets.map((value, row) => row == index ? {...value, path: event.target.value} : value)})}),
+            h('p:mt-1 truncate text-xs text-[#6b6b6f]', {}, asset.mime_type || 'application/octet-stream')),
+            h('button:rounded-lg p-2 hover:bg-[#f3f3f4]', {onClick: () => update({...item,
+              assets: item.assets.filter((value, row) => row != index)}), 'aria-label': `Remove ${asset.path}`}, h('L:Trash2', {size: 14})))))
+            : h('p:mt-3 text-center text-xs text-[#6b6b6f]', {}, 'No assets added yet'))},
+        {id: 'tools', label: 'כלים', render: () => relation('toolIds', 'tools', 'כלים')}
+      ] : resource == 'knowledge' ? [
+        {id: 'general', label: 'כללי', render: generalStep},
+        {id: 'files', label: 'קבצים', render: knowledgeSection}
+      ] : resource == 'plugins' ? [
+        {id: 'general', label: 'כללי', render: generalStep},
+        {id: 'instructions', label: 'הנחיות בסיס', render: () => field('הנחיות בסיס', h(
+          `textarea:${classes.field} min-h-40 resize-y`, {value: item.instructions || '',
+            onInput: event => update({...item, instructions: event.target.value})}))}
+      ] : [
+        {id: 'general', label: 'כללי', render: generalStep},
+        {id: 'instructions', label: 'הנחיות בסיס', render: () => field('הנחיות בסיס', h(
+          `textarea:${classes.field} min-h-40 resize-y`, {value: item.instructions || '',
+            onInput: event => update({...item, instructions: event.target.value})}))},
+        {id: 'skills', label: 'מיומנויות', render: () => relation('skillIds', 'skills', 'מיומנויות')},
+        {id: 'tools', label: 'כלים', render: () => relation('toolIds', 'tools', 'כלים')}
+      ]
       const flapiBaseUrl = ctx.vars.flapiBaseUrl
       const flapiCall = (operation, vars) => dsls.common.data.wonderPlatformFlapiCall.$runWithCtx(ctx, {operation, flapiBaseUrl, ...vars})
       const currentPackage = pkg || repo.flowPackages.find(value => value.Id == item.packageId)
@@ -128,50 +195,21 @@ ReactComp('wonderPlatformResourceFields', {
         return h('section:rounded-2xl border border-[#e8e8ea] p-4', {}, h('b:text-sm', {}, 'היסטוריית הרצות'),
           runs.length ? runs.map(historyRow) : h('p:mt-3 text-xs text-[#6b6b6f]', {}, 'עדיין אין הרצות'))
       }
-      if (resource == 'evaluations') {
-        const target = repo.agents.find(agent => agent.id == item.targetId), running = runningSet == item.id
-        const ready = item.name?.trim() && target && item.rows?.some(row => row.input?.trim())
-        const scenario = (row, index) => h('article:rounded-xl border border-[#e8e8ea] bg-white p-4', {key: index}, h(
-          'div:flex items-center justify-between', {}, h('b:text-sm', {}, `תרחיש ${index + 1}`), h(
-            'button:rounded-lg p-1.5 text-[#6b6b6f] hover:bg-red-50 hover:text-red-600', {onClick: () => update({...item,
-              rows: item.rows.filter((value, rowIndex) => rowIndex != index)}), 'aria-label': `מחיקת תרחיש ${index + 1}`}, h(
-              'L:Trash2', {size: 14}))), h('div:mt-3 grid gap-3 md:grid-cols-2', {}, field('מה שולחים לסוכן?', h(
-            `textarea:${classes.field} min-h-28 resize-y`, {value: row.input || '', placeholder: 'לדוגמה: סכם את מדיניות ההחזרות',
-              onInput: event => update({...item, rows: item.rows.map((value, rowIndex) => rowIndex == index
-                ? {...value, input: event.target.value} : value)})})), field('מהי תשובה טובה?', h(
-            `textarea:${classes.field} min-h-28 resize-y`, {value: row.expected || '',
-              placeholder: 'הגדירו עובדות, מבנה או תנאים שחייבים להופיע',
-              onInput: event => update({...item, rows: item.rows.map((value, rowIndex) => rowIndex == index
-                ? {...value, expected: event.target.value} : value)})}))), h('details:mt-3', {}, h(
-          'summary:cursor-pointer text-xs text-[#6b6b6f]', {}, 'הערות פנימיות'), h(`textarea:${classes.field}`, {
-            value: row.notes || '', placeholder: 'הקשר נוסף לצוות', onInput: event => update({...item,
-              rows: item.rows.map((value, rowIndex) => rowIndex == index ? {...value, notes: event.target.value} : value)})})))
-        return h('div:space-y-5', {}, h('section:rounded-2xl border border-[#e8e8ea] p-5', {}, h(
-          'h2:text-base font-semibold', {}, 'מה רוצים לבדוק?'), h(`textarea:${classes.field} min-h-20 resize-y`, {value: item.desc || '',
-            placeholder: 'תארו בקצרה את מטרת הבדיקה', onInput: event => update({...item, desc: event.target.value})})), h(
-          'section:rounded-2xl border border-[#e8e8ea] p-5', {}, h('div:flex items-start gap-3', {}, h(
-            'span:grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#f4f4f5]', {}, h('L:Bot', {size: 17})), h(
-            'div:flex-1', {}, h('h2:text-base font-semibold', {}, 'איזה סוכן בודקים?'), h(
-              'p:mt-1 text-xs text-[#6b6b6f]', {}, 'כל התרחישים ירוצו מול אותו סוכן דרך Agno'), h('div:mt-3', {}, hh(
-              ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {items: repo.agents, value: item.targetId || '',
-                onChange: targetId => update({...item, targetId}), placeholder: 'בחרו סוכן', empty: 'אין סוכנים זמינים'}))))), h(
-          'section:rounded-2xl border border-[#e8e8ea] bg-[#fafafa] p-5', {}, h('div:flex items-center justify-between gap-3', {}, h(
-            'div', {}, h('h2:text-base font-semibold', {}, 'תרחישי בדיקה'), h('p:mt-1 text-xs text-[#6b6b6f]', {},
-              'כל תרחיש הוא שאלה אחת ותיאור של התוצאה הרצויה')), h(`button:${classes.button}`, {onClick: () => update({...item,
-              rows: [...(item.rows || []), {input: '', expected: '', notes: ''}]})}, h('L:Plus', {size: 14}), 'תרחיש')), h(
-            'div:mt-4 space-y-3', {}, (item.rows || []).map(scenario), !item.rows?.length && h(
-              'div:rounded-xl border border-dashed border-[#d8d8dc] p-8 text-center text-sm text-[#6b6b6f]', {},
-              'הוסיפו תרחיש ראשון כדי להתחיל'))), h('section:rounded-2xl border border-[#e8e8ea] p-5', {}, h(
-            'h2:text-base font-semibold', {}, 'רובריקה'), h('p:mt-1 text-xs text-[#6b6b6f]', {},
-              'הגדירו כיצד להעריך תשובה טובה בכל התרחישים'), h(`textarea:${classes.field} mt-4 min-h-24 resize-y`, {
-                value: item.rubric || '', placeholder: 'לדוגמה: התשובה מדויקת, מבוססת על המקורות ומציינת פערי מידע',
-                onInput: event => update({...item, rubric: event.target.value})})), historySection(), h(
-          'div:sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#d8d8dc] bg-white p-4 shadow-lg', {}, h(
-            'p:text-xs text-[#6b6b6f]', {}, !item.name?.trim() ? 'הוסיפו שם לבדיקה' : !target ? 'בחרו סוכן כדי להריץ'
-              : !item.rows?.some(row => row.input?.trim()) ? 'הוסיפו לפחות תרחיש אחד עם קלט' : 'מוכן להרצה'), h(
-            `button:${classes.primary}`, {disabled: !ready || running, onClick: () => saveAndRun(item, target)},
-            running ? 'מריץ…' : 'שמירה והרצה')))
-      }
+      const scenario = (row, index) => h('article:rounded-xl border border-[#e8e8ea] bg-white p-4', {key: index}, h(
+        'div:flex items-center justify-between', {}, h('b:text-sm', {}, `תרחיש ${index + 1}`), h(
+          'button:rounded-lg p-1.5 text-[#6b6b6f] hover:bg-red-50 hover:text-red-600', {onClick: () => update({...item,
+            rows: item.rows.filter((value, rowIndex) => rowIndex != index)}), 'aria-label': `מחיקת תרחיש ${index + 1}`}, h(
+            'L:Trash2', {size: 14}))), h('div:mt-3 grid gap-3 md:grid-cols-2', {}, field('מה שולחים לסוכן?', h(
+          `textarea:${classes.field} min-h-28 resize-y`, {value: row.input || '', placeholder: 'לדוגמה: סכם את מדיניות ההחזרות',
+            onInput: event => update({...item, rows: item.rows.map((value, rowIndex) => rowIndex == index
+              ? {...value, input: event.target.value} : value)})})), field('מהי תשובה טובה?', h(
+          `textarea:${classes.field} min-h-28 resize-y`, {value: row.expected || '',
+            placeholder: 'הגדירו עובדות, מבנה או תנאים שחייבים להופיע',
+            onInput: event => update({...item, rows: item.rows.map((value, rowIndex) => rowIndex == index
+              ? {...value, expected: event.target.value} : value)})}))), h('details:mt-3', {}, h(
+        'summary:cursor-pointer text-xs text-[#6b6b6f]', {}, 'הערות פנימיות'), h(`textarea:${classes.field}`, {
+          value: row.notes || '', placeholder: 'הקשר נוסף לצוות', onInput: event => update({...item,
+            rows: item.rows.map((value, rowIndex) => rowIndex == index ? {...value, notes: event.target.value} : value)})})))
       const legacyTool = () => h('div:space-y-5', {},
         h('section:rounded-2xl border border-[#e8e8ea] p-4', {},
           field('description', h(`div:${classes.field} text-[#6b6b6f]`, {dir: 'ltr'}, item.apiDescription || '—')),
@@ -190,48 +228,45 @@ ReactComp('wonderPlatformResourceFields', {
         item.packageId && (item.inputSchema || []).length > 0 && inputSchemaSection(),
         item.packageId && (item.inputSchema || []).length > 0 && outputCubesSection())
       if (resource == 'tools') return toolFields()
-      return h('div:space-y-5', {},
-      field('id', input('id', {dir: 'ltr', placeholder: 'uiRenderingSkill', disabled: !!item.originalId})),
-      field('description', h(`textarea:${classes.field} min-h-24 resize-y`, {dir: 'ltr', value: item.apiDescription || '',
-        onInput: event => update({...item, apiDescription: event.target.value})})), field('hebrew_description', h(
-        `textarea:${classes.field} min-h-24 resize-y`, {value: item.desc || '', onInput: event => update({...item, desc: event.target.value})})),
-      resource == 'knowledge' && knowledgeSection(),
-      ['plugins', 'skills', 'subagents'].includes(resource) &&
-        field(resource == 'skills' ? repo.marketplace ? 'SKILL.md' : 'תוכן המיומנות' : 'הנחיות בסיס', h(
-          `textarea:${classes.field} min-h-40 resize-y`, {
-          value: resource == 'skills' ? item.content || '' : item.instructions || '',
-          onInput: event => update({...item, [resource == 'skills' ? 'content' : 'instructions']: event.target.value})})),
-      resource == 'skills' && !repo.marketplace && h('div:grid grid-cols-1 gap-3 sm:grid-cols-2', {},
-        field('גרסה נוכחית', h(`div:${classes.field} text-[#6b6b6f]`, {}, item.originalId ? item.version : 'טרם פורסם')),
-        field('גרסה חדשה', input('publishVersion', {dir: 'ltr', placeholder: '1.0.0'})),
-        h('p:col-span-full text-xs leading-5 text-[#6b6b6f]', {},
-          'השמירה מפרסמת release חדש. גרסאות ותוכן שכבר פורסמו נשארים בלתי משתנים.')),
-      resource == 'skills' && repo.marketplace && h('div:grid grid-cols-1 gap-3 sm:grid-cols-2', {},
-        field('min_agent_version', input('minAgentVersion', {dir: 'ltr'})), field('license', input('license', {dir: 'ltr'}))),
-      resource == 'skills' && repo.marketplace && h('section:rounded-2xl border border-[#e8e8ea] p-4', {},
-        h('div:flex items-start justify-between gap-3', {}, h('div', {}, h('b:text-sm', {}, `Assets (${(item.assets || []).length})`),
-          h('p:mt-1 text-xs text-[#6b6b6f]', {}, 'Files bundled with this skill. You can adjust their path before saving.'))),
-        h('label:mt-3 flex cursor-pointer flex-col items-center rounded-xl border-2 border-dashed border-[#d8d8dc] px-4 py-5 text-center hover:bg-[#fafafa]',
-          {onDragOver: event => event.preventDefault(), onDrop: event => (event.preventDefault(), addAssets(event.dataTransfer.files,
-            event.currentTarget.ownerDocument.defaultView))}, h('L:Upload', {size: 20}), h('b:mt-2 text-sm', {}, 'Drop files here or browse'),
-          h('span:mt-1 text-xs text-[#6b6b6f]', {}, 'Multiple files are supported'), h('input:hidden', {type: 'file', multiple: true,
-            'data-skill-assets': true, onChange: event => addAssets(event.target.files, event.currentTarget.ownerDocument.defaultView)})),
-        (item.assets || []).length ? h('div:mt-3 space-y-2', {}, item.assets.map((asset, index) => h(
-          'div:flex min-w-0 items-center gap-3 rounded-xl border border-[#e8e8ea] p-3', {key: `${asset.path}-${index}`},
-          h('L:File', {size: 18}), h('div:min-w-0 flex-1', {}, h('input:w-full min-w-0 bg-transparent text-sm font-medium outline-none', {
-            dir: 'ltr', value: asset.path || '', 'aria-label': `Asset path ${index + 1}`, onInput: event => update({...item,
-              assets: item.assets.map((value, row) => row == index ? {...value, path: event.target.value} : value)})}),
-          h('p:mt-1 truncate text-xs text-[#6b6b6f]', {}, asset.mime_type || 'application/octet-stream')),
-          h('button:rounded-lg p-2 hover:bg-[#f3f3f4]', {onClick: () => update({...item,
-            assets: item.assets.filter((value, row) => row != index)}), 'aria-label': `Remove ${asset.path}`}, h('L:Trash2', {size: 14})))))
-          : h('p:mt-3 text-center text-xs text-[#6b6b6f]', {}, 'No assets added yet')),
-      resource == 'skills' && relation('toolIds', 'tools', 'כלים'), resource == 'subagents' && h('div:space-y-4', {},
-        relation('skillIds', 'skills', 'מיומנויות'), relation('toolIds', 'tools', 'כלים')),
-      repo.marketplace && item._marketplace && h('section:rounded-2xl border border-[#e8e8ea] p-4', {}, h(
-        'div:flex flex-wrap items-center gap-2', {}, h('b:text-sm', {}, 'Marketplace API'), h(`span:${classes.chip}`, {},
-          `${item.versions?.length || 0} גרסאות`), h(`span:${classes.chip}`, {}, `${item.audit?.length || 0} אירועי audit`)),
-      (item.versions || []).length > 0 && h('div:mt-3 flex flex-wrap gap-2', {}, item.versions.map((version, index) => h(
-        `span:${classes.chip}`, {key: index}, `V${version.version ?? version.n ?? index + 1}`)))))
+      if (resource == 'evaluations') {
+        const target = repo.agents.find(agent => agent.id == item.targetId), running = runningSet == item.id
+        const ready = item.name?.trim() && target && item.rows?.some(row => row.input?.trim())
+        const evalSteps = [
+          {id: 'general', label: 'הגדרה', render: () => h('div:space-y-4', {}, h('section:rounded-2xl border border-[#e8e8ea] p-5', {}, h(
+            'h2:text-base font-semibold', {}, 'מה רוצים לבדוק?'), h(`textarea:${classes.field} min-h-20 resize-y`, {value: item.desc || '',
+              placeholder: 'תארו בקצרה את מטרת הבדיקה', onInput: event => update({...item, desc: event.target.value})})), h(
+            'section:rounded-2xl border border-[#e8e8ea] p-5', {}, h('div:flex items-start gap-3', {}, h(
+              'span:grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#f4f4f5]', {}, h('L:Bot', {size: 17})), h(
+              'div:flex-1', {}, h('h2:text-base font-semibold', {}, 'איזה סוכן בודקים?'), h(
+                'p:mt-1 text-xs text-[#6b6b6f]', {}, 'כל התרחישים ירוצו מול אותו סוכן דרך Agno'), h('div:mt-3', {}, hh(
+                ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {items: repo.agents, value: item.targetId || '',
+                  onChange: targetId => update({...item, targetId}), placeholder: 'בחרו סוכן', empty: 'אין סוכנים זמינים'}))))))},
+          {id: 'scenarios', label: 'תרחישי בדיקה', render: () => h('div:space-y-4', {}, h(
+            'section:rounded-2xl border border-[#e8e8ea] bg-[#fafafa] p-5', {}, h('div:flex items-center justify-between gap-3', {}, h(
+              'div', {}, h('h2:text-base font-semibold', {}, 'תרחישי בדיקה'), h('p:mt-1 text-xs text-[#6b6b6f]', {},
+                'כל תרחיש הוא שאלה אחת ותיאור של התוצאה הרצויה')), h(`button:${classes.button}`, {onClick: () => update({...item,
+                rows: [...(item.rows || []), {input: '', expected: '', notes: ''}]})}, h('L:Plus', {size: 14}), 'תרחיש')), h(
+              'div:mt-4 space-y-3', {}, (item.rows || []).map(scenario), !item.rows?.length && h(
+                'div:rounded-xl border border-dashed border-[#d8d8dc] p-8 text-center text-sm text-[#6b6b6f]', {},
+                'הוסיפו תרחיש ראשון כדי להתחיל'))))},
+          {id: 'rubric', label: 'רובריקה', render: () => h('section:rounded-2xl border border-[#e8e8ea] p-5', {}, h(
+            'h2:text-base font-semibold', {}, 'רובריקה'), h('p:mt-1 text-xs text-[#6b6b6f]', {},
+              'הגדירו כיצד להעריך תשובה טובה בכל התרחישים'), h(`textarea:${classes.field} mt-4 min-h-24 resize-y`, {
+                value: item.rubric || '', placeholder: 'לדוגמה: התשובה מדויקת, מבוססת על המקורות ומציינת פערי מידע',
+                onInput: event => update({...item, rubric: event.target.value})}))},
+          {id: 'history', label: 'היסטוריית הרצות', render: historySection}
+        ]
+        return h('div:space-y-5', {},
+          hh(ctx, dsls.react['react-comp'].wonderPlatformWizard, {steps: evalSteps, activeId, onStep: setActiveId}),
+          h('div:sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#d8d8dc] bg-white p-4 shadow-lg', {}, h(
+            'p:text-xs text-[#6b6b6f]', {}, !item.name?.trim() ? 'הוסיפו שם לבדיקה' : !target ? 'בחרו סוכן כדי להריץ'
+              : !item.rows?.some(row => row.input?.trim()) ? 'הוסיפו לפחות תרחיש אחד עם קלט' : 'מוכן להרצה'), h(
+            `button:${classes.primary}`, {disabled: !ready || running, onClick: () => saveAndRun(item, target)},
+            running ? 'מריץ…' : 'שמירה והרצה')))
+      }
+      const steps = stepsFor(resource).filter(step => step.id != 'assets' || repo.marketplace)
+      const active = steps.find(step => step.id == activeId) || steps[0]
+      return hh(ctx, dsls.react['react-comp'].wonderPlatformWizard, {steps, activeId: active.id, onStep: setActiveId})
     }
   })
 })

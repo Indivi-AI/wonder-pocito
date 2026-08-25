@@ -442,9 +442,10 @@ Test('wonderPlatform.marketplacePluginWorkspace', {
 
 Test('wonderPlatform.marketplaceSkillEditor', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformMarketplaceTestApp(),
-    and(contains('min_agent_version'), contains('Assets'), contains('Marketplace API'), contains('SKILL.md')), {
+    and(contains('תוכן המיומנות'), contains('גרסה'), contains('Assets'), contains('Drop files here or browse')), {
       userActions: actions(waitForText('פלאגין ראיות'), click('מיומנויות'), waitForText('מיומנות ראיות'), click('מיומנות ראיות'),
-        waitForText('Assets'))})
+        waitForText('Marketplace API'), click('תוכן המיומנות'), waitForText('SKILL.md'), click('גרסה'),
+        waitForText('min_agent_version'), click('Assets'), waitForText('Drop files here or browse'))})
 })
 
 Test('wonderPlatform.marketplaceToolEditor', {
@@ -633,7 +634,9 @@ Test('wonderPlatform.marketplaceSkillAssetUpload', {
       click('מיומנויות'),
       waitForText('מיומנות ראיות'),
       click('מיומנות ראיות'),
-      waitForText('Assets'),
+      waitForText('כללי'),
+      click('Assets'),
+      waitForText('Drop files here or browse'),
       wonderPlatformUploadAsset('checklist.md', '# Checklist', { mimeType: 'text/markdown' }),
       waitForText('checklist.md')
     )
