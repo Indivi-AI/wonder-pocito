@@ -18,19 +18,18 @@ Convert every resource form in the Wonder Platform editor (`solutions/pocito/mar
 - New registered component `wonderPlatformWizard` in new file `solutions/pocito/marketplace-ui/wonder-platform-wizard.js`. The step rail sits at the TOP of the form as a horizontal tab row (user moved it from the right rail on 2026-08-25).
 - Agents/plugins/subagents click through to the WORKSPACE page (`wonder-platform-workspace.js`), so their wizard lives in the workspace form (Task 12), not in the resource editor.
 - `wonderPlatformResourceFields` (`wonder-platform-resource-fields.js`) defines per-resource step lists as declarative data: `steps = [{id, label, render}]`, where `render` returns the step's form content using the existing in-scope helpers (`input`, `field`, `relation`, `packageStep`, `inputSchemaSection`, `outputCubesSection`, `knowledgeSection`, history/scenario sections, marketplace fields).
-- `wonderPlatformWizard` props: `{steps, activeId, onStep}`. It renders the rail (slim, right side, RTL-first) and the active step content; it owns no domain logic. Hooks live only in its returned function (solutions/pocito/CLAUDE.md rule).
+- `wonderPlatformWizard` props: `{steps, activeId, onStep}`. It renders the step tabs as a horizontal row at the top of the form and the active step content; it owns no domain logic. Hooks live only in its returned function (solutions/pocito/CLAUDE.md rule).
 - Active-step state lives in `wonderPlatformResourceFields` via `useState`, reset when the edited resource changes.
 - Matches TGP philosophy: declarative profiles, technical handling in components; every stateful component registered via `ReactComp` and rendered via `hh`.
 
 ## Step contents per resource
 
-**Agents** — 6 steps:
+**Agents** — 3 steps (workspace + editor):
 1. `כללי` — description + hebrew description
 2. `הנחיות` — instructions textarea
-3. `פלאגינים` — `relation('pluginIds', ...)`
-4. `מיומנויות` — `relation('skillIds', ...)`
-5. `כלים` — `relation('toolIds', ...)`
-6. `ידע` — `relation('knowledgeIds', ...)`
+3. `חיבורים` — stacked relations: `pluginIds`, `skillIds`, `toolIds`, `knowledgeIds`
+
+(User collapsed the per-asset relation tabs into one חיבורים tab on 2026-08-25.)
 
 **Tools** — 3 stages:
 1. `כללי` — description + hebrew description + **tool id input** (numeric, 6-8 digits, `dir: 'ltr'`) + **טעינת מארז (load) button** next to the id.
@@ -52,20 +51,15 @@ Convert every resource form in the Wonder Platform editor (`solutions/pocito/mar
 1. `כללי` — description + hebrew description
 2. `קבצים` — `knowledgeSection()`
 
-**Plugins** — steps:
+**Plugins** — 3 steps:
 1. `כללי` — description + hebrew description
 2. `הנחיות` — instructions textarea
-3. `מיומנויות` — `relation('skillIds', ...)`
-4. `כלים` — `relation('toolIds', ...)`
-5. `ידע` — `relation('knowledgeIds', ...)`
+3. `חיבורים` — stacked relations: `skillIds`, `toolIds`, `knowledgeIds`
 
-(User added the relation steps on 2026-08-25.)
-
-**Subagents** — steps:
+**Subagents** — 3 steps:
 1. `כללי` — description + hebrew description
 2. `הנחיות בסיס` — instructions textarea
-3. `מיומנויות` — `relation('skillIds', ...)`
-4. `כלים` — `relation('toolIds', ...)`
+3. `חיבורים` — stacked relations: `skillIds`, `toolIds`
 
 **Evaluations** — steps:
 1. `הגדרה` — מה רוצים לבדוק + איזה סוכן בודקים
