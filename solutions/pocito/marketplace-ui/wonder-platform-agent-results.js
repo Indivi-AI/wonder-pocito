@@ -8,7 +8,7 @@ ReactComp('wonderPlatformAgnoResult', {
     hFunc: (ctx, {react: {h}}) => ({result}) => h(
       'div:rounded-2xl border border-[#e8e8ea] bg-white p-5 shadow-sm', {'data-agent-harness': 'agno'},
       h('div:mb-3 flex items-center justify-between gap-3 text-xs font-semibold text-[#2e2e2e]', {},
-        h('span', {}, 'תשובת AgentOS'), h('span:font-mono text-[10px] text-[#6b6b6f]', {}, result.runId || 'run pending')),
+        h('span', {}, 'תשובת AgentOS'), h('span:font-mono text-[10px] text-[#6b6b6f]', {}, result.runId || 'בהרצה…')),
       h('div:whitespace-pre-wrap text-sm leading-7', {dir: 'auto'}, result.text || result.output),
       result.sessionId && h('div:mt-3 text-[10px] text-[#6b6b6f]', {}, `session · ${result.sessionId}`)
     )

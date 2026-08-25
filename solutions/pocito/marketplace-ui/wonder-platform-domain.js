@@ -154,7 +154,7 @@ Data('wonderPlatformUi', {
         create: 'כלי ממארז Flow', icon: 'Wrench', label: 'כלי'},
       subagents: {title: 'סאב-אייג׳נטים', subtitle: 'ספרייה משותפת של יעדי האצלה ממוקדים', create: 'סאב-אייג׳נט חדש',
         icon: 'Network', label: 'סאב-אייג׳נט', relations: [['skillIds', 'skills', 'מיומנויות'], ['toolIds', 'tools', 'כלים']]},
-      knowledge: {title: 'ידע', subtitle: 'מקורות מידע ומסמכים המשמשים ל-RAG ומשפרים דיוק סוכנים', create: 'Knowledge חדש',
+      knowledge: {title: 'ידע', subtitle: 'מקורות מידע ומסמכים המשמשים ל-RAG ומשפרים דיוק סוכנים', create: 'מקור ידע חדש',
         icon: 'Database', label: 'ידע'},
       agents: {title: 'סוכנים', subtitle: 'סוכנים מותאמים אישית עבור כל מטרה',
         create: 'סוכן חדש', icon: 'Bot', label: 'סוכן',
@@ -171,12 +171,16 @@ Data('wonderPlatformUi', {
     ownerTabs: [['mine', 'שלי'], ['global', 'קטלוג גלובלי']],
     classes: {
       button: 'inline-flex items-center justify-center gap-2 rounded-[10px] border border-[#e8e8ea] bg-white px-3 py-2 ' +
-        'text-[13px] font-medium text-[#2e2e2e] transition-colors hover:border-[#d8d8dc] hover:bg-[#fafafa]',
+        'text-[13px] font-medium text-[#2e2e2e] transition-colors hover:border-[#d8d8dc] hover:bg-[#fafafa] ' +
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f0f10] focus-visible:ring-offset-2',
       primary: 'inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#0f0f10] px-3.5 py-2 text-[13px] ' +
-        'font-medium text-white transition-opacity hover:opacity-85 disabled:opacity-30',
+        'font-medium text-white transition-opacity hover:opacity-85 disabled:opacity-30 ' +
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f0f10] focus-visible:ring-offset-2',
       field: 'mt-1.5 w-full rounded-[10px] border border-[#e8e8ea] bg-white px-3 py-2 text-[13px] text-[#0f0f10] ' +
-        'outline-none transition-colors placeholder:text-[#9b9ba0] focus:border-[#c9c9ce]',
-      card: 'rounded-xl border border-[#e8e8ea] bg-white p-4 transition-colors',
+        'outline-none transition-colors placeholder:text-[#6b7280] focus:border-[#c9c9ce] ' +
+        'focus-visible:ring-2 focus-visible:ring-[#0f0f10] focus-visible:ring-offset-2',
+      card: 'rounded-xl border border-[#e8e8ea] bg-white p-4 transition-colors ' +
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f0f10] focus-visible:ring-offset-2',
       chip: 'rounded-md border border-[#e8e8ea] px-2 py-0.5 text-[11px] font-medium text-[#6b6b6f]'
     }
   })

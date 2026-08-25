@@ -14,21 +14,26 @@ ReactComp('wonderPlatformResourceFields', {
       const [pkg, setPkg] = useState()
       const [activeId, setActiveId] = useState('general')
       useEffect(() => { setActiveId('general'); setPkg() }, [item.id, resource])
-      const field = (label, control) => h('label:block text-xs font-semibold text-[#2e2e2e]', {}, label, control)
+      const field = (label, control, hint) => h('label:block text-xs font-semibold text-[#2e2e2e]', {}, label,
+        hint && h('span:mr-2 font-mono text-xs font-normal text-[#6b6b6f]', {dir: 'ltr'}, hint), control)
       const input = (key, props = {}) => h(`input:${classes.field}`, {value: item[key] || '',
         onInput: event => update({...item, [key]: event.target.value}), ...props})
-      const relation = (fieldName, target, title) => h('section:rounded-2xl border border-[#e8e8ea] p-4', {},
-        h('div:flex items-center justify-between', {}, h('b:text-sm', {}, title), h(`button:${classes.button}`, {
-          onClick: () => openPicker(fieldName, target, title)}, h('L:Plus', {size: 14}), 'צירוף מהקטלוג')),
-        h('div:mt-3 flex flex-wrap gap-2', {}, (item[fieldName] || []).map(id => h(`span:${classes.chip} flex items-center gap-2`, {key: id},
-          repo[target]?.find(value => value.id == id)?.name || id, h('button', {onClick: () => update({...item,
-            [fieldName]: item[fieldName].filter(value => value != id)}), 'aria-label': 'הסרה'}, h('L:X', {size: 12}))))))
+      const relation = (fieldName, target, title) => {
+        const ids = item[fieldName] || [], addButton = h(`button:${classes.button}`, {
+          onClick: () => openPicker(fieldName, target, title)}, h('L:Plus', {size: 14}), 'צירוף מהקטלוג')
+        return ids.length ? h('section:rounded-2xl border border-[#e8e8ea] p-4', {},
+          h('div:flex items-center justify-between', {}, h('b:text-sm', {}, title), addButton),
+          h('div:mt-3 flex flex-wrap gap-2', {}, ids.map(id => h(`span:${classes.chip} flex items-center gap-2`, {key: id},
+            repo[target]?.find(value => value.id == id)?.name || id, h('button', {onClick: () => update({...item,
+              [fieldName]: item[fieldName].filter(value => value != id)}), 'aria-label': 'הסרה'}, h('L:X', {size: 12}))))))
+          : h('div:flex items-center justify-between rounded-2xl border border-[#e8e8ea] px-4 py-3', {}, h('b:text-sm', {}, title), addButton)
+      }
       const generalStep = () => h('div:space-y-4', {},
-        field('id', input('id', {dir: 'ltr', placeholder: 'uiRenderingSkill', disabled: !!item.originalId})),
-        field('description', h(`textarea:${classes.field} min-h-24 resize-y`, {dir: 'ltr', value: item.apiDescription || '',
-          onInput: event => update({...item, apiDescription: event.target.value})})),
-        field('hebrew_description', h(`textarea:${classes.field} min-h-24 resize-y`, {value: item.desc || '',
-          onInput: event => update({...item, desc: event.target.value})})),
+        field('מזהה', input('id', {dir: 'ltr', placeholder: 'uiRenderingSkill', disabled: !!item.originalId}), 'id'),
+        field('תיאור באנגלית', h(`textarea:${classes.field} min-h-24 resize-y`, {dir: 'ltr', value: item.apiDescription || '',
+          onInput: event => update({...item, apiDescription: event.target.value})}), 'description'),
+        field('תיאור בעברית', h(`textarea:${classes.field} min-h-24 resize-y`, {value: item.desc || '',
+          onInput: event => update({...item, desc: event.target.value})}), 'hebrew_description'),
         repo.marketplace && item._marketplace && h('section:rounded-2xl border border-[#e8e8ea] p-4', {}, h(
           'div:flex flex-wrap items-center gap-2', {}, h('b:text-sm', {}, 'Marketplace API'), h(`span:${classes.chip}`, {},
             `${item.versions?.length || 0} גרסאות`), h(`span:${classes.chip}`, {}, `${item.audit?.length || 0} אירועי audit`)),
@@ -36,15 +41,15 @@ ReactComp('wonderPlatformResourceFields', {
           `span:${classes.chip}`, {key: index}, `V${version.version ?? version.n ?? index + 1}`)))))
       const stepsFor = resource => resource == 'agents' ? [
         {id: 'general', label: 'כללי', render: generalStep},
-        {id: 'instructions', label: 'הנחיות', render: () => field('הנחיות', h(`textarea:${classes.field} min-h-40 resize-y`, {
-          value: item.instructions || '', onInput: event => update({...item, instructions: event.target.value})}))},
+        {id: 'instructions', label: 'הנחיות', render: () => field('הנחיות מערכת', h(`textarea:${classes.field} min-h-40 resize-y`, {
+          value: item.instructions || '', onInput: event => update({...item, instructions: event.target.value})}), 'system_prompt')},
         {id: 'connections', label: 'חיבורים', render: () => h('div:space-y-4', {}, relation('pluginIds', 'plugins', 'פלאגינים'),
           relation('skillIds', 'skills', 'מיומנויות'), relation('toolIds', 'tools', 'כלים'), relation('knowledgeIds', 'knowledge', 'ידע'))}
       ] : resource == 'skills' ? [
         {id: 'general', label: 'כללי', render: generalStep},
-        {id: 'content', label: 'תוכן המיומנות', render: () => field(repo.marketplace ? 'SKILL.md' : 'תוכן המיומנות', h(
+        {id: 'content', label: 'תוכן המיומנות', render: () => field('תוכן המיומנות', h(
           `textarea:${classes.field} min-h-40 resize-y`, {value: item.content || '',
-            onInput: event => update({...item, content: event.target.value})}))},
+            onInput: event => update({...item, content: event.target.value})}), repo.marketplace && 'SKILL.md')},
         {id: 'assets', label: 'Assets', render: () => repo.marketplace && h('section:rounded-2xl border border-[#e8e8ea] p-4', {},
           h('div:flex items-start justify-between gap-3', {}, h('div', {}, h('b:text-sm', {}, `Assets (${(item.assets || []).length})`),
             h('p:mt-1 text-xs text-[#6b6b6f]', {}, 'Files bundled with this skill. You can adjust their path before saving.'))),
@@ -183,8 +188,8 @@ ReactComp('wonderPlatformResourceFields', {
             rows: item.rows.map((value, rowIndex) => rowIndex == index ? {...value, notes: event.target.value} : value)})})))
       const legacyTool = () => h('div:space-y-5', {},
         h('section:rounded-2xl border border-[#e8e8ea] p-4', {},
-          field('description', h(`div:${classes.field} text-[#6b6b6f]`, {dir: 'ltr'}, item.apiDescription || '—')),
-          field('hebrew_description', h(`div:${classes.field} text-[#6b6b6f]`, {}, item.desc || '—'))),
+          field('תיאור באנגלית', h(`div:${classes.field} text-[#6b6b6f]`, {dir: 'ltr'}, item.apiDescription || '—'), 'description'),
+          field('תיאור בעברית', h(`div:${classes.field} text-[#6b6b6f]`, {}, item.desc || '—'), 'hebrew_description')),
         h('p:text-xs leading-5 text-[#6b6b6f]', {}, 'כלי Connector מנוהל — לא ניתן לעריכה מכאן.'))
       const mockLoadPackage = () => {
         const seed = repo.flowPackages.find(value => String(value.Id) == item.id) || repo.flowPackages[0]
@@ -196,12 +201,12 @@ ReactComp('wonderPlatformResourceFields', {
       const toolSteps = [
         {id: 'general', label: 'כללי', render: () => h('div:space-y-4', {},
           h('div:flex items-end gap-2', {}, h('div:flex-1', {},
-            field('id', input('id', {dir: 'ltr', placeholder: '12345678', inputMode: 'numeric'}))),
+            field('מזהה מארז Flow', input('id', {dir: 'ltr', placeholder: '12345678', inputMode: 'numeric'}), 'id')),
             h(`button:${classes.button}`, {onClick: mockLoadPackage}, 'טעינת מארז')),
-          field('description', h(`textarea:${classes.field} min-h-24 resize-y`, {dir: 'ltr', value: item.apiDescription || '',
-            onInput: event => update({...item, apiDescription: event.target.value})})),
-          field('hebrew_description', h(`textarea:${classes.field} min-h-24 resize-y`, {value: item.desc || '',
-            onInput: event => update({...item, desc: event.target.value})})),
+          field('תיאור באנגלית', h(`textarea:${classes.field} min-h-24 resize-y`, {dir: 'ltr', value: item.apiDescription || '',
+            onInput: event => update({...item, apiDescription: event.target.value})}), 'description'),
+          field('תיאור בעברית', h(`textarea:${classes.field} min-h-24 resize-y`, {value: item.desc || '',
+            onInput: event => update({...item, desc: event.target.value})}), 'hebrew_description'),
           item.packageId && h('p:text-xs text-[#6b6b6f]', {dir: 'ltr'}, `נבחר: ${currentPackage?.Name || item.packageId} (#${item.packageId})`))},
         {id: 'params', label: 'פרמטרים', disabled: !loaded, render: () => h('div:space-y-4', {},
           h('div:rounded-lg border border-[#d8d8dc] bg-[#f4f4f5] px-3 py-2 text-xs text-[#0f0f10]', {},

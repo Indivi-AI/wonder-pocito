@@ -12,7 +12,7 @@ ReactComp('wonderPlatformResourcePage', {
       const readOnlyTool = resource == 'tools' && item.originalId && item.kind != 'flow'
       const saveDisabled = !item.name?.trim() || !item.id?.trim() || resource == 'skills' && !repo.marketplace && (!item.content?.trim()
         || !/^\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/.test(item.publishVersion))
-      return h('main:min-h-screen overflow-x-hidden pb-24 sm:mr-[248px] sm:pb-0', {},
+      return h('main:min-h-screen min-w-0 flex-1 overflow-x-hidden pb-24 sm:pb-0', {},
         h('header:sticky top-0 z-20 flex flex-wrap items-center gap-3 border-b border-[#e8e8ea] bg-white px-5 py-4', {},
           h('button:rounded-lg p-2 hover:bg-[#f4f4f5]', {onClick: back, 'aria-label': `חזרה ל${labels[resource]}`}, h('L:ChevronRight', {size: 16})),
           h('span:text-xs text-[#6b6b6f]', {}, labels[resource]),

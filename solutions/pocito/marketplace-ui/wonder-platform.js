@@ -228,7 +228,9 @@ ReactComp('wonderPlatform', {
       const updateConversation = async updated => persistRepo({...repo,
         conversations: repo.conversations.map(item => item.id == updated.id ? updated : item)})
       const newConversation = async (agentId = '') => {
-        const created = {id: `c-${Date.now()}`, title: 'שיחה חדשה', agentId, when: 'עכשיו', messages: [],
+        const agent = repo.agents.find(item => item.id == agentId)
+        const title = agent ? `שיחה · ${agent.name}` : `שיחה ${repo.conversations.length + 1}`
+        const created = {id: `c-${Date.now()}`, title, agentId, when: 'עכשיו', messages: [],
           pluginIds: [], skillIds: [], toolIds: [], knowledgeIds: []}
         await persistRepo({...repo, conversations: [created, ...repo.conversations]})
         setConversationId(created.id); setMessage(''); openView('chat')
@@ -279,10 +281,10 @@ ReactComp('wonderPlatform', {
               : hh(ctx, dsls.react['react-comp'].wonderPlatformCatalog, {view, repo, search, setSearch, openItem, createItem, importItem})
       return h('div:min-h-screen overflow-x-clip bg-white text-[#0f0f10] antialiased', {dir: 'rtl', lang: 'he', style: {
         fontFamily: '"Inter", "Assistant", system-ui, sans-serif', letterSpacing: '-0.005em'}},
-      hh(ctx, dsls.react['react-comp'].wonderPlatformNavigation, {
+      h('div:mx-auto flex w-full max-w-[2000px]', {}, hh(ctx, dsls.react['react-comp'].wonderPlatformNavigation, {
         view: view == 'workspace' ? workspace?.resource : view, openView, brand, brandTagline, brandIcon, extraPrimaryNav, extraLibraryNav,
         conversations: repo.conversations, conversationId, newConversation,
-        openConversation: id => (setConversationId(id), openView('chat'))}), content,
+        openConversation: id => (setConversationId(id), openView('chat'))}), content),
       editors.length > (editors[0]?.standalone ? 1 : 0) && hh(ctx,
         dsls.react['react-comp'].wonderPlatformResourceEditor, {editors, setEditors, repo, saveEditor, deleteEditor,
           openPicker: openEditorPicker, requestClose: requestLeave}),
