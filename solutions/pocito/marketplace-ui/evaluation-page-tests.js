@@ -113,3 +113,18 @@ Test('evaluationPage.datasetAuthoring', {
     logger: 'uiLogger'
   })
 })
+
+Test('evaluationPage.datasetAuthoring', {
+  impl: reactTest({
+    testedComp: evaluationPageTestHost(),
+    expectedResult: and(contains('תיאור מערך הנתונים'), contains('קלט לסוכן'), contains('פלט מצופה או עובדות נדרשות')),
+    userActions: actions(
+      waitForText('סיכום ההרצה'),
+      click('מערכי נתונים'),
+      waitForText('מערך נתונים חדש'),
+      click('פתיחה'),
+      waitForText('קלט לסוכן')
+    ),
+    logger: 'uiLogger'
+  })
+})
