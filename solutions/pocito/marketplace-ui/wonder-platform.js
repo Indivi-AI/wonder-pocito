@@ -107,7 +107,9 @@ ReactComp('wonderPlatform', {
       const navigate = id => (setView(id), setWorkspace(), setSearch(''))
       const editorEntry = (resource, item, extra = {}) => ({resource, item, baseline: JSON.stringify(item), ...extra})
       const dirty = entry => JSON.stringify(entry.item) != entry.baseline
-      const requestLeave = action => { const active = editorsRef.current.at(-1); (active && dirty(active)) || (viewRef.current == 'workspace' && dirtyRef.current) ? setPendingLeave(action) : action() }
+      const requestLeave = action => { const active = editorsRef.current.at(-1)
+        const blocked = (active && dirty(active)) || (viewRef.current == 'workspace' && dirtyRef.current)
+        blocked ? setPendingLeave(() => action) : action() }
       const openView = id => requestLeave(() => (setEditors([]), navigate(id)))
       const openItem = async (resource, item) => {
         if (repo.marketplace && marketResources.includes(resource)) item = await marketplaceDetail(
