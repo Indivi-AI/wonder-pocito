@@ -55,7 +55,7 @@ ReactComp('wonderPlatform', {
       const config = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx), [view, setView] = useState(defaultView)
       const [repo, setRepo] = useState(), [loadError, setLoadError] = useState(), [search, setSearch] = useState('')
       const [workspace, setWorkspace] = useState()
-      const [editors, setEditors] = useState([]), [picker, setPicker] = useState(), [pendingNav, setPendingNav] = useState()
+      const [editors, setEditors] = useState([]), [picker, setPicker] = useState(), [pendingLeave, setPendingLeave] = useState()
       const [conversationId, setConversationId] = useState('c1'), [message, setMessage] = useState(''), [busy, setBusy] = useState(false)
       const [runningSet, setRunningSet] = useState(''), [notice, setNotice] = useState('')
       useEffect(() => { void Promise.resolve(loadRepo(ctx.setVars({roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))).then(setRepo, setLoadError) }, [])
@@ -104,8 +104,8 @@ ReactComp('wonderPlatform', {
       const navigate = id => (setView(id), setWorkspace(), setSearch(''))
       const editorEntry = (resource, item, extra = {}) => ({resource, item, baseline: JSON.stringify(item), ...extra})
       const dirty = entry => JSON.stringify(entry.item) != entry.baseline
-      const leave = id => (setEditors([]), navigate(id), setPendingNav())
-      const openView = id => editors.at(-1) && dirty(editors.at(-1)) ? setPendingNav(id) : leave(id)
+      const requestLeave = action => { const active = editors.at(-1); active && dirty(active) ? setPendingLeave(action) : action() }
+      const openView = id => requestLeave(() => (setEditors([]), navigate(id)))
       const openItem = async (resource, item) => {
         if (repo.marketplace && marketResources.includes(resource)) item = await marketplaceDetail(
           ctx.setVars({resource, id: item.id, roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))
@@ -184,9 +184,9 @@ ReactComp('wonderPlatform', {
           ? [{...editors[0], item: {...saved, originalId: saved.id}, baseline: JSON.stringify({...saved, originalId: saved.id})}] : [])
         flash('נשמר בקטלוג המשותף'); return saved
       }
-      const saveAndLeave = async () => { const id = pendingNav
+      const saveAndLeave = async () => { const action = pendingLeave
         try { await (editors[0]?.standalone ? saveBase() : saveEditor()) } catch (error) { return }
-        leave(id) }
+        setPendingLeave(); action() }
       const deleteBase = async () => {
         const {resource, item} = editors[0]
         if (repo.marketplace && marketResources.includes(resource)) await marketplaceCall(ctx.setVars({operation: 'delete', resource, id: item.originalId,
@@ -271,7 +271,8 @@ ReactComp('wonderPlatform', {
           createSet: () => setEditors([editorEntry('evaluations', blank('evaluations'), {createLabel: 'סט חדש', standalone: true})]),
           runningSet, runSet})
           : editors[0]?.standalone ? hh(ctx, dsls.react['react-comp'].wonderPlatformResourcePage, {active: editors[0], update: updateBase,
-              save: saveBase, deleteItem: deleteBase, back: () => setEditors([]), repo, openPicker: openEditorPicker, saveAndRun, runningSet})
+              save: saveBase, deleteItem: deleteBase, back: () => requestLeave(() => setEditors([])), repo, openPicker: openEditorPicker,
+              saveAndRun, runningSet})
               : hh(ctx, dsls.react['react-comp'].wonderPlatformCatalog, {view, repo, search, setSearch, openItem, createItem, importItem})
       return h('div:min-h-screen overflow-x-clip bg-white text-[#0f0f10] antialiased', {dir: 'rtl', lang: 'he', style: {
         fontFamily: '"Inter", "Assistant", system-ui, sans-serif', letterSpacing: '-0.005em'}},
@@ -280,15 +281,16 @@ ReactComp('wonderPlatform', {
         conversations: repo.conversations, conversationId, newConversation,
         openConversation: id => (setConversationId(id), openView('chat'))}), content,
       editors.length > (editors[0]?.standalone ? 1 : 0) && hh(ctx,
-        dsls.react['react-comp'].wonderPlatformResourceEditor, {editors, setEditors, repo, saveEditor, deleteEditor, openPicker: openEditorPicker}),
+        dsls.react['react-comp'].wonderPlatformResourceEditor, {editors, setEditors, repo, saveEditor, deleteEditor,
+          openPicker: openEditorPicker, requestClose: requestLeave}),
       picker && hh(ctx, dsls.react['react-comp'].wonderPlatformAttachPicker, {picker, repo, setPicker, attachSelected, createNested}),
-      pendingNav && h('div:fixed inset-0 z-[90] grid place-items-center bg-black/25 p-4', {}, h(
+      pendingLeave && h('div:fixed inset-0 z-[90] grid place-items-center bg-black/25 p-4', {}, h(
         'section:w-full max-w-md rounded-2xl border border-[#e8e8ea] bg-white p-5 shadow-2xl', {}, h(
         'div:flex items-center justify-between', {}, h('b:text-base font-semibold', {}, 'שינויים שלא נשמרו'),
-        h('button:rounded-lg p-1.5 hover:bg-gray-100', {onClick: () => setPendingNav(), 'aria-label': 'סגירה'}, h('L:X'))),
+        h('button:rounded-lg p-1.5 hover:bg-gray-100', {onClick: () => setPendingLeave(), 'aria-label': 'סגירה'}, h('L:X'))),
         h('p:mt-2 text-sm text-[#6b6b6f]', {}, 'ערכתם פריט שעדיין לא נשמר. מה תרצו לעשות?'),
         h('div:mt-5 flex flex-wrap gap-2', {}, h(`button:${config.classes.primary}`, {onClick: saveAndLeave}, 'שמירה ועזיבה'),
-          h(`button:${config.classes.button}`, {onClick: () => leave(pendingNav)}, 'עזיבה בלי שמירה')))),
+          h(`button:${config.classes.button}`, {onClick: () => (setPendingLeave(), pendingLeave())}, 'עזיבה בלי שמירה')))),
       notice && h('div:fixed bottom-5 left-5 z-[100] rounded-xl border border-[#d8d8dc] bg-[#f4f4f5] px-4 py-2 text-sm text-[#0f0f10]', {}, notice))
     }
   })

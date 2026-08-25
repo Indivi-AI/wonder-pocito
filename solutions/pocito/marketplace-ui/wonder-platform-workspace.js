@@ -119,7 +119,7 @@ ReactComp('wonderPlatformWorkspace', {
       shownRun && h('div:mt-4', {}, h('div:flex items-center gap-2', {}, h(`span:${classes.chip}`, {}, shownRun.status),
         h('span:text-xs text-[#6b6b6f]', {}, shownRun.started || 'עכשיו')), h('div:mt-4 space-y-2', {}, (shownRun.rows || []).map(evalRow))))
       return h('main:min-h-screen overflow-x-clip pb-24 sm:mr-[248px] sm:pb-0', {}, h('header:sticky top-0 z-20 flex flex-wrap items-center ' +
-        'gap-3 border-b border-[#e8e8ea] bg-white px-5 py-4', {}, h('button:rounded-lg border p-2', {onClick: back,
+        'gap-3 border-b border-[#e8e8ea] bg-white px-5 py-4', {}, h('button:rounded-lg p-2 hover:bg-[#f4f4f5]', {onClick: back,
         'aria-label': `חזרה ל${{plugins: 'פלאגינים', subagents: 'סאב-אייג׳נטים', agents: 'סוכנים'}[workspace.resource]}`},
         h('L:ChevronRight', {size: 16})),
       h('span:text-xs text-[#6b6b6f]', {}, labels[workspace.resource]), h('input:min-w-0 flex-1 text-xl font-bold outline-none', {

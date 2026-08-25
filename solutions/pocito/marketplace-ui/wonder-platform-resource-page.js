@@ -14,7 +14,7 @@ ReactComp('wonderPlatformResourcePage', {
         || !/^\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/.test(item.publishVersion))
       return h('main:min-h-screen overflow-x-hidden pb-24 sm:mr-[248px] sm:pb-0', {},
         h('header:sticky top-0 z-20 flex flex-wrap items-center gap-3 border-b border-[#e8e8ea] bg-white px-5 py-4', {},
-          h('button:rounded-lg border p-2', {onClick: back, 'aria-label': `חזרה ל${labels[resource]}`}, h('L:ChevronRight', {size: 16})),
+          h('button:rounded-lg p-2 hover:bg-[#f4f4f5]', {onClick: back, 'aria-label': `חזרה ל${labels[resource]}`}, h('L:ChevronRight', {size: 16})),
           h('span:text-xs text-[#6b6b6f]', {}, labels[resource]),
           h('input:min-w-0 flex-1 text-xl font-bold outline-none', {value: item.name || '', placeholder: 'שם להצגה…', 'aria-label': 'display_name',
             onInput: event => update({...item, name: event.target.value})}),
