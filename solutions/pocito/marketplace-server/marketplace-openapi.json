@@ -2957,7 +2957,8 @@
           "flow_package",
           "flow_cube",
           "solr",
-          "kick_graphql"
+          "kick_graphql",
+          "mcp"
         ],
         "title": "ToolType",
         "description": "Invocation type: code uses a handler; dedicated runtime types use dedicated_tool_config."
