@@ -140,7 +140,7 @@ ReactComp('EvaluationPage', {
         await persistRun(runId, item => ({...item, status: 'completed', finishedAt: Date.now()}))
       }
       const nav = h('nav:mt-7 grid grid-cols-3 border-b border-[#e8e8ea] sm:flex', {'aria-label': 'ניווט אבלואציה'}, [
-        ['composer', 'Play', 'הרצה'], ['runs', 'ChartNoAxesCombined', 'הרצות קודמות'], ['library', 'Library', 'ספרייה']]
+        ['library', 'Library', 'ספרייה'], ['runs', 'ChartNoAxesCombined', 'הרצות קודמות'], ['composer', 'Play', 'הרצה']]
         .map(([id, icon, title]) => h(`button:relative flex items-center justify-center gap-1 px-1 py-3
           text-[11px] outline-none focus-visible:ring-1 focus-visible:ring-[#0f0f10] sm:gap-2 sm:px-3 sm:text-[13px] ${
           view == id ? 'font-medium text-[#0f0f10]' : 'text-[#6b6b6f] hover:text-[#0f0f10]'}`, {key: id, onClick: () => setView(id)}, h(
