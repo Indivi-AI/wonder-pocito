@@ -9,9 +9,15 @@ from unittest.mock import patch
 import httpx
 from fastapi.testclient import TestClient
 
-from agno_server import create_app as create_agent_os_app
+from agno_server import create_app as create_agent_os_app, knowledge_reader
 from marketplace_e2e_model import MarketplaceE2EEmbedder, model_factory
 from marketplace_server import create_app
+
+
+class KnowledgeChunkingTest(unittest.TestCase):
+    def test_configuration(self):
+        strategy = knowledge_reader(Path('knowledge.txt')).chunking_strategy
+        self.assertEqual((strategy.chunk_size, strategy.overlap), (3000, 300))
 
 
 class MarketplaceServerTest(unittest.TestCase):

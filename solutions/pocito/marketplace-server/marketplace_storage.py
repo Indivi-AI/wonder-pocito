@@ -18,7 +18,7 @@ from fastapi import HTTPException
 
 ROOT = Path(__file__).parent
 DEFAULT_ROOM = 'marketplace'
-KNOWLEDGE_INDEX_VERSION = 'pgvector-v2'
+KNOWLEDGE_INDEX_VERSION = 'pgvector-v3'
 ROOM_CONTEXT = ContextVar('room', default=DEFAULT_ROOM)
 logger = logging.getLogger(__name__)
 

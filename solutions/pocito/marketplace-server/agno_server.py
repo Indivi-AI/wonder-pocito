@@ -17,8 +17,10 @@ from pathlib import Path
 from agno.agent import Agent
 from agno.agent.factory import AgentFactory
 from agno.db.in_memory import InMemoryDb
+from agno.knowledge.chunking.fixed import FixedSizeChunking
 from agno.knowledge.embedder.openai import OpenAIEmbedder
 from agno.knowledge.knowledge import Knowledge
+from agno.knowledge.reader import ReaderFactory
 from agno.models.openai import OpenAIResponses
 from agno.os import AgentOS
 from agno.skills import LocalSkills, Skills
@@ -34,6 +36,12 @@ from sqlalchemy.engine import URL
 
 from marketplace_storage import DEFAULT_ROOM, ROOM_CONTEXT, ROOT, MarketplaceRepository, S3ObjectStore, safe_name, safe_path
 from knowledge_mcp import BearerAuthMiddleware, create_knowledge_mcp
+
+
+def knowledge_reader(path):
+    reader = ReaderFactory.get_reader_for_extension(path.suffix)
+    reader.chunking_strategy = FixedSizeChunking(3000, 300)
+    return reader
 
 
 class MarketplaceAgentRuntime:
@@ -140,7 +148,7 @@ class MarketplaceAgentRuntime:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(body)
         count = knowledge.vector_db.get_count() if knowledge.vector_db.exists() else 0
-        knowledge.insert(name=item['name'], description=item.get('description'), path=str(path),
+        knowledge.insert(name=item['name'], description=item.get('description'), path=str(path), reader=knowledge_reader(path),
           metadata=(item.get('metadata') or {}) | {'knowledge_id': job['knowledge_id'], 'content_id': job['content_id']})
         table = knowledge.vector_db.table
         Index(f'{table.name}_hnsw_index', table.c.embedding, postgresql_using='hnsw',

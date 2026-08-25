@@ -5,21 +5,21 @@ import '@wonder/db/db-drivers.js'
 const { common: { Data } } = dsls
 
 Data('wonderPlatformMarketplaceApiBase', {
-  description: 'single source of truth: explicit baseUrl, else MARKETPLACE_API_URL (page global or server env), else marketplace on the page host at 7777',
+  description: 'single source of truth: explicit baseUrl, else MARKETPLACE_API_URL, else marketplace on the page host at 58046',
   params: [
     {id: 'baseUrl', as: 'string'}
   ],
   impl: ({}, {}, {baseUrl}) => (baseUrl || globalThis.MARKETPLACE_API_URL || globalThis.process?.env?.MARKETPLACE_API_URL
-    || (globalThis.location ? `${location.protocol}//${location.hostname}:7777` : 'http://localhost:7777')).replace(/\/$/, '')
+    || (globalThis.location ? `${location.protocol}//${location.hostname}:58046` : 'http://localhost:58046')).replace(/\/$/, '')
 })
 
 Data('wonderPlatformAgnoApiBase', {
-  description: 'agent-run (AgentOS) server base: explicit baseUrl, else AGNO_API_URL (page global or server env), else agno on the page host at 7778',
+  description: 'agent-run base: explicit baseUrl, else AGNO_API_URL, else agno on the page host at 58049',
   params: [
     {id: 'baseUrl', as: 'string'}
   ],
   impl: ({}, {}, {baseUrl}) => (baseUrl || globalThis.AGNO_API_URL || globalThis.process?.env?.AGNO_API_URL
-    || (globalThis.location ? `${location.protocol}//${location.hostname}:7778` : 'http://localhost:7778')).replace(/\/$/, '')
+    || (globalThis.location ? `${location.protocol}//${location.hostname}:58049` : 'http://localhost:58049')).replace(/\/$/, '')
 })
 
 const { wonderPlatformAgnoApiBase, wonderPlatformMarketplaceApiBase } = dsls.common.data

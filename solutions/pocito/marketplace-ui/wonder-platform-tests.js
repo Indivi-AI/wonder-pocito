@@ -399,7 +399,8 @@ Test('wonderPlatform.pluginWorkspace', {
 })
 
 Test('wonderPlatform.evaluationCatalog', {
-  impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(), and(contains('אימות טענות ומקורות'), contains('רשומות'), contains('טרם הורץ')), {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(), and(
+    contains('אימות טענות ומקורות'), contains('תרחישים'), contains('טרם הורץ')), {
     userActions: actions(waitForText('פלאגין חדש'), click('אבלואציה'), waitForText('אימות טענות ומקורות'))})
 })
 

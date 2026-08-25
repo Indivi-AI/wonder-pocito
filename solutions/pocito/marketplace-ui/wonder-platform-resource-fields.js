@@ -161,10 +161,11 @@ ReactComp('wonderPlatformResourceFields', {
               rows: [...(item.rows || []), {input: '', expected: '', notes: ''}]})}, h('L:Plus', {size: 14}), 'תרחיש')), h(
             'div:mt-4 space-y-3', {}, (item.rows || []).map(scenario), !item.rows?.length && h(
               'div:rounded-xl border border-dashed border-[#d8d8dc] p-8 text-center text-sm text-[#6b6b6f]', {},
-              'הוסיפו תרחיש ראשון כדי להתחיל'))), h('details:rounded-2xl border border-[#e8e8ea] p-4', {}, h(
-            'summary:cursor-pointer text-sm font-semibold', {}, 'אפשרויות מתקדמות'), field('הנחיות הערכה', h(
-              `textarea:${classes.field} min-h-24`, {value: item.rubric || '', placeholder: 'קריטריונים נוספים לשימוש עתידי',
-                onInput: event => update({...item, rubric: event.target.value})}))), historySection(), h(
+              'הוסיפו תרחיש ראשון כדי להתחיל'))), h('section:rounded-2xl border border-[#e8e8ea] p-5', {}, h(
+            'h2:text-base font-semibold', {}, 'רובריקה'), h('p:mt-1 text-xs text-[#6b6b6f]', {},
+              'הגדירו כיצד להעריך תשובה טובה בכל התרחישים'), h(`textarea:${classes.field} mt-4 min-h-24 resize-y`, {
+                value: item.rubric || '', placeholder: 'לדוגמה: התשובה מדויקת, מבוססת על המקורות ומציינת פערי מידע',
+                onInput: event => update({...item, rubric: event.target.value})})), historySection(), h(
           'div:sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#d8d8dc] bg-white p-4 shadow-lg', {}, h(
             'p:text-xs text-[#6b6b6f]', {}, !item.name?.trim() ? 'הוסיפו שם לבדיקה' : !target ? 'בחרו סוכן כדי להריץ'
               : !item.rows?.some(row => row.input?.trim()) ? 'הוסיפו לפחות תרחיש אחד עם קלט' : 'מוכן להרצה'), h(
