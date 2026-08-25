@@ -351,6 +351,7 @@ Test('wonderPlatform.moduleContracts', {
       'data<common>wonderPlatformMarketplaceDetail', 'data<common>wonderPlatformAgentOsRequest', 'data<common>wonderPlatformAgentOsRun',
       'workflow<ai>wonderPlatformAgent', 'react-comp<react>wonderPlatformNavigation', 'react-comp<react>wonderPlatformCatalog',
       'react-comp<react>wonderPlatformAttachPicker', 'react-comp<react>wonderPlatformResourceEditor',
+      'react-comp<react>wonderPlatformWizard',
       'react-comp<react>wonderPlatformWorkspace', 'react-comp<react>wonderPlatformChat',
       'react-comp<react>wonderPlatformEvaluation', 'react-comp<react>wonderPlatform'].every(id => coreUtils.compByFullId(id))}),
     expectedResult: equals('%result%', true)
@@ -489,6 +490,24 @@ ReactComp('wonderPlatformVerificationHost', {
     const App = dsls.react['react-comp'].wonderPlatform.$runWithCtx(ctx, {roomWUrl: 'room:minio//wonder-platform-verification-v3'})
     return () => ctx.vars.react.h(App)
   }})
+})
+
+ReactComp('wonderPlatformWizardTestHost', {
+  impl: comp({hFunc: (ctx, {react: {h, hh, useState}}) => {
+    const Wizard = dsls.react['react-comp'].wonderPlatformWizard
+    return () => {
+      const [activeId, setActiveId] = useState('a')
+      return hh(ctx, Wizard, {steps: [{id: 'a', label: 'ראשון', render: () => h('p', {}, 'תוכן ראשון')},
+        {id: 'b', label: 'שני', render: () => h('p', {}, 'תוכן שני')},
+        {id: 'c', label: 'חסום', disabled: true, render: () => h('p', {}, 'לא רואים')}], activeId, onStep: setActiveId})
+    }
+  }})
+})
+
+Test('wonderPlatform.wizardShell', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformWizardTestHost(), and(contains('תוכן שני'),
+    notContains('תוכן ראשון'), notContains('לא רואים'), contains('חסום')), {
+    userActions: actions(waitForText('ראשון'), click('שני'), waitForText('תוכן שני'))})
 })
 Test('wonderPlatform.marketplaceWUrlInterceptor', {
   nodeOnly: true,

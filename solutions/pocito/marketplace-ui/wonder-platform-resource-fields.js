@@ -3,6 +3,7 @@ import '@jb6/react'
 import './wonder-platform-domain.js'
 import './wonder-platform-flapi.js'
 import './wonder-platform-searchable-select.js'
+import './wonder-platform-wizard.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
