@@ -173,12 +173,10 @@ ReactComp('wonderPlatformResourceFields', {
       }
       const legacyTool = () => h('div:space-y-5', {},
         h('section:rounded-2xl border border-[#e8e8ea] p-4', {},
-          field('display_name', h(`div:${classes.field} text-[#6b6b6f]`, {}, item.name || '—')),
           field('description', h(`div:${classes.field} text-[#6b6b6f]`, {dir: 'ltr'}, item.apiDescription || '—')),
           field('hebrew_description', h(`div:${classes.field} text-[#6b6b6f]`, {}, item.desc || '—'))),
         h('p:text-xs leading-5 text-[#6b6b6f]', {}, 'כלי Connector מנוהל — לא ניתן לעריכה מכאן.'))
       const toolFields = () => item.originalId && item.kind != 'flow' ? legacyTool() : h('div:space-y-5', {},
-        field('display_name', input('name', {placeholder: 'שם להצגה'})),
         field('id', input('id', {dir: 'ltr', placeholder: 'uiRenderingSkill', disabled: !!item.originalId})),
         field('description', h(`textarea:${classes.field} min-h-24 resize-y`, {dir: 'ltr', value: item.apiDescription || '',
           onInput: event => update({...item, apiDescription: event.target.value})})),
@@ -192,7 +190,6 @@ ReactComp('wonderPlatformResourceFields', {
         item.packageId && (item.inputSchema || []).length > 0 && outputCubesSection())
       if (resource == 'tools') return toolFields()
       return h('div:space-y-5', {},
-      field('display_name', input('name', {placeholder: 'שם להצגה'})),
       field('id', input('id', {dir: 'ltr', placeholder: 'uiRenderingSkill', disabled: !!item.originalId})),
       field('description', h(`textarea:${classes.field} min-h-24 resize-y`, {dir: 'ltr', value: item.apiDescription || '',
         onInput: event => update({...item, apiDescription: event.target.value})})), field('hebrew_description', h(

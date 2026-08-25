@@ -46,12 +46,14 @@ ReactComp('wonderPlatformResourceEditor', {
         dir: 'rtl'}, h('div:sticky top-0 z-10 border-b border-[#e8e8ea] bg-white p-5', {}, h('div:flex flex-wrap gap-2 text-xs text-[#6b6b6f]', {},
         editors.map((entry, index) => h('button', {key: index, onClick: () => setEditors(editors.slice(0, index + 1))},
           `${labels[entry.resource] || 'סט'} · ${entry.item.name || 'חדש'}`))), h('div:mt-3 flex items-center justify-between gap-4', {}, h('div', {},
-        h('h2:text-xl font-bold', {}, item.name || active.createLabel), h('span:text-xs text-[#6b6b6f]', {}, labels[resource])),
+        h('input:min-w-0 flex-1 text-xl font-bold outline-none', {value: item.name || '', placeholder: 'שם להצגה…',
+          'aria-label': 'display_name', onInput: event => update({...item, name: event.target.value})}),
+        h('span:text-xs text-[#6b6b6f]', {}, labels[resource])),
       h('div:flex items-center gap-2', {}, !readOnlyTool && h(`button:${classes.primary}`, {
         disabled: saveDisabled, onClick: saveEditor, 'aria-label': 'שמירת עורך'}, 'שמירה'),
         h('button:rounded-lg p-2 hover:bg-gray-100', {onClick: () => setEditors(editors.slice(0, -1)), 'aria-label': 'סגירה'}, h('L:X'))))),
       h('div:p-6', {}, hh(ctx, dsls.react['react-comp'].wonderPlatformResourceFields, {resource, item, update, repo, openPicker})),
-      h('div:flex items-center justify-between border-t border-[#e8e8ea] p-5', {}, active.item.originalId &&
+      h('div:flex items-center justify-between border-t border-[#e8e8ea] p-5', {}, !readOnlyTool && active.item.originalId &&
         (resource != 'skills' || repo.marketplace) && h('button:text-sm text-red-600', {
         onClick: deleteEditor}, 'מחיקה'), h(`button:${classes.button} mr-auto`, {
         onClick: () => setEditors(editors.slice(0, -1))}, 'ביטול'))))
