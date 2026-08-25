@@ -143,7 +143,7 @@ Data('wonderPlatformTrace', {
 Data('wonderPlatformUi', {
   impl: () => ({
     resources: {
-      plugins: {title: 'פלאגינים', subtitle: 'פלאגין אורז מיומנויות וכלים ליחידה אחת.',
+      plugins: {title: 'פלאגינים', subtitle: 'פלאגין אורז מיומנויות, כלים וידע ליחידה אחת.',
         create: 'פלאגין חדש',
         icon: 'PlugZap', label: 'פלאגין', relations: [['skillIds', 'skills', 'מיומנויות'], ['toolIds', 'tools', 'כלים'],
           ['knowledgeIds', 'knowledge', 'ידע']]},
@@ -155,7 +155,7 @@ Data('wonderPlatformUi', {
         icon: 'Network', label: 'סאב-אייג׳נט', relations: [['skillIds', 'skills', 'מיומנויות'], ['toolIds', 'tools', 'כלים']]},
       knowledge: {title: 'ידע', subtitle: 'מקורות מידע ומסמכים המשמשים ל-RAG ומשפרים דיוק סוכנים.', create: 'Knowledge חדש',
         icon: 'Database', label: 'ידע'},
-      agents: {title: 'סוכנים', subtitle: 'סוכנים אישיים המרכיבים פלאגינים, מיומנויות, כלים וידע ליחידה אחת.',
+      agents: {title: 'סוכנים', subtitle: 'סוכנים מותאמים אישית עבור כל מטרה',
         create: 'סוכן חדש', icon: 'Bot', label: 'סוכן',
         relations: [['pluginIds', 'plugins', 'פלאגינים'], ['skillIds', 'skills', 'מיומנויות'], ['toolIds', 'tools', 'כלים'],
           ['knowledgeIds', 'knowledge', 'ידע']]}
