@@ -117,11 +117,11 @@ Test('evaluationPage.datasetAuthoring', {
 Test('evaluationPage.datasetAuthoring', {
   impl: reactTest({
     testedComp: evaluationPageTestHost(),
-    expectedResult: and(contains('תיאור מערך הנתונים'), contains('קלט לסוכן'), contains('פלט מצופה או עובדות נדרשות')),
+    expectedResult: and(contains('תיאור הסט'), contains('קלט לסוכן'), contains('פלט מצופה או עובדות נדרשות')),
     userActions: actions(
-      waitForText('סיכום ההרצה'),
-      click('מערכי נתונים'),
-      waitForText('מערך נתונים חדש'),
+      waitForText('איזה סוכן רוצים לבדוק?'),
+      click('ספרייה'),
+      waitForText('סט חדש'),
       click('פתיחה'),
       waitForText('קלט לסוכן')
     ),
