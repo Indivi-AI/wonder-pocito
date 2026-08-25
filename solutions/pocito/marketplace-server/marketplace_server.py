@@ -127,6 +127,7 @@ class ToolType(str, Enum):
     flow_cube = 'flow_cube'
     solr = 'solr'
     kick_graphql = 'kick_graphql'
+    mcp = 'mcp'
 
 
 class CreateTool(ToolDescription):
