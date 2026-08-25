@@ -8,17 +8,23 @@ const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
 ReactComp('wonderPlatformChatContext', {
   impl: comp({
-    hFunc: (ctx, {react: {h, hh}}) => ({repo, conversation, selectAgent, setContext}) => {
+    hFunc: (ctx, {react: {h, hh, useState}}) => ({repo, conversation, selectAgent, setContext}) => {
       const rows = [['pluginIds', 'plugins', 'פלאגינים'], ['skillIds', 'skills', 'מיומנויות'],
         ['toolIds', 'tools', 'כלים'], ['knowledgeIds', 'knowledge', 'ידע']]
+      const [open, setOpen] = useState('agent')
+      const section = (id, label, body) => h('div', {key: id},
+        h(`button:flex w-full items-center justify-between border-b border-[#e8e8ea] py-2 text-base font-semibold text-[#0f0f10]`,
+          {onClick: () => setOpen(open == id ? '' : id)}, label,
+          h(`L:${open == id ? 'ChevronUp' : 'ChevronDown'}`, {size: 16})),
+        open == id && h('div:pt-3', {}, body))
       const picker = (label, control) => h('div:mb-4', {},
         h('span:mb-1.5 block text-[11px] font-medium uppercase tracking-[0.06em] text-[#9b9ba0]', {}, label), control)
       return h('aside:hidden w-[280px] shrink-0 overflow-y-auto border-r border-[#e8e8ea] bg-white px-4 py-5 lg:block', {},
         h('div:mb-5 text-[13px] font-semibold text-[#0f0f10]', {}, 'הקשר השיחה'),
-        picker('סוכן', hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {items: repo.agents,
+        section('agent', 'סוכן', picker('סוכן', hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {items: repo.agents,
           value: conversation?.agentId || '', onChange: selectAgent, placeholder: 'בחר סוכן', empty: 'ללא סוכן',
-          testId: 'agent-selector'})),
-        rows.map(([field, resource, label]) => h('div', {key: field},
+          testId: 'agent-selector'}))),
+        rows.map(([field, resource, label]) => section(field, label,
           picker(label, hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {items: repo[resource], multi: true,
             value: conversation?.[field] || [], onChange: value => setContext(field, value), placeholder: `בחר ${label}`})))),
         h('p:mt-2 text-[11px] leading-5 text-[#9b9ba0]', {},
