@@ -3,7 +3,7 @@
 This is the current operating guide for Wonder in the air-gapped network. It records the working local setup, transfer process, runtime
 selection, bucket configuration, React applet flow, and remaining gaps.
 
-> Status: the docker-compose flow in `cloud-services/on-prem/README.md` (entry point: `solutions/pocito/wonder-platform/README.md`)
+> Status: the docker-compose flow in `solutions/pocito/on-prem/README.md` (entry point: `solutions/pocito/wonder-platform/README.md`)
 > is the target deployment path, and some scripts referenced below were since removed from the repo. This guide stays for its
 > operational knowledge: buckets, MinIO CORS, MCP wiring, and git-bundle updates.
 
@@ -208,7 +208,7 @@ After exporting the runtime variables above, start the server:
 
 ```bash
 cd /mnt/users/yiftach/wonder
-bash cloud-services/on-prem/run-mcp.sh /mnt/users/yiftach/wonder
+bash solutions/pocito/on-prem/run-mcp.sh /mnt/users/yiftach/wonder
 ```
 
 Keep this terminal open. The script publishes container port 3000 on the Ubuntu host and bind-mounts the live repository. Source-only Git updates
@@ -346,7 +346,7 @@ The provided uploader needs only `curl` and anonymous PUT access:
 ```bash
 cd /mnt/users/yiftach/wonder
 export MINIO_ENDPOINT='https://MINIO_HOST'
-bash cloud-services/on-prem/deploy-cdn.sh
+bash solutions/pocito/on-prem/deploy-cdn.sh
 ```
 
 It uploads:
@@ -511,7 +511,7 @@ revision strategy later.
 2. Confirm MinIO CORS and browser reachability.
 3. Install the Git bundle, `node_modules`, and Docker image once.
 4. Export the runtime variables with the single MinIO endpoint.
-5. Run `bash cloud-services/on-prem/run-mcp.sh /mnt/users/yiftach/wonder`.
+5. Run `bash solutions/pocito/on-prem/run-mcp.sh /mnt/users/yiftach/wonder`.
 6. Verify `/health` locally and from the MCP client machine.
 7. Configure the model with `http://UBUNTU_HOST_OR_IP:3000/mcp`.
 8. Put valid component files under `solutions/pocito`.
@@ -529,6 +529,6 @@ revision strategy later.
 - `wonder/studio/mcp-tools/wonder-mcp-tools.js` — applet upload implementation.
 - `cloud-services/express-server/local-server.js` — local server startup and `.env.dev` loading.
 - `cloud-services/express-server/lib/room-lambda-and-applet.js` — applet routes, storage injection, and runtime import map.
-- `cloud-services/on-prem/run-mcp.sh` — current local Docker launcher.
-- `cloud-services/on-prem/export-airgap.sh` — full offline kit exporter.
-- `cloud-services/on-prem/wonder.yaml` — current OpenShift public service manifest.
+- `solutions/pocito/on-prem/run-mcp.sh` — current local Docker launcher.
+- `solutions/pocito/on-prem/export-airgap.sh` — full offline kit exporter.
+- `solutions/pocito/on-prem/wonder.yaml` — current OpenShift public service manifest.

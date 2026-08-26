@@ -11,9 +11,9 @@ wonder.zip
 tmp/
 cloud-services/express-server/.env.onprem
 
-cloud-services/on-prem/.env.site
+solutions/pocito/on-prem/.env.site
 __pycache__/
-cloud-services/on-prem/llm-lite-config.yaml
+solutions/pocito/on-prem/llm-lite-config.yaml
 
 solutions/pocito/marketplace-server/.venv/
 

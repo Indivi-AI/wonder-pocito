@@ -8,7 +8,7 @@ platform="${PLATFORM:-linux/amd64}"; litellm="wonder-llm-lite:1.98.0"; pgvector=
 [[ ! -e "$out" && ! -e "$out.tar" ]] || { echo "Output already exists: $out or $out.tar" >&2; exit 1; }
 for tool in docker git gzip sha256sum tar; do command -v "$tool" >/dev/null || { echo "Missing command: $tool" >&2; exit 1; }; done
 
-tag="$(cloud-services/on-prem/build-images.sh --base | tee /dev/stderr | sed -n 's/^IMAGE_TAG=//p')"
+tag="$(solutions/pocito/on-prem/build-images.sh --base | tee /dev/stderr | sed -n 's/^IMAGE_TAG=//p')"
 docker pull --platform "$platform" "$pgvector"
 runtimes=("wonder-server:$tag" "marketplace-server:$tag" "$litellm" "$pgvector")
 images=(wonder-server-base:latest marketplace-server-base:latest "${runtimes[@]}")
@@ -18,13 +18,13 @@ for image in "${images[@]}"; do
 done
 
 mkdir -p "$out"
-cp cloud-services/on-prem/{docker-compose.yml,compose.airgap.yml,sim-check.sh,docker-up.sh} "$out/"
-cp cloud-services/on-prem/.env.site.template "$out/.env.example"
-cp cloud-services/on-prem/llm-lite-config.template.yaml "$out/llm-lite-config.example.yaml"
-cp cloud-services/on-prem/helm/wonder/files/minio-init.py "$out/"
+cp solutions/pocito/on-prem/{docker-compose.yml,compose.airgap.yml,sim-check.sh,docker-up.sh} "$out/"
+cp solutions/pocito/on-prem/.env.site.template "$out/.env.example"
+cp solutions/pocito/on-prem/llm-lite-config.template.yaml "$out/llm-lite-config.example.yaml"
+cp solutions/pocito/on-prem/helm/wonder/files/minio-init.py "$out/"
 git bundle create "$out/wonder.bundle" HEAD "refs/heads/$branch"
 { git diff HEAD --binary
-  for file in cloud-services/on-prem/{AIRGAP-KIT.md,create-docker-airgap-kit.sh,docker-up.sh,llm-lite.docker,wonder-server-base.docker}; do
+  for file in solutions/pocito/on-prem/{AIRGAP-KIT.md,create-docker-airgap-kit.sh,docker-up.sh,llm-lite.docker,wonder-server-base.docker}; do
     git ls-files --error-unmatch "$file" >/dev/null 2>&1 || git diff --no-index --binary /dev/null "$file" || true
   done
 } > "$out/source.patch"
@@ -35,7 +35,7 @@ docker image inspect --platform "$platform" "${images[@]}" \
   --format '{{join .RepoTags ","}} {{.Id}} {{.Os}}/{{.Architecture}} {{.Size}}' > "$out/images.txt"
 docker save --platform "$platform" "${images[@]}" | gzip -6 > "$out/images.tar.gz"
 chmod +x "$out/docker-up.sh" "$out/sim-check.sh"
-cp cloud-services/on-prem/AIRGAP-KIT.md "$out/README.md"
+cp solutions/pocito/on-prem/AIRGAP-KIT.md "$out/README.md"
 (cd "$out" && sha256sum .env.example compose.airgap.yml docker-compose.yml docker-up.sh images.tar.gz images.txt \
   llm-lite-config.example.yaml manifest.env minio-init.py README.md sim-check.sh source.patch source-status.txt wonder.bundle > SHA256SUMS)
 tar -cf "$out.tar" -C "$(dirname "$out")" "$(basename "$out")"

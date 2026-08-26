@@ -15,7 +15,7 @@ Everything talks through the same published URLs browsers use; applet pages rece
 `AGNO_API_URL` and `LLM_PROXY_URL` from the wonder server's env, so the browser calls each server directly.
 Ports above are defaults — every value comes from env files (below).
 
-Fastest team setup: `./wonder-up.sh` at the repo root (see the root `README.md`) — docker, one command, working tree
+Fastest team setup: `./solutions/pocito/wonder-up.sh` (see the root `README.md`) — docker, one command, working tree
 mounted live. The paths below are the bare-process alternative and the deployment flows.
 
 ## 1. Local development — internet machine, from zero
@@ -48,9 +48,9 @@ Tests: `node --import ./nodejs-importmap.js jb6/testing/run-tests-cli.js .jb6/en
 ## 2. Build images + simulate the on-prem — internet machine
 
 ```sh
-cloud-services/on-prem/build-images.sh --base    # dependency bases, once per deps change
-cloud-services/on-prem/build-images.sh           # app images, offline by design; prints IMAGE_TAG
-cd cloud-services/on-prem && cp .env.site.template .env.site   # fill SITE_HOST=$(hostname), IMAGE_TAG, LLM_MODEL
+solutions/pocito/on-prem/build-images.sh --base    # dependency bases, once per deps change
+solutions/pocito/on-prem/build-images.sh           # app images, offline by design; prints IMAGE_TAG
+cd solutions/pocito/on-prem && cp .env.site.template .env.site   # fill SITE_HOST=$(hostname), IMAGE_TAG, LLM_MODEL
 cp llm-lite-config.template.yaml llm-lite-config.yaml          # upstream endpoint + api key live here
 docker compose --env-file .env.site -f docker-compose.yml -f compose.airgap.yml --profile local-minio up -d
 ./sim-check.sh
@@ -61,7 +61,7 @@ inside the gap breaks here first. Browse `http://$SITE_HOST:58045/room/<room>/ap
 
 ## 3. Deploy inside the air gap
 
-Whiten `wonder-images.tar.gz` (`docker save` of the built images) plus the `cloud-services/on-prem/` directory, then on the site:
+Whiten `wonder-images.tar.gz` (`docker save` of the built images) plus the `solutions/pocito/on-prem/` directory, then on the site:
 
 ```sh
 docker load < wonder-images.tar.gz
@@ -71,7 +71,7 @@ docker compose --env-file .env.site up -d      # wonder + marketplace + agno + l
 ./sim-check.sh
 ```
 
-Full runbook, whitening kit, in-gap rebuilds, OpenShift notes: `cloud-services/on-prem/README.md`.
+Full runbook, whitening kit, in-gap rebuilds, OpenShift notes: `solutions/pocito/on-prem/README.md`.
 
 ## Env files — what lives where
 
@@ -79,12 +79,12 @@ Full runbook, whitening kit, in-gap rebuilds, OpenShift notes: `cloud-services/o
 |---|---|---|
 | `cloud-services/express-server/.env.dev` | dev | optional `OPENAI_API_KEY` for cloud LLM flows |
 | `solutions/pocito/marketplace-server/.env` | dev | marketplace `OPENAI_*` provider (from `.env.example`) |
-| `cloud-services/on-prem/.env.site` | sim and site, own gitignored copy each | all deployment facts: `SITE_HOST`, ports, `IMAGE_TAG`, MinIO endpoint + creds, `LLM_MODEL` |
-| `cloud-services/on-prem/llm-lite-config.yaml` | sim and site, own gitignored copy each | LLM routing + secrets: the LiteLLM yaml with upstream endpoints and api keys |
+| `solutions/pocito/on-prem/.env.site` | sim and site, own gitignored copy each | all deployment facts: `SITE_HOST`, ports, `IMAGE_TAG`, MinIO endpoint + creds, `LLM_MODEL` |
+| `solutions/pocito/on-prem/llm-lite-config.yaml` | sim and site, own gitignored copy each | LLM routing + secrets: the LiteLLM yaml with upstream endpoints and api keys |
 
 Images are env-free; secrets are never committed and never baked into an image.
 
 ## Reference
 
 - `solutions/pocito/marketplace-server/marketplace-server.md` — marketplace + agno server behavior, env names, tests.
-- `cloud-services/on-prem/README.md` — the outside/inside deployment runbook.
+- `solutions/pocito/on-prem/README.md` — the outside/inside deployment runbook.
