@@ -40,7 +40,7 @@ Data('fileQuery', {
         const pathOf = f => f?.path ? f.path : (typeof f?.url === 'function' ? f.url(ctx) : '')
         const srcPath = pathOf(from)
         const hash = s => { let h = 0; for (let i=0; i<s.length; i++) h = ((h<<5)-h+s.charCodeAt(i))|0; return (h>>>0).toString(36) }
-        const queryHash = hash(JSON.stringify(ctx.jbCtx?.profile?.query || query || ''))
+        const queryHash = hash(coreUtils.embedBraceVars(JSON.stringify(ctx.jbCtx?.profile?.query || query || ''), ctx))
         // output cache mirrors the source's canonical wcache path (+queryHash); falls back to local source path
         const srcCache = /:\/\//.test(srcPath) ? await wresolve(srcPath, ctx.setVars({ db: 'wcache' })) : srcPath
         const cachePath = `${srcCache}.q-${queryHash}`

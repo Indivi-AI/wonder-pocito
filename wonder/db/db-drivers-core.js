@@ -410,7 +410,7 @@ async function wfetch2(_url, opts, _ctx) {
 
   const driverParts = driver.id.split('.')
 
-  if (driverParts.includes('FS') && driverParts.includes('node')) {
+  if ((driverParts.includes('FS') || driverParts.includes('fsmem')) && driverParts.includes('node')) {
     const { resolve } = await import('path')
     filePath = resolve(await wonderRepoRoot(), `files/${path}`)
     curl = `cat ${filePath}`
@@ -648,6 +648,7 @@ DbDriver('GCS.node.publicGCS', {
     authMethod: authMethod.none(),
     get: wget.viaBucketApi(),
     put: wput.viaBucketApi(),
+    append: wappend.bucketSingleWriterGetPut(),
     head: whead.viaBucketApi(),
     list: wlist.viaBucketApi(),
     filePathUrl: (ctx, { path, bucketName }) => `${storagePrefix}/${bucketName}/${path}`

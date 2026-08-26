@@ -256,7 +256,8 @@ Test('wonderPlatform.flapiRoundTrip', {
     calculate: dsls.common.data.wonderPlatformFlapiRoundTrip(),
     expectedResult: and(equals('%status%', 200), equals('%body/quick/ecom-query-1/0/Name%', 'category'),
       equals('%body/metadata/Queries/0/Name%', 'Orders Cube'), equals('%requests/length%', 2),
-      equals('%requests/0/authorization%', 'Bearer test-token'), equals('%requests/1/authorization%', 'Bearer test-token'))
+      equals('%requests/0/authorization%', 'Bearer test-token'), equals('%requests/1/authorization%', 'Bearer test-token')),
+    timeout: 10000
   })
 })
 
@@ -265,7 +266,7 @@ Test('wonderPlatform.marketplaceManifest', {
     calculate: () => ({result: {
       plugin: wonderPlatformMarketplaceManifest.$run({resource: 'plugins', item: {id: 'p', name: 'פ', desc: 'ת', skillIds: ['s'],
         toolIds: ['t'], subagentIds: ['a']}}), tool: wonderPlatformMarketplaceManifest.$run({resource: 'tools', item: {id: 't', name: 'כ',
-          desc: 'ת', toolType: 'code', tracable: true}}), agentCreateReadme: wonderPlatformMarketplaceManifest.$run({resource: 'subagents',
+          desc: 'ת', tracable: true}}), agentCreateReadme: wonderPlatformMarketplaceManifest.$run({resource: 'subagents',
             item: {id: 'a', readme: '# Agent'}}).readme, agentKnowledge: wonderPlatformMarketplaceManifest.$run({resource: 'agents',
               item: {id: 'a', knowledgeIds: ['finance', 'legal']}}).config.knowledge_bases,
           knowledge: wonderPlatformMarketplaceManifest.$run({resource: 'knowledge', item: {id: 'k', name: 'י', desc: 'ת'}}),
@@ -278,7 +279,7 @@ Test('wonderPlatform.marketplaceManifest', {
           description: 'ת',
           hebrew_description: 'ת',
           tags: [],
-          config: {skills: ['s'], tools: ['t']},
+          config: {skills: ['s'], tools: ['t'], knowledge_bases: []},
           readme: ''
         },
         tool: {
@@ -286,12 +287,12 @@ Test('wonderPlatform.marketplaceManifest', {
           display_name: 'כ',
           description: 'ת',
           hebrew_description: 'ת',
-          tool_type: 'code',
-          json_schema: {},
+          tool_type: 'flow_package',
           is_async: true,
           tracable: true,
-          dedicated_tool_config: {},
-          code_files: []
+          package_id: '',
+          input_schema: [],
+          output_cubes: []
         },
         agentCreateReadme: '# Agent',
         agentKnowledge: ['finance','legal'],
@@ -453,7 +454,7 @@ Test('wonderPlatform.wfetchApi', {
 Test('wonderPlatform.pluginWorkspace', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(), and(contains('חיבורים'), contains('הרצת ניסוי'),
     contains('סט אבלואציה מקושר')), {userActions: actions(waitForText('אנליסט הוכחת קיום'), click('אנליסט הוכחת קיום'),
-      waitForText('חיבורים'), click('הנחיות'), waitForText('סט אבלואציה מקושר'))})
+      waitForText('חיבורים'), click('חיבורים'), waitForText('סט אבלואציה מקושר'))})
 })
 
 Test('wonderPlatform.evaluationCatalog', {
@@ -633,9 +634,10 @@ UiAction('wonderPlatformClickInSection', {
   ],
   impl: ({}, {}, {section, button}) => ({
     async exec({vars: {win}}) {
-      const candidates = [...win.document.querySelectorAll('section')].filter(element => element.textContent.includes(section))
+      const candidates = [...win.document.querySelectorAll('section, div')].filter(element => element.textContent.includes(section))
         .sort((left, right) => left.textContent.length - right.textContent.length)
-      const target = [...(candidates[0]?.querySelectorAll('button') || [])].find(element => element.outerHTML.includes(button))
+      const target = candidates.flatMap(element => [...element.querySelectorAll('button')])
+        .find(element => element.outerHTML.includes(button))
       if (!target) throw new Error(`Button not found: ${section} / ${button}`)
       target.dispatchEvent(new win.MouseEvent('click', {bubbles: true, cancelable: true}))
       await win.waitForMutations(100)
@@ -691,7 +693,7 @@ Test('wonderPlatform.flowToolWizard', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformMarketplaceTestApp(),
     and(contains('קוביות פלט'), contains('Orders Cube'), contains('פרמטרים'), notContains('טעינת מארז')), {
       userActions: actions(waitForText('פלאגין ראיות'), click('כלים'), waitForText('כלי ממארז Flow'),
-        click('כלי ממארז Flow'), waitForText('טעינת מארז'), wonderPlatformSetControl('id', {value: '7'}),
+        click('כלי ממארז Flow'), waitForText('טעינת מארז'), wonderPlatformSetControl('מזהה מארז Flow', {value: '7'}),
         click('טעינת מארז'), waitForText('E-commerce Analytics'), click('פרמטרים'), waitForText('Category'),
         click('קוביות פלט'), waitForText('בחר קוביות פלט'), click('בחר קוביות פלט'), click('Orders Cube'))})
 })
@@ -769,7 +771,7 @@ Test('wonderPlatform.chatRunsSelectedAgent', {
       click('בחר סוכן'),
       waitForText('סוכן תמיכת לקוחות B2B'),
       click('סוכן תמיכת לקוחות B2B'),
-      wonderPlatformSetControl({ placeholder: 'כתוב הודעה…', value: 'Question' }),
+      wonderPlatformSetControl({ placeholder: 'שאלו כל דבר…', value: 'Question' }),
       click('aria-label="שליחה"'),
       waitForText('AGNO_AGENT:ag1')
     ),

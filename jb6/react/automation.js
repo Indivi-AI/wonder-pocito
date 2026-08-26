@@ -109,10 +109,11 @@ function waitFor(ctx, subject, timeout, check) {
     observer.observe(win.document, {childList: true, subtree: true})
     checkNow()
     function checkNow() { if (check()) finish(true) }
-    function finish(found) {
+    async function finish(found) {
       observer.disconnect()
       clearTimeout(timer)
       uiLogger?.info?.({t: 'automation wait', subject, found, ms: Date.now() - started}, {}, {ctx})
+      if (found) await win.waitForMutations(80)   // let react finish committing - a click right on the discovery frame hits handlers that are not live yet
       resolve()
     }
   })

@@ -49,7 +49,7 @@ Test('etlDsl.make.runsFirstTimeSkipsSecond', {
         load: loadIntoUrl('analytics:gcs//etl-test/dst-%$testSessionId%')
       })
     ),
-    expectedResult: contains('etl is already done', { allText: join('\n', { items: '%etlLog/t%' }) }),
+    expectedResult: contains('etl is already done', { allText: join('\n', { items: '%etlLogger/etlLog/t%' }) }),
     timeout: 12000,
     logger: 'dbLogger,etlLogger'
   })
@@ -88,14 +88,15 @@ const { testCsvData } = dsls.common.data
 
 const runCategoryQueries = Data('runCategoryQueries', {
   params: [{id: 'first', dynamic: true}, {id: 'second', dynamic: true}],
-  impl: async (ctx, {}, {first, second}) => [await first(ctx.setVars({category: 'sports'})), await second(ctx.setVars({category: 'electronics'}))]
+  impl: async (ctx, {}, {first, second}) => [...await first(ctx.setVars({category: 'sports'})), ...await second(ctx.setVars({category: 'electronics'}))]
 })
 
 const writeCsvSetup = Component('writeCsvSetup', {
   type: 'ctx-enricher<tgp>',
   impl: async ctx => {
-    const { writeFileSync } = await import('fs')
+    const { writeFileSync, rmSync } = await import('fs')
     writeFileSync(testCsvPath, testCsvData.$run())
+    rmSync(testOutputPath, { force: true })   // stale output within the same mtime second reads as "etl already done"
     return ctx
   }
 })
@@ -109,8 +110,8 @@ Test('cliEtl.mlr.groupBy', {
       load: copyToFile(testOutputPath)
     }),
     expectedResult: and(
-      contains('cliEtl start', { allText: join('\n', { items: '%etlLog/t%' }) }),
-      contains('cliEtl complete', { allText: join('\n', { items: '%etlLog/t%' }) })
+      contains('cliEtl start', { allText: join('\n', { items: '%etlLogger/etlLog/t%' }) }),
+      contains('cliEtl complete', { allText: join('\n', { items: '%etlLogger/etlLog/t%' }) })
     ),
     timeout: 12000,
     logger: 'dbLogger,etlLogger'
@@ -127,8 +128,8 @@ Test('cliEtl.duckdb.groupBy', {
       load: copyToFile(testOutputPath)
     }),
     expectedResult: and(
-      contains('cliEtl start', { allText: join('\n', { items: '%etlLog/t%' }) }),
-      contains('cliEtl complete', { allText: join('\n', { items: '%etlLog/t%' }) })
+      contains('cliEtl start', { allText: join('\n', { items: '%etlLogger/etlLog/t%' }) }),
+      contains('cliEtl complete', { allText: join('\n', { items: '%etlLogger/etlLog/t%' }) })
     ),
     timeout: 12000,
     logger: 'dbLogger,etlLogger'
@@ -144,8 +145,8 @@ Test('cliEtl.polars.groupBy', {
       load: copyToFile(testOutputPath)
     }),
     expectedResult: and(
-      contains('cliEtl start', { allText: join('\n', { items: '%etlLog/t%' }) }),
-      contains('cliEtl complete', { allText: join('\n', { items: '%etlLog/t%' }) })
+      contains('cliEtl start', { allText: join('\n', { items: '%etlLogger/etlLog/t%' }) }),
+      contains('cliEtl complete', { allText: join('\n', { items: '%etlLogger/etlLog/t%' }) })
     ),
     timeout: 12000,
     logger: 'dbLogger,etlLogger'
@@ -157,9 +158,10 @@ const testClientsPath = '/tmp/etl-test-clients.csv'
 const writeJoinSetup = Component('writeJoinSetup', {
   type: 'ctx-enricher<tgp>',
   impl: async ctx => {
-    const { writeFileSync } = await import('fs')
+    const { writeFileSync, rmSync } = await import('fs')
     writeFileSync(testCsvPath, testCsvData.$run())
     writeFileSync(testClientsPath, `campaign_name,client_tier\ncamp_a,gold\ncamp_b,silver`)
+    rmSync(testOutputPath, { force: true })
     return ctx
   }
 })
@@ -174,8 +176,8 @@ Test('cliEtl.duckdb.join', {
       load: copyToFile(testOutputPath)
     }),
     expectedResult: and(
-      contains('more file ready', { allText: join('\n', { items: '%etlLog/t%' }) }),
-      contains('cliEtl complete', { allText: join('\n', { items: '%etlLog/t%' }) })
+      contains('more file ready', { allText: join('\n', { items: '%etlLogger/etlLog/t%' }) }),
+      contains('cliEtl complete', { allText: join('\n', { items: '%etlLogger/etlLog/t%' }) })
     ),
     timeout: 12000,
     logger: 'dbLogger,etlLogger'
@@ -197,7 +199,7 @@ Test('cliEtl.mlr.cacheSkipsSecondRun', {
         load: copyToFile(testOutputPath)
       })
     ),
-    expectedResult: contains('etl is already done', { allText: join('\n', { items: '%etlLog/t%' }) }),
+    expectedResult: contains('etl is already done', { allText: join('\n', { items: '%etlLogger/etlLog/t%' }) }),
     timeout: 12000,
     logger: 'dbLogger,etlLogger'
   })
@@ -230,8 +232,8 @@ Test('cliEtl.cachedWonderUrl.rawCsvInRoom', {
       load: copyToFile('/tmp/etl-test-raw-csv-output.csv')
     }),
     expectedResult: and(
-      contains('rawFile fs GET', { allText: join('\n', { items: '%dbLog/t%' }) }),
-      contains('cliEtl complete', { allText: join('\n', { items: '%etlLog/t%' }) })
+      contains('wcache hit', { allText: join('\n', { items: '%dbLogger/dbLog/t%' }) }),
+      contains('cliEtl complete', { allText: join('\n', { items: '%etlLogger/etlLog/t%' }) })
     ),
     timeout: 12000,
     logger: 'dbLogger,etlLogger'
@@ -257,8 +259,8 @@ Test('cliEtl.cachedWonderUrl.json', {
       load: copyToFile('/tmp/etl-test-wonder-output.csv')
     }),
     expectedResult: and(
-      contains('wcache populated', { allText: join('\n', { items: '%dbLog/t%' }) }),
-      contains('cliEtl complete', { allText: join('\n', { items: '%etlLog/t%' }) })
+      contains('wcache populated', { allText: join('\n', { items: '%dbLogger/dbLog/t%' }) }),
+      contains('cliEtl complete', { allText: join('\n', { items: '%etlLogger/etlLog/t%' }) })
     ),
     timeout: 12000,
     logger: 'dbLogger,etlLogger'
@@ -308,7 +310,7 @@ Test('fileQuery.dynamicVarCache', {
         query: duckdb("SELECT '{%$category%}' AS category", { format: 'JSON, ARRAY' })
       })
     ),
-    expectedResult: contains('sports,electronics', { allText: join(',', { items: '%%/category' }) }),
+    expectedResult: contains('sports,electronics', { allText: join(',', { items: '%category%' }) }),
     timeout: 12000,
     logger: 'etlLogger'
   })

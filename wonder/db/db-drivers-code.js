@@ -30,3 +30,25 @@ DbDriver('clientCode.cloudflare', {
     filePathUrl: (ctx, { clientCodeEndpoint, path }) => `${clientCodeEndpoint}/${path.replace(/^runtime\//, '')}`
   })
 })
+
+DbDriver('clientCode.gcs', {
+  impl: dbDriver({
+    whenAndWhyToUse: 'Read client code packages from the public GCS bucket over anonymous HTTPS.',
+    authToken: authToken.anonymous(),
+    authMethod: authMethod.none(),
+    get: wget.viaBucketApi(),
+    head: whead.viaBucketApi(),
+    filePathUrl: '%$bucketEndpoint%/%$bucketName%/%$path%'
+  })
+})
+
+DbDriver('lambdaCode.gcs', {
+  impl: dbDriver({
+    whenAndWhyToUse: 'Read lambda code packages from the public GCS bucket over anonymous HTTPS.',
+    authToken: authToken.anonymous(),
+    authMethod: authMethod.none(),
+    get: wget.viaBucketApi(),
+    head: whead.viaBucketApi(),
+    filePathUrl: '%$bucketEndpoint%/%$bucketName%/%$path%'
+  })
+})
