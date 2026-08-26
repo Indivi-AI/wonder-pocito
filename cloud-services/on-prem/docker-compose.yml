@@ -37,7 +37,7 @@ services:
       AGNO_API_URL: ${SITE_SCHEME}://${SITE_HOST}:${AGNO_PUBLISHED_PORT}
       LLM_PROXY_URL: ${SITE_SCHEME}://${SITE_HOST}:${WONDER_PUBLISHED_PORT}/llmProxy
       LLM_PROXY_TARGET: ${SITE_SCHEME}://${SITE_HOST}:${LLM_LITE_PUBLISHED_PORT}
-      LLM_PROXY_KEY: ${LLM_PROXY_KEY}
+      LLM_MODEL: ${LLM_MODEL}
 
   marketplace:
     image: marketplace-server:${IMAGE_TAG}
@@ -64,7 +64,7 @@ services:
       AGENT_OS_PORT: ${AGENT_OS_PORT}
       MARKETPLACE_DATA_DIR: /data
       OPENAI_BASE_URL: ${SITE_SCHEME}://${SITE_HOST}:${LLM_LITE_PUBLISHED_PORT}/v1
-      OPENAI_API_KEY: ${LLM_PROXY_KEY}
+      OPENAI_API_KEY: unused   # llm-lite runs keyless; the OpenAI SDK just requires a non-empty string
       MARKETPLACE_MODEL_FACTORY: ${MARKETPLACE_MODEL_FACTORY}
 
   llm-lite:
@@ -73,12 +73,7 @@ services:
     ports: ["${LLM_LITE_PUBLISHED_PORT}:4000"]
     networks: [edge]
     command: ["--config", "/etc/litellm/config.yaml", "--port", "4000"]
-    volumes: ["${LLM_LITE_CONFIG:-./helm/wonder/files/llm-lite-config.yaml}:/etc/litellm/config.yaml:ro"]
-    env_file: [.env.site]   # a site-owned config yaml may reference os.environ/ANY_KEY - add such keys to .env.site
-    environment:
-      LLM_PROXY_KEY: ${LLM_PROXY_KEY}
-      LLM_UPSTREAM_BASE: ${LLM_UPSTREAM_BASE}
-      LLM_UPSTREAM_KEY: ${LLM_UPSTREAM_KEY}
+    volumes: ["./llm-lite-config.yaml:/etc/litellm/config.yaml:ro"]   # routing + secrets live in that file (copy its .template)
 
   minio:
     image: ${MINIO_IMAGE}

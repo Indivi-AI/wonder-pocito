@@ -12,7 +12,8 @@ docker's `host-gateway`; on OpenShift, cluster DNS and routes provide the same n
 ```sh
 cloud-services/on-prem/build-images.sh --base    # dependency bases; needs network, so outside only
 cloud-services/on-prem/build-images.sh           # app layers, built with --network=none; prints IMAGE_TAG=dd-mm-yyyy-HH-MM-<sha>
-cd cloud-services/on-prem && cp .env.site.template .env.site   # SITE_HOST=$(hostname), IMAGE_TAG, LLM_UPSTREAM_KEY
+cd cloud-services/on-prem && cp .env.site.template .env.site               # SITE_HOST=$(hostname), IMAGE_TAG, LLM_MODEL
+cp llm-lite-config.template.yaml llm-lite-config.yaml                      # upstream endpoint + api key live here
 docker compose --env-file .env.site -f docker-compose.yml -f compose.airgap.yml --profile local-minio up -d
 ./sim-check.sh    # waits for readiness, then: anonymous room/applet storage, /llmProxy, CRUD, presign, AgentOS run
 ```
@@ -40,8 +41,8 @@ sha256sum wonder-images.tar.gz wonder.bundle > SHA256SUMS
 ```
 
 Kit = the images tar + `wonder.bundle` + this directory (compose files, dockerfiles, Helm chart,
-`.env.site.template`, scripts). `export-airgap.sh` still builds the legacy bare-process kit (bundle + runtime image +
-`node_modules` tarball) when needed.
+`.env.site.template`, `llm-lite-config.template.yaml`, scripts). `export-airgap.sh` still builds the legacy
+bare-process kit (bundle + runtime image + `node_modules` tarball) when needed.
 
 ## Local Kubernetes and OpenShift
 
@@ -60,26 +61,25 @@ PLATFORM=linux/arm64 ./build-images.sh
 ```sh
 docker load < wonder-images.tar.gz
 cp .env.site.template .env.site
+cp llm-lite-config.template.yaml llm-lite-config.yaml
 docker compose --env-file .env.site up -d    # wonder + marketplace + agno + llm-lite; no minio service on site
 ./sim-check.sh
 ```
 
 Fill `.env.site` with: `SITE_HOST` (the name browsers use for this machine), `IMAGE_TAG`, `MINIO_ENDPOINT` = the
 site's **global MinIO** url (browser-reachable), its S3 creds, `MARKETPLACE_S3_STORAGE_CLASS` (site S3 only — MinIO
-rejects `STANDARD_IA` with `InvalidStorageClass`; `sim-check.sh` proves whatever the site sets),
-`LLM_UPSTREAM_BASE` = the internal OpenAI-compatible endpoint, `LLM_UPSTREAM_KEY`, and an invented `LLM_PROXY_KEY`
-(gates the published llm-lite port). Wonder's global MinIO needs buckets `indiviai-wonder` and
-`wonder-code-packages` with anonymous read+write.
+rejects `STANDARD_IA` with `InvalidStorageClass`; `sim-check.sh` proves whatever the site sets), and `LLM_MODEL`
+(the default model applets start with; the UI may pick another). Wonder's global MinIO needs buckets
+`indiviai-wonder` and `wonder-code-packages` with anonymous read+write.
+
+LLM routing and secrets live only in `llm-lite-config.yaml` (gitignored, next to `.env.site`): the site's own
+LiteLLM yaml with the internal OpenAI-compatible endpoint and its api key inline — nothing LLM-related in env,
+no proxy key. If the upstream is https behind an internal CA, add the CA via a small override:
+`services: {llm-lite: {volumes: ["./site-ca.pem:/site-ca.pem:ro"], environment: {SSL_CERT_FILE: /site-ca.pem}}}`.
 
 In-gap code edits: update source from `wonder.bundle`, run `build-images.sh` (COPY-only layers, fully offline from
 the whitened bases), bump `IMAGE_TAG` in `.env.site`, `up -d`. OpenShift prod: the same images; the same `.env.site`
-keys become ConfigMap/Secret entries.
-
-Site LiteLLM config: put the site's own yaml at `llm-lite-site.yaml` next to `.env.site` (gitignored; include it in
-the whitening kit) and set `LLM_LITE_CONFIG=./llm-lite-site.yaml`. Any `os.environ/KEY` it references goes into
-`.env.site`; if it pins its own `master_key`, `LLM_PROXY_KEY` must equal it. Applet code chooses any model served by this catalog; only
-`SMOKE_LLM_MODEL` selects the deployment smoke test's model. If its upstream is https behind an internal CA, add the CA via a small override:
-`services: {llm-lite: {volumes: ["./site-ca.pem:/site-ca.pem:ro"], environment: {SSL_CERT_FILE: /site-ca.pem}}}`.
+keys become ConfigMap/Secret entries and `llm-lite-config.yaml` is passed as `--set-file llm.config`.
 
 ## Bare-process dev mode (no docker)
 

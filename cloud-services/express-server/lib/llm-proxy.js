@@ -57,8 +57,8 @@ export function setupLlmProxyRoute(app) {
       const destinationHeaders = Object.fromEntries(Object.entries(headers)
         .filter(([name]) => !['authorization', 'x-wonder-proxy-auth'].includes(name.toLowerCase())))
       const url = new URL(targetUrl)
-      if (forwardTarget) return streamPost(new URL(url.pathname + url.search, forwardTarget), { ...destinationHeaders,
-        ...(process.env.LLM_PROXY_KEY && { authorization: `Bearer ${process.env.LLM_PROXY_KEY}` }), 'accept-encoding': 'identity' }, originalBody, res)
+      if (forwardTarget) return streamPost(new URL(url.pathname + url.search, forwardTarget),
+        { ...destinationHeaders, 'accept-encoding': 'identity' }, originalBody, res)
       const access = await proxyRoomCaller(req, roomId)
       if (access.error) return res.status(access.status).json({ error: access.error })
       const providerHeaders = providers[url.hostname]?.()

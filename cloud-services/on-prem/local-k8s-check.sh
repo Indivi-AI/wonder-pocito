@@ -7,5 +7,4 @@ export WONDER_URL=http://wonder.localhost:18080
 export MARKETPLACE_URL=http://marketplace.localhost:18080
 export AGNO_URL=http://agno.localhost:18080
 export MINIO_ENDPOINT=http://localhost:30900
-export SMOKE_LLM_MODEL="${SMOKE_LLM_MODEL:-${LLM_MODEL:-}}"
 ./sim-check.sh

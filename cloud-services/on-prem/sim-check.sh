@@ -9,8 +9,8 @@ wonder="${WONDER_URL:-$SITE_SCHEME://$SITE_HOST:$WONDER_PUBLISHED_PORT}"
 market="${MARKETPLACE_URL:-$SITE_SCHEME://$SITE_HOST:$MARKETPLACE_PUBLISHED_PORT}"
 agno="${AGNO_URL:-$SITE_SCHEME://$SITE_HOST:$AGNO_PUBLISHED_PORT}"
 minio_url="${MINIO_ENDPOINT:-$SITE_SCHEME://$SITE_HOST:$MINIO_PUBLISHED_PORT}"
-smoke_model="${SMOKE_LLM_MODEL:-${LLM_MODEL:-}}"
-[ -n "$smoke_model" ] || { echo 'SMOKE_LLM_MODEL is required'; exit 1; }
+smoke_model="${LLM_MODEL:-}"
+[ -n "$smoke_model" ] || { echo 'LLM_MODEL is required'; exit 1; }
 room="smoke-$$"
 fail=0
 pass() { echo "PASS $1"; }
