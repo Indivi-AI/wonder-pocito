@@ -7,7 +7,8 @@ set -a; source .env.site; set +a
 for value in LLM_MODEL S3_ACCESS_KEY S3_SECRET_KEY; do
   [ -n "${!value:-}" ] || { echo "$value is required in .env.site" >&2; exit 1; }
 done
-[ -f llm-lite-config.yaml ] || { echo 'llm-lite-config.yaml is required (copy llm-lite-config.template.yaml and fill)' >&2; exit 1; }
+: "${LLM_LITE_CONFIG:=llm-lite-config.yaml}"
+[ -f "$LLM_LITE_CONFIG" ] || { echo "$LLM_LITE_CONFIG is required (copy llm-lite-config.template.yaml and fill)" >&2; exit 1; }
 kind get clusters | grep -qx wonder || kind create cluster --name wonder --config kind-config.yaml
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.15.1/deploy/static/provider/kind/deploy.yaml
 kubectl wait -n ingress-nginx --for=condition=Available deployment/ingress-nginx-controller --timeout=5m
@@ -27,7 +28,7 @@ kubectl -n wonder create secret generic wonder-secrets --dry-run=client -o yaml 
 helm upgrade --install wonder helm/wonder -n wonder -f helm/wonder/values-local.yaml --wait --timeout 10m \
   --set-string images.wonder="wonder-server:$tag" --set-string images.marketplace="marketplace-server:$tag" \
   --set-string images.litellm="$LLM_LITE_IMAGE" --set-string images.minio="$MINIO_IMAGE" \
-  --set-string llm.model="$LLM_MODEL" --set-file llm.config=llm-lite-config.yaml
+  --set-string llm.model="$LLM_MODEL" --set-file llm.config="$LLM_LITE_CONFIG"
 kubectl rollout restart -n wonder deployment/wonder-wonder deployment/wonder-marketplace deployment/wonder-agno deployment/wonder-litellm
 kubectl rollout status -n wonder deployment/wonder-wonder deployment/wonder-marketplace deployment/wonder-agno deployment/wonder-litellm --timeout=5m
 kubectl get pods,services,ingress -n wonder

@@ -75,7 +75,7 @@ services:
     ports: ["${LLM_LITE_PUBLISHED_PORT:-58047}:4000"]
     networks: [edge]
     command: ["--config", "/etc/litellm/config.yaml", "--port", "4000"]
-    volumes: ["./llm-lite-config.yaml:/etc/litellm/config.yaml:ro"]   # routing + secrets live in that file (copy its .template)
+    volumes: ["${LLM_LITE_CONFIG:-./llm-lite-config.yaml}:/etc/litellm/config.yaml:ro"]   # routing + secrets live in that file (copy its .template)
 
   minio:
     image: ${MINIO_IMAGE:-minio/minio:RELEASE.2025-04-22T22-12-26Z}
