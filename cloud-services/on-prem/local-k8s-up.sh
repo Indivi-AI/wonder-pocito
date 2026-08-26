@@ -3,7 +3,8 @@ set -euo pipefail
 cd "$(dirname "$0")"
 tag="${1:?usage: $0 IMAGE_TAG}"
 set -a; source .env.site; set +a
-for value in LLM_MODEL S3_ACCESS_KEY S3_SECRET_KEY LLM_LITE_IMAGE MINIO_IMAGE; do
+: "${LLM_LITE_IMAGE:=ghcr.io/berriai/litellm:main-stable}" "${MINIO_IMAGE:=minio/minio:RELEASE.2025-04-22T22-12-26Z}"   # same defaults as docker-compose.yml
+for value in LLM_MODEL S3_ACCESS_KEY S3_SECRET_KEY; do
   [ -n "${!value:-}" ] || { echo "$value is required in .env.site" >&2; exit 1; }
 done
 [ -f llm-lite-config.yaml ] || { echo 'llm-lite-config.yaml is required (copy llm-lite-config.template.yaml and fill)' >&2; exit 1; }

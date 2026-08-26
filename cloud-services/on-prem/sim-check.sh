@@ -5,6 +5,8 @@
 set -uo pipefail
 cd "$(dirname "$0")"
 set -a; [ "${SITE_ENV_FILE:-.env.site}" = /dev/null ] || source "${SITE_ENV_FILE:-.env.site}"; set +a
+: "${SITE_SCHEME:=http}" "${WONDER_PUBLISHED_PORT:=58045}" "${MARKETPLACE_PUBLISHED_PORT:=58046}" \
+  "${MINIO_PUBLISHED_PORT:=58048}" "${AGNO_PUBLISHED_PORT:=58049}"   # same defaults as docker-compose.yml
 wonder="${WONDER_URL:-$SITE_SCHEME://$SITE_HOST:$WONDER_PUBLISHED_PORT}"
 market="${MARKETPLACE_URL:-$SITE_SCHEME://$SITE_HOST:$MARKETPLACE_PUBLISHED_PORT}"
 agno="${AGNO_URL:-$SITE_SCHEME://$SITE_HOST:$AGNO_PUBLISHED_PORT}"

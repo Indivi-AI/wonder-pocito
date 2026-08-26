@@ -66,11 +66,13 @@ docker compose --env-file .env.site up -d    # wonder + marketplace + agno + llm
 ./sim-check.sh
 ```
 
-Fill `.env.site` with: `SITE_HOST` (the name browsers use for this machine), `IMAGE_TAG`, `MINIO_ENDPOINT` = the
-site's **global MinIO** url (browser-reachable), its S3 creds, `MARKETPLACE_S3_STORAGE_CLASS` (site S3 only — MinIO
-rejects `STANDARD_IA` with `InvalidStorageClass`; `sim-check.sh` proves whatever the site sets), and `LLM_MODEL`
-(the default model applets start with; the UI may pick another). Wonder's global MinIO needs buckets
-`indiviai-wonder` and `wonder-code-packages` with anonymous read+write.
+Fill `.env.site` with just the human values: `SITE_HOST` (the name browsers use for this machine), `IMAGE_TAG`,
+`MINIO_ENDPOINT` = the site's **global MinIO** url (browser-reachable), its S3 creds, and `LLM_MODEL` (the default
+model applets start with; the UI may pick another). Everything else — scheme, published ports, buckets, storage
+class, image pins — defaults inside `docker-compose.yml`; override by uncommenting it in the template's advanced
+section (site S3 note: MinIO rejects `STANDARD_IA` with `InvalidStorageClass`; `sim-check.sh` proves whatever the
+site sets). Wonder's global MinIO needs buckets `indiviai-wonder` and `wonder-code-packages` with anonymous
+read+write.
 
 LLM routing and secrets live only in `llm-lite-config.yaml` (gitignored, next to `.env.site`): the site's own
 LiteLLM yaml with the internal OpenAI-compatible endpoint and its api key inline — nothing LLM-related in env,
