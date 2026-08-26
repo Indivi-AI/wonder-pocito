@@ -35,7 +35,7 @@
         "tags": [
           "tools"
         ],
-        "summary": "List Tools",
+        "summary": "List Resources",
         "description": "List every published tool config.",
         "operationId": "list_tools_api_v1_tools__get",
         "responses": {
@@ -60,7 +60,7 @@
         "tags": [
           "tools"
         ],
-        "summary": "Create Tool",
+        "summary": "Create Resource",
         "description": "Create a tool. 409 on id collision; 422 on invalid body.",
         "operationId": "create_tool_api_v1_tools__post",
         "requestBody": {
@@ -100,7 +100,7 @@
         "tags": [
           "tools"
         ],
-        "summary": "Get Tool",
+        "summary": "Get Resource",
         "description": "Get a single tool config by id. 404 if missing.",
         "operationId": "get_tool_api_v1_tools__id__get",
         "parameters": [
@@ -143,7 +143,7 @@
         "tags": [
           "tools"
         ],
-        "summary": "Update Tool",
+        "summary": "Update Resource",
         "description": "Partial update. Snapshots the prior state (incl. code bytes), bumps version, audits.",
         "operationId": "update_tool_api_v1_tools__id__put",
         "parameters": [
@@ -196,7 +196,7 @@
         "tags": [
           "tools"
         ],
-        "summary": "Delete Tool",
+        "summary": "Delete Resource",
         "description": "Unpublish + wipe. 204 on success; 404 if the config did not exist.",
         "operationId": "delete_tool_api_v1_tools__id__delete",
         "parameters": [
@@ -232,7 +232,7 @@
         "tags": [
           "tools"
         ],
-        "summary": "Get Tool Code",
+        "summary": "Tool Code",
         "description": "Read a tool source file. 404 if the object is missing.",
         "operationId": "get_tool_code_api_v1_tools__id__code__path__get",
         "parameters": [
@@ -263,6 +263,9 @@
                 "schema": {
                   "type": "string"
                 }
+              },
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -284,7 +287,7 @@
         "tags": [
           "tools"
         ],
-        "summary": "List Tool Versions",
+        "summary": "List Versions",
         "description": "List every snapshot config for the tool, ascending by version.",
         "operationId": "list_tool_versions_api_v1_tools__id__versions_get",
         "parameters": [
@@ -332,7 +335,7 @@
         "tags": [
           "tools"
         ],
-        "summary": "Read Tool Version",
+        "summary": "Read Version",
         "description": "Read a specific version's config snapshot. 404 if missing.",
         "operationId": "read_tool_version_api_v1_tools__id__versions__n__get",
         "parameters": [
@@ -386,7 +389,7 @@
         "tags": [
           "skills"
         ],
-        "summary": "List Skills",
+        "summary": "List Resources",
         "description": "List every published skill manifest.",
         "operationId": "list_skills_api_v1_skills__get",
         "responses": {
@@ -411,7 +414,7 @@
         "tags": [
           "skills"
         ],
-        "summary": "Create Skill",
+        "summary": "Create Resource",
         "description": "Create a skill. 409 on id collision; 422 on invalid body.",
         "operationId": "create_skill_api_v1_skills__post",
         "requestBody": {
@@ -451,7 +454,7 @@
         "tags": [
           "skills"
         ],
-        "summary": "Get Skill",
+        "summary": "Get Resource",
         "description": "Get a single skill manifest by id. 404 if missing.",
         "operationId": "get_skill_api_v1_skills__id__get",
         "parameters": [
@@ -494,7 +497,7 @@
         "tags": [
           "skills"
         ],
-        "summary": "Update Skill",
+        "summary": "Update Resource",
         "description": "Partial update. Snapshots the prior state, bumps version, audits.",
         "operationId": "update_skill_api_v1_skills__id__put",
         "parameters": [
@@ -547,7 +550,7 @@
         "tags": [
           "skills"
         ],
-        "summary": "Delete Skill",
+        "summary": "Delete Resource",
         "description": "Unpublish + wipe. 204 on success; 404 if the manifest did not exist.",
         "operationId": "delete_skill_api_v1_skills__id__delete",
         "parameters": [
@@ -583,7 +586,7 @@
         "tags": [
           "skills"
         ],
-        "summary": "Get Skill Md",
+        "summary": "Skill Md",
         "description": "Read the SKILL.md document. 404 if missing.",
         "operationId": "get_skill_md_api_v1_skills__id__SKILL_md_get",
         "parameters": [
@@ -605,6 +608,9 @@
                 "schema": {
                   "type": "string"
                 }
+              },
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -626,7 +632,7 @@
         "tags": [
           "skills"
         ],
-        "summary": "Get Skill Asset",
+        "summary": "Skill Asset",
         "description": "Read a skill asset as raw bytes (binary-safe). 404 if missing.",
         "operationId": "get_skill_asset_api_v1_skills__id__assets__path__get",
         "parameters": [
@@ -676,7 +682,7 @@
         "tags": [
           "skills"
         ],
-        "summary": "List Skill Versions",
+        "summary": "List Versions",
         "description": "List every snapshot manifest for the skill, ascending by version.",
         "operationId": "list_skill_versions_api_v1_skills__id__versions_get",
         "parameters": [
@@ -724,7 +730,7 @@
         "tags": [
           "skills"
         ],
-        "summary": "Read Skill Version",
+        "summary": "Read Version",
         "description": "Read a specific version's manifest snapshot. 404 if missing.",
         "operationId": "read_skill_version_api_v1_skills__id__versions__n__get",
         "parameters": [
@@ -778,7 +784,7 @@
         "tags": [
           "plugins"
         ],
-        "summary": "List Plugins",
+        "summary": "List Resources",
         "description": "List every published plugin manifest.",
         "operationId": "list_plugins_api_v1_plugins__get",
         "responses": {
@@ -803,7 +809,7 @@
         "tags": [
           "plugins"
         ],
-        "summary": "Create Plugin",
+        "summary": "Create Resource",
         "description": "Create a plugin. 409 on id collision; 422 on invalid body.",
         "operationId": "create_plugin_api_v1_plugins__post",
         "requestBody": {
@@ -843,7 +849,7 @@
         "tags": [
           "plugins"
         ],
-        "summary": "Get Plugin",
+        "summary": "Get Resource",
         "description": "Get a single plugin manifest. 404 if missing.",
         "operationId": "get_plugin_api_v1_plugins__id__get",
         "parameters": [
@@ -886,7 +892,7 @@
         "tags": [
           "plugins"
         ],
-        "summary": "Update Plugin",
+        "summary": "Update Resource",
         "description": "Partial update. Snapshots the prior state, bumps version, audits.",
         "operationId": "update_plugin_api_v1_plugins__id__put",
         "parameters": [
@@ -939,7 +945,7 @@
         "tags": [
           "plugins"
         ],
-        "summary": "Delete Plugin",
+        "summary": "Delete Resource",
         "description": "Unpublish + wipe. 204 on success; 404 if the manifest did not exist.",
         "operationId": "delete_plugin_api_v1_plugins__id__delete",
         "parameters": [
@@ -975,7 +981,7 @@
         "tags": [
           "plugins"
         ],
-        "summary": "Get Plugin Config",
+        "summary": "Plugin Config",
         "description": "Read the config.yaml document. 404 if missing.",
         "operationId": "get_plugin_config_api_v1_plugins__id__config_yaml_get",
         "parameters": [
@@ -997,6 +1003,9 @@
                 "schema": {
                   "type": "string"
                 }
+              },
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -1018,7 +1027,7 @@
         "tags": [
           "plugins"
         ],
-        "summary": "Get Plugin Readme",
+        "summary": "Plugin Readme",
         "description": "Read the README.md document. 404 if missing.",
         "operationId": "get_plugin_readme_api_v1_plugins__id__README_md_get",
         "parameters": [
@@ -1040,6 +1049,9 @@
                 "schema": {
                   "type": "string"
                 }
+              },
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -1061,7 +1073,7 @@
         "tags": [
           "plugins"
         ],
-        "summary": "Check Plugin References",
+        "summary": "Plugin References",
         "description": "Check existence of every tool/skill referenced by the plugin. 404 if missing.",
         "operationId": "check_plugin_references_api_v1_plugins__id__references_get",
         "parameters": [
@@ -1106,7 +1118,7 @@
         "tags": [
           "plugins"
         ],
-        "summary": "List Plugin Versions",
+        "summary": "List Versions",
         "description": "List every snapshot manifest for the plugin, ascending by version.",
         "operationId": "list_plugin_versions_api_v1_plugins__id__versions_get",
         "parameters": [
@@ -1154,7 +1166,7 @@
         "tags": [
           "plugins"
         ],
-        "summary": "Read Plugin Version",
+        "summary": "Read Version",
         "description": "Read a specific version's manifest snapshot. 404 if missing.",
         "operationId": "read_plugin_version_api_v1_plugins__id__versions__n__get",
         "parameters": [
@@ -1208,7 +1220,7 @@
         "tags": [
           "agents"
         ],
-        "summary": "List Agents",
+        "summary": "List Resources",
         "description": "List every published agent manifest.",
         "operationId": "list_agents_api_v1_agents__get",
         "responses": {
@@ -1233,7 +1245,7 @@
         "tags": [
           "agents"
         ],
-        "summary": "Create Agent",
+        "summary": "Create Resource",
         "description": "Create an agent. 409 on id collision; 422 on invalid body.",
         "operationId": "create_agent_api_v1_agents__post",
         "requestBody": {
@@ -1273,7 +1285,7 @@
         "tags": [
           "agents"
         ],
-        "summary": "Get Agent",
+        "summary": "Get Resource",
         "description": "Get a single agent manifest. 404 if missing.",
         "operationId": "get_agent_api_v1_agents__id__get",
         "parameters": [
@@ -1316,7 +1328,7 @@
         "tags": [
           "agents"
         ],
-        "summary": "Update Agent",
+        "summary": "Update Resource",
         "description": "Partial update. Snapshots the prior state, bumps version, audits.",
         "operationId": "update_agent_api_v1_agents__id__put",
         "parameters": [
@@ -1369,7 +1381,7 @@
         "tags": [
           "agents"
         ],
-        "summary": "Delete Agent",
+        "summary": "Delete Resource",
         "description": "Unpublish + wipe. 204 on success; 404 if the manifest did not exist.",
         "operationId": "delete_agent_api_v1_agents__id__delete",
         "parameters": [
@@ -1405,7 +1417,7 @@
         "tags": [
           "agents"
         ],
-        "summary": "Get Agent Config",
+        "summary": "Agent Config",
         "description": "Read the config.yaml document. 404 if missing.",
         "operationId": "get_agent_config_api_v1_agents__id__config_yaml_get",
         "parameters": [
@@ -1427,6 +1439,9 @@
                 "schema": {
                   "type": "string"
                 }
+              },
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -1448,7 +1463,7 @@
         "tags": [
           "agents"
         ],
-        "summary": "Check Agent References",
+        "summary": "Agent References",
         "description": "Check existence of every plugin/tool/skill/sub-agent. 404 if missing.",
         "operationId": "check_agent_references_api_v1_agents__id__references_get",
         "parameters": [
@@ -1493,7 +1508,7 @@
         "tags": [
           "agents"
         ],
-        "summary": "List Agent Versions",
+        "summary": "List Versions",
         "description": "List every snapshot manifest for the agent, ascending by version.",
         "operationId": "list_agent_versions_api_v1_agents__id__versions_get",
         "parameters": [
@@ -1541,7 +1556,7 @@
         "tags": [
           "agents"
         ],
-        "summary": "Read Agent Version",
+        "summary": "Read Version",
         "description": "Read a specific version's manifest snapshot. 404 if missing.",
         "operationId": "read_agent_version_api_v1_agents__id__versions__n__get",
         "parameters": [
@@ -1683,7 +1698,7 @@
         "tags": [
           "audit"
         ],
-        "summary": "List Audit Events",
+        "summary": "Audit",
         "description": "List audit events for resource_id/resource_type; corrupt events are skipped and missing resources return an empty list.",
         "operationId": "list_audit_events_api_v1_audit__resource_type___resource_id__get",
         "parameters": [
@@ -1692,13 +1707,14 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
               "enum": [
                 "tool",
                 "skill",
                 "plugin",
-                "agent"
+                "agent",
+                "knowledge"
               ],
+              "type": "string",
               "title": "Resource Type"
             }
           },
@@ -1825,6 +1841,611 @@
           }
         }
       }
+    },
+    "/api/v1/knowledge/": {
+      "get": {
+        "summary": "List Resources",
+        "operationId": "list_knowledge_api_v1_knowledge__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Resource",
+        "operationId": "create_knowledge_api_v1_knowledge__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateKnowledge"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/{id}": {
+      "get": {
+        "summary": "Get Resource",
+        "operationId": "get_knowledge_api_v1_knowledge__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update Resource",
+        "operationId": "update_knowledge_api_v1_knowledge__id__put",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateKnowledge"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Resource",
+        "operationId": "delete_knowledge_api_v1_knowledge__id__delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/{id}/versions": {
+      "get": {
+        "summary": "List Versions",
+        "operationId": "list_knowledge_versions_api_v1_knowledge__id__versions_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/{id}/versions/{n}": {
+      "get": {
+        "summary": "Read Version",
+        "operationId": "read_knowledge_version_api_v1_knowledge__id__versions__n__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "n",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "N"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/{id}/content": {
+      "post": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Upload Content",
+        "operationId": "upload_content_api_v1_knowledge__id__content_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_content_api_v1_knowledge__id__content_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "List Content",
+        "operationId": "list_content_api_v1_knowledge__id__content_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/{id}/content/{content_id}": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Get Content",
+        "operationId": "get_content_api_v1_knowledge__id__content__content_id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "content_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Content Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Update Content",
+        "operationId": "update_content_api_v1_knowledge__id__content__content_id__patch",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "content_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Content Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_update_content_api_v1_knowledge__id__content__content_id__patch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Delete Content",
+        "operationId": "delete_content_api_v1_knowledge__id__content__content_id__delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "content_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Content Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/{id}/content/{content_id}/status": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Content Status",
+        "operationId": "content_status_api_v1_knowledge__id__content__content_id__status_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "content_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Content Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/{id}/content/{content_id}/file": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Download Content",
+        "operationId": "download_content_api_v1_knowledge__id__content__content_id__file_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "content_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Content Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1871,10 +2492,17 @@
               "type": "string"
             },
             "title": "Sub Agents"
+          },
+          "knowledge_bases": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Knowledge Bases"
           }
         },
         "title": "AgentConfig",
-        "description": "Agent execution config. Reference lists contain semantic resource ids; extra fields are allowed for forward compatibility."
+        "description": "Agent payload with flat reference IDs and extensible backend-compatible fields."
       },
       "AssetInput": {
         "type": "object",
@@ -1924,7 +2552,7 @@
           }
         },
         "title": "BackendConfig",
-        "description": "Backend harness settings. Extra fields are allowed for model-specific configuration."
+        "description": "Backend harness selection with extensible fields for forward-compatible config.yaml files."
       },
       "CodeFile": {
         "type": "object",
@@ -1944,7 +2572,7 @@
           }
         },
         "title": "CodeFile",
-        "description": "Tool source stored byte-for-byte under tools/{id}/code/{path}."
+        "description": "One already-wrapped tool source file stored byte-for-byte under tools/{id}/code/{path}."
       },
       "CreateAgent": {
         "type": "object",
@@ -1998,7 +2626,7 @@
           }
         },
         "title": "CreateAgent",
-        "description": "Create body. config.yaml (system_prompt + backend_config + reference id lists) is uploaded first; manifest last."
+        "description": "Create body. config.yaml is uploaded first; the manifest is written last."
       },
       "CreatePlugin": {
         "type": "object",
@@ -2052,7 +2680,7 @@
           }
         },
         "title": "CreatePlugin",
-        "description": "Create body. config.yaml (typed skill/tool flat ids) and README.md are uploaded first; manifest last."
+        "description": "Create body. config.yaml and README.md are uploaded first; the manifest is written last."
       },
       "CreateSkill": {
         "type": "object",
@@ -2200,7 +2828,7 @@
           }
         },
         "title": "CreateTool",
-        "description": "Create body. Code files are uploaded first; config.json is written last.\n\ndedicated_tool_config is validated against the schema registered for tool_type."
+        "description": "Create body. Code files are uploaded before config.json; dedicated config is typed by tool_type."
       },
       "CreateUser": {
         "type": "object",
@@ -2252,8 +2880,8 @@
           },
           "expires_in": {
             "type": "integer",
-            "minimum": 1,
-            "maximum": 86400,
+            "minimum": 1.0,
+            "maximum": 86400.0,
             "default": 3600,
             "title": "Expires In"
           }
@@ -2285,16 +2913,23 @@
             },
             "title": "Skills"
           },
-          "tools": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "title": "Tools"
-          }
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "Tools"
         },
-        "title": "PluginConfig",
-        "description": "Plugin payload of flat skill and tool ids stored in config.yaml. extra=\"allow\" keeps the schema forward-compatible."
+        "knowledge_bases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "Knowledge Bases"
+        }
+      },
+      "title": "PluginConfig",
+      "description": "Flat resource IDs stored in config.yaml with forward-compatible extra fields."
       },
       "TagRef": {
         "type": "object",
@@ -2325,7 +2960,7 @@
           "kick_graphql"
         ],
         "title": "ToolType",
-        "description": "Agent runtime invocation type; dedicated types use dedicated_tool_config."
+        "description": "Invocation type: code uses a handler; dedicated runtime types use dedicated_tool_config."
       },
       "UpdateAgent": {
         "type": "object",
@@ -2378,10 +3013,10 @@
           "tags": {
             "anyOf": [
               {
-                "type": "array",
                 "items": {
                   "$ref": "#/components/schemas/TagRef"
-                }
+                },
+                "type": "array"
               },
               {
                 "type": "null"
@@ -2402,7 +3037,7 @@
           }
         },
         "title": "UpdateAgent",
-        "description": "Partial update \u2014 only fields explicitly set overwrite the stored manifest/config."
+        "description": "Partial update — only fields explicitly set overwrite the stored manifest/config."
       },
       "UpdatePlugin": {
         "type": "object",
@@ -2455,10 +3090,10 @@
           "tags": {
             "anyOf": [
               {
-                "type": "array",
                 "items": {
                   "$ref": "#/components/schemas/TagRef"
-                }
+                },
+                "type": "array"
               },
               {
                 "type": "null"
@@ -2490,7 +3125,7 @@
           }
         },
         "title": "UpdatePlugin",
-        "description": "Partial update \u2014 only fields explicitly set overwrite the stored manifest/config."
+        "description": "Partial update — only fields explicitly set overwrite the stored manifest/config."
       },
       "UpdateSkill": {
         "type": "object",
@@ -2543,10 +3178,10 @@
           "tags": {
             "anyOf": [
               {
-                "type": "array",
                 "items": {
                   "$ref": "#/components/schemas/TagRef"
-                }
+                },
+                "type": "array"
               },
               {
                 "type": "null"
@@ -2590,10 +3225,10 @@
           "assets": {
             "anyOf": [
               {
-                "type": "array",
                 "items": {
                   "$ref": "#/components/schemas/AssetInput"
-                }
+                },
+                "type": "array"
               },
               {
                 "type": "null"
@@ -2603,7 +3238,7 @@
           }
         },
         "title": "UpdateSkill",
-        "description": "Partial update \u2014 only fields explicitly set overwrite the stored manifest/config."
+        "description": "Partial update — only fields explicitly set overwrite the stored manifest/config."
       },
       "UpdateTool": {
         "type": "object",
@@ -2667,8 +3302,8 @@
           "json_schema": {
             "anyOf": [
               {
-                "type": "object",
-                "additionalProperties": true
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
@@ -2701,8 +3336,8 @@
           "dedicated_tool_config": {
             "anyOf": [
               {
-                "type": "object",
-                "additionalProperties": true
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
@@ -2713,10 +3348,10 @@
           "code_files": {
             "anyOf": [
               {
-                "type": "array",
                 "items": {
                   "$ref": "#/components/schemas/CodeFile"
-                }
+                },
+                "type": "array"
               },
               {
                 "type": "null"
@@ -2726,7 +3361,7 @@
           }
         },
         "title": "UpdateTool",
-        "description": "Partial update. Explicit fields overwrite stored data; code_files are written separately and tool config is revalidated with tool_type."
+        "description": "Partial update; code_files is write-only and typed dedicated config is conditionally revalidated."
       },
       "UploadRequest": {
         "type": "object",
@@ -2752,8 +3387,8 @@
           },
           "expires_in": {
             "type": "integer",
-            "minimum": 1,
-            "maximum": 86400,
+            "minimum": 1.0,
+            "maximum": 86400.0,
             "default": 3600,
             "title": "Expires In"
           }
@@ -2800,6 +3435,216 @@
           }
         },
         "title": "ValidationError"
+      },
+      "Body_update_content_api_v1_knowledge__id__content__content_id__patch": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "title": "Body_update_content_api_v1_knowledge__id__content__content_id__patch"
+      },
+      "Body_upload_content_api_v1_knowledge__id__content_post": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "file": {
+            "anyOf": [
+              {
+                "type": "string",
+                "contentMediaType": "application/octet-stream"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File"
+          },
+          "text_content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text Content"
+          }
+        },
+        "type": "object",
+        "title": "Body_upload_content_api_v1_knowledge__id__content_post"
+      },
+      "CreateKnowledge": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Stable semantic identifier used in API paths and references"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name",
+            "description": "Human-readable display name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "hebrew_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hebrew Description"
+          },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/TagRef"
+            },
+            "type": "array",
+            "title": "Tags"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "display_name",
+          "description"
+        ],
+        "title": "CreateKnowledge"
+      },
+      "UpdateKnowledge": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "hebrew_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hebrew Description"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/TagRef"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "UpdateKnowledge"
       }
     }
   }

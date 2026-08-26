@@ -9,9 +9,15 @@ from unittest.mock import patch
 import httpx
 from fastapi.testclient import TestClient
 
-from agno_server import create_app as create_agent_os_app
-from marketplace_e2e_model import model_factory
+from agno_server import create_app as create_agent_os_app, knowledge_reader
+from marketplace_e2e_model import MarketplaceE2EEmbedder, model_factory
 from marketplace_server import create_app
+
+
+class KnowledgeChunkingTest(unittest.TestCase):
+    def test_configuration(self):
+        strategy = knowledge_reader(Path('knowledge.txt')).chunking_strategy
+        self.assertEqual((strategy.chunk_size, strategy.overlap), (3000, 300))
 
 
 class MarketplaceServerTest(unittest.TestCase):
@@ -20,7 +26,7 @@ class MarketplaceServerTest(unittest.TestCase):
         self.env = patch.dict(os.environ, {'MARKETPLACE_S3_BUCKET': f'marketplace-test-{uuid.uuid4().hex[:12]}'})
         self.env.start()
         self.client = TestClient(create_app())
-        self.agno = TestClient(create_agent_os_app(self.temp.name, model_factory))
+        self.agno = TestClient(create_agent_os_app(self.temp.name, model_factory, MarketplaceE2EEmbedder()))
         self.objects = self.client.app.state.marketplace_repo.objects
         self.examples = json.loads((Path(__file__).parent / 'marketplace-api-examples.json').read_text())
 
@@ -50,6 +56,9 @@ class MarketplaceServerTest(unittest.TestCase):
         return {'id': 'roomAgent', 'display_name': 'Room agent', 'description': 'Uses room facts.', 'config': {
           'system_prompt': 'Use the configured skill and tool.', 'backend_config': {'harness_type': 'deepagents'},
           'plugins': ['roomPlugin'], 'skills': [], 'tools': [], 'sub_agents': []}}
+
+    def knowledge(self, id):
+        return {'id': id, 'display_name': id, 'description': f'{id} knowledge base'}
 
     def test_contract_routes_exist(self):
         schema = self.client.get('/openapi.json').json()
@@ -168,8 +177,8 @@ class MarketplaceServerTest(unittest.TestCase):
         self.assertTrue(all(name in '\n'.join(logs.output) for name in ['legacy', 'broken']))
 
     def test_photographed_schema_examples_round_trip(self):
-        for kind in ['Skill', 'Tool', 'Plugin', 'Agent']:
-            body, plural = self.examples[f'create{kind}'], f'{kind.lower()}s'
+        for kind in ['Skill', 'Tool', 'Plugin', 'Agent', 'Knowledge']:
+            body, plural = self.examples[f'create{kind}'], kind.lower() if kind == 'Knowledge' else f'{kind.lower()}s'
             self.assertEqual(self.request('POST', f'/api/v1/{plural}/', json=body).status_code, 201)
             self.assertEqual(self.request('GET', f"/api/v1/{plural}/{body['id']}").status_code, 200)
             self.assertEqual(self.request('PUT', f"/api/v1/{plural}/{body['id']}",
@@ -179,6 +188,28 @@ class MarketplaceServerTest(unittest.TestCase):
         for action in ['download', 'upload']:
             self.assertEqual(self.request('POST', f'/api/v1/presign/{action}',
               json=self.examples[f'presign{action.title()}']).status_code, 200)
+
+    def test_multiple_knowledge_bases_are_managed_and_connected_to_agents(self):
+        for id, fact in [('finance', 'FINANCE_CODE_GOLD_41'), ('legal', 'LEGAL_CODE_BLUE_92')]:
+            self.assertEqual(self.request('POST', '/api/v1/knowledge/', json=self.knowledge(id)).status_code, 201)
+            content = self.request('POST', f'/api/v1/knowledge/{id}/content',
+              data={'name': f'{id} facts', 'text_content': fact, 'metadata': json.dumps({'domain': id})})
+            self.assertEqual(content.status_code, 202, content.text)
+            self.assertEqual(content.json()['status'], 'pending')
+        agent = self.agent()
+        agent['config'] |= {'plugins': [], 'knowledge_bases': ['finance', 'legal']}
+        self.assertEqual(self.request('POST', '/api/v1/agents/', json=agent).status_code, 201)
+        self.assertTrue(self.request('GET', '/api/v1/agents/roomAgent/references').json()['valid'])
+        self.agno.app.state.marketplace_runtime.process_content_jobs()
+        run = self.agno.post('/agents/roomAgent/runs', data={'message': 'Find FINANCE_CODE_GOLD_41 and LEGAL_CODE_BLUE_92.',
+          'session_id': 'knowledge', 'user_id': 'tester', 'stream': 'false'})
+        self.assertEqual(run.status_code, 200, run.text)
+        self.assertIn('FINANCE_CODE_GOLD_41', run.json()['content'])
+        self.assertIn('LEGAL_CODE_BLUE_92', run.json()['content'])
+        for id in ['finance', 'legal']:
+            content = self.request('GET', f'/api/v1/knowledge/{id}/content').json()['data'][0]
+            self.assertEqual(self.request('GET', f"/api/v1/knowledge/{id}/content/{content['id']}/status").json()['status'],
+              'completed')
 
     def test_agentos_uses_saved_plugin_skill_and_tool_updates(self):
         plugin = {'id': 'roomPlugin', 'display_name': 'Room plugin', 'description': 'Bundle',
@@ -209,6 +240,92 @@ class MarketplaceServerTest(unittest.TestCase):
         updated = agent_run('resources-updated')
         self.assertIn('SAVED_SKILL_UPDATE', updated['content'])
         self.assertIn('SAVED_TOOL_UPDATE:42', updated['content'])
+
+    def test_flow_package_tool_integration(self):
+        tool_payload = {
+            'id': 'flowTool',
+            'display_name': 'Flow Tool',
+            'description': 'Flow Tool description',
+            'tool_type': 'flow_package',
+            'package_id': '7',
+            'input_schema': [
+                {'Name': 'category', 'Type': 'String', 'DisplayName': 'Category', 'Description': 'Category filter', 'IsRequired': True}
+            ],
+            'output_cubes': [{'name': 'Orders Cube'}]
+        }
+        
+        # 1. Create the flow package tool via marketplace API
+        created = self.request('POST', '/api/v1/tools/', json=tool_payload)
+        self.assertEqual(created.status_code, 201)
+        created_json = created.json()
+        self.assertEqual(created_json['package_id'], '7')
+        self.assertEqual(created_json['input_schema'][0]['Name'], 'category')
+        self.assertEqual(created_json['output_cubes'][0]['name'], 'Orders Cube')
+        
+        # 2. Get the tool via marketplace API
+        fetched = self.request('GET', '/api/v1/tools/flowTool').json()
+        self.assertEqual(fetched['package_id'], '7')
+        
+        # 3. Update the tool via marketplace API
+        self.request('PUT', '/api/v1/tools/flowTool', json={'description': 'Updated Description'})
+        updated = self.request('GET', '/api/v1/tools/flowTool').json()
+        self.assertEqual(updated['description'], 'Updated Description')
+        
+        # 4. Load the tool via Agno runtime
+        runtime = self.agno.app.state.marketplace_runtime
+        agno_tool = runtime.tool('marketplace', 'flowTool')
+        
+        # Verify Agno Function contract
+        self.assertEqual(agno_tool.name, 'flowTool')
+        self.assertEqual(agno_tool.description, 'Updated Description')
+        self.assertIn('category', agno_tool.parameters['properties'])
+        self.assertEqual(agno_tool.parameters['properties']['category']['type'], 'string')
+        self.assertIn('category', agno_tool.parameters['required'])
+        
+        # 5. Execute the tool entrypoint
+        with patch.dict(os.environ, {'FLAPI_BASE_URL': 'http://localhost:6001', 'FLAPI_BEARER_TOKEN': 'mock-test-token'}):
+            result = agno_tool.entrypoint(category='Audio')
+            self.assertIn('results', result)
+            self.assertIn('Orders Cube', result['results'])
+
+    def test_adhoc_run_with_no_assets_uses_default_conversation(self):
+        run = self.agno.post('/adhoc/runs', json={'message': 'Hello there'})
+        self.assertEqual(run.status_code, 200, run.text)
+        body = run.json()
+        self.assertEqual(body['content'], 'No marketplace skill or tool is configured.')
+        self.assertEqual(body['status'], 'COMPLETED')
+        self.assertTrue(body['session_id'])
+        self.assertTrue(body['run_id'])
+
+    def test_adhoc_run_with_named_subset_of_assets_carries_them(self):
+        self.assertEqual(self.request('POST', '/api/v1/skills/', json=self.skill()).status_code, 201)
+        self.assertEqual(self.request('POST', '/api/v1/tools/', json=self.tool()).status_code, 201)
+        run = self.agno.post('/adhoc/runs', json={'message': 'What is the code? Double 21.',
+          'skills': ['roomFactsSkill'], 'tools': ['numberTool']})
+        self.assertEqual(run.status_code, 200, run.text)
+        body = run.json()
+        self.assertIn('THE ORBITAL CODE IS AMBER-17', body['content'])
+        self.assertIn('TOOL_CALLED:42', body['content'])
+
+    def test_adhoc_run_executes_flow_package_tool_via_same_executor(self):
+        tool_payload = {'id': 'adhocFlowTool', 'display_name': 'Adhoc Flow Tool', 'description': 'Flow tool for adhoc runs',
+          'tool_type': 'flow_package', 'package_id': '9',
+          'input_schema': [{'Name': 'category', 'Type': 'String', 'DisplayName': 'Category', 'IsRequired': True}]}
+        self.assertEqual(self.request('POST', '/api/v1/tools/', json=tool_payload).status_code, 201)
+        with patch('urllib.request.urlopen') as urlopen:
+            urlopen.return_value.__enter__.return_value.read.return_value = json.dumps({'results': ['ADHOC_FLOW_RESULT']}).encode()
+            run = self.agno.post('/adhoc/runs', json={'message': 'Filter by category.', 'tools': ['adhocFlowTool']})
+        self.assertEqual(run.status_code, 200, run.text)
+        self.assertIn('ADHOC_FLOW_RESULT', run.json()['content'])
+
+    def test_adhoc_run_with_missing_asset_returns_404(self):
+        run = self.agno.post('/adhoc/runs', json={'message': 'hi', 'tools': ['doesNotExist']})
+        self.assertEqual(run.status_code, 404, run.text)
+        self.assertIn('doesNotExist', run.json()['detail'])
+
+    def test_adhoc_run_with_empty_message_returns_422(self):
+        self.assertEqual(self.agno.post('/adhoc/runs', json={'message': ''}).status_code, 422)
+        self.assertEqual(self.agno.post('/adhoc/runs', json={}).status_code, 422)
 
 
 if __name__ == '__main__':

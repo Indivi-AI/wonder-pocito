@@ -22,6 +22,17 @@ Data('wonderPlatformMarketplaceRequest', {
   }
 })
 
+Data('wonderPlatformFlapiPackage', {
+  params: [
+    {id: 'packageId', as: 'string', mandatory: true}
+  ],
+  impl: async (ctx, {}, {packageId}) => {
+    const response = await fetch(`/flapi/package/${encodeURIComponent(packageId)}`)
+    if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || `FLAPI ${response.status}`)
+    return response.json()
+  }
+})
+
 const { wonderPlatformMarketplaceRequest } = dsls.common.data
 
 Data('wonderPlatformMarketplaceCall', {
@@ -29,6 +40,7 @@ Data('wonderPlatformMarketplaceCall', {
     {id: 'operation', as: 'string', mandatory: true},
     {id: 'resource', as: 'string'},
     {id: 'id', as: 'string'},
+    {id: 'contentId', as: 'string'},
     {id: 'filePath', as: 'string'},
     {id: 'version', as: 'number'},
     {id: 'body', as: 'object'},
@@ -39,12 +51,14 @@ Data('wonderPlatformMarketplaceCall', {
       baseUrl: '%$baseUrl%'
     })}
   ],
-  impl: (ctx, {}, {operation, resource, id, filePath, version, body, roomWUrl, baseUrl, request}) => {
+  impl: (ctx, {}, {operation, resource, id, contentId, filePath, version, body, roomWUrl, baseUrl, request}) => {
     const apiResource = resource == 'subagents' ? 'agents' : resource, encodedId = encodeURIComponent(id || '')
+    const encodedContentId = encodeURIComponent(contentId || '')
     const file = String(filePath || '').split('/').map(encodeURIComponent).join('/')
     const routes = {
       health: ['GET', 'healthz'], list: ['GET', `${apiResource}/`], create: ['POST', `${apiResource}/`],
-      get: ['GET', `${apiResource}/${encodedId}`], update: ['PUT', `${apiResource}/${encodedId}`],
+      get: ['GET', `${apiResource}/${encodedId}${resource == 'skills' ? '?includeAssets=true' : ''}`],
+      update: ['PUT', `${apiResource}/${encodedId}`],
       delete: ['DELETE', `${apiResource}/${encodedId}`], config: ['GET', `${apiResource}/${encodedId}/config.yaml`],
       document: ['GET', `${apiResource}/${encodedId}/${resource == 'skills' ? 'SKILL.md' : 'README.md'}`],
       references: ['GET', `${apiResource}/${encodedId}/references`],
@@ -52,7 +66,9 @@ Data('wonderPlatformMarketplaceCall', {
       version: ['GET', `${apiResource}/${encodedId}/versions/${version}`],
       asset: ['GET', `skills/${encodedId}/assets/${file}`],
       code: ['GET', `tools/${encodedId}/code/${file}`],
-      audit: ['GET', `audit/${{tools: 'tool', skills: 'skill', plugins: 'plugin', agents: 'agent'}[apiResource]}/${encodedId}`],
+      listContent: ['GET', `knowledge/${encodedId}/content`], uploadContent: ['POST', `knowledge/${encodedId}/content`],
+      deleteContent: ['DELETE', `knowledge/${encodedId}/content/${encodedContentId}`],
+      audit: ['GET', `audit/${{tools: 'tool', skills: 'skill', plugins: 'plugin', agents: 'agent', knowledge: 'knowledge'}[apiResource]}/${encodedId}`],
       presignDownload: ['POST', 'presign/download'],
       presignUpload: ['POST', 'presign/upload'],
       createUser: ['POST', 'users/'],
@@ -75,17 +91,19 @@ Data('wonderPlatformMarketplaceManifest', {
   impl: ({}, {}, {resource, item, operation}) => {
     const base = {id: item.id, display_name: item.name || item.id,
       description: item.apiDescription || item.desc || '', hebrew_description: item.desc || null, tags: item.tags || []}
-    if (resource == 'plugins') return {...base, config: {skills: item.skillIds || [], tools: item.toolIds || []},
+    if (resource == 'plugins') return {...base, config: {skills: item.skillIds || [], tools: item.toolIds || [],
+      knowledge_bases: item.knowledgeIds || []},
       readme: item.readme || ''}
-    if (resource == 'subagents') return {...base, config: {system_prompt: item.instructions || '',
+    if (['subagents', 'agents'].includes(resource)) return {...base, config: {system_prompt: item.instructions || '',
       backend_config: item.backendConfig || {harness_type: 'deepagents'}, plugins: item.pluginIds || [], skills: item.skillIds || [],
-      tools: item.toolIds || [], sub_agents: item.subagentIds || []}, ...(operation == 'create' ? {readme: item.readme || ''} : {})}
+      tools: item.toolIds || [], sub_agents: item.subagentIds || [], knowledge_bases: item.knowledgeIds || []},
+      ...(operation == 'create' ? {readme: item.readme || ''} : {})}
     if (resource == 'skills') return {...base, min_agent_version: item.minAgentVersion || null, license: item.license || null,
-      skill_md: item.content || '', assets: item.assets || []}
+      skill_md: item.content || '', assets: (item.assets || []).map(({path, content_b64, mime_type}) => ({path, content_b64, mime_type}))}
+    if (resource == 'knowledge') return base
     const {tags, ...toolBase} = base
-    return {...toolBase, tool_type: item.toolType || item.tool_type || 'code', json_schema: item.jsonSchema || {},
-      is_async: item.isAsync ?? true, tracable: item.tracable ?? true, dedicated_tool_config: item.dedicatedToolConfig || {},
-      code_files: item.codeFiles || []}
+    return {...toolBase, tool_type: 'flow_package', is_async: true, tracable: true,
+      package_id: item.packageId || '', input_schema: item.inputSchema || [], output_cubes: item.outputCubes || []}
   }
 })
 
@@ -99,14 +117,28 @@ Data('wonderPlatformMarketplaceItem', {
     return {...item, _marketplace: true, id, name, mark: name?.slice(0, 2), desc: item.hebrew_description || item.description || '',
       apiDescription: item.description || '', tags: item.tags || [], version: item.version == null ? 'V0' : String(item.version),
       created: item.created_at || item.created || '—', updated: item.updated_at || item.updated || '—',
-      skillIds: config.skills || item.skills || [], toolIds: config.tools || item.tools || [],
+      skillIds: config.skills || item.skills || [], toolIds: config.tools || item.tools || [], knowledgeIds: config.knowledge_bases || [],
       subagentIds: config.sub_agents || config.agents || item.agents || [], pluginIds: config.plugins || item.plugins || [],
       instructions: config.system_prompt || item.instructions || '', readme: item.readme || '', backendConfig: config.backend_config || {},
       content: item.skill_md || item.content || '', assets: item.assets || [], minAgentVersion: item.min_agent_version,
       license: item.license, toolType: item.tool_type, jsonSchema: item.json_schema || {}, isAsync: item.is_async,
       tracable: item.tracable, dedicatedToolConfig: item.dedicated_tool_config || {}, codeFiles: item.code_files || [],
       kind: resource == 'tools' ? ['flow_package', 'flow_cube'].includes(item.tool_type) ? 'flow' : 'connector' : item.kind,
-      managed: resource == 'tools' && item.tool_type == 'kick_graphql'}
+      managed: resource == 'tools' && item.tool_type == 'kick_graphql', files: item.contents?.data || item.files || [],
+      fileCount: item.contents?.meta?.total_count ?? item.files?.length ?? 0,
+      packageId: item.package_id || '', inputSchema: item.input_schema || [],
+      outputCubes: (item.output_cubes || []).map(cube => {
+        const name = cube.Name || cube.name || cube.id || '';
+        return {
+          ...cube,
+          id: cube.id || (item.package_id ? `query-${item.package_id}-${name}` : name),
+          Name: name,
+          description: cube.description || '',
+          markdownRows: cube.markdownRows || 20,
+          save: cube.save || false,
+          format: cube.format || 'json'
+        };
+      })}
   }
 })
 
@@ -120,7 +152,7 @@ Data('wonderPlatformMarketplaceLoad', {
     })}
   ],
   impl: async (ctx, {}, {roomWUrl, baseUrl, call}) => Object.fromEntries(await Promise.all(
-    ['plugins', 'skills', 'tools', 'subagents'].map(async resource =>
+    ['plugins', 'skills', 'tools', 'subagents', 'agents', 'knowledge'].map(async resource =>
       [resource, await call(ctx.setVars({resource, roomWUrl, baseUrl}))])
   ))
 })
@@ -157,13 +189,14 @@ Data('wonderPlatformMarketplaceDetail', {
   ],
   impl: async (ctx, {}, {resource, id, roomWUrl, baseUrl, call, normalize}) => {
     const run = (operation, vars = {}) => call(ctx.setVars({operation, resource, id, roomWUrl, baseUrl, ...vars}))
-    const [manifest, versions, audit] = await Promise.all([run('get'), run('versions'), run('audit')])
+    const [manifest, versions, audit, contents] = await Promise.all([run('get'), run('versions'), run('audit'),
+      resource == 'knowledge' ? run('listContent') : null])
     const [references, document, configYaml] = await Promise.all([
-      ['plugins', 'subagents'].includes(resource) ? run('references') : null,
+      ['plugins', 'subagents', 'agents'].includes(resource) ? run('references') : null,
       ['plugins', 'skills'].includes(resource) ? run('document') : null,
-      ['plugins', 'subagents'].includes(resource) ? run('config') : null
+      ['plugins', 'subagents', 'agents'].includes(resource) ? run('config') : null
     ])
-    return {...normalize(ctx.setVars({resource, manifest})), versions, audit, references, configYaml,
+    return {...normalize(ctx.setVars({resource, manifest: {...manifest, ...(contents ? {contents} : {})}})), versions, audit, references, configYaml,
       ...(resource == 'skills' ? {content: document} : resource == 'plugins' ? {readme: document} : {})}
   }
 })
@@ -213,11 +246,8 @@ Data('wonderPlatformAgentOsRun', {
   impl: async (ctx, {}, {text, target, sessionId, roomWUrl, baseUrl, token, request}) => {
     const startedAt = Date.now(), run = await request(
       ctx.setVars({agentId: target.id, text, sessionId, roomWUrl, baseUrl, token}))
-    const output = typeof run.content == 'string' ? run.content : JSON.stringify(run.content || '')
-    const markers = [...output.matchAll(/\[\[report:([\w-]+)\]\]/g)]
     return {
-      text: output.replace(/\s*\[\[report:[\w-]+\]\]/g, '').trim(),
-      reportIds: [...new Set(markers.map(([, id]) => id))],
+      text: dsls.common.data.wonderPlatformAgentContent.$run(run.content),
       followUps: [],
       status: String(run.status || '').toLowerCase().includes('fail') ? 'נכשל' : 'הושלם',
       duration: `${Math.max(1, Math.round((Date.now() - startedAt) / 1000))} שנ׳`,

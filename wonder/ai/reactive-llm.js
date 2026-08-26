@@ -96,12 +96,13 @@ export const buildRequestBody = (model, messages, maxTokens, temperature, instru
     })
   }
   const responseFormat = responseSchema && { response_format: { type: 'json_schema', json_schema: { name: 'response', schema: responseSchema } } }
-  const noThinking = thinkingBudget === 0
-  const reasoning = noThinking && provider === 'openai' && /^gpt-5/.test(model) ? { reasoning_effort: 'none' }
+  const noThinking = thinkingBudget === 0, openAiGpt5 = provider === 'openai' && /^gpt-5/.test(model)
+  const reasoning = noThinking && openAiGpt5 ? { reasoning_effort: 'minimal' }
     : noThinking && provider === 'openrouter' ? { reasoning: { effort: 'low', exclude: true } }
     : noThinking && provider === 'groq' && /^openai\/gpt-oss/.test(model) ? { include_reasoning: false, reasoning_effort: 'low' } : {}
   const usageOpt = provider === 'openrouter' ? { usage: { include: true } } : { stream_options: { include_usage: true } }
-  const body = { model, stream: true, ...maxTokensOpt, temperature, messages: messagesWithSystem, ...usageOpt, ...responseFormat, ...reasoning,
+  const body = { model, stream: true, ...maxTokensOpt, ...(openAiGpt5 ? {} : {temperature}),
+    messages: messagesWithSystem, ...usageOpt, ...responseFormat, ...reasoning,
     ...(userRequestId && {user: userRequestId}) }
   return request(body)
 }

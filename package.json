@@ -12,7 +12,7 @@
     "deploy-wonder": "bash cloud-services/deploy-cloud-run-staging.sh",
     "deploy-wonder-all": "bash cloud-services/deploy-cloud-run-staging.sh --all",
     "deploy-react-lib-and-images-to-cdn": "bash cloud-services/deploy-react-lib-and-images-to-cdn.sh",
-    "airgapped-export": "bash cloud-services/on-prem/export-airgap.sh",
+    "airgapped-export": "bash solutions/pocito/on-prem/export-airgap.sh",
     "server-secrets:pull:dev": "node scripts/secrets.js pull dev",
     "server-secrets:pull:prod": "node scripts/secrets.js pull prod",
     "server-secrets:push:dev": "node scripts/secrets.js push dev",

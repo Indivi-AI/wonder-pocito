@@ -2,91 +2,145 @@ import { dsls } from '@jb6/core'
 import '@jb6/react'
 import './wonder-platform-domain.js'
 import './wonder-platform-agent-results.js'
+import './wonder-platform-searchable-select.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
-ReactComp('wonderPlatformVerifiedReport', {
+const wonderPlatformChatContextRows = [['pluginIds', 'plugins', 'פלאגינים'], ['skillIds', 'skills', 'מיומנויות'],
+  ['toolIds', 'tools', 'כלים'], ['knowledgeIds', 'knowledge', 'ידע']]
+
+ReactComp('wonderPlatformChatContext', {
   impl: comp({
-    hFunc: (ctx, {react: {h}}) => ({report}) => report && h('section:mt-4 overflow-hidden rounded-xl border border-[#cfe0d5] bg-[#f8fbf9]', {
-      'data-report-id': report.id}, h('div:flex items-start justify-between border-b border-[#e1ebe4] bg-[#edf6f0] px-4 py-3', {}, h('div', {},
-      h('div:flex items-center gap-2 text-sm font-bold text-[#294f3b]', {}, h('L:BadgeCheck', {size: 16}), report.name),
-      h('div:mt-1 text-[11px] text-[#728078]', {}, `דוח מאומת · ${report.sourceCount} מקורות`)), h('span:rounded border border-[#c8d9ce] ' +
-        'px-1.5 py-0.5 text-[10px] text-[#52705e]', {}, report.status)), h('p:px-4 pt-3 text-xs leading-5 text-[#66706b]', {}, report.desc),
-      h('div:grid grid-cols-1 gap-2 p-4 sm:grid-cols-3', {}, report.rows.map(row => h('div:rounded-lg border border-[#e0e8e3] bg-white p-3', {
-        key: row.subject}, h('div:text-[10px] text-[#8b948f]', {}, row.subject), h('div:mt-1 font-bold text-[#2f6b4b]', {}, row.value),
-      h('div:mt-2 text-[10px] leading-4 text-[#7d8781]', {}, row.evidence)))))
+    hFunc: (ctx, {react: {h, hh, useState}}) => ({repo, conversation, selectAgent, setContext, locked}) => {
+      const [closed, setClosed] = useState('')
+      const select = props => hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {bare: true, tall: true, ...props})
+      const agent = repo.agents.find(item => item.id == conversation?.agentId)
+      const chipClass = dsls.common.data.wonderPlatformUi.$run().classes.chip
+      const section = (id, label, body) => h('div:mb-3', {key: id},
+        h(`button:flex w-full items-center justify-between border-b border-[#e8e8ea] py-1.5 text-base font-semibold text-[#0f0f10]`,
+          {onClick: () => setClosed(closed == id ? '' : id)}, label,
+          h(`L:${closed == id ? 'ChevronDown' : 'ChevronUp'}`, {size: 16})),
+        closed != id && h('div:pt-2', {}, body))
+      const chips = (id, label, names) => h('div:mb-3', {key: id},
+        h('div:border-b border-[#e8e8ea] pb-1.5 text-base font-semibold text-[#0f0f10]', {}, label),
+        h('div:flex flex-wrap gap-1.5 pt-2', {}, names.length
+          ? names.map(name => h(`span:${chipClass}`, {key: name}, name)) : h('span:text-[12px] text-[#6b7280]', {}, 'ללא')))
+      return h('aside:hidden w-[260px] shrink-0 overflow-y-auto bg-white px-4 py-5 shadow-[-8px_0_24px_rgba(0,0,0,0.07)] lg:block', {},
+        h('div:mb-5 text-[13px] font-semibold text-[#0f0f10]', {}, 'הקשר השיחה'),
+        locked
+          ? [chips('agent', 'סוכן', agent ? [agent.name] : []),
+              wonderPlatformChatContextRows.map(([field, resource, label]) => chips(field, label,
+                (conversation?.[field] || []).map(id => repo[resource].find(item => item.id == id)?.name || id)))]
+          : [section('agent', 'סוכן', select({items: repo.agents, value: conversation?.agentId || '', onChange: selectAgent,
+              placeholder: 'בחר סוכן', empty: 'ללא סוכן', testId: 'agent-selector'})),
+              wonderPlatformChatContextRows.map(([field, resource, label]) => section(field, label,
+                select({items: repo[resource], multi: true, value: conversation?.[field] || [],
+                  onChange: value => setContext(field, value), placeholder: `בחר ${label}`})))],
+        h('p:mt-2 text-[11px] leading-5 text-[#6b7280]', {}, locked
+          ? 'ההקשר ננעל כשהשיחה התחילה. פתחו שיחה חדשה כדי לשנות אותו.'
+          : 'הסוכן והנכסים שנבחרו מהווים את ההקשר שנשלח בכל פנייה בשיחה זו.'))
+    }
   })
 })
 
-ReactComp('wonderPlatformReport', {
+ReactComp('wonderPlatformChatContextBoard', {
   impl: comp({
-    hFunc: (ctx, {react: {h, hh}}) => ({report, back}) => h('main:min-h-screen overflow-x-hidden px-5 pb-24 pt-8 sm:mr-[210px] sm:px-10', {},
-      h('div:mx-auto max-w-4xl', {}, h('button:mb-5 inline-flex items-center gap-2 text-sm text-[#2f6b4b]', {onClick: back},
-        h('L:ChevronRight', {size: 15}), 'חזרה לדוחות'), hh(ctx, dsls.react['react-comp'].wonderPlatformVerifiedReport, {report})))
+    hFunc: (ctx, {react: {h, hh}}) => ({repo, conversation, selectAgent, setContext}) => {
+      const agent = repo.agents.find(item => item.id == conversation?.agentId)
+      const slot = (key, label, filled, body) => h('div:flex min-h-[92px] flex-col items-center justify-center gap-2 ' +
+        `rounded-[14px] border p-3 text-center ${filled ? 'border-[#d8d8dc] bg-[#f4f4f5]' : 'border-dashed border-[#d8d8dc] bg-white'}`,
+        {key}, h('span:text-[12px] font-medium text-[#2e2e2e]', {}, label), body)
+      return h('div:flex w-full max-w-lg flex-col items-center gap-5 text-center', {},
+        h('div', {}, h('h2:text-[15px] font-semibold text-[#0f0f10]', {}, 'הקשר השיחה'),
+          h('p:mt-1 text-[12px] text-[#6b7280]', {}, 'כולם אופציונליים')),
+        h('div:grid w-full grid-cols-3 gap-3', {},
+          slot('agent', 'סוכן', !!agent, hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {bare: true,
+            items: repo.agents, value: conversation?.agentId || '', onChange: selectAgent, placeholder: '+ הוספה',
+            empty: 'ללא סוכן', testId: 'agent-selector-board'})),
+          wonderPlatformChatContextRows.map(([field, resource, label]) => slot(field, label,
+            (conversation?.[field] || []).length > 0, hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {bare: true,
+              multi: true, items: repo[resource], value: conversation?.[field] || [],
+              onChange: value => setContext(field, value), placeholder: '+ הוספה'})))))
+    }
   })
 })
 
 ReactComp('wonderPlatformChatComposer', {
   impl: comp({
-    hFunc: (ctx, {react: {h, useEffect, useRef, useState}}) => ({repo, conversation, message, setMessage, busy, send, selectAgent, model, setModel}) => {
-      const ref = useRef(), submit = () => message.trim() && conversation?.agentId && !busy && send()
+    hFunc: (ctx, {react: {h, useEffect, useRef, useState}}) => ({repo, conversation, message, setMessage, busy, send, model, setModel}) => {
+      const ref = useRef(), submit = () => message.trim() && !busy && send()
       const [models, setModels] = useState([])
-      const agent = repo.subagents.find(item => item.id == conversation?.agentId)
+      const agent = repo.agents.find(item => item.id == conversation?.agentId)
       const llmflow = [agent?.backendConfig?.harness, agent?.backendConfig?.harness_type].includes('llmflow')
       useEffect(() => { globalThis.LLM_PROXY_URL && fetch(`${globalThis.LLM_PROXY_URL}/models`).then(response => response.ok && response.json())
         .then(catalog => setModels((catalog?.data || []).map(entry => `openai/${entry.id}`).filter(name => name != 'openai/*')), () => {}) }, [])
       useEffect(() => { if (ref.current) ref.current.style.height = 'auto', ref.current.style.height = `${Math.min(ref.current.scrollHeight, 144)}px` }, [message])
-      return h('div:border-t border-[#e3e7e4] bg-[#f8f9f8] p-4', {}, h('div:mx-auto max-w-3xl rounded-2xl border border-[#e0e5e2] ' +
-        'bg-white p-2 shadow-sm', {}, h('div:mb-2 flex flex-wrap items-center gap-2', {},
-        h('select:max-w-full rounded-full border border-[#cfe0d5] bg-[#edf6f0] px-3 py-1 text-xs text-[#315e46]', {
-          value: conversation?.agentId || '', 'data-testid': 'agent-selector', onChange: event => selectAgent(event.target.value)},
-        h('option', {value: ''}, 'בחר סוכן'),
-        repo.subagents.map(item => h('option', {key: item.id, value: item.id}, item.name))),
-        llmflow && h('input:w-48 max-w-full rounded-full border border-[#dbe3de] px-3 py-1 text-xs text-[#52705e]', {dir: 'ltr',
-          list: 'wonder-llm-models', value: model, placeholder: 'model', 'data-testid': 'model-selector',
-          title: 'מודל השפה - ריק = ברירת המחדל של האתר', onInput: event => setModel(event.target.value)}),
-        llmflow && h('datalist', {id: 'wonder-llm-models'}, models.map(name => h('option', {key: name, value: name})))), h('div:flex items-end gap-2', {},
-        h('textarea:min-h-11 flex-1 resize-none px-3 py-2 text-sm outline-none', {ref, rows: 1, value: message, 'data-testid': 'chat-input',
-          placeholder: conversation?.agentId ? 'כתוב הודעה לסוכן…' : 'בחר סוכן כדי להתחיל',
-          onInput: event => setMessage(event.target.value),
-          onKeyDown: event => event.key == 'Enter' && !event.shiftKey && (event.preventDefault(), submit())}),
-        h('button:grid h-10 w-10 place-items-center rounded-full bg-[#2f6b4b] text-white disabled:opacity-40', {
-          disabled: !message.trim() || !conversation?.agentId || busy, onClick: submit, 'aria-label': 'שליחה'}, h('L:ArrowUp', {size: 16})))))
+      return h('div:px-5 py-4', {}, h('div:mx-auto flex max-w-3xl items-end gap-2 rounded-[12px] ' +
+        'border border-[#e8e8ea] bg-white p-2 shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-colors ' +
+        'focus-within:border-[#c9c9ce]', {},
+      llmflow && h('input:w-40 shrink-0 rounded-[8px] border border-[#e8e8ea] px-2 py-1.5 text-[12px] text-[#2e2e2e] outline-none ' +
+        'placeholder:text-[#6b7280]', {dir: 'ltr', list: 'wonder-llm-models', value: model, placeholder: 'model',
+        'data-testid': 'model-selector', title: 'מודל השפה - ריק = ברירת המחדל של האתר', onInput: event => setModel(event.target.value)}),
+      llmflow && h('datalist', {id: 'wonder-llm-models'}, models.map(name => h('option', {key: name, value: name}))),
+      h('textarea:min-h-10 flex-1 resize-none px-2 py-1.5 text-[13px] outline-none placeholder:text-[#6b7280]', {ref, rows: 1,
+        value: message, 'data-testid': 'chat-input', placeholder: 'שאלו כל דבר…',
+        onInput: event => setMessage(event.target.value),
+        onKeyDown: event => event.key == 'Enter' && !event.shiftKey && (event.preventDefault(), submit())}),
+      h('button:grid h-8 w-8 shrink-0 place-items-center rounded-[8px] bg-[#0f0f10] text-white transition-opacity ' +
+        'hover:opacity-85 disabled:opacity-25', {disabled: !message.trim() || busy, onClick: submit,
+        'aria-label': 'שליחה'}, h('L:ArrowUp', {size: 15}))))
     }
   })
 })
 
+const wonderPlatformRunStatusLabel = {running: 'בהרצה…', completed: 'הושלם', failed: 'נכשל'}
+
 ReactComp('wonderPlatformChat', {
   impl: comp({
     hFunc: (ctx, {react: {h, hh}}) => props => {
-      const {repo, conversation, message, setMessage, busy, send, selectAgent, newConversation, setConversation, model, setModel} = props
-      const agent = repo.subagents.find(item => item.id == conversation?.agentId)
+      const {repo, conversation, message, setMessage, busy, send, selectAgent, setContext, model, setModel} = props
+      const agent = repo.agents.find(item => item.id == conversation?.agentId)
       const opikUrl = conversation?.messages.filter(item => item.opikUrl).at(-1)?.opikUrl
-      return h('main:h-screen min-w-0 overflow-hidden pb-16 sm:mr-[210px] sm:pb-0', {}, h('div:flex h-full min-w-0', {},
-        h('section:flex min-w-0 flex-1 flex-col', {}, h('header:flex items-center justify-between border-b border-[#e5e8e6] bg-white px-6 py-4', {},
-          h('div:flex items-center gap-3', {}, h('span:grid h-8 w-8 place-items-center rounded-xl bg-[#e6f2ea] text-xs font-bold text-[#285a40]', {},
-            agent?.mark || '—'), h('b:text-sm', {}, agent?.name || 'בחר סוכן')),
-          opikUrl && h('a:text-xs text-[#37664e]', {href: opikUrl}, 'ה-trace המלא ב-Opik ↗')),
-        h('div:flex-1 overflow-y-auto overflow-x-hidden', {}, h('div:mx-auto max-w-3xl px-5 py-8', {}, conversation?.messages.length > 0 && h(
-          'div:mb-5 text-center text-xs text-[#a3a9a6]', {}, `שיחה מתמשכת · ${agent?.name} · ההקשר נשמר בין הפניות`),
-        conversation?.messages.map(item => item.role == 'user' ? h('div:mb-4 mr-auto max-w-[88%] rounded-2xl border border-[#cee2d6] ' +
-          'bg-[#eaf4ed] p-4 text-sm leading-7', {key: item.id, 'data-message-role': 'user'}, item.text) : h('div:mb-4', {key: item.id},
-          h('details:mb-3 rounded-xl border border-[#e3e7e4] bg-white', {}, h('summary:cursor-pointer px-4 py-3 text-xs font-semibold text-[#3c5548]', {},
-            `מעקב הרצה · ${item.steps?.length || 0} שלבים · ${item.status || 'הושלם'}`), h('div:border-t border-[#edf0ee] p-3', {},
-            (item.steps || []).map((step, index) => h('div:flex items-center gap-2 py-1 text-xs', {key: index},
-              h('span:rounded-full border px-2 py-0.5 text-[10px]', {}, step.kind), step.title || step.name)))),
-          hh(ctx, dsls.react['react-comp'].wonderPlatformAgentResult, {result: item, setMessage}),
-          (item.reportIds || []).map(id => hh(ctx, dsls.react['react-comp'].wonderPlatformVerifiedReport, {
-            key: id, report: repo.reports.find(report => report.id == id)})))), busy && h(
-          'div:flex items-center gap-2 rounded-2xl border border-[#e3e7e4] bg-white p-5 text-sm text-[#758078]', {},
-          h('L:Loader2', {size: 16, className: 'animate-spin'}), 'הסוכן פועל…'))),
-        hh(ctx, dsls.react['react-comp'].wonderPlatformChatComposer, {repo, conversation, message, setMessage, busy, send, selectAgent, model, setModel})),
-        h('aside:hidden w-[260px] shrink-0 overflow-y-auto border-r border-[#e4e8e5] bg-white p-4 lg:block', {},
-          h('button:w-full rounded-xl border border-[#cfe0d5] bg-[#edf6f0] py-2.5 text-sm font-semibold text-[#315e46]', {
-            onClick: () => newConversation()}, '＋ שיחה חדשה'), h('div:pb-3 pt-6 text-xs text-[#a1a7a4]', {}, 'היסטוריית שיחות'),
-          repo.conversations.map(item => h(`button:mb-1 w-full rounded-xl px-3 py-3 text-right text-sm ${item.id == conversation?.id
-            ? 'bg-[#e7f1eb]' : 'hover:bg-gray-50'}`, {key: item.id, onClick: () => setConversation(item.id)}, h('b:block', {}, item.title),
-          h('small:text-[#8b948f]', {}, `${repo.subagents.find(value => value.id == item.agentId)?.name || 'ללא בחירה'} · ${item.when || 'עכשיו'}`))))))
+      const statusText = status => wonderPlatformRunStatusLabel[String(status).toLowerCase()] || status || 'הושלם'
+      const locked = conversation?.messages.length > 0
+      const starterPrompts = agent && [agent.desc, `איך אתה יכול לעזור לי, ${agent.name}?`,
+        `תן לי דוגמה לשאלה שאפשר לשאול את ${agent.name}`]
+      const board = h('div:flex w-full max-w-lg flex-col items-center gap-6', {},
+        hh(ctx, dsls.react['react-comp'].wonderPlatformChatContextBoard, {repo, conversation, selectAgent, setContext}),
+        starterPrompts && h('div:mt-1 flex w-full flex-col gap-2', {},
+          starterPrompts.map(prompt => h('button:rounded-[10px] border border-[#e8e8ea] bg-white px-3.5 py-2.5 ' +
+            'text-[12px] leading-5 text-[#2e2e2e] transition-colors hover:border-[#d8d8dc] hover:bg-[#fafafa]',
+            {key: prompt, onClick: () => setMessage(prompt)}, prompt))))
+      const messages = h('div:mx-auto max-w-3xl px-5 py-8', {},
+        conversation?.messages.map(item => item.role == 'user'
+          ? h('div:mb-4 flex', {key: item.id, 'data-message-role': 'user'},
+            h('div:max-w-[70ch] rounded-[14px] bg-[#f4f4f5] px-4 py-3 text-[13px] leading-[1.7] text-[#0f0f10]', {}, item.text))
+          : h('div:mb-4 max-w-[70ch]', {key: item.id, 'data-message-role': 'agent'},
+            h('div:mb-1.5 flex items-center gap-2', {},
+              h('span:grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#f4f4f5] text-[10px] font-bold text-[#0f0f10]',
+                {}, agent?.mark || 'AI'),
+              h('span:text-[12px] font-medium text-[#2e2e2e]', {}, agent?.name || 'סוכן')),
+            h('details:mb-3 rounded-[10px] border border-[#e8e8ea] bg-white', {},
+              h('summary:cursor-pointer px-3.5 py-2.5 text-[12px] text-[#6b6b6f]', {},
+                `מעקב הרצה · ${item.steps?.length || 0} שלבים · ${statusText(item.status)}`),
+              h('div:border-t border-[#e8e8ea] p-3', {}, (item.steps || []).map((step, index) =>
+                h('div:flex items-center gap-2 py-1 text-[12px]', {key: index},
+                  h('span:rounded-md border border-[#e8e8ea] px-1.5 py-0.5 text-[10px] text-[#6b6b6f]', {}, step.kind),
+                  step.title || step.name)))),
+            hh(ctx, dsls.react['react-comp'].wonderPlatformAgentResult, {result: item, setMessage}))),
+        busy && h('div:flex items-center gap-2 rounded-[10px] border border-[#e8e8ea] bg-white p-4 text-[13px] text-[#6b6b6f]', {},
+          h('L:Loader2', {size: 15, className: 'animate-spin'}), 'הסוכן פועל…'))
+      return h('main:h-screen min-w-0 flex-1 overflow-hidden pb-16 sm:pb-0', {}, h('div:flex h-full min-w-0', {},
+        h('section:flex min-w-0 flex-1 flex-col', {},
+          h('header:flex items-center justify-between border-b border-[#e8e8ea] bg-white px-6 py-3.5', {},
+            h('div:min-w-0', {}, h('b:block truncate text-[14px] font-medium text-[#0f0f10]', {}, agent?.name || 'שיחה חופשית'),
+              conversation?.messages.length > 0 && h('span:text-[11px] text-[#6b7280]', {}, 'ההקשר נשמר בין הפניות')),
+            opikUrl && h('a:shrink-0 text-[12px] text-[#2e2e2e]', {href: opikUrl}, 'ה-trace המלא ב-Opik ↗')),
+          h('div:flex-1 overflow-y-auto overflow-x-hidden', {},
+            conversation?.messages.length || busy ? messages
+              : h('div:mx-auto flex h-full max-w-3xl items-center justify-center px-5 py-8', {}, board)),
+          hh(ctx, dsls.react['react-comp'].wonderPlatformChatComposer, {repo, conversation, message, setMessage, busy, send, model, setModel})),
+        hh(ctx, dsls.react['react-comp'].wonderPlatformChatContext, {repo, conversation, selectAgent, setContext, locked})))
     }
   })
 })

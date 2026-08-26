@@ -4,13 +4,14 @@ import '@jb6/react/automation.js'
 import '@jb6/react/tests/react-testers.js'
 import './wonder-platform-runtime.js'
 import './wonder-platform.js'
+import './wonder-agents.js'
 
 const {
   tgp: { CtxEnricher },
   common: { Data, data: { asIs, wFetch, wonderPlatformAnswer, wonderPlatformListSkills, wonderPlatformLoadSkill,
     wonderPlatformLoadTargetSkills, wonderPlatformMarketplaceCall, wonderPlatformMarketplaceItem, wonderPlatformMarketplaceManifest,
     wonderPlatformNormalize, wonderPlatformPublishSkill, wonderPlatformSeed, wonderPlatformUpsert, wonderPlatformAgentOsRun },
-    boolean: { and, contains, equals } },
+    boolean: { and, contains, equals, notContains } },
   react: { ReactComp, UiAction, 'react-comp': { comp, wonderPlatform },
     'ui-action': { actions, click, waitForText } },
   test: { Test, test: { dataTest, reactTest } },
@@ -42,11 +43,16 @@ Data('wonderPlatformApiCapture', {
 })
 
 Data('wonderPlatformAgentOsCapture', {
-  impl: () => ({content: 'Grounded answer [[report:r1]]', run_id: 'run-1', status: 'COMPLETED'})
+  impl: () => ({content: 'Grounded answer', run_id: 'run-1', status: 'COMPLETED'})
 })
 
 Data('wonderPlatformChatAgentCapture', {
-  impl: ctx => ({harness: 'agno', text: `AGNO_AGENT:${ctx.vars.target.id}`, reportIds: [], runtimeSteps: []})
+  impl: ctx => ({harness: 'agno', text: `AGNO_AGENT:${ctx.vars.target.id}`, runtimeSteps: []})
+})
+
+Data('wonderPlatformFlapiFixture', {
+  impl: () => ({quick: {'ecom-query-1': [{Name: 'category', DisplayName: 'Category', Type: 'string', Description: 'Product category'}]},
+    metadata: {Id: 7, Name: 'E-commerce Analytics', Queries: [{id: 'orders', Name: 'Orders Cube', ResultsLimit: 1000, Fields: []}]}})
 })
 
 const { wonderPlatformChatAgentCapture, wonderPlatformTestSave } = dsls.common.data
@@ -116,7 +122,7 @@ Data('wonderPlatformDocletRoundTrip', {
 })
 
 const wonderPlatformSkillProbeAgent = Workflow('wonderPlatformSkillProbeAgent', {
-  impl: () => ({calcWorkflow: async workflowCtx => ({runRes: {text: workflowCtx.vars.loadedSkillDoclets, reportIds: [], followUps: []},
+  impl: () => ({calcWorkflow: async workflowCtx => ({runRes: {text: workflowCtx.vars.loadedSkillDoclets, followUps: []},
     workflowErrors: [], workflowTrace: []})})
 })
 
@@ -160,13 +166,43 @@ Data('wonderPlatformWfetchRoundTrip', {
   }
 })
 
+Data('wonderPlatformFlapiRoundTrip', {
+  impl: async () => {
+    const {createServer} = await import('node:http'), requests = []
+    const upstream = createServer((req, res) => {
+      requests.push({url: req.url, authorization: req.headers.authorization})
+      res.setHeader('content-type', 'application/json')
+      res.end(JSON.stringify(req.url.includes('/quick/') ? {'ecom-query-1': [{Name: 'category'}]}
+        : {Id: 7, Name: 'E-commerce Analytics', Queries: [{Name: 'Orders Cube'}]}))
+    })
+    await new Promise(resolve => upstream.listen(0, '127.0.0.1', resolve))
+    const previous = {FLAPI_BASE_URL: process.env.FLAPI_BASE_URL, FLAPI_BEARER_TOKEN: process.env.FLAPI_BEARER_TOKEN}
+    process.env.FLAPI_BASE_URL = `http://127.0.0.1:${upstream.address().port}`; process.env.FLAPI_BEARER_TOKEN = 'test-token'
+    try {
+      const {createApp} = await import(`${await coreUtils.calcRepoRoot()}/cloud-services/express-server/app.js`)
+      const app = await createApp('public'), server = await new Promise(resolve => {
+        const instance = app.listen(0, '127.0.0.1', () => resolve(instance))
+      })
+      try {
+        const response = await fetch(`http://127.0.0.1:${server.address().port}/flapi/package/7`), body = await response.json()
+        return {status: response.status, body, requests}
+      } finally { await new Promise(resolve => server.close(resolve)) }
+    } finally {
+      await new Promise(resolve => upstream.close(resolve))
+      for (const [key, value] of Object.entries(previous)) value == null ? delete process.env[key] : process.env[key] = value
+    }
+  }
+})
+
 ReactComp('wonderPlatformTestApp', {
   impl: wonderPlatform({loadRepo: wonderPlatformSeed(), saveRepo: dsls.common.data.wonderPlatformTestSave()})
 })
 
 ReactComp('wonderPlatformMarketplaceTestApp', {
   impl: wonderPlatform({loadRepo: dsls.common.data.wonderPlatformMarketplaceFixture(), saveRepo: dsls.common.data.wonderPlatformTestSave(),
-    marketplaceDetail: dsls.common.data.wonderPlatformMarketplaceDetailFixture('%$resource%', '%$id%')})
+    loadPackage: dsls.common.data.wonderPlatformFlapiFixture(),
+    marketplaceDetail: dsls.common.data.wonderPlatformMarketplaceDetailFixture('%$resource%', '%$id%'),
+    extraPrimaryNav: [['agents', 'Bot', 'סוכנים']]})
 })
 
 ReactComp('wonderPlatformAgentChatTestApp', {
@@ -188,23 +224,39 @@ Test('wonderPlatform.marketplaceApiRoutes', {
         ...args,
         request
       })
-      const [list, version, audit, update, upload] = await Promise.all([
+      const [list, skill, version, audit, update, upload, contents, deleteContent] = await Promise.all([
         call({operation: 'list', resource: 'plugins'}),
+        call({operation: 'get', resource: 'skills', id: 'skill-a'}),
         call({operation: 'version', resource: 'subagents', id: 'a b', version: 2}),
         call({operation: 'audit', resource: 'skills', id: 'skill-1'}),
         call({operation: 'update', resource: 'tools', id: 'tool-1', body: {tracable: true}}),
-        call({operation: 'presignUpload', body: {key: 'assets/a'}})
+        call({operation: 'presignUpload', body: {key: 'assets/a'}}),
+        call({operation: 'listContent', resource: 'knowledge', id: 'kb 1'}),
+        call({operation: 'deleteContent', resource: 'knowledge', id: 'kb 1', contentId: 'doc/1'})
       ])
-      return {result: {list, version, audit, update, upload}, ...coreUtils.harvestLogs(ctx)}
+      return {result: {list, skill, version, audit, update, upload, contents, deleteContent}, ...coreUtils.harvestLogs(ctx)}
     },
     expectedResult: equals('%result%', asIs({
         list: {method: 'GET', wUrl: 'room://tenant-a/plugins/'},
+        skill: {method: 'GET', wUrl: 'room://tenant-a/skills/skill-a?includeAssets=true'},
         version: {method: 'GET', wUrl: 'room://tenant-a/agents/a%20b/versions/2'},
         audit: {method: 'GET', wUrl: 'room://tenant-a/audit/skill/skill-1'},
         update: {method: 'PUT', wUrl: 'room://tenant-a/tools/tool-1', body: {tracable: true}},
-        upload: {method: 'POST', wUrl: 'room://tenant-a/presign/upload', body: {key: 'assets/a'}}
+        upload: {method: 'POST', wUrl: 'room://tenant-a/presign/upload', body: {key: 'assets/a'}},
+        contents: {method: 'GET', wUrl: 'room://tenant-a/knowledge/kb%201/content'},
+        deleteContent: {method: 'DELETE', wUrl: 'room://tenant-a/knowledge/kb%201/content/doc%2F1'}
     })),
     logger: 'marketplaceLogger'
+  })
+})
+
+Test('wonderPlatform.flapiRoundTrip', {
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: dsls.common.data.wonderPlatformFlapiRoundTrip(),
+    expectedResult: and(equals('%status%', 200), equals('%body/quick/ecom-query-1/0/Name%', 'category'),
+      equals('%body/metadata/Queries/0/Name%', 'Orders Cube'), equals('%requests/length%', 2),
+      equals('%requests/0/authorization%', 'Bearer test-token'), equals('%requests/1/authorization%', 'Bearer test-token'))
   })
 })
 
@@ -214,12 +266,60 @@ Test('wonderPlatform.marketplaceManifest', {
       plugin: wonderPlatformMarketplaceManifest.$run({resource: 'plugins', item: {id: 'p', name: 'פ', desc: 'ת', skillIds: ['s'],
         toolIds: ['t'], subagentIds: ['a']}}), tool: wonderPlatformMarketplaceManifest.$run({resource: 'tools', item: {id: 't', name: 'כ',
           desc: 'ת', toolType: 'code', tracable: true}}), agentCreateReadme: wonderPlatformMarketplaceManifest.$run({resource: 'subagents',
-            item: {id: 'a', readme: '# Agent'}}).readme, agentUpdateHasReadme: 'readme' in wonderPlatformMarketplaceManifest.$run({
-              resource: 'subagents', operation: 'update', item: {id: 'a', readme: '# Agent'}})}}),
-    expectedResult: equals('%result%', asIs({plugin: {id: 'p', display_name: 'פ', description: 'ת', hebrew_description: 'ת',
-      tags: [], config: {skills: ['s'], tools: ['t']}, readme: ''}, tool: {id: 't', display_name: 'כ',
-      description: 'ת', hebrew_description: 'ת', tool_type: 'code', json_schema: {}, is_async: true,
-      tracable: true, dedicated_tool_config: {}, code_files: []}, agentCreateReadme: '# Agent', agentUpdateHasReadme: false}))
+            item: {id: 'a', readme: '# Agent'}}).readme, agentKnowledge: wonderPlatformMarketplaceManifest.$run({resource: 'agents',
+              item: {id: 'a', knowledgeIds: ['finance', 'legal']}}).config.knowledge_bases,
+          knowledge: wonderPlatformMarketplaceManifest.$run({resource: 'knowledge', item: {id: 'k', name: 'י', desc: 'ת'}}),
+          agentUpdateHasReadme: 'readme' in wonderPlatformMarketplaceManifest.$run({resource: 'subagents', operation: 'update',
+            item: {id: 'a', readme: '# Agent'}})}}),
+    expectedResult: equals('%result%', asIs({
+        plugin: {
+          id: 'p',
+          display_name: 'פ',
+          description: 'ת',
+          hebrew_description: 'ת',
+          tags: [],
+          config: {skills: ['s'], tools: ['t']},
+          readme: ''
+        },
+        tool: {
+          id: 't',
+          display_name: 'כ',
+          description: 'ת',
+          hebrew_description: 'ת',
+          tool_type: 'code',
+          json_schema: {},
+          is_async: true,
+          tracable: true,
+          dedicated_tool_config: {},
+          code_files: []
+        },
+        agentCreateReadme: '# Agent',
+        agentKnowledge: ['finance','legal'],
+        knowledge: {id: 'k', display_name: 'י', description: 'ת', hebrew_description: 'ת', tags: []},
+        agentUpdateHasReadme: false
+    }))
+  })
+})
+
+Test('wonderPlatform.marketplaceSkillAssetManifest', {
+  impl: dataTest({
+    calculate: () => wonderPlatformMarketplaceManifest.$run({resource: 'skills', item: {id: 'skill-a', assets: [{
+      path: 'references/checklist.md', content_b64: 'IyBDaGVja2xpc3Q=', mime_type: 'text/markdown', size: 11}]}}),
+    expectedResult: equals('%assets%', asIs([
+        {path: 'references/checklist.md', content_b64: 'IyBDaGVja2xpc3Q=', mime_type: 'text/markdown'}
+    ]))
+  })
+})
+
+Test('wonderPlatform.marketplaceKnowledgeItem', {
+  impl: dataTest({
+    calculate: () => ({result: wonderPlatformMarketplaceItem.$run({resource: 'knowledge', item: {id: 'policies', display_name: 'נהלים',
+      description: 'Policies', contents: {data: [{id: 'doc-1', name: 'policy.pdf', size: '1024', status: 'ready'}]}}})}),
+    expectedResult: and(
+      equals('%result/knowledgeIds/length%', 0),
+      equals('%result/files/0/id%', 'doc-1'),
+      equals('%result/files/0/status%', 'ready')
+    )
   })
 })
 
@@ -227,7 +327,7 @@ Test('wonderPlatform.agentOsRun', {
   impl: dataTest({
     calculate: wonderPlatformAgentOsRun('Question', asIs({id: 'evidenceAgent', name: 'סוכן ראיות'}), 'session-1', {
       request: dsls.common.data.wonderPlatformAgentOsCapture()}),
-    expectedResult: and(equals('%text%', 'Grounded answer'), equals('%reportIds/0%', 'r1'), equals('%runId%', 'run-1'),
+    expectedResult: and(equals('%text%', 'Grounded answer'), equals('%runId%', 'run-1'),
       equals('%runtimeSteps/0/kind%', 'AgentOS'))
   })
 })
@@ -237,12 +337,11 @@ Test('wonderPlatform.seedShape', {
     calculate: () => {
       const repo = dsls.common.data.wonderPlatformSeed.$run()
       return {result: {plugins: repo.plugins.length, skills: repo.skills.length, tools: repo.tools.length, subagents: repo.subagents.length,
-        reports: repo.reports.length, evaluations: repo.evaluations.length, flowPackages: repo.flowPackages.length,
-        embeddedReports: repo.conversations[0].messages[1].reportIds.length, firstSkill: repo.skills[0].id,
+        evaluations: repo.evaluations.length, flowPackages: repo.flowPackages.length, firstSkill: repo.skills[0].id,
         skillWUrl: repo.skills[0].docletUrl}}
     },
-    expectedResult: equals('%result%', asIs({plugins: 4, skills: 4, tools: 6, subagents: 3, reports: 3, evaluations: 4,
-      flowPackages: 3, embeddedReports: 2, firstSkill: 'evidenceVerification',
+    expectedResult: equals('%result%', asIs({plugins: 4, skills: 4, tools: 6, subagents: 3, evaluations: 4,
+      flowPackages: 3, firstSkill: 'evidenceVerification',
       skillWUrl: 'room:minio//wonder-platform/doclets/evidenceVerification'}))
   })
 })
@@ -259,7 +358,7 @@ Test('wonderPlatform.migration', {
         evaluations: repo.evaluations.length, evalRuns: repo.evalRuns.length}}
     },
     expectedResult: equals('%result%', asIs({
-        version: 4,
+        version: 5,
         packageId: '4821037',
         managedKind: 'connector',
         skills: ['evidenceVerification','documentationGaps'],
@@ -293,10 +392,12 @@ Test('wonderPlatform.moduleContracts', {
       'data<common>wonderPlatformMarketplaceRequest', 'data<common>wonderPlatformMarketplaceCall',
       'data<common>wonderPlatformMarketplaceManifest', 'data<common>wonderPlatformMarketplaceItem',
       'data<common>wonderPlatformMarketplaceLoad', 'data<common>wonderPlatformMarketplaceRepository',
-      'data<common>wonderPlatformMarketplaceDetail', 'data<common>wonderPlatformAgentOsRequest', 'data<common>wonderPlatformAgentOsRun',
+      'data<common>wonderPlatformMarketplaceDetail', 'data<common>wonderPlatformFlapiPackage',
+      'data<common>wonderPlatformAgentOsRequest', 'data<common>wonderPlatformAgentOsRun',
       'workflow<ai>wonderPlatformAgent', 'react-comp<react>wonderPlatformNavigation', 'react-comp<react>wonderPlatformCatalog',
       'react-comp<react>wonderPlatformAttachPicker', 'react-comp<react>wonderPlatformResourceEditor',
-      'react-comp<react>wonderPlatformWorkspace', 'react-comp<react>wonderPlatformVerifiedReport', 'react-comp<react>wonderPlatformChat',
+      'react-comp<react>wonderPlatformWizard',
+      'react-comp<react>wonderPlatformWorkspace', 'react-comp<react>wonderPlatformChat',
       'react-comp<react>wonderPlatformEvaluation', 'react-comp<react>wonderPlatform'].every(id => coreUtils.compByFullId(id))}),
     expectedResult: equals('%result%', true)
   })
@@ -306,7 +407,7 @@ Test('wonderPlatform.minioRoundTrip', {
   nodeOnly: true,
   impl: dataTest({
     calculate: dsls.common.data.wonderPlatformRepositoryRoundTrip('room:minio//wonder-platform-test/tests/%$testSessionId%/assets'),
-    expectedResult: and(equals('%plugins/0/name%', 'אנליסט הוכחת קיום'), equals('%reports/length%', 3), equals('%flowPackages/length%', 3)),
+    expectedResult: and(equals('%plugins/0/name%', 'אנליסט הוכחת קיום'), equals('%flowPackages/length%', 3)),
     logger: 'dbLogger'
   })
 })
@@ -350,14 +451,16 @@ Test('wonderPlatform.wfetchApi', {
 })
 
 Test('wonderPlatform.pluginWorkspace', {
-  impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(), and(contains('חיבורי הפלאגין'), contains('הרצת ניסוי'),
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(), and(contains('חיבורים'), contains('הרצת ניסוי'),
     contains('סט אבלואציה מקושר')), {userActions: actions(waitForText('אנליסט הוכחת קיום'), click('אנליסט הוכחת קיום'),
-      waitForText('חיבורי הפלאגין'))})
+      waitForText('חיבורים'), click('הנחיות'), waitForText('סט אבלואציה מקושר'))})
 })
 
 Test('wonderPlatform.evaluationCatalog', {
-  impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(), and(contains('אימות טענות ומקורות'), contains('רשומות'), contains('טרם הורץ')), {
-    userActions: actions(waitForText('פלאגין חדש'), click('אבלואציה'), waitForText('אימות טענות ומקורות'))})
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(), and(
+    contains('הרצה חדשה'), contains('ספרייה'), contains('איזה סוכן רוצים לבדוק?')), {
+    userActions: actions(waitForText('פלאגין חדש'), click('אבלואציה'), waitForText('איזה סוכן רוצים לבדוק?')),
+    logger: 'uiLogger'})
 })
 
 Test('wonderPlatform.toolRules', {
@@ -371,61 +474,59 @@ Test('wonderPlatform.skillCatalog', {
       userActions: actions(waitForText('פלאגין חדש'), click('מיומנויות'), waitForText('הוכחת קיום — תהליך מלא'))})
 })
 
-Test('wonderPlatform.chatHistory', {
+Test('wonderPlatform.chatContextPanel', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(),
-    and(contains('שיחה מתמשכת'), contains('היסטוריית שיחות'), contains('דוח מאומת')), {
-    userActions: actions(waitForText('פלאגין חדש'), click('צ׳אט'), waitForText('שיחה מתמשכת'))})
-})
-
-Test('wonderPlatform.subagentWorkspace', {
-  impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(), and(contains('חיבורי הסאב-אייג׳נט'), contains('נסה את הסאב-אייג׳נט')), {
-    userActions: actions(waitForText('פלאגין חדש'), click('סאב-אייג׳נטים'), waitForText('מחלץ ישויות'), click('מחלץ ישויות'),
-      waitForText('חיבורי הסאב-אייג׳נט'))})
+    and(contains('הקשר השיחה'), contains('שיחה חופשית')), {
+    userActions: actions(waitForText('פלאגין חדש'), click('שיחה חדשה'), waitForText('הקשר השיחה'))})
 })
 
 Test('wonderPlatform.marketplacePluginWorkspace', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformMarketplaceTestApp(),
-    and(contains('README.md'), contains('Marketplace API'), contains('2 גרסאות'), contains('config.yaml')), {
-      userActions: actions(waitForText('פלאגין ראיות'), click('פלאגין ראיות'), waitForText('Marketplace API'))})
+    and(contains('Marketplace API'), contains('2 גרסאות'), contains('config.yaml'), contains('חיבורים')), {
+      userActions: actions(waitForText('פלאגין ראיות'), click('פלאגין ראיות'), waitForText('Marketplace API'),
+        click('הנחיות'), waitForText('README.md'), click('כללי'), waitForText('Marketplace API'))})
 })
 
 Test('wonderPlatform.marketplaceSkillEditor', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformMarketplaceTestApp(),
-    and(contains('min_agent_version'), contains('Assets'), contains('Marketplace API'), contains('SKILL.md')), {
+    and(contains('תוכן המיומנות'), contains('Assets'), contains('Drop files here or browse')), {
       userActions: actions(waitForText('פלאגין ראיות'), click('מיומנויות'), waitForText('מיומנות ראיות'), click('מיומנות ראיות'),
-        waitForText('Assets'))})
+        waitForText('Marketplace API'), click('תוכן המיומנות'), waitForText('SKILL.md'), click('Assets'),
+        waitForText('Drop files here or browse'))})
 })
 
 Test('wonderPlatform.marketplaceToolEditor', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformMarketplaceTestApp(),
-    and(contains('tool_type'), contains('tracable'), contains('Code files'), contains('dedicated_tool_config')), {
+    and(contains('חיפוש ראיות'), contains('Connector מנוהל'), notContains('tool_type'), notContains('Code files')), {
       userActions: actions(waitForText('פלאגין ראיות'), click('כלים'), waitForText('חיפוש ראיות'), click('חיפוש ראיות'),
-        waitForText('Code files'))})
+        waitForText('לא ניתן לעריכה'))})
 })
 
 Test('wonderPlatform.marketplaceAgentWorkspace', {
   impl: reactTest({
     testedComp: {$: 'react-comp<react>wonderPlatformMarketplaceTestApp'},
     expectedResult: and(
-      contains('Execution harness'),
-      contains('Agno · AgentOS'),
+      contains('חיבורים'),
       contains('פלאגינים'),
-      contains('סאב-אייג׳נטים')
+      contains('ידע')
     ),
     userActions: actions(
       waitForText('פלאגין ראיות'),
-      click('סאב-אייג׳נטים'),
-      waitForText('סוכן ראיות'),
-      click('סוכן ראיות'),
-      waitForText('Execution harness')
+      click('סוכנים'),
+      waitForText('סוכן תמיכת לקוחות B2B'),
+      click('סוכן תמיכת לקוחות B2B'),
+      waitForText('חיבורים'),
+      click('חיבורים'),
+      waitForText('הוספה'),
+      waitForText('פלאגינים')
     )
   })
 })
 
 Test('wonderPlatform.marketplaceAgentCreate', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformMarketplaceTestApp(), and(contains('README (creation only)'), contains('שמירה')), {
-    userActions: actions(waitForText('פלאגין ראיות'), click('סאב-אייג׳נטים'), waitForText('סוכן ראיות'), click('סאב-אייג׳נט חדש'),
-      waitForText('README (creation only)'))})
+    userActions: actions(waitForText('פלאגין ראיות'), click('סוכנים'), waitForText('סוכן חדש'), click('סוכן חדש'),
+      waitForText('הנחיות'), click('הנחיות'), waitForText('README (creation only)'))})
 })
 
 ReactComp('wonderPlatformChatTestHost', {
@@ -440,6 +541,24 @@ ReactComp('wonderPlatformVerificationHost', {
     const App = dsls.react['react-comp'].wonderPlatform.$runWithCtx(ctx, {roomWUrl: 'room:minio//wonder-platform-verification-v3'})
     return () => ctx.vars.react.h(App)
   }})
+})
+
+ReactComp('wonderPlatformWizardTestHost', {
+  impl: comp({hFunc: (ctx, {react: {h, hh, useState}}) => {
+    const Wizard = dsls.react['react-comp'].wonderPlatformWizard
+    return () => {
+      const [activeId, setActiveId] = useState('a')
+      return hh(ctx, Wizard, {steps: [{id: 'a', label: 'ראשון', render: () => h('p', {}, 'תוכן ראשון')},
+        {id: 'b', label: 'שני', render: () => h('p', {}, 'תוכן שני')},
+        {id: 'c', label: 'חסום', disabled: true, render: () => h('p', {}, 'לא רואים')}], activeId, onStep: setActiveId})
+    }
+  }})
+})
+
+Test('wonderPlatform.wizardShell', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformWizardTestHost(), and(contains('תוכן שני'),
+    notContains('תוכן ראשון'), notContains('לא רואים'), contains('חסום')), {
+    userActions: actions(waitForText('ראשון'), click('שני'), waitForText('תוכן שני'))})
 })
 Test('wonderPlatform.marketplaceWUrlInterceptor', {
   nodeOnly: true,
@@ -459,22 +578,28 @@ Test('wonderPlatform.marketplaceWUrlInterceptor', {
       })
       await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
       try {
-        const result = await dsls.common.data.wonderPlatformMarketplaceRequest.$runWithCtx(ctx, {
+        const skill = await dsls.common.data.wonderPlatformMarketplaceRequest.$runWithCtx(ctx, {
           method: 'PUT',
           wUrl: 'room://tenant-x/skills/skill-a?includeAssets=true',
           body: {skill_md: 'room scoped'},
           baseUrl: `http://127.0.0.1:${server.address().port}`
         })
-        return {result, ...coreUtils.harvestLogs(ctx)}
+        const knowledge = await dsls.common.data.wonderPlatformMarketplaceRequest.$runWithCtx(ctx, {
+          wUrl: 'room://tenant-x/knowledge/', baseUrl: `http://127.0.0.1:${server.address().port}`
+        })
+        return {result: {skill, knowledge}, ...coreUtils.harvestLogs(ctx)}
       } finally {
         await new Promise(resolve => server.close(resolve))
       }
     },
     expectedResult: equals('%result%', asIs({
-        path: '/api/v1/skills/skill-a?includeAssets=true',
-        room: 'tenant-x',
-        method: 'PUT',
-        body: {skill_md: 'room scoped'}
+        skill: {
+          path: '/api/v1/skills/skill-a?includeAssets=true',
+          room: 'tenant-x',
+          method: 'PUT',
+          body: {skill_md: 'room scoped'}
+        },
+        knowledge: {path: '/api/v1/knowledge/', room: 'tenant-x', method: 'GET', body: null}
     })),
     timeout: 10000,
     logger: 'marketplaceLogger'
@@ -532,17 +657,71 @@ UiAction('wonderPlatformWaitForButtonGone', {
     }
   })
 })
+UiAction('wonderPlatformUploadAsset', {
+  params: [
+    {id: 'name', as: 'string', mandatory: true},
+    {id: 'content', as: 'string', mandatory: true},
+    {id: 'mimeType', as: 'string', mandatory: true}
+  ],
+  impl: ({}, {}, {name, content, mimeType}) => ({
+    async exec({vars: {win}}) {
+      const input = win.document.querySelector('input[data-skill-assets]')
+      if (!input) throw new Error('Skill asset input unavailable')
+      Object.defineProperty(input, 'files', {configurable: true, value: [new win.File([content], name, {type: mimeType})]})
+      input.dispatchEvent(new win.Event('change', {bubbles: true}))
+      await win.waitForMutations(100)
+    }
+  })
+})
 
-const { wonderPlatformClickInSection, wonderPlatformSetControl, wonderPlatformWaitForButtonGone } = dsls.react['ui-action']
+const { wonderPlatformClickInSection, wonderPlatformSetControl, wonderPlatformUploadAsset, wonderPlatformWaitForButtonGone } =
+  dsls.react['ui-action']
+
+Test('wonderPlatform.navGuardPrompts', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformMarketplaceTestApp(),
+    and(contains('ארגז הכלים שעומד ברשות הסוכנים'), notContains('שינויים שלא נשמרו')), {
+      userActions: actions(waitForText('פלאגין ראיות'), click('מיומנויות'), waitForText('מיומנות ראיות'), click('מיומנות ראיות'),
+        waitForText('Marketplace API'),
+        wonderPlatformSetControl({selector: '[aria-label="display_name"]', value: 'מיומנות ששונתה'}),
+        click('כלים'), waitForText('שינויים שלא נשמרו'), click('עזיבה בלי שמירה'),
+        waitForText('ארגז הכלים שעומד ברשות הסוכנים'))})
+})
+
+Test('wonderPlatform.flowToolWizard', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformMarketplaceTestApp(),
+    and(contains('קוביות פלט'), contains('Orders Cube'), contains('פרמטרים'), notContains('טעינת מארז')), {
+      userActions: actions(waitForText('פלאגין ראיות'), click('כלים'), waitForText('כלי ממארז Flow'),
+        click('כלי ממארז Flow'), waitForText('טעינת מארז'), wonderPlatformSetControl('id', {value: '7'}),
+        click('טעינת מארז'), waitForText('E-commerce Analytics'), click('פרמטרים'), waitForText('Category'),
+        click('קוביות פלט'), waitForText('בחר קוביות פלט'), click('בחר קוביות פלט'), click('Orders Cube'))})
+})
+
+Test('wonderPlatform.marketplaceSkillAssetUpload', {
+  impl: reactTest(wonderPlatformMarketplaceTestApp(), and(contains('checklist.md'), contains('text/markdown')), {
+    userActions: actions(
+      waitForText('פלאגין ראיות'),
+      click('מיומנויות'),
+      waitForText('מיומנות ראיות'),
+      click('מיומנות ראיות'),
+      waitForText('כללי'),
+      click('Assets'),
+      waitForText('Drop files here or browse'),
+      wonderPlatformUploadAsset('checklist.md', '# Checklist', { mimeType: 'text/markdown' }),
+      waitForText('checklist.md')
+    )
+  })
+})
 
 Test('wonderPlatform.workspaceSavesOnlyFromButton', {
   impl: reactTest(wonderPlatformTestApp(), contains('פלאגין שנשמר'), {
     userActions: actions(
       waitForText('אנליסט הוכחת קיום'),
       click('אנליסט הוכחת קיום'),
-      waitForText('חיבורי הפלאגין'),
+      waitForText('חיבורים'),
       wonderPlatformSetControl({selector: '[aria-label="display_name"]', value: 'טיוטה שלא נשמרה'}),
       click('aria-label="חזרה לפלאגינים"'),
+      waitForText('שינויים שלא נשמרו'),
+      click('עזיבה בלי שמירה'),
       waitForText('אנליסט הוכחת קיום'),
       click('אנליסט הוכחת קיום'),
       wonderPlatformSetControl({selector: '[aria-label="display_name"]', value: 'פלאגין שנשמר'}),
@@ -561,9 +740,11 @@ Test('wonderPlatform.marketplaceAgentCreateRelations', {
     expectedResult: and(contains('מיומנות ראיות'), contains('פלאגין ראיות'), contains('שמירה')),
     userActions: actions(
       waitForText('פלאגין ראיות'),
-      click('סאב-אייג׳נטים'),
-      waitForText('סוכן ראיות'),
-      click('סאב-אייג׳נט חדש'),
+      click('סוכנים'),
+      waitForText('סוכן חדש'),
+      click('סוכן חדש'),
+      waitForText('חיבורים'),
+      click('חיבורים'),
       wonderPlatformClickInSection('מיומנויות', 'הוספה'),
       waitForText('אישור בחירה'),
       click('מיומנות ראיות'),
@@ -580,15 +761,17 @@ Test('wonderPlatform.marketplaceAgentCreateRelations', {
 })
 
 Test('wonderPlatform.chatRunsSelectedAgent', {
-  impl: reactTest(wonderPlatformAgentChatTestApp(), contains('AGNO_AGENT:a2'), {
+  impl: reactTest(wonderPlatformAgentChatTestApp(), contains('AGNO_AGENT:ag1'), {
     userActions: actions(
       waitForText('פלאגין חדש'),
-      click('צ׳אט'),
-      waitForText('מחלץ ישויות'),
-      wonderPlatformSetControl({ selector: '[data-testid="agent-selector"]', value: 'a2' }),
-      wonderPlatformSetControl({ placeholder: 'כתוב הודעה לסוכן', value: 'Question' }),
+      click('שיחה חדשה'),
+      waitForText('הקשר השיחה'),
+      click('בחר סוכן'),
+      waitForText('סוכן תמיכת לקוחות B2B'),
+      click('סוכן תמיכת לקוחות B2B'),
+      wonderPlatformSetControl({ placeholder: 'כתוב הודעה…', value: 'Question' }),
       click('aria-label="שליחה"'),
-      waitForText('AGNO_AGENT:a2')
+      waitForText('AGNO_AGENT:ag1')
     ),
     logger: 'uiLogger'
   })
@@ -639,6 +822,7 @@ Test('wonderPlatform.marketplaceUiAgentE2e', {
       click('פלאגין חדש'),
       wonderPlatformSetControl('id', { value: 'e2ePlugin' }),
       wonderPlatformSetControl({ selector: '[aria-label="display_name"]', value: 'E2E Plugin' }),
+      click('חיבורים'),
       wonderPlatformClickInSection('מיומנויות', 'הוספה'),
       waitForText('E2E Skill'),
       click('E2E Skill'),
@@ -654,14 +838,19 @@ Test('wonderPlatform.marketplaceUiAgentE2e', {
       click('סאב-אייג׳נטים'),
       waitForText('סאב-אייג׳נט חדש'),
       click('סאב-אייג׳נט חדש'),
+      click('הנחיות'),
       waitForText('README (creation only)'),
       wonderPlatformSetControl({ selector: '[aria-label="display_name"]', value: 'E2E Agent' }),
+      click('כללי'),
       wonderPlatformSetControl('id', { value: 'e2eAgent' }),
+      click('הנחיות'),
       wonderPlatformSetControl('system_prompt', {
         value: 'Use the attached plugin. Return its skill fact and exact tool result.'
       }),
       click('aria-label="שמירת סביבת עבודה"'),
+      click('כללי'),
       waitForText('Marketplace API'),
+      click('חיבורים'),
       wonderPlatformClickInSection('פלאגינים', 'הוספה'),
       waitForText('E2E Plugin'),
       click('E2E Plugin'),

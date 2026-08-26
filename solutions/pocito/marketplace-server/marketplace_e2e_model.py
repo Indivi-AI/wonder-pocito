@@ -1,6 +1,9 @@
 import json
+import hashlib
+import math
 import re
 
+from agno.knowledge.embedder.base import Embedder
 from agno.models.base import Model
 from agno.models.response import ModelResponse
 
@@ -19,6 +22,10 @@ class MarketplaceE2EModel(Model):
         results = [message.get_content_string() for message in messages if message.role == 'tool']
         functions = {item['function']['name']: item['function'] for item in tools or [] if item.get('type') == 'function'}
         system = '\n'.join(message.get_content_string() for message in messages if message.role == 'system')
+        knowledge = functions.get('search_knowledge_base')
+        if knowledge and not results:
+            query = next(message.get_content_string() for message in reversed(messages) if message.role == 'user')
+            return self.call('search_knowledge_base', {'query': query}, 'knowledge')
         skill = re.search(r'<skill>.*?<name>(.*?)</name>', system, re.S)
         if not results and skill:
             return self.call('get_skill_instructions', {'skill_name': skill.group(1)}, 'skill')
@@ -51,3 +58,18 @@ class MarketplaceE2EModel(Model):
 
 def model_factory(_):
     return MarketplaceE2EModel()
+
+
+class MarketplaceE2EEmbedder(Embedder):
+    def __init__(self):
+        super().__init__(dimensions=64)
+
+    def get_embedding(self, text):
+        vector = [0.0] * self.dimensions
+        for word in re.findall(r'\w+', text.lower()):
+            vector[int(hashlib.sha256(word.encode()).hexdigest(), 16) % self.dimensions] += 1
+        norm = math.sqrt(sum(value * value for value in vector)) or 1
+        return [value / norm for value in vector]
+
+    def get_embedding_and_usage(self, text):
+        return self.get_embedding(text), None
