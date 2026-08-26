@@ -6,46 +6,79 @@ import './wonder-platform-searchable-select.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
+const wonderPlatformChatContextRows = [['pluginIds', 'plugins', 'פלאגינים'], ['skillIds', 'skills', 'מיומנויות'],
+  ['toolIds', 'tools', 'כלים'], ['knowledgeIds', 'knowledge', 'ידע']]
+
 ReactComp('wonderPlatformChatContext', {
   impl: comp({
-    hFunc: (ctx, {react: {h, hh, useState}}) => ({repo, conversation, selectAgent, setContext}) => {
-      const rows = [['pluginIds', 'plugins', 'פלאגינים'], ['skillIds', 'skills', 'מיומנויות'],
-        ['toolIds', 'tools', 'כלים'], ['knowledgeIds', 'knowledge', 'ידע']]
+    hFunc: (ctx, {react: {h, hh, useState}}) => ({repo, conversation, selectAgent, setContext, locked}) => {
       const [closed, setClosed] = useState('')
       const select = props => hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {bare: true, tall: true, ...props})
+      const agent = repo.agents.find(item => item.id == conversation?.agentId)
+      const chipClass = dsls.common.data.wonderPlatformUi.$run().classes.chip
       const section = (id, label, body) => h('div:mb-3', {key: id},
         h(`button:flex w-full items-center justify-between border-b border-[#e8e8ea] py-1.5 text-base font-semibold text-[#0f0f10]`,
           {onClick: () => setClosed(closed == id ? '' : id)}, label,
           h(`L:${closed == id ? 'ChevronDown' : 'ChevronUp'}`, {size: 16})),
         closed != id && h('div:pt-2', {}, body))
+      const chips = (id, label, names) => h('div:mb-3', {key: id},
+        h('div:border-b border-[#e8e8ea] pb-1.5 text-base font-semibold text-[#0f0f10]', {}, label),
+        h('div:flex flex-wrap gap-1.5 pt-2', {}, names.length
+          ? names.map(name => h(`span:${chipClass}`, {key: name}, name)) : h('span:text-[12px] text-[#6b7280]', {}, 'ללא')))
       return h('aside:hidden w-[260px] shrink-0 overflow-y-auto bg-white px-4 py-5 shadow-[-8px_0_24px_rgba(0,0,0,0.07)] lg:block', {},
         h('div:mb-5 text-[13px] font-semibold text-[#0f0f10]', {}, 'הקשר השיחה'),
-        section('agent', 'סוכן', select({items: repo.agents, value: conversation?.agentId || '', onChange: selectAgent,
-          placeholder: 'בחר סוכן', empty: 'ללא סוכן', testId: 'agent-selector'})),
-        rows.map(([field, resource, label]) => section(field, label,
-          select({items: repo[resource], multi: true, value: conversation?.[field] || [],
-            onChange: value => setContext(field, value), placeholder: `בחר ${label}`}))),
-        h('p:mt-2 text-[11px] leading-5 text-[#6b7280]', {},
-          'הסוכן והנכסים שנבחרו מהווים את ההקשר שנשלח בכל פנייה בשיחה זו.'))
+        locked
+          ? [chips('agent', 'סוכן', agent ? [agent.name] : []),
+              wonderPlatformChatContextRows.map(([field, resource, label]) => chips(field, label,
+                (conversation?.[field] || []).map(id => repo[resource].find(item => item.id == id)?.name || id)))]
+          : [section('agent', 'סוכן', select({items: repo.agents, value: conversation?.agentId || '', onChange: selectAgent,
+              placeholder: 'בחר סוכן', empty: 'ללא סוכן', testId: 'agent-selector'})),
+              wonderPlatformChatContextRows.map(([field, resource, label]) => section(field, label,
+                select({items: repo[resource], multi: true, value: conversation?.[field] || [],
+                  onChange: value => setContext(field, value), placeholder: `בחר ${label}`})))],
+        h('p:mt-2 text-[11px] leading-5 text-[#6b7280]', {}, locked
+          ? 'ההקשר ננעל כשהשיחה התחילה. פתחו שיחה חדשה כדי לשנות אותו.'
+          : 'הסוכן והנכסים שנבחרו מהווים את ההקשר שנשלח בכל פנייה בשיחה זו.'))
+    }
+  })
+})
+
+ReactComp('wonderPlatformChatContextBoard', {
+  impl: comp({
+    hFunc: (ctx, {react: {h, hh}}) => ({repo, conversation, selectAgent, setContext}) => {
+      const agent = repo.agents.find(item => item.id == conversation?.agentId)
+      const slot = (key, label, filled, body) => h('div:flex min-h-[92px] flex-col items-center justify-center gap-2 ' +
+        `rounded-[14px] border p-3 text-center ${filled ? 'border-[#d8d8dc] bg-[#f4f4f5]' : 'border-dashed border-[#d8d8dc] bg-white'}`,
+        {key}, h('span:text-[12px] font-medium text-[#2e2e2e]', {}, label), body)
+      return h('div:flex w-full max-w-lg flex-col items-center gap-5 text-center', {},
+        h('div', {}, h('h2:text-[15px] font-semibold text-[#0f0f10]', {}, 'הקשר השיחה'),
+          h('p:mt-1 text-[12px] text-[#6b7280]', {}, 'כולם אופציונליים')),
+        h('div:grid w-full grid-cols-3 gap-3', {},
+          slot('agent', 'סוכן', !!agent, hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {bare: true,
+            items: repo.agents, value: conversation?.agentId || '', onChange: selectAgent, placeholder: '+ הוספה',
+            empty: 'ללא סוכן', testId: 'agent-selector-board'})),
+          wonderPlatformChatContextRows.map(([field, resource, label]) => slot(field, label,
+            (conversation?.[field] || []).length > 0, hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {bare: true,
+              multi: true, items: repo[resource], value: conversation?.[field] || [],
+              onChange: value => setContext(field, value), placeholder: '+ הוספה'})))))
     }
   })
 })
 
 ReactComp('wonderPlatformChatComposer', {
   impl: comp({
-    hFunc: (ctx, {react: {h, useEffect, useRef}}) => ({message, setMessage, busy, ready, send}) => {
+    hFunc: (ctx, {react: {h, useEffect, useRef}}) => ({message, setMessage, busy, send}) => {
       const ref = useRef(), submit = () => message.trim() && !busy && send()
       useEffect(() => { if (ref.current) ref.current.style.height = 'auto', ref.current.style.height = `${Math.min(ref.current.scrollHeight, 144)}px` }, [message])
       return h('div:px-5 py-4', {}, h('div:mx-auto flex max-w-3xl items-end gap-2 rounded-[12px] ' +
         'border border-[#e8e8ea] bg-white p-2 shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-colors ' +
         'focus-within:border-[#c9c9ce]', {},
       h('textarea:min-h-10 flex-1 resize-none px-2 py-1.5 text-[13px] outline-none placeholder:text-[#6b7280]', {ref, rows: 1,
-        value: message, disabled: !ready, 'data-testid': 'chat-input',
-        placeholder: ready ? 'כתוב הודעה…' : 'בחרו סוכן כדי להתחיל',
+        value: message, 'data-testid': 'chat-input', placeholder: 'שאלו כל דבר…',
         onInput: event => setMessage(event.target.value),
         onKeyDown: event => event.key == 'Enter' && !event.shiftKey && (event.preventDefault(), submit())}),
       h('button:grid h-8 w-8 shrink-0 place-items-center rounded-[8px] bg-[#0f0f10] text-white transition-opacity ' +
-        'hover:opacity-85 disabled:opacity-25', {disabled: !message.trim() || busy || !ready, onClick: submit,
+        'hover:opacity-85 disabled:opacity-25', {disabled: !message.trim() || busy, onClick: submit,
         'aria-label': 'שליחה'}, h('L:ArrowUp', {size: 15}))))
     }
   })
@@ -60,14 +93,11 @@ ReactComp('wonderPlatformChat', {
       const agent = repo.agents.find(item => item.id == conversation?.agentId)
       const opikUrl = conversation?.messages.filter(item => item.opikUrl).at(-1)?.opikUrl
       const statusText = status => wonderPlatformRunStatusLabel[String(status).toLowerCase()] || status || 'הושלם'
+      const locked = conversation?.messages.length > 0
       const starterPrompts = agent && [agent.desc, `איך אתה יכול לעזור לי, ${agent.name}?`,
         `תן לי דוגמה לשאלה שאפשר לשאול את ${agent.name}`]
-      const empty = h('div:flex w-full max-w-sm flex-col items-center gap-4 text-center', {},
-        h('div:grid h-11 w-11 place-items-center rounded-full bg-[#f4f4f5] text-[#6b6b6f]', {}, h('L:Bot', {size: 20})),
-        h('h2:text-[15px] font-semibold text-[#0f0f10]', {}, 'בחרו סוכן כדי להתחיל שיחה'),
-        h('div:w-full', {}, hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {items: repo.agents,
-          value: conversation?.agentId || '', onChange: selectAgent, placeholder: 'בחר סוכן', empty: 'ללא סוכן',
-          testId: 'agent-selector-canvas'})),
+      const board = h('div:flex w-full max-w-lg flex-col items-center gap-6', {},
+        hh(ctx, dsls.react['react-comp'].wonderPlatformChatContextBoard, {repo, conversation, selectAgent, setContext}),
         starterPrompts && h('div:mt-1 flex w-full flex-col gap-2', {},
           starterPrompts.map(prompt => h('button:rounded-[10px] border border-[#e8e8ea] bg-white px-3.5 py-2.5 ' +
             'text-[12px] leading-5 text-[#2e2e2e] transition-colors hover:border-[#d8d8dc] hover:bg-[#fafafa]',
@@ -99,9 +129,9 @@ ReactComp('wonderPlatformChat', {
             opikUrl && h('a:shrink-0 text-[12px] text-[#2e2e2e]', {href: opikUrl}, 'ה-trace המלא ב-Opik ↗')),
           h('div:flex-1 overflow-y-auto overflow-x-hidden', {},
             conversation?.messages.length || busy ? messages
-              : h('div:mx-auto flex h-full max-w-3xl items-center justify-center px-5 py-8', {}, empty)),
-          hh(ctx, dsls.react['react-comp'].wonderPlatformChatComposer, {message, setMessage, busy, ready: !!agent, send})),
-        hh(ctx, dsls.react['react-comp'].wonderPlatformChatContext, {repo, conversation, selectAgent, setContext})))
+              : h('div:mx-auto flex h-full max-w-3xl items-center justify-center px-5 py-8', {}, board)),
+          hh(ctx, dsls.react['react-comp'].wonderPlatformChatComposer, {message, setMessage, busy, send})),
+        hh(ctx, dsls.react['react-comp'].wonderPlatformChatContext, {repo, conversation, selectAgent, setContext, locked})))
     }
   })
 })

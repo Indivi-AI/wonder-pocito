@@ -53,24 +53,29 @@ Data('wonderPlatformAgentWUrlResponse', {
     {id: 'resolveAgnoBase', dynamic: true, defaultValue: wonderPlatformAgnoApiBase('%$agnoBaseUrl%')}
   ],
   impl: async (ctx, {}, {url, fileName, opts, baseUrl, agnoBaseUrl, resolveApiBase, resolveAgnoBase}) => {
-    const match = String(fileName).match(/^agent\/([^/]+)$/)
-    if (!match) return
+    const match = String(fileName).match(/^agent\/([^/]+)$/), adhoc = fileName == 'adhoc/runs'
+    if (!match && !adhoc) return
     const method = (opts.method || 'GET').toUpperCase(), harness = new URL(url).searchParams.get('harness')
+    const agentId = match && decodeURIComponent(match[1])
     const json = (payload, status = 200) => {
-      ctx.vars.agentLogger?.info?.({t: 'agentWUrl', harness, agentId, method, status}, {}, {ctx})
+      ctx.vars.agentLogger?.info?.({t: 'agentWUrl', harness, agentId, adhoc, method, status}, {}, {ctx})
       return new Response(JSON.stringify(payload), {status, headers: {'content-type': 'application/json'}})
     }
-    const agentId = decodeURIComponent(match[1])
     if (harness != 'agno') return json({detail: 'harness must be agno'}, 400)
-    if (!['GET', 'POST'].includes(method)) return json({detail: `Method ${method} not allowed`}, 405)
-    const apiBase = method == 'GET' ? resolveApiBase(ctx.setVars({baseUrl})) : resolveAgnoBase(ctx.setVars({agnoBaseUrl}))
-    const apiPath = method == 'GET' ? `/api/v1/agents/${encodeURIComponent(agentId)}`
+    if (adhoc ? method != 'POST' : !['GET', 'POST'].includes(method)) return json({detail: `Method ${method} not allowed`}, 405)
+    const apiBase = adhoc || method == 'POST' ? resolveAgnoBase(ctx.setVars({agnoBaseUrl})) : resolveApiBase(ctx.setVars({baseUrl}))
+    const apiPath = adhoc ? '/adhoc/runs' : method == 'GET' ? `/api/v1/agents/${encodeURIComponent(agentId)}`
       : `/agents/${encodeURIComponent(agentId)}/runs`
     const headers = new Headers(opts.headers || {})
     headers.delete('content-type')
     headers.set('x-wonder-room', ctx.vars.roomId)
     let body, sessionId
-    if (method == 'POST') {
+    if (adhoc) {
+      const input = opts.body || {}
+      if (!String(input.message || '').trim()) return json({detail: 'message is required'}, 422)
+      headers.set('content-type', 'application/json')
+      body = JSON.stringify(input)
+    } else if (method == 'POST') {
       const input = opts.body || {}
       if (!String(input.message || '').trim()) return json({detail: 'message is required'}, 422)
       sessionId = input.sessionId || `${agentId}-${Date.now()}`
@@ -80,7 +85,7 @@ Data('wonderPlatformAgentWUrlResponse', {
     }
     const upstream = await fetch(`${apiBase}${apiPath}`, {method, headers, ...(body ? {body} : {})})
     if (!upstream.ok) return upstream
-    return json({...(await upstream.json()), harness, agentId, ...(method == 'POST' ? {sessionId} : {})}, upstream.status)
+    return json({...(await upstream.json()), harness, ...(agentId ? {agentId} : {}), ...(sessionId ? {sessionId} : {})}, upstream.status)
   }
 })
 Data('wonderPlatformAgentWUrlRequest', {
@@ -169,6 +174,62 @@ Data('wonderPlatformRunAgent', {
       runId: run.run_id || run.runId, sessionId: run.sessionId,
       opikUrl: run.opik_url || run.trace_url,
       runtimeSteps: [{kind: 'AgentOS', title: target.name, runtime: true}]
+    }
+  }
+})
+
+Data('wonderPlatformAdhocRunRequest', {
+  params: [
+    {id: 'message', as: 'string', mandatory: true},
+    {id: 'sessionId', as: 'string'},
+    {id: 'skillIds', as: 'array', defaultValue: []},
+    {id: 'toolIds', as: 'array', defaultValue: []},
+    {id: 'knowledgeIds', as: 'array', defaultValue: []},
+    {id: 'pluginIds', as: 'array', defaultValue: []},
+    {id: 'roomWUrl', as: 'string', defaultValue: 'room://wonder-platform'},
+    {id: 'baseUrl', as: 'string'},
+    {id: 'token', as: 'string'}
+  ],
+  impl: async (ctx, {}, {message, sessionId, skillIds, toolIds, knowledgeIds, pluginIds, roomWUrl, baseUrl, token}) => {
+    const wUrl = `${roomWUrl.replace(/\/$/, '')}/adhoc/runs?harness=agno`
+    const response = await jb.wonderUtils.wfetch2(wUrl, {
+      method: 'POST', headers: token ? {Authorization: `Bearer ${token}`} : {},
+      body: {message, session_id: sessionId, skills: skillIds, tools: toolIds, knowledge: knowledgeIds, plugins: pluginIds}
+    }, ctx.setVars({marketplaceBaseUrl: baseUrl, agnoBaseUrl: baseUrl}))
+    if (!response.ok) throw new Error(`Adhoc run ${response.status}: ${await response.text()}`)
+    return response.json()
+  }
+})
+
+const { wonderPlatformAdhocRunRequest } = dsls.common.data
+Data('wonderPlatformRunAdhoc', {
+  params: [
+    {id: 'text', as: 'string', mandatory: true},
+    {id: 'conversation', as: 'object', mandatory: true},
+    {id: 'sessionId', as: 'string'},
+    {id: 'roomWUrl', as: 'string', defaultValue: 'room://wonder-platform'},
+    {id: 'baseUrl', as: 'string'},
+    {id: 'token', as: 'string'},
+    {id: 'request', dynamic: true, defaultValue: wonderPlatformAdhocRunRequest('%$text%', {
+      sessionId: '%$sessionId%',
+      skillIds: '%$conversation/skillIds%',
+      toolIds: '%$conversation/toolIds%',
+      knowledgeIds: '%$conversation/knowledgeIds%',
+      pluginIds: '%$conversation/pluginIds%',
+      roomWUrl: '%$roomWUrl%',
+      baseUrl: '%$baseUrl%',
+      token: '%$token%'
+    })}
+  ],
+  impl: async (ctx, {}, {text, conversation, sessionId, roomWUrl, baseUrl, token, request}) => {
+    const startedAt = Date.now(), run = await request(ctx.setVars({text, conversation, sessionId, roomWUrl, baseUrl, token}))
+    return {
+      harness: 'agno', text: dsls.common.data.wonderPlatformAgentContent.$run(run.content),
+      status: String(run.status || '').toLowerCase().includes('fail') ? 'נכשל' : 'הושלם',
+      duration: `${Math.max(1, Math.round((Date.now() - startedAt) / 1000))} שנ׳`,
+      runId: run.run_id || run.runId, sessionId: run.session_id || run.sessionId,
+      opikUrl: run.opik_url || run.trace_url,
+      runtimeSteps: [{kind: 'AgentOS', title: 'הרצה ללא סוכן', runtime: true}]
     }
   }
 })

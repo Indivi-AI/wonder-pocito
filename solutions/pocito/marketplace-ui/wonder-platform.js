@@ -8,7 +8,7 @@ import './wonder-platform-resource-page.js'
 import './evaluation-page.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
-const { wonderPlatformRunAgent, wonderPlatformListSkills, wonderPlatformLoadSkill, wonderPlatformMarketplaceCall,
+const { wonderPlatformRunAgent, wonderPlatformRunAdhoc, wonderPlatformListSkills, wonderPlatformLoadSkill, wonderPlatformMarketplaceCall,
   wonderPlatformFlapiPackage, wonderPlatformMarketplaceDetail, wonderPlatformMarketplaceManifest, wonderPlatformMarketplaceRepository,
   wonderPlatformPublishSkill, wonderPlatformSaveRepository, wonderPlatformUpsert } = dsls.common.data
 
@@ -45,13 +45,19 @@ ReactComp('wonderPlatform', {
       roomWUrl: '%$roomWUrl%',
       baseUrl: '%$agentOsBaseUrl%',
       token: '%$agentOsToken%'
+    })},
+    {id: 'runAdhoc', dynamic: true, defaultValue: wonderPlatformRunAdhoc('%$text%', '%$conversation%', {
+      sessionId: '%$sessionId%',
+      roomWUrl: '%$roomWUrl%',
+      baseUrl: '%$agentOsBaseUrl%',
+      token: '%$agentOsToken%'
     })}
   ],
   impl: comp({
     hFunc: (ctx, {react: {h, hh, useEffect, useState, useRef}},
       {roomWUrl, marketplaceBaseUrl, agentOsBaseUrl, agentOsToken, defaultView, brand, brandTagline, brandIcon, extraPrimaryNav,
         extraLibraryNav, loadRepo, saveRepo, loadPackage, upsert, loadSkill, listSkills, publishSkill,
-        marketplaceCall, marketplaceDetail, manifest, runAgent}) => () => {
+        marketplaceCall, marketplaceDetail, manifest, runAgent, runAdhoc}) => () => {
       const repositoryRoomWUrl = ctx.vars.roomWUrl || roomWUrl, marketplaceUrl = ctx.vars.marketplaceBaseUrl || marketplaceBaseUrl
       const agentUrl = ctx.vars.agentOsBaseUrl || agentOsBaseUrl, token = ctx.vars.agentOsToken || agentOsToken
       const config = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx), [view, setView] = useState(defaultView)
@@ -240,14 +246,15 @@ ReactComp('wonderPlatform', {
       const setContext = (field, value) => updateConversation({...conversation, [field]: value})
       const send = async () => {
         const text = message.trim(), agent = repo.agents.find(item => item.id == conversation?.agentId)
-        if (!text || busy || !agent) return
+        if (!text || busy) return
         setMessage(''); setBusy(true)
         const pending = {...conversation, title: conversation.messages.length ? conversation.title : text.slice(0, 42), when: 'עכשיו',
           messages: [...conversation.messages, {id: `m-${Date.now()}`, role: 'user', text}]}
         await updateConversation(pending)
         try {
-          const result = await runTarget(text, agent, conversation.id)
-          const steps = [...dsls.common.data.wonderPlatformTrace.$runWithCtx(ctx, {repo, target: agent}), ...(result.runtimeSteps || [])]
+          const result = agent ? await runTarget(text, agent, conversation.id) : await runAdhoc(ctx.setVars({text, conversation,
+            sessionId: conversation.id, roomWUrl: repositoryRoomWUrl, agentOsBaseUrl: agentUrl, agentOsToken: token}))
+          const steps = [...dsls.common.data.wonderPlatformTrace.$runWithCtx(ctx, {repo, target: agent || conversation}), ...(result.runtimeSteps || [])]
           await updateConversation({...pending, messages: [...pending.messages, {...result, id: `m-${Date.now() + 1}`, role: 'agent',
             text: result.text || result.output, steps}]})
         } catch (error) {
