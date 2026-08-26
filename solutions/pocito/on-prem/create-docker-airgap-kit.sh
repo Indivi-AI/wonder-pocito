@@ -19,7 +19,7 @@ done
 
 mkdir -p "$out"
 cp solutions/pocito/on-prem/{docker-compose.yml,compose.airgap.yml,sim-check.sh,docker-up.sh} "$out/"
-cp solutions/pocito/on-prem/.env.site.template "$out/.env.example"
+sed "/^IMAGE_TAG=/d;/build-images.sh output/d" solutions/pocito/on-prem/.env.site.template > "$out/.env.example"   # manifest.env supplies IMAGE_TAG
 cp solutions/pocito/on-prem/llm-lite-config.template.yaml "$out/llm-lite-config.example.yaml"
 cp solutions/pocito/on-prem/helm/wonder/files/minio-init.py "$out/"
 git bundle create "$out/wonder.bundle" HEAD "refs/heads/$branch"
