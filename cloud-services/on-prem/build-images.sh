@@ -6,8 +6,10 @@ cd "$(git rev-parse --show-toplevel)"
 PLATFORM="${PLATFORM:-linux/amd64}"   # the SITE's architecture, not the build machine's (mac arm builds still target amd64 sites)
 STAMP="$(date +%d-%m-%Y-%H-%M)-$(git rev-parse --short=7 HEAD)"
 if [[ "${1:-}" == --base ]]; then
-  docker build --platform "$PLATFORM" -f cloud-services/wonder-base.docker -t wonder-server-base:latest .
-  docker build --platform "$PLATFORM" -f cloud-services/on-prem/marketplace-server-base.docker -t marketplace-server-base:latest solutions/pocito/marketplace-server
+  docker build --platform "$PLATFORM" --network=host -f cloud-services/on-prem/wonder-server-base.docker -t wonder-server-base:latest .
+  docker build --platform "$PLATFORM" --network=host -f cloud-services/on-prem/marketplace-server-base.docker \
+    -t marketplace-server-base:latest solutions/pocito/marketplace-server
+  docker build --platform "$PLATFORM" --network=host -f cloud-services/on-prem/llm-lite.docker -t wonder-llm-lite:1.98.0 .
 fi
 docker build --platform "$PLATFORM" --network=none -f cloud-services/on-prem/wonder-server.docker -t "wonder-server:$STAMP" .
 docker build --platform "$PLATFORM" --network=none -f cloud-services/on-prem/marketplace-server.docker -t "marketplace-server:$STAMP" solutions/pocito/marketplace-server

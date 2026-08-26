@@ -1,0 +1,12 @@
+FROM node:24.3-bookworm AS dependencies
+WORKDIR /usr/src/app
+COPY package.json package-lock.json ./
+RUN npm ci && rm -rf node_modules/playwright node_modules/playwright-core
+
+FROM node:24.3-bookworm-slim
+WORKDIR /usr/src/app
+RUN apt-get update && apt-get install -y --no-install-recommends fontconfig fonts-liberation fonts-noto-core git \
+  && rm -rf /var/lib/apt/lists/*
+ENV IN_DOCKER=true
+COPY package.json package-lock.json ./
+COPY --from=dependencies /usr/src/app/node_modules ./node_modules
