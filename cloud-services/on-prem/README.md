@@ -1,7 +1,7 @@
 # Wonder on-prem — build outside, whiten, run inside
 
-Images are built OUTSIDE the gap and carry code + deps only — no `.env` is ever baked. One `docker-compose.yml` runs
-the outside sim and the site stack (and mirrors what OpenShift deploys); every site fact lives in `.env.site`
+Images are built OUTSIDE the gap and carry code + deps only — no `.env` is ever baked. Docker Compose runs the machine-local stack; the Helm
+chart deploys the same images and configuration to local Kubernetes or OpenShift. Every site fact lives in `.env.site`
 (copy `.env.site.template`, gitignored, one copy per machine). All communication — browsers and service-to-service
 alike — crosses the host at `SITE_HOST:<published port>`; there is no internal docker network, so nothing can depend
 on an address browsers cannot reach (presigned S3 urls included). Containers resolve `SITE_HOST` back to the host via
@@ -39,9 +39,21 @@ git bundle create wonder.bundle HEAD <branch>          # source: enables in-gap 
 sha256sum wonder-images.tar.gz wonder.bundle > SHA256SUMS
 ```
 
-Kit = the images tar + `wonder.bundle` + this directory (compose files, dockerfiles, `llm-lite-config.yaml`,
+Kit = the images tar + `wonder.bundle` + this directory (compose files, dockerfiles, Helm chart,
 `.env.site.template`, scripts). `export-airgap.sh` still builds the legacy bare-process kit (bundle + runtime image +
 `node_modules` tarball) when needed.
+
+## Local Kubernetes and OpenShift
+
+`helm/wonder` is one chart with explicit `platform: kubernetes|openshift` variants. The Kubernetes variant renders an Ingress and optional
+MinIO; the OpenShift variant renders Routes, requires digest-pinned images, and uses the site's object store. On an outside Mac with kind:
+
+```sh
+PLATFORM=linux/arm64 ./build-images.sh --base
+PLATFORM=linux/arm64 ./build-images.sh
+./local-k8s-up.sh <IMAGE_TAG>
+./local-k8s-check.sh
+```
 
 ## Inside: deploy and iterate
 
@@ -65,8 +77,8 @@ keys become ConfigMap/Secret entries.
 
 Site LiteLLM config: put the site's own yaml at `llm-lite-site.yaml` next to `.env.site` (gitignored; include it in
 the whitening kit) and set `LLM_LITE_CONFIG=./llm-lite-site.yaml`. Any `os.environ/KEY` it references goes into
-`.env.site`; if it pins its own `master_key`, `LLM_PROXY_KEY` must equal it, and `LLM_MODEL`/`OPENAI_MODEL` must name
-models it serves. If its upstream is https behind an internal CA, add the CA via a small override:
+`.env.site`; if it pins its own `master_key`, `LLM_PROXY_KEY` must equal it. Applet code chooses any model served by this catalog; only
+`SMOKE_LLM_MODEL` selects the deployment smoke test's model. If its upstream is https behind an internal CA, add the CA via a small override:
 `services: {llm-lite: {volumes: ["./site-ca.pem:/site-ca.pem:ro"], environment: {SSL_CERT_FILE: /site-ca.pem}}}`.
 
 ## Bare-process dev mode (no docker)

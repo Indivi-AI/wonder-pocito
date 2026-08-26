@@ -1,18 +1,24 @@
 #!/usr/bin/env bash
-# Mirror this wonder checkout into a wonder-pocito checkout: everything EXCEPT non-pocito solutions.
-# idf was renamed to pocito in wonder, so no path translation is needed. Nothing is committed here;
-# inspect `git status` in the target, then commit/push there.
 set -euo pipefail
-SRC="$(cd "$(dirname "$0")/.." && pwd)"
-DST="$(cd "${1:-$SRC/../wonder-pocito}" && pwd)"
-[[ -d "$DST/.git" ]] || { echo "not a git checkout: $DST" >&2; exit 1; }
+SOURCE="$(cd "$(dirname "$0")/.." && pwd)"
+POCITO="$(cd "${1:-$SOURCE/../wonder-pocito}" && pwd)"
+[[ -d "$POCITO/.git" ]] || { echo "not a git checkout: $POCITO" >&2; exit 1; }
 JUNK='(^|/)(node_modules|__pycache__|\.venv)/|^files$|(^|/)\.env(\.(dev|prod|onprem|site))?$|(^|/)\.DS_Store$'
-
-cd "$SRC"; wanted="$(git ls-files | grep -vE "$JUNK" | awk '!/^solutions\// || /^solutions\/pocito\//')"   # pocito is the ONLY solution that syncs
-# make DST match wanted exactly: delete every tracked DST file not in wanted (strips ALL non-pocito solutions),
-# keeping only the `files` submodule ref. Then copy wanted over. Deletions and renames propagate.
-cd "$DST"
-comm -23 <(git ls-files | grep -vE '^files$' | sort) <(echo "$wanted" | sort) | while read -r f; do git rm -qf --ignore-unmatch -- "$f" >/dev/null; done
-git clean -qfd -- solutions   # untracked residue under solutions/ would ride into the next `git add -A` commit
-while read -r f; do [ -f "$SRC/$f" ] || continue; [ "$SRC/$f" -ef "$DST/$f" ] && continue; mkdir -p "$DST/$(dirname "$f")"; cp -p "$SRC/$f" "$DST/$f"; done <<< "$wanted"
-echo "synced $SRC -> $DST (pocito-only, $(echo "$wanted" | wc -l | tr -d ' ') files)"
+included="$(git -C "$SOURCE" ls-files | grep -vE "$JUNK" | awk '$0 != "LICENSE" && !/^indiviai(\/|$)/ && (!/^solutions(\/|$)/ || /^solutions\/pocito(\/|$)/)')"
+git -C "$POCITO" fetch origin wonder
+WORKTREE="$(mktemp -d)"
+trap 'git -C "$POCITO" worktree remove --force "$WORKTREE" >/dev/null 2>&1 || rm -rf "$WORKTREE"' EXIT
+git -C "$POCITO" worktree add -q --detach "$WORKTREE" origin/wonder
+comm -23 <(git -C "$WORKTREE" ls-files | grep -vE '^(LICENSE|files)$' | sort) <(printf '%s\n' "$included") |
+  while IFS= read -r path; do git -C "$WORKTREE" rm -qf --ignore-unmatch -- "$path"; done
+while IFS= read -r path; do
+  [[ -f "$SOURCE/$path" ]] || continue
+  mkdir -p "$WORKTREE/$(dirname "$path")"
+  cp -p "$SOURCE/$path" "$WORKTREE/$path"
+done <<< "$included"
+git -C "$WORKTREE" add -A
+excluded="$(git -C "$WORKTREE" ls-files | awk '/^indiviai(\/|$)/ || (/^solutions(\/|$)/ && !/^solutions\/pocito(\/|$)/)')"
+[[ -z "$excluded" ]] || { echo "refusing to push excluded paths: $excluded" >&2; exit 1; }
+git -C "$WORKTREE" diff --cached --quiet && { echo "wonder-pocito/wonder is up to date"; exit; }
+git -C "$WORKTREE" commit -qm "Sync Wonder infrastructure"
+git -C "$WORKTREE" push origin HEAD:wonder

@@ -1,0 +1,19 @@
+platform: kubernetes
+
+exposure:
+  scheme: http
+  port: 18080
+  hosts:
+    wonder: wonder.localhost
+    marketplace: marketplace.localhost
+    agno: agno.localhost
+
+storage:
+  endpoint: http://wonder-minio:9000
+  publicEndpoint: http://localhost:30900
+
+llm:
+  upstreamBase: https://api.openai.com/v1
+
+minio:
+  enabled: true

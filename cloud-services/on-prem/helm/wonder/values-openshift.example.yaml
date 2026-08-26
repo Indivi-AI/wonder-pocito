@@ -1,0 +1,19 @@
+platform: openshift
+
+images:
+  wonder: registry.internal.example/wonder/wonder-server@sha256:replace
+  marketplace: registry.internal.example/wonder/marketplace-server@sha256:replace
+  litellm: registry.internal.example/wonder/litellm@sha256:replace
+
+exposure:
+  hosts:
+    wonder: wonder.apps.cluster.internal
+    marketplace: marketplace.apps.cluster.internal
+    agno: agno.apps.cluster.internal
+
+storage:
+  endpoint: https://minio.internal.example
+  publicEndpoint: https://minio.internal.example
+
+llm:
+  upstreamBase: https://llm.internal.example/v1
