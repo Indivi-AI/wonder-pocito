@@ -1,6 +1,7 @@
 cloud-services/express-server/.env.dev
 cloud-services/express-server/.env.prod
 node_modules/**
+solutions/pocito/on-prem/flapi-mock/node_modules/
 cloud-services/.local/
 .DS_Store
 .cache/
