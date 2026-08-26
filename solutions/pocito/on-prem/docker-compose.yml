@@ -113,6 +113,13 @@ services:
     command: ["--config", "/etc/litellm/config.yaml", "--port", "4000"]
     volumes: ["${LLM_LITE_CONFIG:-./llm-lite-config.yaml}:/etc/litellm/config.yaml:ro"]   # routing + secrets live in that file (copy its .template)
 
+  flapi-mock:   # stand-in for the site's FLAPI package service - sim/dev only (wonder-up --flapi); site: set FLAPI_BASE_URL
+    image: wonder-flapi-mock:latest
+    profiles: [local-flapi]
+    restart: unless-stopped
+    ports: ["${FLAPI_PUBLISHED_PORT:-58051}:6001"]
+    networks: [edge]
+
   minio:
     image: ${MINIO_IMAGE:-minio/minio:RELEASE.2025-04-22T22-12-26Z}
     profiles: [local-minio]
