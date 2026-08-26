@@ -48,8 +48,13 @@ Example:
 `
 })
 
+Data('wonderPlatformModel', {
+  description: 'chat model: the UI-selected selectedModel var, else the deployment default LLM_MODEL, else the cloud fallback',
+  impl: ctx => ctx.vars.selectedModel || globalThis.LLM_MODEL || globalThis.process?.env?.LLM_MODEL || 'gemini/gemini-3.5-flash'
+})
+
 Workflow('wonderPlatformAgent', {
-  params: [{id: 'model', as: 'string', defaultValue: globalThis.LLM_MODEL || globalThis.process?.env?.LLM_MODEL || 'gemini/gemini-3.5-flash'}],
+  params: [{id: 'model', as: 'string', defaultValue: dsls.common.data.wonderPlatformModel()}],
   impl: mainWorkflow({
     main: mpi('%$model%', {
       prompt: `USER_MESSAGE: %$userMessage%

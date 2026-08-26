@@ -39,6 +39,8 @@ llm_response=$(curl -sS --max-time 20 -X POST "$wonder/llmProxy" -H 'content-typ
 if echo "$llm_response" | grep -q "Cannot POST /llmProxy"; then flunk "/llmProxy not registered on the wonder server"
 elif echo "$llm_response" | grep -q '"content"'; then pass "/llmProxy -> llm-lite -> upstream answered a completion"
 else flunk "/llmProxy upstream replied: $(echo "$llm_response" | tr -d '\n' | head -c 140)"; fi
+curl -fsS --max-time 10 "$wonder/llmProxy/models" | grep -q '"data"' \
+  && pass "/llmProxy/models lists the llm-lite catalog (model-selection UI source)" || flunk "/llmProxy/models"
 mcurl -X POST "$market/api/v1/skills/" -H 'content-type: application/json' \
   -d '{"id":"smokeSkill","display_name":"Smoke skill","description":"fact: SIM_SMOKE_OK","skill_md":"# smoke\nThe phrase is SIM_SMOKE_OK."}' \
   > /dev/null && pass "skill create (S3 put incl MARKETPLACE_S3_STORAGE_CLASS='${MARKETPLACE_S3_STORAGE_CLASS:-}')" || flunk "skill create"

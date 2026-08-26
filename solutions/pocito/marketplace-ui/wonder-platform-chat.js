@@ -28,14 +28,24 @@ ReactComp('wonderPlatformReport', {
 
 ReactComp('wonderPlatformChatComposer', {
   impl: comp({
-    hFunc: (ctx, {react: {h, useEffect, useRef}}) => ({repo, conversation, message, setMessage, busy, send, selectAgent}) => {
+    hFunc: (ctx, {react: {h, useEffect, useRef, useState}}) => ({repo, conversation, message, setMessage, busy, send, selectAgent, model, setModel}) => {
       const ref = useRef(), submit = () => message.trim() && conversation?.agentId && !busy && send()
+      const [models, setModels] = useState([])
+      const agent = repo.subagents.find(item => item.id == conversation?.agentId)
+      const llmflow = [agent?.backendConfig?.harness, agent?.backendConfig?.harness_type].includes('llmflow')
+      useEffect(() => { globalThis.LLM_PROXY_URL && fetch(`${globalThis.LLM_PROXY_URL}/models`).then(response => response.ok && response.json())
+        .then(catalog => setModels((catalog?.data || []).map(entry => `openai/${entry.id}`).filter(name => name != 'openai/*')), () => {}) }, [])
       useEffect(() => { if (ref.current) ref.current.style.height = 'auto', ref.current.style.height = `${Math.min(ref.current.scrollHeight, 144)}px` }, [message])
       return h('div:border-t border-[#e3e7e4] bg-[#f8f9f8] p-4', {}, h('div:mx-auto max-w-3xl rounded-2xl border border-[#e0e5e2] ' +
-        'bg-white p-2 shadow-sm', {}, h('select:mb-2 max-w-full rounded-full border border-[#cfe0d5] bg-[#edf6f0] px-3 py-1 text-xs text-[#315e46]', {
+        'bg-white p-2 shadow-sm', {}, h('div:mb-2 flex flex-wrap items-center gap-2', {},
+        h('select:max-w-full rounded-full border border-[#cfe0d5] bg-[#edf6f0] px-3 py-1 text-xs text-[#315e46]', {
           value: conversation?.agentId || '', 'data-testid': 'agent-selector', onChange: event => selectAgent(event.target.value)},
         h('option', {value: ''}, 'בחר סוכן'),
-        repo.subagents.map(agent => h('option', {key: agent.id, value: agent.id}, agent.name))), h('div:flex items-end gap-2', {},
+        repo.subagents.map(item => h('option', {key: item.id, value: item.id}, item.name))),
+        llmflow && h('input:w-48 max-w-full rounded-full border border-[#dbe3de] px-3 py-1 text-xs text-[#52705e]', {dir: 'ltr',
+          list: 'wonder-llm-models', value: model, placeholder: 'model', 'data-testid': 'model-selector',
+          title: 'מודל השפה - ריק = ברירת המחדל של האתר', onInput: event => setModel(event.target.value)}),
+        llmflow && h('datalist', {id: 'wonder-llm-models'}, models.map(name => h('option', {key: name, value: name})))), h('div:flex items-end gap-2', {},
         h('textarea:min-h-11 flex-1 resize-none px-3 py-2 text-sm outline-none', {ref, rows: 1, value: message, 'data-testid': 'chat-input',
           placeholder: conversation?.agentId ? 'כתוב הודעה לסוכן…' : 'בחר סוכן כדי להתחיל',
           onInput: event => setMessage(event.target.value),
@@ -49,7 +59,7 @@ ReactComp('wonderPlatformChatComposer', {
 ReactComp('wonderPlatformChat', {
   impl: comp({
     hFunc: (ctx, {react: {h, hh}}) => props => {
-      const {repo, conversation, message, setMessage, busy, send, selectAgent, newConversation, setConversation} = props
+      const {repo, conversation, message, setMessage, busy, send, selectAgent, newConversation, setConversation, model, setModel} = props
       const agent = repo.subagents.find(item => item.id == conversation?.agentId)
       const opikUrl = conversation?.messages.filter(item => item.opikUrl).at(-1)?.opikUrl
       return h('main:h-screen min-w-0 overflow-hidden pb-16 sm:mr-[210px] sm:pb-0', {}, h('div:flex h-full min-w-0', {},
@@ -70,7 +80,7 @@ ReactComp('wonderPlatformChat', {
             key: id, report: repo.reports.find(report => report.id == id)})))), busy && h(
           'div:flex items-center gap-2 rounded-2xl border border-[#e3e7e4] bg-white p-5 text-sm text-[#758078]', {},
           h('L:Loader2', {size: 16, className: 'animate-spin'}), 'הסוכן פועל…'))),
-        hh(ctx, dsls.react['react-comp'].wonderPlatformChatComposer, {repo, conversation, message, setMessage, busy, send, selectAgent})),
+        hh(ctx, dsls.react['react-comp'].wonderPlatformChatComposer, {repo, conversation, message, setMessage, busy, send, selectAgent, model, setModel})),
         h('aside:hidden w-[260px] shrink-0 overflow-y-auto border-r border-[#e4e8e5] bg-white p-4 lg:block', {},
           h('button:w-full rounded-xl border border-[#cfe0d5] bg-[#edf6f0] py-2.5 text-sm font-semibold text-[#315e46]', {
             onClick: () => newConversation()}, '＋ שיחה חדשה'), h('div:pb-3 pt-6 text-xs text-[#a1a7a4]', {}, 'היסטוריית שיחות'),
