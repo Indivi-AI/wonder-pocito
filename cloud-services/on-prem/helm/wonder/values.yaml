@@ -1,0 +1,55 @@
+platform: ""
+
+images:
+  wonder: ""
+  marketplace: ""
+  litellm: ""
+  minio: ""
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+exposure:
+  scheme: https
+  port: ""
+  ingressClassName: nginx
+  hosts:
+    wonder: ""
+    marketplace: ""
+    agno: ""
+
+secretName: wonder-secrets
+
+storage:
+  endpoint: ""
+  publicEndpoint: ""
+  marketplaceBucket: wonder-marketplace
+  marketplaceStorageClass: ""
+
+llm:
+  model: ""    # default model for applets/UI and smoke, e.g. openai/gpt-5-mini
+  config: ""   # the site's LiteLLM yaml (routing + api keys): --set-file llm.config=llm-lite-config.yaml
+
+replicas:
+  wonder: 1
+  marketplace: 1
+  agno: 1
+  litellm: 1
+
+minio:
+  enabled: false
+  nodePort: 30900
+  buckets: indiviai-wonder,wonder-code-packages,indiviai-wonder-protected,logs-bucket-me-west1,wonder-marketplace
+
+resources:
+  wonder:
+    requests: {cpu: 250m, memory: 512Mi}
+    limits: {cpu: "2", memory: 2Gi}
+  marketplace:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {cpu: "1", memory: 1Gi}
+  agno:
+    requests: {cpu: 250m, memory: 512Mi}
+    limits: {cpu: "2", memory: 2Gi}
+  litellm:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {cpu: "1", memory: 1Gi}

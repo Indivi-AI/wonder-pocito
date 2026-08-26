@@ -44,11 +44,14 @@ class S3ObjectStore:
     def __init__(self, bucket=None, client=None):
         self.bucket = bucket or os.getenv('MARKETPLACE_S3_BUCKET', 'wonder-marketplace')
         self.storage_class = os.getenv('MARKETPLACE_S3_STORAGE_CLASS', '')
-        self.client = client or boto3.client('s3', endpoint_url=os.getenv('MARKETPLACE_S3_ENDPOINT', 'http://127.0.0.1:9000'),
+        endpoint = os.getenv('MARKETPLACE_S3_ENDPOINT', 'http://127.0.0.1:9000')
+        create_client = lambda url: boto3.client('s3', endpoint_url=url,
           aws_access_key_id=os.getenv('MARKETPLACE_S3_ACCESS_KEY', 'wonder'),
-          aws_secret_access_key=os.getenv('MARKETPLACE_S3_SECRET_KEY', 'wonder-minio-local'),
-          region_name=os.getenv('MARKETPLACE_S3_REGION', 'us-east-1'),
+          aws_secret_access_key=os.getenv('MARKETPLACE_S3_SECRET_KEY', 'wonder-minio-local'), region_name='us-east-1',
           config=BotoConfig(connect_timeout=5, read_timeout=20, retries={'max_attempts': 3, 'mode': 'standard'}))
+        self.client = client or create_client(endpoint)
+        public_endpoint = os.getenv('MARKETPLACE_S3_PUBLIC_ENDPOINT', endpoint)
+        self.presign_client = self.client if client or public_endpoint == endpoint else create_client(public_endpoint)
         self.client.meta.events.register('before-send.s3.*', self.drop_expect_header)
         try:
             self.client.head_bucket(Bucket=self.bucket)
@@ -102,7 +105,7 @@ class S3ObjectStore:
     def presign(self, key, method, expires, content_type=None):
         operation = 'get_object' if method == 'GET' else 'put_object'
         params = {'Bucket': self.bucket, 'Key': key} | ({'ContentType': content_type} if content_type else {})
-        return self.client.generate_presigned_url(operation, Params=params, ExpiresIn=expires)
+        return self.presign_client.generate_presigned_url(operation, Params=params, ExpiresIn=expires)
 
 
 class MarketplaceRepository:

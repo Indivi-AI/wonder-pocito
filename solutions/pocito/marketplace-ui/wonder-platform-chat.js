@@ -67,12 +67,21 @@ ReactComp('wonderPlatformChatContextBoard', {
 
 ReactComp('wonderPlatformChatComposer', {
   impl: comp({
-    hFunc: (ctx, {react: {h, useEffect, useRef}}) => ({message, setMessage, busy, send}) => {
+    hFunc: (ctx, {react: {h, useEffect, useRef, useState}}) => ({repo, conversation, message, setMessage, busy, send, model, setModel}) => {
       const ref = useRef(), submit = () => message.trim() && !busy && send()
+      const [models, setModels] = useState([])
+      const agent = repo.agents.find(item => item.id == conversation?.agentId)
+      const llmflow = [agent?.backendConfig?.harness, agent?.backendConfig?.harness_type].includes('llmflow')
+      useEffect(() => { globalThis.LLM_PROXY_URL && fetch(`${globalThis.LLM_PROXY_URL}/models`).then(response => response.ok && response.json())
+        .then(catalog => setModels((catalog?.data || []).map(entry => `openai/${entry.id}`).filter(name => name != 'openai/*')), () => {}) }, [])
       useEffect(() => { if (ref.current) ref.current.style.height = 'auto', ref.current.style.height = `${Math.min(ref.current.scrollHeight, 144)}px` }, [message])
       return h('div:px-5 py-4', {}, h('div:mx-auto flex max-w-3xl items-end gap-2 rounded-[12px] ' +
         'border border-[#e8e8ea] bg-white p-2 shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-colors ' +
         'focus-within:border-[#c9c9ce]', {},
+      llmflow && h('input:w-40 shrink-0 rounded-[8px] border border-[#e8e8ea] px-2 py-1.5 text-[12px] text-[#2e2e2e] outline-none ' +
+        'placeholder:text-[#6b7280]', {dir: 'ltr', list: 'wonder-llm-models', value: model, placeholder: 'model',
+        'data-testid': 'model-selector', title: 'מודל השפה - ריק = ברירת המחדל של האתר', onInput: event => setModel(event.target.value)}),
+      llmflow && h('datalist', {id: 'wonder-llm-models'}, models.map(name => h('option', {key: name, value: name}))),
       h('textarea:min-h-10 flex-1 resize-none px-2 py-1.5 text-[13px] outline-none placeholder:text-[#6b7280]', {ref, rows: 1,
         value: message, 'data-testid': 'chat-input', placeholder: 'שאלו כל דבר…',
         onInput: event => setMessage(event.target.value),
@@ -89,7 +98,7 @@ const wonderPlatformRunStatusLabel = {running: 'בהרצה…', completed: 'הו
 ReactComp('wonderPlatformChat', {
   impl: comp({
     hFunc: (ctx, {react: {h, hh}}) => props => {
-      const {repo, conversation, message, setMessage, busy, send, selectAgent, setContext} = props
+      const {repo, conversation, message, setMessage, busy, send, selectAgent, setContext, model, setModel} = props
       const agent = repo.agents.find(item => item.id == conversation?.agentId)
       const opikUrl = conversation?.messages.filter(item => item.opikUrl).at(-1)?.opikUrl
       const statusText = status => wonderPlatformRunStatusLabel[String(status).toLowerCase()] || status || 'הושלם'
@@ -130,7 +139,7 @@ ReactComp('wonderPlatformChat', {
           h('div:flex-1 overflow-y-auto overflow-x-hidden', {},
             conversation?.messages.length || busy ? messages
               : h('div:mx-auto flex h-full max-w-3xl items-center justify-center px-5 py-8', {}, board)),
-          hh(ctx, dsls.react['react-comp'].wonderPlatformChatComposer, {message, setMessage, busy, send})),
+          hh(ctx, dsls.react['react-comp'].wonderPlatformChatComposer, {repo, conversation, message, setMessage, busy, send, model, setModel})),
         hh(ctx, dsls.react['react-comp'].wonderPlatformChatContext, {repo, conversation, selectAgent, setContext, locked})))
     }
   })

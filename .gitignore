@@ -4,7 +4,7 @@ node_modules/**
 cloud-services/.local/
 .DS_Store
 .cache/
-files/
+/files/
 
 wonder.zip
 
@@ -13,7 +13,7 @@ cloud-services/express-server/.env.onprem
 
 cloud-services/on-prem/.env.site
 __pycache__/
-cloud-services/on-prem/llm-lite-site.yaml
+cloud-services/on-prem/llm-lite-config.yaml
 
 solutions/pocito/marketplace-server/.venv/
 

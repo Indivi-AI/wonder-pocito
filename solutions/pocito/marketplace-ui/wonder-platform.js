@@ -67,6 +67,7 @@ ReactComp('wonderPlatform', {
       const editorsRef = useRef([]), dirtyRef = useRef(false), viewRef = useRef(view)
       editorsRef.current = editors; dirtyRef.current = workspaceDirty; viewRef.current = view
       const [conversationId, setConversationId] = useState('c1'), [message, setMessage] = useState(''), [busy, setBusy] = useState(false)
+      const [model, setModel] = useState(globalThis.LLM_MODEL || '')   // '' = the deployment default (wonderPlatformModel chain)
       const [runningSet, setRunningSet] = useState(''), [notice, setNotice] = useState('')
       useEffect(() => { void Promise.resolve(loadRepo(ctx.setVars({roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))).then(setRepo, setLoadError) }, [])
       const flash = text => (setNotice(text), setTimeout(() => setNotice(''), 1800))
@@ -214,7 +215,7 @@ ReactComp('wonderPlatform', {
         setEditors(editors.slice(0, -1))
       }
       const runTarget = (text, target, sessionId = `${target.id}-${Date.now()}`) => runAgent(ctx.setVars({text, target, sessionId,
-        roomWUrl: repositoryRoomWUrl, agentOsBaseUrl: agentUrl, agentOsToken: token}))
+        roomWUrl: repositoryRoomWUrl, agentOsBaseUrl: agentUrl, agentOsToken: token, ...(model && {selectedModel: model})}))
       const runEval = async (evaluation, targetResource, target, runRepo = repo) => {
         const startedAt = Date.now(), id = `eval-${startedAt}`, started = new Date(startedAt).toLocaleString('he-IL', {
           dateStyle: 'short', timeStyle: 'short'}), pending = {id, evaluationId: evaluation.id, targetResource, targetId: target.id,
@@ -280,7 +281,7 @@ ReactComp('wonderPlatform', {
       const content = view == 'workspace' && workspace ? hh(ctx, dsls.react['react-comp'].wonderPlatformWorkspace, {workspace, repo,
         back: () => openView(workspace.resource), saveWorkspace, deleteWorkspace, openPicker: openWorkspacePicker, setDirty: setWorkspaceDirty,
         openEditor: openWorkspaceEditor, runTarget, runEval}) : view == 'chat' ? hh(ctx, dsls.react['react-comp'].wonderPlatformChat, {
-        repo, conversation, message, setMessage, busy, send, selectAgent, setContext})
+        repo, conversation, message, setMessage, busy, send, selectAgent, setContext, model, setModel})
         : view == 'evaluations' ? hh(ctx, dsls.react['react-comp'].EvaluationPage, {embedded: true, roomWUrl: repositoryRoomWUrl,
           marketplaceBaseUrl: marketplaceUrl, agentOsBaseUrl: agentUrl, agentOsToken: token, targetItems: repo.agents, openView})
           : editors[0]?.standalone ? hh(ctx, dsls.react['react-comp'].wonderPlatformResourcePage, {active: editors[0], update: updateBase,

@@ -1,5 +1,7 @@
 name: wonder-onprem
-# One file for every network; all values interpolate from .env.site; nothing site-specific lives here.
+# One file for every network. The human fills the few values in .env.site (see .env.site.template);
+# everything else defaults right here as ${VAR:-default} and any of it can be overridden from .env.site.
+# In-container listen ports are fixed: wonder 8045, marketplace 8046, agno 8047, llm-lite 4000, minio 9000, pgvector 5432.
 # THE RULE: every call - browser AND service-to-service - crosses the host through a published port
 # (SITE_HOST:x, mapped x->y into the container). There is deliberately NO internal docker network or DNS,
 # so nothing can accidentally depend on an address browsers cannot reach (e.g. presigned S3 urls stay valid).
@@ -9,12 +11,12 @@ networks:
   edge: {}
 
 x-marketplace-s3-env: &marketplace-s3-env   # marketplace + agno share ONLY this object store - no calls between them
-  MARKETPLACE_S3_ENDPOINT: ${MINIO_ENDPOINT:-${SITE_SCHEME}://${SITE_HOST}:${MINIO_PUBLISHED_PORT}}
+  MARKETPLACE_S3_ENDPOINT: ${MINIO_ENDPOINT:-${SITE_SCHEME:-http}://${SITE_HOST}:${MINIO_PUBLISHED_PORT:-58048}}
   MARKETPLACE_S3_ACCESS_KEY: ${S3_ACCESS_KEY}
   MARKETPLACE_S3_SECRET_KEY: ${S3_SECRET_KEY}
-  MARKETPLACE_S3_BUCKET: ${MARKETPLACE_S3_BUCKET}
-  MARKETPLACE_S3_STORAGE_CLASS: ${MARKETPLACE_S3_STORAGE_CLASS}
-  CORS_ALLOWED_ORIGINS: ${SITE_SCHEME}://${SITE_HOST}:${WONDER_PUBLISHED_PORT}
+  MARKETPLACE_S3_BUCKET: ${MARKETPLACE_S3_BUCKET:-wonder-marketplace}
+  MARKETPLACE_S3_STORAGE_CLASS: ${MARKETPLACE_S3_STORAGE_CLASS:-}
+  CORS_ALLOWED_ORIGINS: ${SITE_SCHEME:-http}://${SITE_HOST}:${WONDER_PUBLISHED_PORT:-58045}
 
 volumes:
   minio-data: {}
@@ -25,40 +27,39 @@ services:
   wonder:
     image: wonder-server:${IMAGE_TAG}
     restart: unless-stopped
-    ports: ["${WONDER_PUBLISHED_PORT}:${WONDER_PORT}"]
+    ports: ["${WONDER_PUBLISHED_PORT:-58045}:8045"]
     networks: [edge]
     extra_hosts: ["${SITE_HOST}:host-gateway"]
     environment:
-      PORT: ${WONDER_PORT}
+      PORT: 8045
       STORAGE_PROVIDER: minio
       WONDER_AUTH_MODE: none
-      WONDER_SERVICE_URL: http://127.0.0.1:${WONDER_PORT}
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-${SITE_SCHEME}://${SITE_HOST}:${MINIO_PUBLISHED_PORT}}
-      MARKETPLACE_API_URL: ${SITE_SCHEME}://${SITE_HOST}:${MARKETPLACE_PUBLISHED_PORT}
-      AGNO_API_URL: ${SITE_SCHEME}://${SITE_HOST}:${AGNO_PUBLISHED_PORT}
-      LLM_PROXY_URL: ${SITE_SCHEME}://${SITE_HOST}:${WONDER_PUBLISHED_PORT}/llmProxy
-      LLM_PROXY_TARGET: ${SITE_SCHEME}://${SITE_HOST}:${LLM_LITE_PUBLISHED_PORT}
-      LLM_PROXY_KEY: ${LLM_PROXY_KEY}
+      WONDER_SERVICE_URL: http://127.0.0.1:8045
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-${SITE_SCHEME:-http}://${SITE_HOST}:${MINIO_PUBLISHED_PORT:-58048}}
+      MARKETPLACE_API_URL: ${SITE_SCHEME:-http}://${SITE_HOST}:${MARKETPLACE_PUBLISHED_PORT:-58046}
+      AGNO_API_URL: ${SITE_SCHEME:-http}://${SITE_HOST}:${AGNO_PUBLISHED_PORT:-58049}
+      LLM_PROXY_URL: ${SITE_SCHEME:-http}://${SITE_HOST}:${WONDER_PUBLISHED_PORT:-58045}/llmProxy
+      LLM_PROXY_TARGET: ${SITE_SCHEME:-http}://${SITE_HOST}:${LLM_LITE_PUBLISHED_PORT:-58047}
       LLM_MODEL: ${LLM_MODEL}
-      FLAPI_BASE_URL: ${FLAPI_BASE_URL}
-      FLAPI_BEARER_TOKEN: ${FLAPI_BEARER_TOKEN}
+      FLAPI_BASE_URL: ${FLAPI_BASE_URL:-}
+      FLAPI_BEARER_TOKEN: ${FLAPI_BEARER_TOKEN:-}
 
   marketplace:
     image: marketplace-server:${IMAGE_TAG}
     restart: unless-stopped
-    ports: ["${MARKETPLACE_PUBLISHED_PORT}:${MARKETPLACE_PORT}"]
+    ports: ["${MARKETPLACE_PUBLISHED_PORT:-58046}:8046"]
     networks: [edge]
     extra_hosts: ["${SITE_HOST}:host-gateway"]
     environment:
       <<: *marketplace-s3-env
       MARKETPLACE_HOST: 0.0.0.0
-      MARKETPLACE_PORT: ${MARKETPLACE_PORT}
+      MARKETPLACE_PORT: 8046
 
   agno:
     image: marketplace-server:${IMAGE_TAG}
     command: ["python", "agno_server.py"]
     restart: unless-stopped
-    ports: ["${AGNO_PUBLISHED_PORT}:${AGENT_OS_PORT}"]
+    ports: ["${AGNO_PUBLISHED_PORT:-58049}:8047"]
     networks: [edge]
     extra_hosts: ["${SITE_HOST}:host-gateway"]
     volumes: [agno-runtime:/data]
@@ -67,12 +68,12 @@ services:
     environment:
       <<: *marketplace-s3-env
       AGENT_OS_HOST: 0.0.0.0
-      AGENT_OS_PORT: ${AGENT_OS_PORT}
+      AGENT_OS_PORT: 8047
       SITE_HOST: ${SITE_HOST}
       MARKETPLACE_DATA_DIR: /data
-      OPENAI_BASE_URL: ${SITE_SCHEME}://${SITE_HOST}:${LLM_LITE_PUBLISHED_PORT}/v1
-      OPENAI_API_KEY: ${LLM_PROXY_KEY}
-      OPENAI_MODEL: ${OPENAI_MODEL}
+      OPENAI_BASE_URL: ${SITE_SCHEME:-http}://${SITE_HOST}:${LLM_LITE_PUBLISHED_PORT:-58047}/v1
+      OPENAI_API_KEY: unused   # llm-lite runs keyless; the OpenAI SDK just requires a non-empty string
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5-mini}
       OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
       OPENAI_EMBEDDING_DIMENSIONS: ${OPENAI_EMBEDDING_DIMENSIONS:-1536}
       PGVECTOR_URL: ${PGVECTOR_URL:-}
@@ -81,10 +82,10 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-wonder}
       POSTGRES_USER: ${POSTGRES_USER:-wonder}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wonder-pg-local}
-      MARKETPLACE_MODEL_FACTORY: ${MARKETPLACE_MODEL_FACTORY}
-      MCP_BEARER_TOKEN: ${MCP_BEARER_TOKEN:-${LLM_PROXY_KEY}}
-      FLAPI_BASE_URL: ${FLAPI_BASE_URL}
-      FLAPI_BEARER_TOKEN: ${FLAPI_BEARER_TOKEN}
+      MARKETPLACE_MODEL_FACTORY: ${MARKETPLACE_MODEL_FACTORY:-}
+      MCP_BEARER_TOKEN: ${MCP_BEARER_TOKEN:-}
+      FLAPI_BASE_URL: ${FLAPI_BASE_URL:-}
+      FLAPI_BEARER_TOKEN: ${FLAPI_BEARER_TOKEN:-}
 
   pgvector:
     image: ${PGVECTOR_IMAGE:-pgvector/pgvector:0.8.6-pg16-bookworm}
@@ -105,24 +106,19 @@ services:
       retries: 30
 
   llm-lite:
-    image: ${LLM_LITE_IMAGE}
+    image: ${LLM_LITE_IMAGE:-ghcr.io/berriai/litellm:main-stable}
     restart: unless-stopped
-    ports: ["${LLM_LITE_PUBLISHED_PORT}:4000"]
+    ports: ["${LLM_LITE_PUBLISHED_PORT:-58047}:4000"]
     networks: [edge]
     command: ["--config", "/etc/litellm/config.yaml", "--port", "4000"]
-    volumes: ["${LLM_LITE_CONFIG:-./llm-lite-config.yaml}:/etc/litellm/config.yaml:ro"]
-    env_file: [.env.site]   # a site-owned config yaml may reference os.environ/ANY_KEY - add such keys to .env.site
-    environment:
-      LLM_PROXY_KEY: ${LLM_PROXY_KEY}
-      LLM_UPSTREAM_BASE: ${LLM_UPSTREAM_BASE}
-      LLM_UPSTREAM_KEY: ${LLM_UPSTREAM_KEY}
+    volumes: ["${LLM_LITE_CONFIG:-./llm-lite-config.yaml}:/etc/litellm/config.yaml:ro"]   # routing + secrets live in that file (copy its .template)
 
   minio:
-    image: ${MINIO_IMAGE}
+    image: ${MINIO_IMAGE:-minio/minio:RELEASE.2025-04-22T22-12-26Z}
     profiles: [local-minio]
     restart: unless-stopped
     command: server /data --console-address :9001
-    ports: ["${MINIO_PUBLISHED_PORT}:9000"]
+    ports: ["${MINIO_PUBLISHED_PORT:-58048}:9000"]
     networks: [edge]
     volumes: [minio-data:/data]
     environment:
@@ -135,10 +131,10 @@ services:
     restart: "no"
     networks: [edge]
     extra_hosts: ["${SITE_HOST}:host-gateway"]
-    volumes: ["./minio-init.py:/minio-init.py:ro"]
+    volumes: ["./helm/wonder/files/minio-init.py:/minio-init.py:ro"]
     command: ["python", "/minio-init.py"]
     environment:
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-${SITE_SCHEME}://${SITE_HOST}:${MINIO_PUBLISHED_PORT}}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-${SITE_SCHEME:-http}://${SITE_HOST}:${MINIO_PUBLISHED_PORT:-58048}}
       S3_ACCESS_KEY: ${S3_ACCESS_KEY}
       S3_SECRET_KEY: ${S3_SECRET_KEY}
-      WONDER_BUCKETS: ${WONDER_BUCKETS}
+      WONDER_BUCKETS: ${WONDER_BUCKETS:-indiviai-wonder,wonder-code-packages,indiviai-wonder-protected,logs-bucket-me-west1}
