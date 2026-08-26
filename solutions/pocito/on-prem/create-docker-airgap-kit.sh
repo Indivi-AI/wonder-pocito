@@ -2,6 +2,7 @@
 set -euo pipefail
 root="$(git rev-parse --show-toplevel)"; cd "$root"
 rev="$(git rev-parse --short=12 HEAD)"; branch="$(git branch --show-current)"
+parts=1; [[ "${1:-}" == --parts ]] && { parts="${2:?--parts needs a number}"; shift 2; }   # split the final tar for size-capped whitening
 out="${1:-$(dirname "$root")/wonder-docker-airgap-$rev-lean}"; [[ "$out" = /* ]] || out="$PWD/$out"
 platform="${PLATFORM:-linux/amd64}"; litellm="wonder-llm-lite:1.98.0"; pgvector="pgvector/pgvector:0.8.6-pg16-bookworm"
 [[ "$platform" == linux/amd64 ]] || { echo 'The deployment kit must target linux/amd64' >&2; exit 1; }
@@ -40,4 +41,12 @@ cp solutions/pocito/on-prem/AIRGAP-KIT.md "$out/README.md"
   llm-lite-config.example.yaml manifest.env minio-init.py README.md sim-check.sh source.patch source-status.txt wonder.bundle > SHA256SUMS)
 tar -cf "$out.tar" -C "$(dirname "$out")" "$(basename "$out")"
 (cd "$(dirname "$out")" && sha256sum "$(basename "$out").tar" > "$(basename "$out").tar.sha256")
-echo "Air-gap kit: $out.tar"
+if (( parts > 1 )); then
+  split -b $(( $(wc -c < "$out.tar") / parts + 1 )) "$out.tar" "$out.tar.part-"
+  rm "$out.tar"
+  (cd "$(dirname "$out")" && sha256sum "$(basename "$out")".tar.part-* >> "$(basename "$out").tar.sha256")
+  echo "Air-gap kit in $parts parts: $out.tar.part-*"
+  echo "Reassemble inside: cat $(basename "$out").tar.part-* > $(basename "$out").tar && sha256sum -c --ignore-missing $(basename "$out").tar.sha256"
+else
+  echo "Air-gap kit: $out.tar"
+fi
