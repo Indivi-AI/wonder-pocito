@@ -10,6 +10,7 @@ import json
 import os
 import re
 import sys
+import uuid
 from collections import defaultdict
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
@@ -31,11 +32,14 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from mcp.server.transport_security import TransportSecuritySettings
+from pydantic import BaseModel, Field
 from sqlalchemy import Index, create_engine, text
 from sqlalchemy.engine import URL
 
 from marketplace_storage import DEFAULT_ROOM, ROOM_CONTEXT, ROOT, MarketplaceRepository, S3ObjectStore, safe_name, safe_path
 from knowledge_mcp import BearerAuthMiddleware, create_knowledge_mcp
+
+ADHOC_DEFAULT_INSTRUCTIONS = 'את/ה עוזר בינה מלאכותית ידידותי ומדויק. השב/י בעברית, בבהירות ובתמציתיות.'
 
 
 def knowledge_reader(path):
@@ -292,10 +296,9 @@ class MarketplaceAgentRuntime:
         limit = num_documents or knowledge.max_results
         return self.search_knowledge(ROOM_CONTEXT.get(), sorted(names), query, limit)
 
-    def agent(self, room, name):
-        manifest = self.agent_manifest(room, name)
+    def build_agent(self, room, manifest, agent_id, knowledge_names):
         config, skill_names, tool_names = manifest['config'], set(), set()
-        knowledge_names = set(self.assigned_knowledge_names(room, name))
+        knowledge_names = set(knowledge_names)
         for plugin_name in config.get('plugins', []):
             plugin = self.repo.get(room, 'plugin', plugin_name).get('config') or {}
             skill_names.update(plugin.get('skills', []))
@@ -304,12 +307,27 @@ class MarketplaceAgentRuntime:
         tool_names.update(config.get('tools', []))
         skills = Skills([LocalSkills(str(self.materialize_skill(room, item)), validate=False) for item in sorted(skill_names)])
         knowledge = self.knowledge(room, sorted(knowledge_names)[0]) if knowledge_names else None
-        return Agent(id=name, name=manifest['display_name'], model=self.model_factory(manifest),
+        return Agent(id=agent_id, name=manifest['display_name'], model=self.model_factory(manifest),
           db=self.room_dbs[room], add_history_to_context=True,
           tools=[self.tool(room, item) for item in sorted(tool_names)], skills=skills,
           knowledge=knowledge, knowledge_retriever=(lambda agent, query, num_documents=None, **kwargs:
             self.retrieve_knowledge(knowledge, knowledge_names, query, num_documents, **kwargs)) if knowledge else None,
           instructions=[config['system_prompt']], markdown=True, telemetry=False)
+
+    def agent(self, room, name):
+        manifest = self.agent_manifest(room, name)
+        return self.build_agent(room, manifest, name, self.assigned_knowledge_names(room, name))
+
+
+class AdhocRunRequest(BaseModel):
+    message: str = Field(min_length=1)
+    session_id: str | None = None
+    display_name: str | None = None
+    instructions: str | None = None
+    skills: list[str] | None = None
+    tools: list[str] | None = None
+    knowledge: list[str] | None = None
+    plugins: list[str] | None = None
 
 
 def configured_model_factory():
@@ -380,6 +398,19 @@ def create_app(data_dir=None, model_factory=None, embedder=None):
             vector_store = 'unreachable'
         return {'status': 'ok' if vector_store == 'ok' else 'degraded',
           'object_store': 'ok' if repo.objects.healthy() else 'unreachable', 'vector_store': vector_store}
+
+    @base.post('/adhoc/runs', tags=['adhoc'])
+    async def adhoc_run(payload: AdhocRunRequest):
+        room = ROOM_CONTEXT.get()
+        skills, tools, knowledge, plugins = payload.skills or [], payload.tools or [], payload.knowledge or [], payload.plugins or []
+        for name in knowledge:
+            repo.get(room, 'knowledge', name)
+        session_id = payload.session_id or uuid.uuid4().hex
+        manifest = {'display_name': payload.display_name or 'Ad-hoc agent', 'config': {
+          'system_prompt': payload.instructions or ADHOC_DEFAULT_INSTRUCTIONS, 'plugins': plugins, 'skills': skills, 'tools': tools}}
+        agent = runtime.build_agent(room, manifest, f'adhoc-{session_id}', knowledge)
+        result = await agent.arun(payload.message, session_id=session_id, stream=False)
+        return {'run_id': result.run_id, 'content': result.content, 'status': result.status.value, 'session_id': session_id}
 
     sync_factories()
     agent_os = AgentOS(name='Wonder AgentOS', agents=factories, db=runtime.db, base_app=base,
