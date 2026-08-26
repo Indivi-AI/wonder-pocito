@@ -1,6 +1,7 @@
 cloud-services/express-server/.env.dev
 cloud-services/express-server/.env.prod
 node_modules/**
+solutions/pocito/on-prem/flapi-mock/node_modules/
 cloud-services/.local/
 .DS_Store
 .cache/
@@ -11,9 +12,9 @@ wonder.zip
 tmp/
 cloud-services/express-server/.env.onprem
 
-cloud-services/on-prem/.env.site
+solutions/pocito/on-prem/.env.site
 __pycache__/
-cloud-services/on-prem/llm-lite-config.yaml
+solutions/pocito/on-prem/llm-lite-config.yaml
 
 solutions/pocito/marketplace-server/.venv/
 

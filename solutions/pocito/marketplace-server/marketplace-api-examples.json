@@ -24,7 +24,8 @@
       "plugins": ["evidencePlugin"],
       "skills": ["evidenceSkill"],
       "tools": ["evidenceSearch"],
-      "sub_agents": []
+      "sub_agents": [],
+      "knowledge_bases": ["evidenceKnowledge"]
     },
     "readme": "# Evidence agent"
   },
@@ -36,6 +37,12 @@
     "tags": [{"tag_type": "domain", "tag_name": "audit"}],
     "config": {"skills": ["evidenceSkill"], "tools": ["evidenceSearch"]},
     "readme": "# Evidence plugin"
+  },
+  "createKnowledge": {
+    "id": "evidenceKnowledge",
+    "display_name": "Evidence knowledge",
+    "description": "Documents used to verify evidence.",
+    "tags": [{"tag_type": "domain", "tag_name": "audit"}]
   },
   "createSkill": {
     "id": "evidenceSkill",
@@ -72,10 +79,12 @@
       "plugins": [],
       "skills": ["evidenceSkill"],
       "tools": ["evidenceSearch"],
-      "sub_agents": []
+      "sub_agents": [],
+      "knowledge_bases": ["evidenceKnowledge"]
     }
   },
   "updatePlugin": {"readme": "# Evidence plugin\n\nVersion two."},
+  "updateKnowledge": {"description": "Updated evidence documents."},
   "updateSkill": {"license": "Apache-2.0", "assets": []},
   "updateTool": {"tool_type": "solr", "dedicated_tool_config": {"collection": "evidence"}, "code_files": []},
   "presignDownload": {"key": "skills/evidenceSkill/assets/checklist.md", "expires_in": 3600},

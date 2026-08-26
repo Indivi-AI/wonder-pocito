@@ -1,18 +1,18 @@
 # Dev overlay: run the stack against YOUR working tree - applet and source edits serve live, no rebuilds.
-# Used by ./wonder-up.sh (repo root). node_modules stays the image's own via the shadowing volume
+# Used by ./solutions/pocito/wonder-up.sh. node_modules stays the image's own via the shadowing volume
 # (reset it with ./wonder-up.sh --clean after dependency changes). Server-code edits: docker compose restart wonder.
 services:
   wonder:
     user: "${WONDER_UID:-1001}:${WONDER_GID:-1001}"   # wonder-up.sh exports your uid/gid so git and file access match the mounted repo
     volumes:
-      - ../..:/usr/src/app
+      - ../../..:/usr/src/app
       - wonder-node-modules:/usr/src/app/node_modules
   marketplace:
     volumes:
-      - ../../solutions/pocito/marketplace-server:/app
+      - ../marketplace-server:/app
   agno:
     volumes:
-      - ../../solutions/pocito/marketplace-server:/app
+      - ../marketplace-server:/app
 
 volumes:
   wonder-node-modules: {}
