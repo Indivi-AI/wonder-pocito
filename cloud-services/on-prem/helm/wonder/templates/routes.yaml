@@ -1,0 +1,14 @@
+{{- if eq .Values.platform "openshift" }}
+{{- range $name, $host := .Values.exposure.hosts }}
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ $.Release.Name }}-{{ $name }}
+spec:
+  host: {{ $host }}
+  to: {kind: Service, name: {{ $.Release.Name }}-{{ $name }}}
+  port: {targetPort: http}
+  tls: {termination: edge, insecureEdgeTerminationPolicy: Redirect}
+{{- end }}
+{{- end }}

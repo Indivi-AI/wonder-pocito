@@ -48,7 +48,8 @@ Tests: `node --import ./nodejs-importmap.js jb6/testing/run-tests-cli.js .jb6/en
 ```sh
 cloud-services/on-prem/build-images.sh --base    # dependency bases, once per deps change
 cloud-services/on-prem/build-images.sh           # app images, offline by design; prints IMAGE_TAG
-cd cloud-services/on-prem && cp .env.site.template .env.site   # fill SITE_HOST=$(hostname), IMAGE_TAG, LLM_UPSTREAM_KEY
+cd cloud-services/on-prem && cp .env.site.template .env.site   # fill SITE_HOST=$(hostname), IMAGE_TAG, LLM_MODEL
+cp llm-lite-config.template.yaml llm-lite-config.yaml          # upstream endpoint + api key live here
 docker compose --env-file .env.site -f docker-compose.yml -f compose.airgap.yml --profile local-minio up -d
 ./sim-check.sh
 ```
@@ -62,7 +63,8 @@ Whiten `wonder-images.tar.gz` (`docker save` of the built images) plus the `clou
 
 ```sh
 docker load < wonder-images.tar.gz
-cp .env.site.template .env.site      # SITE_HOST=<site hostname>, IMAGE_TAG, MINIO_ENDPOINT=<global MinIO URL>, keys
+cp .env.site.template .env.site                       # SITE_HOST=<site hostname>, IMAGE_TAG, MINIO_ENDPOINT=<global MinIO URL>, LLM_MODEL
+cp llm-lite-config.template.yaml llm-lite-config.yaml # the internal LLM endpoint + api key
 docker compose --env-file .env.site up -d      # wonder + marketplace + agno + llm-lite; storage is the global MinIO
 ./sim-check.sh
 ```
@@ -75,7 +77,8 @@ Full runbook, whitening kit, in-gap rebuilds, OpenShift notes: `cloud-services/o
 |---|---|---|
 | `cloud-services/express-server/.env.dev` | dev | optional `OPENAI_API_KEY` for cloud LLM flows |
 | `solutions/pocito/marketplace-server/.env` | dev | marketplace `OPENAI_*` provider (from `.env.example`) |
-| `cloud-services/on-prem/.env.site` | sim and site, own gitignored copy each | all deployment facts: `SITE_HOST`, ports, `IMAGE_TAG`, MinIO + LLM endpoints and keys |
+| `cloud-services/on-prem/.env.site` | sim and site, own gitignored copy each | all deployment facts: `SITE_HOST`, ports, `IMAGE_TAG`, MinIO endpoint + creds, `LLM_MODEL` |
+| `cloud-services/on-prem/llm-lite-config.yaml` | sim and site, own gitignored copy each | LLM routing + secrets: the LiteLLM yaml with upstream endpoints and api keys |
 
 Images are env-free; secrets are never committed and never baked into an image.
 

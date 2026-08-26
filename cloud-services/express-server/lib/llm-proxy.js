@@ -36,8 +36,8 @@ async function consumeDailyQuota(ip) {
   throw new Error('quota counter contention')
 }
 
-const streamPost = (url, headers, originalBody, res) => {
-  const proxy = (url.protocol === 'https:' ? https : http).request(url, { method: 'POST', headers }, upstream => {
+const streamUpstream = (url, headers, originalBody, res, method = 'POST') => {
+  const proxy = (url.protocol === 'https:' ? https : http).request(url, { method, headers }, upstream => {
     res.status(upstream.statusCode || 500)
     Object.entries(upstream.headers).filter(([name]) => name !== 'content-encoding' && !name.startsWith('access-control-'))
       .forEach(([name, value]) => res.setHeader(name, value))
@@ -51,21 +51,23 @@ const streamPost = (url, headers, originalBody, res) => {
 export function setupLlmProxyRoute(app) {
   // air-gap mode: LLM_PROXY_TARGET (an OpenAI-compatible gateway, e.g. llm-lite) replaces provider keys, GCS quota and the public-host allowlist
   const forwardTarget = process.env.LLM_PROXY_TARGET
+  if (forwardTarget) app.get('/llmProxy/models', (req, res) =>   // the model-selection UI lists llm-lite's catalog
+    streamUpstream(new URL('/v1/models', forwardTarget), { 'accept-encoding': 'identity' }, null, res, 'GET'))
   app.post('/llmProxy', async (req, res) => {
     try {
       const { targetUrl, originalBody, headers = {}, roomId } = req.body
       const destinationHeaders = Object.fromEntries(Object.entries(headers)
         .filter(([name]) => !['authorization', 'x-wonder-proxy-auth'].includes(name.toLowerCase())))
       const url = new URL(targetUrl)
-      if (forwardTarget) return streamPost(new URL(url.pathname + url.search, forwardTarget), { ...destinationHeaders,
-        ...(process.env.LLM_PROXY_KEY && { authorization: `Bearer ${process.env.LLM_PROXY_KEY}` }), 'accept-encoding': 'identity' }, originalBody, res)
+      if (forwardTarget) return streamUpstream(new URL(url.pathname + url.search, forwardTarget),
+        { ...destinationHeaders, 'accept-encoding': 'identity' }, originalBody, res)
       const access = await proxyRoomCaller(req, roomId)
       if (access.error) return res.status(access.status).json({ error: access.error })
       const providerHeaders = providers[url.hostname]?.()
       if (!providerHeaders) return res.status(400).json({ error: `unsupported LLM host ${url.hostname}` })
       const quota = await consumeDailyQuota(req.ip)
       if (!quota.allowed) return res.status(429).json({ error: 'daily LLM quota exceeded', quota })
-      streamPost(url, { ...destinationHeaders, ...providerHeaders, 'accept-encoding': 'identity' }, originalBody, res)
+      streamUpstream(url, { ...destinationHeaders, ...providerHeaders, 'accept-encoding': 'identity' }, originalBody, res)
     } catch (error) {
       res.status(400).json({ error: error.message })
     }

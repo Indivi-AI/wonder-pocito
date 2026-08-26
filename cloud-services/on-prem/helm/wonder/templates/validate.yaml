@@ -1,0 +1,19 @@
+{{- if not (has .Values.platform (list "kubernetes" "openshift")) -}}
+{{- fail "platform must be kubernetes or openshift" -}}
+{{- end -}}
+{{- range $name := list "wonder" "marketplace" "litellm" -}}
+{{- if not (index $.Values.images $name) -}}{{- fail (printf "images.%s is required" $name) -}}{{- end -}}
+{{- end -}}
+{{- if and .Values.minio.enabled (not .Values.images.minio) -}}{{- fail "images.minio is required when minio.enabled" -}}{{- end -}}
+{{- range $name, $host := .Values.exposure.hosts -}}
+{{- if not $host -}}{{- fail (printf "exposure.hosts.%s is required" $name) -}}{{- end -}}
+{{- end -}}
+{{- if not .Values.storage.endpoint -}}{{- fail "storage.endpoint is required" -}}{{- end -}}
+{{- if not .Values.llm.config -}}{{- fail "llm.config is required (--set-file llm.config=llm-lite-config.yaml)" -}}{{- end -}}
+{{- if and (eq .Values.platform "openshift") .Values.minio.enabled -}}{{- fail "OpenShift must use the site object store" -}}{{- end -}}
+{{- if eq .Values.platform "openshift" -}}
+{{- range $name := list "wonder" "marketplace" "litellm" -}}
+{{- $image := index $.Values.images $name -}}
+{{- if not (contains "@sha256:" $image) -}}{{- fail (printf "OpenShift image images.%s must use a sha256 digest" $name) -}}{{- end -}}
+{{- end -}}
+{{- end -}}

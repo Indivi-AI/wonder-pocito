@@ -1,0 +1,3 @@
+Wonder: {{ include "wonder.publicUrl" (list . .Values.exposure.hosts.wonder) }}
+Marketplace: {{ include "wonder.publicUrl" (list . .Values.exposure.hosts.marketplace) }}
+Agno: {{ include "wonder.publicUrl" (list . .Values.exposure.hosts.agno) }}
