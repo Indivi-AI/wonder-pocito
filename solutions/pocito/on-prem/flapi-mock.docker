@@ -1,0 +1,10 @@
+# Stand-in for the site's FLAPI package service (flow-package tools) - FlowBolt's mocks/flapi-mock,
+# vendored verbatim from github.com/88roy88/flowbolt. Sim/dev only (profile local-flapi, wonder-up --flapi);
+# a real site points FLAPI_BASE_URL at its internal FLAPI instead. Any non-empty Bearer token is accepted.
+FROM node:24-alpine
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
+EXPOSE 6001
+CMD ["npm", "start"]

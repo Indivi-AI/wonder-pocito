@@ -10,6 +10,8 @@ if [[ "${1:-}" == --base ]]; then
   docker build --platform "$PLATFORM" --network=host -f solutions/pocito/on-prem/marketplace-server-base.docker \
     -t marketplace-server-base:latest solutions/pocito/marketplace-server
   docker build --platform "$PLATFORM" --network=host -f solutions/pocito/on-prem/llm-lite.docker -t wonder-llm-lite:1.98.0 .
+  docker build --platform "$PLATFORM" --network=host -f solutions/pocito/on-prem/flapi-mock.docker \
+    -t wonder-flapi-mock:latest solutions/pocito/on-prem/flapi-mock
 fi
 docker build --platform "$PLATFORM" --network=none -f solutions/pocito/on-prem/wonder-server.docker -t "wonder-server:$STAMP" .
 docker build --platform "$PLATFORM" --network=none -f solutions/pocito/on-prem/marketplace-server.docker -t "marketplace-server:$STAMP" solutions/pocito/marketplace-server

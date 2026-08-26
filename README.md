@@ -22,7 +22,10 @@ edits serve live, no rebuilds; after adding new server code run `docker compose 
 
 ## Integrating with FlowBolt (FLAPI)
 
-For executing dynamic Flow Package tools (e.g., Package 7/25), you must run the **FlowBolt** package service alongside Wonder:
+Dev/sim shortcut: `./solutions/pocito/wonder-up.sh --flapi` runs the vendored FLAPI mock (FlowBolt's `mocks/flapi-mock`)
+as a compose service and points the stack at it — no separate clone needed. A real site sets `FLAPI_BASE_URL` instead.
+
+For executing dynamic Flow Package tools (e.g., Package 7/25) against the real service, run **FlowBolt** alongside Wonder:
 1. Clone and start **FlowBolt** (runs on port `6001` by default):
    ```sh
    git clone https://github.com/88roy88/FlowBolt.git
