@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # One-command wonder: build images, start docker compose, init storage, smoke-check, print the URLs.
 #   ./wonder-up.sh                   # dev mode: your working tree mounted live, local minio, native cpu arch
-#   ./wonder-up.sh --env team.env    # first install the .env file you were sent as cloud-services/on-prem/.env.site
+#   ./wonder-up.sh --env team.env    # first install the .env file you were sent as solutions/pocito/on-prem/.env.site
 #   ./wonder-up.sh --airgap          # on-prem sim: images-only, egress blocked (llm-lite excepted)
 #   ./wonder-up.sh --clean           # stop everything and wipe volumes (fresh state)
 set -euo pipefail
-cd "$(dirname "$0")/cloud-services/on-prem"
+cd "$(dirname "$0")/on-prem"
 MODE=dev ENVFILE=""
 while [[ $# -gt 0 ]]; do case "$1" in
   --airgap) MODE=airgap;; --clean) MODE=clean;; --env) ENVFILE="$2"; shift;; *) echo "unknown flag: $1" >&2; exit 1;;
@@ -22,11 +22,11 @@ while IFS= read -r line; do key="${line%%=*}"; grep -q "^$key=" .env.site || ech
   < <(grep -E '^[A-Z_]+=' .env.site.template | sed -E 's/[[:space:]]+#.*$//')   # backfill keys added by newer templates,
   # comment-stripped (compose reads "KEY=  # x" as value "# x"); your existing values always win
 grep -Eq '^SITE_HOST=[^ ]' .env.site || { sed -i.bak "s/^SITE_HOST=.*/SITE_HOST=$(hostname)/" .env.site && rm -f .env.site.bak; }
-if ! grep -qE '^[A-Z_]*_PUBLISHED_PORT=' .env.site; then   # published ports: shift the 58045-58049 block +100 while another container holds one
+if ! grep -qE '^[A-Z_]*_PUBLISHED_PORT=' .env.site; then   # published ports: shift the 58045-58050 block +100 while another container holds one
   taken="$(docker ps --format '{{.Label "com.docker.compose.project"}}|{{.Ports}}' | grep -v '^wonder-onprem|' || true)"
   offset=0
-  while grep -qE ":($((58045+offset))|$((58046+offset))|$((58047+offset))|$((58048+offset))|$((58049+offset)))->" <<< "$taken"; do offset=$((offset+100)); done
-  [[ "$offset" == 0 ]] || for entry in WONDER:58045 MARKETPLACE:58046 LLM_LITE:58047 MINIO:58048 AGNO:58049; do
+  while grep -qE ":($((58045+offset))|$((58046+offset))|$((58047+offset))|$((58048+offset))|$((58049+offset))|$((58050+offset)))->" <<< "$taken"; do offset=$((offset+100)); done
+  [[ "$offset" == 0 ]] || for entry in WONDER:58045 MARKETPLACE:58046 LLM_LITE:58047 MINIO:58048 AGNO:58049 PGVECTOR:58050; do
     echo "${entry%:*}_PUBLISHED_PORT=$(( ${entry#*:} + offset ))" >> .env.site; done
 fi
 

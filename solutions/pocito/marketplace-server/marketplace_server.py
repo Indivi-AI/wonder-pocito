@@ -4,7 +4,7 @@ import os
 from enum import Enum
 from typing import Any, Literal
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, File, Form, HTTPException, Query, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -81,14 +81,16 @@ class AgentConfig(BaseModel):
     skills: list[str] = Field(default_factory=list)
     tools: list[str] = Field(default_factory=list)
     sub_agents: list[str] = Field(default_factory=list)
+    knowledge_bases: list[str] = Field(default_factory=list)
 
 
 class PluginConfig(BaseModel):
-    """Flat skill/tool IDs stored in config.yaml with forward-compatible extra fields."""
+    """Flat resource IDs stored in config.yaml with forward-compatible extra fields."""
 
     model_config = ConfigDict(extra='allow')
     skills: list[str] = Field(default_factory=list)
     tools: list[str] = Field(default_factory=list)
+    knowledge_bases: list[str] = Field(default_factory=list)
 
 
 class DescribedModel(NamedModel):
@@ -130,6 +132,9 @@ class CreateTool(ToolDescription):
     tracable: bool = True
     dedicated_tool_config: dict[str, Any] = Field(default_factory=dict)
     code_files: list[CodeFile] = Field(default_factory=list)
+    package_id: str | None = None
+    input_schema: list[dict[str, Any]] | None = Field(default_factory=list)
+    output_cubes: list[dict[str, Any]] | None = Field(default_factory=list)
 
 
 class CreatePlugin(DescribedModel):
@@ -144,6 +149,10 @@ class CreateAgent(DescribedModel):
 
     config: AgentConfig
     readme: str = ''
+
+
+class CreateKnowledge(DescribedModel):
+    pass
 
 
 class UpdateBase(StrictModel):
@@ -176,6 +185,9 @@ class UpdateTool(StrictModel):
     tracable: bool | None = None
     dedicated_tool_config: dict[str, Any] | None = None
     code_files: list[CodeFile] | None = None
+    package_id: str | None = None
+    input_schema: list[dict[str, Any]] | None = Field(default_factory=list)
+    output_cubes: list[dict[str, Any]] | None = Field(default_factory=list)
 
 
 class UpdatePlugin(UpdateBase):
@@ -185,6 +197,10 @@ class UpdatePlugin(UpdateBase):
 
 class UpdateAgent(UpdateBase):
     config: AgentConfig | None = None
+
+
+class UpdateKnowledge(UpdateBase):
+    pass
 
 
 class CreateUser(StrictModel):
@@ -234,10 +250,10 @@ def create_app():
         return {'status': 'ok', 'object_store': 'ok' if repo.objects.healthy() else 'unreachable'}
 
     models = {'tool': (CreateTool, UpdateTool), 'skill': (CreateSkill, UpdateSkill), 'plugin': (CreatePlugin, UpdatePlugin),
-      'agent': (CreateAgent, UpdateAgent)}
+      'agent': (CreateAgent, UpdateAgent), 'knowledge': (CreateKnowledge, UpdateKnowledge)}
 
     def routes(kind, create_model, update_model):
-        plural = f'{kind}s'
+        plural = 'knowledge' if kind == 'knowledge' else f'{kind}s'
 
         async def list_resources():
             return repo.list(ROOM_CONTEXT.get(), kind)
@@ -325,8 +341,59 @@ def create_app():
 
     @base.get('/api/v1/audit/{resource_type}/{resource_id}', tags=['audit'],
       operation_id='list_audit_events_api_v1_audit__resource_type___resource_id__get')
-    def audit(resource_type: Literal['tool', 'skill', 'plugin', 'agent'], resource_id: str):
+    def audit(resource_type: Literal['tool', 'skill', 'plugin', 'agent', 'knowledge'], resource_id: str):
         return repo.audits(ROOM_CONTEXT.get(), resource_type, resource_id)
+
+    def metadata_json(value):
+        try:
+            metadata = json.loads(value or '{}')
+            if not isinstance(metadata, dict):
+                raise ValueError
+            return metadata
+        except (json.JSONDecodeError, ValueError):
+            raise HTTPException(422, 'metadata must be a JSON object')
+
+    @base.post('/api/v1/knowledge/{id}/content', status_code=202, tags=['knowledge'])
+    async def upload_content(id: str, name: str | None = Form(None), description: str | None = Form(None),
+      metadata: str | None = Form(None), file: UploadFile | None = File(None), text_content: str | None = Form(None)):
+        if (file is None) == (text_content is None):
+            raise HTTPException(422, 'provide exactly one of file or text_content')
+        body = await file.read() if file else text_content.encode()
+        file_name = file.filename if file else f'{name or "content"}.txt'
+        content_type = file.content_type if file else 'text/plain'
+        return repo.create_content(ROOM_CONTEXT.get(), id, name, description, metadata_json(metadata), file_name, content_type, body)
+
+    @base.get('/api/v1/knowledge/{id}/content', tags=['knowledge'])
+    def list_content(id: str, page: int = Query(1, ge=1), limit: int = Query(20, ge=1, le=100)):
+        items = repo.contents(ROOM_CONTEXT.get(), id)
+        start, total = (page - 1) * limit, len(items)
+        return {'data': items[start:start + limit], 'meta': {'page': page, 'limit': limit,
+          'total_pages': (total + limit - 1) // limit, 'total_count': total}}
+
+    @base.get('/api/v1/knowledge/{id}/content/{content_id}', tags=['knowledge'])
+    def get_content(id: str, content_id: str):
+        return repo.public_content(repo.content(ROOM_CONTEXT.get(), id, content_id))
+
+    @base.get('/api/v1/knowledge/{id}/content/{content_id}/status', tags=['knowledge'])
+    def content_status(id: str, content_id: str):
+        content = repo.content(ROOM_CONTEXT.get(), id, content_id)
+        return {key: content[key] for key in ('id', 'status', 'status_message')}
+
+    @base.patch('/api/v1/knowledge/{id}/content/{content_id}', tags=['knowledge'])
+    def update_content(id: str, content_id: str, name: str | None = Form(None), description: str | None = Form(None),
+      metadata: str | None = Form(None)):
+        changes = {key: value for key, value in {'name': name, 'description': description}.items() if value is not None}
+        return repo.update_content(ROOM_CONTEXT.get(), id, content_id,
+          changes | ({'metadata': metadata_json(metadata)} if metadata is not None else {}))
+
+    @base.delete('/api/v1/knowledge/{id}/content/{content_id}', tags=['knowledge'])
+    def delete_content(id: str, content_id: str):
+        return repo.delete_content(ROOM_CONTEXT.get(), id, content_id)
+
+    @base.get('/api/v1/knowledge/{id}/content/{content_id}/file', tags=['knowledge'])
+    def download_content(id: str, content_id: str):
+        body, artifact = repo.content_file(ROOM_CONTEXT.get(), id, content_id)
+        return Response(body, media_type=artifact.get('mime_type') or 'application/octet-stream')
 
     @base.post('/api/v1/users/', status_code=201, tags=['users'])
     def create_user(payload: CreateUser):
@@ -351,8 +418,8 @@ def create_app():
     def presign_upload(payload: UploadRequest):
         return presigned(payload.key, 'PUT', payload.expires_in, payload.content_type)
 
-    base.add_middleware(CORSMiddleware, allow_origins=os.getenv('CORS_ALLOWED_ORIGINS', '*').split(','),
-      allow_methods=['*'], allow_headers=['*'])
+    base.add_middleware(CORSMiddleware, allow_origins=os.getenv('CORS_ALLOWED_ORIGINS', '*').lower().split(','),
+      allow_methods=['*'], allow_headers=['*'], allow_private_network=True)
     base.state.marketplace_repo = repo
     base.openapi_schema = json.loads((ROOT / 'marketplace-openapi.json').read_text())
     base.openapi = lambda: base.openapi_schema

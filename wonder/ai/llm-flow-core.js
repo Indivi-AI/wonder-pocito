@@ -19,7 +19,7 @@ const {
 const workflowLoggerProfile = Logger('workflowLoggerProfile', { impl: domainLogger('workflow') })
 
 // last fenced block, fence must open with a newline - a prose mention like "a ```javascript block" is not a fence
-const lastFencedBlock = txt => [...String(txt || '').matchAll(/```(?:javascript)?[ \t]*\n([\s\S]*?)```/g)].at(-1)?.[1]
+const lastFencedBlock = txt => [...String(txt || '').matchAll(/```(?:js|javascript)?[ \t]*\n([\s\S]*?)```/gi)].at(-1)?.[1]
 
 Object.assign(jb.workflowUtils ||= {}, {
   extendWithWorkflowVars,
@@ -112,12 +112,14 @@ async function parseFlowCode(code, workflowLogger, ctx) {
     const parsedElems = await Promise.all(elems.map(async ({raw, lineNo}) => {
       try { return parseElem(raw) }
       catch(e) {
-        workflowLogger.error({t: 'element parse error', lineNo, error: e.stack}, {raw}, {ctx})
+        let parseError = e
+        workflowLogger.info({t: 'element parse error, attempting fix', lineNo, error: e.stack}, {raw}, {ctx})
         const fix = await llmFixElement(ctx, { elemCode: raw, error: e.stack, phase: 'compile' })
         if (fix?.fixedCode) {
           try { return parseElem(fix.fixedCode) }
-          catch(e2) { workflowLogger.error({t: 'element fix parse error', lineNo, error: e2.stack}, {fixedCode: fix.fixedCode}, {ctx}) }
+          catch(e2) { parseError = e2 }
         }
+        workflowLogger.error({t: 'element parse error', lineNo, error: parseError.stack}, {raw}, {ctx})
         if (fix?.needsRegeneration)
           return { $: 'flow-elem<ai>setCtxData', goal: `Parse error at line ${lineNo}`,
             value: { $: 'data<common>jqSingle', exp: `{error: "parse error", needsRegeneration: true}` } }
