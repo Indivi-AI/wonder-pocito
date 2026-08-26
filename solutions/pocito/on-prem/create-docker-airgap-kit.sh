@@ -2,16 +2,22 @@
 set -euo pipefail
 root="$(git rev-parse --show-toplevel)"; cd "$root"
 rev="$(git rev-parse --short=12 HEAD)"; branch="$(git branch --show-current)"
-parts=1; [[ "${1:-}" == --parts ]] && { parts="${2:?--parts needs a number}"; shift 2; }   # split the final tar for size-capped whitening
-out="${1:-$(dirname "$root")/wonder-docker-airgap-$rev-lean}"; [[ "$out" = /* ]] || out="$PWD/$out"
+parts=1 pinned=1
+while [[ "${1:-}" == --* ]]; do case "$1" in
+  --parts) parts="${2:?--parts needs a number}"; shift 2;;   # split the final tar for size-capped whitening
+  --no-pinned) pinned=""; shift;;   # update kit: skip litellm+pgvector - the site already has them from the first full kit
+  *) echo "unknown flag: $1" >&2; exit 1;;
+esac; done
+kind=lean; [[ -n "$pinned" ]] || kind=apps
+out="${1:-$(dirname "$root")/wonder-docker-airgap-$rev-$kind}"; [[ "$out" = /* ]] || out="$PWD/$out"
 platform="${PLATFORM:-linux/amd64}"; litellm="wonder-llm-lite:1.98.0"; pgvector="pgvector/pgvector:0.8.6-pg16-bookworm"
 [[ "$platform" == linux/amd64 ]] || { echo 'The deployment kit must target linux/amd64' >&2; exit 1; }
 [[ ! -e "$out" && ! -e "$out.tar" ]] || { echo "Output already exists: $out or $out.tar" >&2; exit 1; }
 for tool in docker git gzip sha256sum tar; do command -v "$tool" >/dev/null || { echo "Missing command: $tool" >&2; exit 1; }; done
 
 tag="$(solutions/pocito/on-prem/build-images.sh --base | tee /dev/stderr | sed -n 's/^IMAGE_TAG=//p')"
-docker pull --platform "$platform" "$pgvector"
-runtimes=("wonder-server:$tag" "marketplace-server:$tag" "$litellm" "$pgvector")
+runtimes=("wonder-server:$tag" "marketplace-server:$tag")
+[[ -z "$pinned" ]] || { docker pull --platform "$platform" "$pgvector"; runtimes+=("$litellm" "$pgvector"); }
 images=(wonder-server-base:latest marketplace-server-base:latest "${runtimes[@]}")
 for image in "${images[@]}"; do
   [[ "$(docker image inspect --platform "$platform" "$image" -f '{{.Os}}/{{.Architecture}}')" == "$platform" ]] \
