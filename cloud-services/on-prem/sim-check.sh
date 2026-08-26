@@ -5,12 +5,14 @@
 set -uo pipefail
 cd "$(dirname "$0")"
 set -a; [ "${SITE_ENV_FILE:-.env.site}" = /dev/null ] || source "${SITE_ENV_FILE:-.env.site}"; set +a
+: "${SITE_SCHEME:=http}" "${WONDER_PUBLISHED_PORT:=58045}" "${MARKETPLACE_PUBLISHED_PORT:=58046}" \
+  "${MINIO_PUBLISHED_PORT:=58048}" "${AGNO_PUBLISHED_PORT:=58049}"   # same defaults as docker-compose.yml
 wonder="${WONDER_URL:-$SITE_SCHEME://$SITE_HOST:$WONDER_PUBLISHED_PORT}"
 market="${MARKETPLACE_URL:-$SITE_SCHEME://$SITE_HOST:$MARKETPLACE_PUBLISHED_PORT}"
 agno="${AGNO_URL:-$SITE_SCHEME://$SITE_HOST:$AGNO_PUBLISHED_PORT}"
 minio_url="${MINIO_ENDPOINT:-$SITE_SCHEME://$SITE_HOST:$MINIO_PUBLISHED_PORT}"
-smoke_model="${SMOKE_LLM_MODEL:-${LLM_MODEL:-}}"
-[ -n "$smoke_model" ] || { echo 'SMOKE_LLM_MODEL is required'; exit 1; }
+smoke_model="${LLM_MODEL:-}"
+[ -n "$smoke_model" ] || { echo 'LLM_MODEL is required'; exit 1; }
 room="smoke-$$"
 fail=0
 pass() { echo "PASS $1"; }
@@ -39,6 +41,8 @@ llm_response=$(curl -sS --max-time 20 -X POST "$wonder/llmProxy" -H 'content-typ
 if echo "$llm_response" | grep -q "Cannot POST /llmProxy"; then flunk "/llmProxy not registered on the wonder server"
 elif echo "$llm_response" | grep -q '"content"'; then pass "/llmProxy -> llm-lite -> upstream answered a completion"
 else flunk "/llmProxy upstream replied: $(echo "$llm_response" | tr -d '\n' | head -c 140)"; fi
+curl -fsS --max-time 10 "$wonder/llmProxy/models" | grep -q '"data"' \
+  && pass "/llmProxy/models lists the llm-lite catalog (model-selection UI source)" || flunk "/llmProxy/models"
 mcurl -X POST "$market/api/v1/skills/" -H 'content-type: application/json' \
   -d '{"id":"smokeSkill","display_name":"Smoke skill","description":"fact: SIM_SMOKE_OK","skill_md":"# smoke\nThe phrase is SIM_SMOKE_OK."}' \
   > /dev/null && pass "skill create (S3 put incl MARKETPLACE_S3_STORAGE_CLASS='${MARKETPLACE_S3_STORAGE_CLASS:-}')" || flunk "skill create"

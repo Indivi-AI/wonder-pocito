@@ -9,7 +9,7 @@
 {{- if not $host -}}{{- fail (printf "exposure.hosts.%s is required" $name) -}}{{- end -}}
 {{- end -}}
 {{- if not .Values.storage.endpoint -}}{{- fail "storage.endpoint is required" -}}{{- end -}}
-{{- if not .Values.llm.upstreamBase -}}{{- fail "llm.upstreamBase is required" -}}{{- end -}}
+{{- if not .Values.llm.config -}}{{- fail "llm.config is required (--set-file llm.config=llm-lite-config.yaml)" -}}{{- end -}}
 {{- if and (eq .Values.platform "openshift") .Values.minio.enabled -}}{{- fail "OpenShift must use the site object store" -}}{{- end -}}
 {{- if eq .Values.platform "openshift" -}}
 {{- range $name := list "wonder" "marketplace" "litellm" -}}

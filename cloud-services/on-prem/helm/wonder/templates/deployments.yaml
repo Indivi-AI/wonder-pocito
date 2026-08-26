@@ -48,25 +48,13 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ $root.Release.Name }}-{{ $name }}
+          {{- if or (eq $name "marketplace") (eq $name "agno") }}
           env:
-            {{- if eq $name "wonder" }}
-            - name: LLM_PROXY_KEY
-              valueFrom: {secretKeyRef: {name: {{ $root.Values.secretName }}, key: LLM_PROXY_KEY}}
-            {{- else if or (eq $name "marketplace") (eq $name "agno") }}
             - name: MARKETPLACE_S3_ACCESS_KEY
               valueFrom: {secretKeyRef: {name: {{ $root.Values.secretName }}, key: S3_ACCESS_KEY}}
             - name: MARKETPLACE_S3_SECRET_KEY
               valueFrom: {secretKeyRef: {name: {{ $root.Values.secretName }}, key: S3_SECRET_KEY}}
-            {{- if eq $name "agno" }}
-            - name: OPENAI_API_KEY
-              valueFrom: {secretKeyRef: {name: {{ $root.Values.secretName }}, key: LLM_PROXY_KEY}}
-            {{- end }}
-            {{- else }}
-            - name: LLM_PROXY_KEY
-              valueFrom: {secretKeyRef: {name: {{ $root.Values.secretName }}, key: LLM_PROXY_KEY}}
-            - name: LLM_UPSTREAM_KEY
-              valueFrom: {secretKeyRef: {name: {{ $root.Values.secretName }}, key: LLM_UPSTREAM_KEY}}
-            {{- end }}
+          {{- end }}
           securityContext:
             allowPrivilegeEscalation: false
             capabilities: {drop: [ALL]}

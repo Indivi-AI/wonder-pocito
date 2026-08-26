@@ -52,6 +52,7 @@ ReactComp('wonderPlatform', {
       const [workspace, setWorkspace] = useState()
       const [editors, setEditors] = useState([]), [picker, setPicker] = useState(), [report, setReport] = useState()
       const [conversationId, setConversationId] = useState('c1'), [message, setMessage] = useState(''), [busy, setBusy] = useState(false)
+      const [model, setModel] = useState(globalThis.LLM_MODEL || '')   // '' = the deployment default (wonderPlatformModel chain)
       const [runningSet, setRunningSet] = useState(''), [notice, setNotice] = useState('')
       useEffect(() => { void Promise.resolve(loadRepo(ctx.setVars({roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))).then(setRepo, setLoadError) }, [])
       const flash = text => (setNotice(text), setTimeout(() => setNotice(''), 1800))
@@ -158,7 +159,7 @@ ReactComp('wonderPlatform', {
         setEditors(editors.slice(0, -1))
       }
       const runTarget = (text, target, sessionId = `${target.id}-${Date.now()}`) => runAgent(ctx.setVars({text, target, sessionId,
-        roomWUrl: repositoryRoomWUrl, agentOsBaseUrl: agentUrl, agentOsToken: token, repo}))
+        roomWUrl: repositoryRoomWUrl, agentOsBaseUrl: agentUrl, agentOsToken: token, repo, ...(model && {selectedModel: model})}))
       const runEval = async (evaluation, targetResource, target) => {
         const startedAt = Date.now(), id = `eval-${startedAt}`, started = new Date(startedAt).toLocaleString('he-IL', {
           dateStyle: 'short', timeStyle: 'short'}), pending = {id, evaluationId: evaluation.id, targetResource, targetId: target.id,
@@ -212,7 +213,7 @@ ReactComp('wonderPlatform', {
       const content = view == 'workspace' && workspace ? hh(ctx, dsls.react['react-comp'].wonderPlatformWorkspace, {workspace, repo,
         back: () => openView(workspace.resource), saveWorkspace, deleteWorkspace, openPicker: openWorkspacePicker,
         openEditor: openWorkspaceEditor, runTarget, runEval}) : view == 'chat' ? hh(ctx, dsls.react['react-comp'].wonderPlatformChat, {
-        repo, conversation, message, setMessage, busy, send, selectAgent, newConversation, setConversation: setConversationId})
+        repo, conversation, message, setMessage, busy, send, selectAgent, newConversation, setConversation: setConversationId, model, setModel})
         : view == 'evaluations' ? hh(ctx, dsls.react['react-comp'].wonderPlatformEvaluation, {repo, search, setSearch,
           openSet: item => setEditors([{resource: 'evaluations', item: {...item, originalId: item.id}}]),
           createSet: () => setEditors([{resource: 'evaluations', item: blank('evaluations'), createLabel: 'סט חדש'}]), runningSet, runSet})
