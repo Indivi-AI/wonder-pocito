@@ -2,6 +2,10 @@
 
 This AMD64 kit contains the exact Wonder, marketplace/AgentOS, minimal LiteLLM, and PostgreSQL/pgvector images. MinIO is external and not bundled.
 
+An `-apps` kit (created with `create-docker-airgap-kit.sh --no-pinned`) carries only the wonder/marketplace images
+and their bases — deploy it on a machine that already loaded litellm + pgvector from a previous full `-lean` kit
+(`docker-up.sh` verifies they are present).
+
 Kit arrived as `*.tar.part-*` files (created with `create-docker-airgap-kit.sh --parts N`)? Reassemble first:
 `cat wonder-docker-airgap-*-lean.tar.part-* > kit.tar && sha256sum -c --ignore-missing wonder-docker-airgap-*-lean.tar.sha256`, then untar `kit.tar`.
 
