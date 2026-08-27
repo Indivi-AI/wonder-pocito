@@ -12,12 +12,27 @@ for key in "${required[@]}"; do [[ -n "${!key:-}" ]] || { echo "Missing $key in 
 config="${LLM_LITE_CONFIG:-./llm-lite-config.yaml}"
 [[ -s "$config" ]] || { echo "Missing $config; copy llm-lite-config.example.yaml and fill it" >&2; exit 1; }
 
+if ! grep -qE '^[A-Z_]*_PUBLISHED_PORT=' "$env_file"; then   # no explicit ports: shift the 58045-58051 block +100 while any is taken
+  ours="$(docker ps --filter label=com.docker.compose.project=wonder-onprem --format '{{.Ports}}' 2>/dev/null \
+    | grep -oE ':[0-9]{4,5}->' | tr -cd '0-9\n' | sort -u || true)"   # our own running stack keeps its ports - not a conflict
+  taken="$(comm -23 <({ ss -tln 2>/dev/null || docker ps --format '{{.Ports}}'; } \
+    | grep -oE '[:.][0-9]{4,5}([^0-9]|$)' | tr -cd '0-9\n' | sort -u || true) <(printf '%s\n' "$ours"))"
+  offset=0
+  while grep -qxFf <(seq $((58045+offset)) $((58051+offset))) <<< "$taken"; do offset=$((offset+100)); done
+  if (( offset > 0 )); then
+    for entry in WONDER:58045 MARKETPLACE:58046 LLM_LITE:58047 MINIO:58048 AGNO:58049 PGVECTOR:58050 FLAPI:58051; do
+      echo "${entry%:*}_PUBLISHED_PORT=$(( ${entry#*:} + offset ))" >> "$env_file"; done
+    set -a; source "$env_file"; set +a
+    echo "Default ports taken - shifted the whole block +$offset (wonder now :$((58045+offset))); persisted in $env_file"
+  fi
+fi
+
 images=(wonder-server-base:latest marketplace-server-base:latest "wonder-server:$IMAGE_TAG" \
   "marketplace-server:$IMAGE_TAG" "$LLM_LITE_IMAGE" "$PGVECTOR_IMAGE")
 if ! printf '%s\n' "${images[@]}" | xargs -n1 docker image inspect >/dev/null 2>&1; then
   command -v sha256sum >/dev/null && command -v gzip >/dev/null || { echo 'sha256sum and gzip are required' >&2; exit 1; }
-  sha256sum -c SHA256SUMS
-  for archive in images.tar.gz *.image.tar.gz; do   # combined kit or per-image split kit
+  grep -v '  docker-up.sh$' SHA256SUMS | sha256sum -c --ignore-missing -   # verify what's present; absent optional
+  for archive in images.tar.gz *.image.tar.gz; do   # files (bundle/patch) are fine - missing IMAGES fail below by name
     if [[ -f "$archive" ]]; then gzip -dc "$archive" | docker load; fi
   done
 fi
