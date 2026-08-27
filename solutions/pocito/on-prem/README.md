@@ -100,8 +100,15 @@ In-gap code edits: update source from `wonder.bundle`, run `build-images.sh` (CO
 the whitened bases), bump `IMAGE_TAG` in `.env.site`, `up -d`. OpenShift prod: the same images; the same `.env.site`
 keys become ConfigMap/Secret entries and `llm-lite-config.yaml` is passed as `--set-file llm.config`.
 
-## Bare-process dev mode (no docker)
+## Bare-process mode (no docker) — Windows and Linux
 
-`npm run onprem` runs the wonder server alone against a reachable MinIO, loading
-`cloud-services/express-server/.env.onprem` (copy `.env.onprem.template`; usually only `MINIO_ENDPOINT` needs a real
-value). Applets serve live from the checkout at `http://localhost:3000/room/<roomId>/applet/<name>`.
+`node solutions/pocito/on-prem/bare-up.mjs` runs ALL FOUR app servers as bare processes on any machine with
+node+npm and python on PATH — no docker. First runs create `.env.bare` (from its template) and the venvs
+(marketplace `.venv` + isolated `.venv-litellm`), then it starts wonder :3000, marketplace :7777, agno :7778 and
+litellm :4000, prefixing each server's log lines. MinIO and postgres are not started — `.env.bare` points at
+reachable ones (the docker stack's published ports, or the site's global services). In the gap, extract a carried
+`node_modules` tarball at the repo root and install the python deps from a wheel dir instead of the index.
+
+`npm run onprem` remains the smaller variant: the wonder server alone against a reachable MinIO, loading
+`cloud-services/express-server/.env.onprem` (copy `.env.onprem.template`). Applets serve live from the checkout
+at `http://localhost:3000/room/<roomId>/applet/<name>` in both variants.
