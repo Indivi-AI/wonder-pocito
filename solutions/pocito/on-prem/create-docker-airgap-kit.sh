@@ -2,32 +2,42 @@
 set -euo pipefail
 root="$(git rev-parse --show-toplevel)"; cd "$root"
 rev="$(git rev-parse --short=12 HEAD)"; branch="$(git branch --show-current)"
-parts=1 pinned=1 separate=""
+parts=1 pinned=1 separate="" aio=""
 while [[ "${1:-}" == --* ]]; do case "$1" in
   --parts) parts="${2:?--parts needs a number}"; shift 2;;   # split the final tar for size-capped whitening
-  --no-pinned) pinned=""; shift;;   # update kit: skip litellm+pgvector - the site already has them from the first full kit
+  --no-pinned) pinned=""; shift;;   # update kit: skip the pinned 3rd-party images - the site already has them from the first full kit
   --separate) separate=1; shift;;   # one file per image + the bundle + kit files, no outer tar - to see which file whitening rejects
+  --aio) aio=1; shift;;   # single wonder-aio image runs all four app servers (litellm baked in); runs via docker-up.ps1 on Windows too
   *) echo "unknown flag: $1" >&2; exit 1;;
 esac; done
 [[ -z "$separate" || "$parts" == 1 ]] || { echo '--separate and --parts are mutually exclusive' >&2; exit 1; }
-kind=lean; [[ -n "$pinned" ]] || kind=apps; [[ -z "$separate" ]] || kind="$kind-split"
+kind=lean; [[ -z "$aio" ]] || kind=aio; [[ -n "$pinned" ]] || kind="${aio:+aio-}apps"; [[ -z "$separate" ]] || kind="$kind-split"
 out="${1:-$(dirname "$root")/wonder-docker-airgap-$rev-$kind}"; [[ "$out" = /* ]] || out="$PWD/$out"
 platform="${PLATFORM:-linux/amd64}"; litellm="wonder-llm-lite:1.98.0"; pgvector="pgvector/pgvector:0.8.6-pg16-bookworm"
+minio="minio/minio:RELEASE.2025-04-22T22-12-26Z"   # aio kits carry it for machines without a global MinIO (local-minio profile)
 [[ "$platform" == linux/amd64 ]] || { echo 'The deployment kit must target linux/amd64' >&2; exit 1; }
 [[ ! -e "$out" && ! -e "$out.tar" ]] || { echo "Output already exists: $out or $out.tar" >&2; exit 1; }
 for tool in docker git gzip sha256sum tar; do command -v "$tool" >/dev/null || { echo "Missing command: $tool" >&2; exit 1; }; done
 
 tag="$(solutions/pocito/on-prem/build-images.sh --base | tee /dev/stderr | sed -n 's/^IMAGE_TAG=//p')"
-runtimes=("wonder-server:$tag" "marketplace-server:$tag")
-[[ -z "$pinned" ]] || { docker pull --platform "$platform" "$pgvector"; runtimes+=("$litellm" "$pgvector"); }
-images=(wonder-server-base:latest marketplace-server-base:latest "${runtimes[@]}")
+if [[ -n "$aio" ]]; then
+  tag="$(solutions/pocito/on-prem/build-images.sh --aio | tee /dev/stderr | sed -n 's/^IMAGE_TAG=//p')"
+  images=("wonder-aio:$tag")   # no base images: aio kits never rebuild in-gap - code updates come from the wonder-source clone
+  [[ -z "$pinned" ]] || { docker pull --platform "$platform" "$pgvector"; docker pull --platform "$platform" "$minio"
+    images+=("$pgvector" "$minio"); }
+else
+  runtimes=("wonder-server:$tag" "marketplace-server:$tag")
+  [[ -z "$pinned" ]] || { docker pull --platform "$platform" "$pgvector"; runtimes+=("$litellm" "$pgvector"); }
+  images=(wonder-server-base:latest marketplace-server-base:latest "${runtimes[@]}")
+fi
 for image in "${images[@]}"; do
   [[ "$(docker image inspect --platform "$platform" "$image" -f '{{.Os}}/{{.Architecture}}')" == "$platform" ]] \
     || { echo "Wrong platform: $image" >&2; exit 1; }
 done
 
 mkdir -p "$out"
-cp solutions/pocito/on-prem/{docker-compose.yml,compose.airgap.yml,sim-check.sh,docker-up.sh} "$out/"
+cp solutions/pocito/on-prem/{docker-compose.yml,compose.airgap.yml,compose.liverepo.yml,sim-check.sh,docker-up.sh} "$out/"
+[[ -z "$aio" ]] || cp solutions/pocito/on-prem/{compose.aio.yml,docker-up.ps1} "$out/"
 sed "/^IMAGE_TAG=/d;/build-images.sh output/d" solutions/pocito/on-prem/.env.site.template > "$out/.env.example"   # manifest.env supplies IMAGE_TAG
 cp solutions/pocito/on-prem/llm-lite-config.template.yaml "$out/llm-lite-config.example.yaml"
 cp solutions/pocito/on-prem/helm/wonder/files/minio-init.py "$out/"
@@ -40,6 +50,8 @@ git bundle create "$out/wonder.bundle" HEAD "refs/heads/$branch"
 git status --short > "$out/source-status.txt"
 printf 'IMAGE_TAG=%q\nLLM_LITE_IMAGE=%q\nPGVECTOR_IMAGE=%q\nKIT_PLATFORM=%q\nKIT_COMMIT=%q\n' \
   "$tag" "$litellm" "$pgvector" "$platform" "$rev" > "$out/manifest.env"
+{ printf "KIT_COMPOSE=%q\nKIT_IMAGES='%s'\n" "${aio:+compose.aio.yml}" "${images[*]}"   # docker-up.sh/.ps1 read these
+  [[ -z "$aio" ]] || printf 'AIO_IMAGE=%q\n' "wonder-aio:$tag"; } >> "$out/manifest.env"
 docker image inspect --platform "$platform" "${images[@]}" \
   --format '{{join .RepoTags ","}} {{.Id}} {{.Os}}/{{.Architecture}} {{.Size}}' > "$out/images.txt"
 if [[ -n "$separate" ]]; then

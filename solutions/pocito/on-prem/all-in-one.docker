@@ -1,0 +1,28 @@
+# ALL app servers in ONE image, started by aio-start.sh: wonder node server, marketplace, agno, and litellm.
+# litellm lives in its own venv - its mcp<2 pin conflicts with the marketplace's mcp==2 in shared site-packages.
+# Built OUTSIDE with network from the two whitened bases; inside the gap code comes live from the mounted
+# wonder-source clone (compose.aio.yml), so aio kits never need in-gap rebuilds and carry no base images.
+FROM python:3.12-slim
+WORKDIR /usr/src/app
+RUN apt-get update && apt-get install -y --no-install-recommends fontconfig fonts-liberation fonts-noto-core git libstdc++6 libatomic1 \
+  && rm -rf /var/lib/apt/lists/*
+ENV IN_DOCKER=true
+COPY --from=marketplace-server-base:latest /usr/local /usr/local
+COPY --from=node:24.3-bookworm-slim /usr/local/bin/node /usr/local/bin/node
+# keep the litellm venv pins in sync with llm-lite.docker
+RUN python -m venv /opt/litellm \
+  && /opt/litellm/bin/pip install --no-cache-dir litellm==1.98.0 fastapi==0.141.1 'uvicorn>=0.33,<1' pyyaml==6.0.3 python-multipart \
+  && /opt/litellm/bin/pip install --no-cache-dir 'websockets>=15,<16' backoff apscheduler orjson pyjwt rq hiredis cryptography pynacl uvloop \
+    'expression>=5.6,<6' 'mcp>=1.28,<2' 'restrictedpython>=8.1,<9' 'fastapi-sso>=0.19,<1' 'rich>=13.9,<14' 'inquirerpy>=0.3,<1'
+COPY --from=wonder-server-base:latest /usr/src/app/node_modules ./node_modules
+COPY nodejs-importmap.js nodejs-importmap-loader.js package.json package-lock.json ./
+COPY jb6 ./jb6
+COPY wonder ./wonder
+COPY solutions ./solutions
+COPY .jb6 ./.jb6
+COPY cloud-services ./cloud-services
+COPY solutions/pocito/on-prem/aio-start.sh /aio-start.sh
+RUN git config --system --add safe.directory /usr/src/app && mkdir -p /data && chown 1001 /data
+ENV HOME=/tmp
+USER 1001
+CMD ["bash", "/aio-start.sh"]

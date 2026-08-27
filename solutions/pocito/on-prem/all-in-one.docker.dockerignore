@@ -1,0 +1,12 @@
+# aio context keeps solutions/.jb6/tests (live-repo applets import them); deployment tooling stays out except aio-start.sh.
+.git
+node_modules
+files
+tmp
+cloud-services/.local
+.cache
+*.log
+wonder.zip
+**/.venv
+solutions/pocito/on-prem
+!solutions/pocito/on-prem/aio-start.sh
