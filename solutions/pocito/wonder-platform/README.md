@@ -51,7 +51,7 @@ Tests: `node --import ./nodejs-importmap.js jb6/testing/run-tests-cli.js .jb6/en
 solutions/pocito/on-prem/build-images.sh --base    # dependency bases, once per deps change
 solutions/pocito/on-prem/build-images.sh           # app images, offline by design; prints IMAGE_TAG
 cd solutions/pocito/on-prem && cp .env.site.template .env.site   # fill SITE_HOST=$(hostname), IMAGE_TAG, LLM_MODEL
-cp llm-lite-config.template.yaml llm-lite-config.yaml          # upstream endpoint + api key live here
+cp llm-lite-config.template.yaml llm-lite-config.yaml          # upstream endpoint; the key goes in .env.site LLM_API_KEY
 docker compose --env-file .env.site -f docker-compose.yml -f compose.airgap.yml --profile local-minio up -d
 ./sim-check.sh
 ```
@@ -66,7 +66,7 @@ Whiten `wonder-images.tar.gz` (`docker save` of the built images) plus the `solu
 ```sh
 docker load < wonder-images.tar.gz
 cp .env.site.template .env.site                       # SITE_HOST=<site hostname>, IMAGE_TAG, MINIO_ENDPOINT=<global MinIO URL>, LLM_MODEL
-cp llm-lite-config.template.yaml llm-lite-config.yaml # the internal LLM endpoint + api key
+cp llm-lite-config.template.yaml llm-lite-config.yaml # the internal LLM endpoint; key = LLM_API_KEY in .env.site
 docker compose --env-file .env.site up -d      # wonder + marketplace + agno + llm-lite; storage is the global MinIO
 ./sim-check.sh
 ```
@@ -80,7 +80,7 @@ Full runbook, whitening kit, in-gap rebuilds, OpenShift notes: `solutions/pocito
 | `cloud-services/express-server/.env.dev` | dev | optional `OPENAI_API_KEY` for cloud LLM flows |
 | `solutions/pocito/marketplace-server/.env` | dev | marketplace `OPENAI_*` provider (from `.env.example`) |
 | `solutions/pocito/on-prem/.env.site` | sim and site, own gitignored copy each | all deployment facts: `SITE_HOST`, ports, `IMAGE_TAG`, MinIO endpoint + creds, `LLM_MODEL` |
-| `solutions/pocito/on-prem/llm-lite-config.yaml` | sim and site, own gitignored copy each | LLM routing + secrets: the LiteLLM yaml with upstream endpoints and api keys |
+| `solutions/pocito/on-prem/llm-lite-config.yaml` | sim and site, own gitignored copy each | LLM routing: the upstream endpoint + model list (the api key is LLM_API_KEY in .env.site) |
 
 Images are env-free; secrets are never committed and never baked into an image.
 

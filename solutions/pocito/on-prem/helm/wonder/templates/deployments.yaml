@@ -54,6 +54,10 @@ spec:
               valueFrom: {secretKeyRef: {name: {{ $root.Values.secretName }}, key: S3_ACCESS_KEY}}
             - name: MARKETPLACE_S3_SECRET_KEY
               valueFrom: {secretKeyRef: {name: {{ $root.Values.secretName }}, key: S3_SECRET_KEY}}
+          {{- else if eq $name "litellm" }}
+          env:
+            - name: LLM_API_KEY   # the config's os.environ/LLM_API_KEY; optional - a site yaml may inline its own key
+              valueFrom: {secretKeyRef: {name: {{ $root.Values.secretName }}, key: LLM_API_KEY, optional: true}}
           {{- end }}
           securityContext:
             allowPrivilegeEscalation: false
