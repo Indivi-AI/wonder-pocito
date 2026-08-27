@@ -16,6 +16,9 @@ solutions/pocito/on-prem/.env.site
 __pycache__/
 solutions/pocito/on-prem/llm-lite-config.yaml
 solutions/pocito/on-prem/wonder-source/
+solutions/pocito/on-prem/.env.bare
+solutions/pocito/on-prem/.venv-litellm/
+solutions/pocito/on-prem/.agno-data/
 
 solutions/pocito/marketplace-server/.venv/
 
