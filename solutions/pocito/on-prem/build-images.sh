@@ -13,6 +13,10 @@ if [[ "${1:-}" == --base ]]; then
   docker build --platform "$PLATFORM" --network=host -f solutions/pocito/on-prem/flapi-mock.docker \
     -t wonder-flapi-mock:latest solutions/pocito/on-prem/flapi-mock
 fi
-docker build --platform "$PLATFORM" --network=none -f solutions/pocito/on-prem/wonder-server.docker -t "wonder-server:$STAMP" .
-docker build --platform "$PLATFORM" --network=none -f solutions/pocito/on-prem/marketplace-server.docker -t "marketplace-server:$STAMP" solutions/pocito/marketplace-server
+if [[ "${1:-}" == --aio ]]; then   # all four app servers in one image; pip venv + node base pull need network - outside only
+  docker build --platform "$PLATFORM" --network=host -f solutions/pocito/on-prem/all-in-one.docker -t "wonder-aio:$STAMP" .
+else
+  docker build --platform "$PLATFORM" --network=none -f solutions/pocito/on-prem/wonder-server.docker -t "wonder-server:$STAMP" .
+  docker build --platform "$PLATFORM" --network=none -f solutions/pocito/on-prem/marketplace-server.docker -t "marketplace-server:$STAMP" solutions/pocito/marketplace-server
+fi
 echo "IMAGE_TAG=$STAMP"

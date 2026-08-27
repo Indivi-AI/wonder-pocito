@@ -47,6 +47,18 @@ Kit = the images tar + `wonder.bundle` + this directory (compose files, dockerfi
 `.env.site.template`, `llm-lite-config.template.yaml`, scripts). `export-airgap.sh` still builds the legacy
 bare-process kit (bundle + runtime image + `node_modules` tarball) when needed.
 
+`create-docker-airgap-kit.sh` automates all of it; its `--aio` flavor builds `wonder-aio` (`build-images.sh --aio`,
+`all-in-one.docker`): ONE image whose `aio-start.sh` runs all four app servers — wonder, marketplace, agno, and
+litellm in its own venv (litellm's `mcp<2` conflicts with the marketplace's `mcp==2`, so they cannot share
+site-packages). `compose.aio.yml` runs it with pgvector (+ optional local minio) alongside, mounting the
+`wonder-source` clone as the running code — so aio kits carry no base images and never rebuild in-gap, and one
+image file crosses the whitening gate. It is also the Windows path: `docker-up.ps1` needs only Docker Desktop.
+
+Live-repo serving needs the source as a real git clone (jb6 finds the repo root by walking up to `.git`, which
+images never contain). Both up scripts therefore clone `wonder.bundle` to `wonder-source` on first run; lean/apps
+kits mount it into the wonder container via the `compose.liverepo.yml` overlay, aio kits via `compose.aio.yml`.
+In-gap edits: edit `wonder-source`, then `docker compose restart wonder` (or `restart aio`).
+
 ## Local Kubernetes and OpenShift
 
 `helm/wonder` is one chart with explicit `platform: kubernetes|openshift` variants. The Kubernetes variant renders an Ingress and optional
