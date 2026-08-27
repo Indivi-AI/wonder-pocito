@@ -2,13 +2,15 @@
 set -euo pipefail
 root="$(git rev-parse --show-toplevel)"; cd "$root"
 rev="$(git rev-parse --short=12 HEAD)"; branch="$(git branch --show-current)"
-parts=1 pinned=1
+parts=1 pinned=1 separate=""
 while [[ "${1:-}" == --* ]]; do case "$1" in
   --parts) parts="${2:?--parts needs a number}"; shift 2;;   # split the final tar for size-capped whitening
   --no-pinned) pinned=""; shift;;   # update kit: skip litellm+pgvector - the site already has them from the first full kit
+  --separate) separate=1; shift;;   # one file per image + the bundle + kit files, no outer tar - to see which file whitening rejects
   *) echo "unknown flag: $1" >&2; exit 1;;
 esac; done
-kind=lean; [[ -n "$pinned" ]] || kind=apps
+[[ -z "$separate" || "$parts" == 1 ]] || { echo '--separate and --parts are mutually exclusive' >&2; exit 1; }
+kind=lean; [[ -n "$pinned" ]] || kind=apps; [[ -z "$separate" ]] || kind="$kind-split"
 out="${1:-$(dirname "$root")/wonder-docker-airgap-$rev-$kind}"; [[ "$out" = /* ]] || out="$PWD/$out"
 platform="${PLATFORM:-linux/amd64}"; litellm="wonder-llm-lite:1.98.0"; pgvector="pgvector/pgvector:0.8.6-pg16-bookworm"
 [[ "$platform" == linux/amd64 ]] || { echo 'The deployment kit must target linux/amd64' >&2; exit 1; }
@@ -40,11 +42,20 @@ printf 'IMAGE_TAG=%q\nLLM_LITE_IMAGE=%q\nPGVECTOR_IMAGE=%q\nKIT_PLATFORM=%q\nKIT
   "$tag" "$litellm" "$pgvector" "$platform" "$rev" > "$out/manifest.env"
 docker image inspect --platform "$platform" "${images[@]}" \
   --format '{{join .RepoTags ","}} {{.Id}} {{.Os}}/{{.Architecture}} {{.Size}}' > "$out/images.txt"
-docker save --platform "$platform" "${images[@]}" | gzip -6 > "$out/images.tar.gz"
+if [[ -n "$separate" ]]; then
+  for image in "${images[@]}"; do   # docker-up.sh loads every *.image.tar.gz it finds
+    docker save --platform "$platform" "$image" | gzip -6 > "$out/$(echo "$image" | tr '/:' '--').image.tar.gz"
+  done
+else
+  docker save --platform "$platform" "${images[@]}" | gzip -6 > "$out/images.tar.gz"
+fi
 chmod +x "$out/docker-up.sh" "$out/sim-check.sh"
 cp solutions/pocito/on-prem/AIRGAP-KIT.md "$out/README.md"
-(cd "$out" && sha256sum .env.example compose.airgap.yml docker-compose.yml docker-up.sh images.tar.gz images.txt \
-  llm-lite-config.example.yaml manifest.env minio-init.py README.md sim-check.sh source.patch source-status.txt wonder.bundle > SHA256SUMS)
+(cd "$out" && ls | grep -vx SHA256SUMS | xargs sha256sum > SHA256SUMS)
+if [[ -n "$separate" ]]; then
+  echo "Split kit - carry EVERY file in: $out"; ls -lh "$out"
+  exit 0
+fi
 tar -cf "$out.tar" -C "$(dirname "$out")" "$(basename "$out")"
 (cd "$(dirname "$out")" && sha256sum "$(basename "$out").tar" > "$(basename "$out").tar.sha256")
 if (( parts > 1 )); then
