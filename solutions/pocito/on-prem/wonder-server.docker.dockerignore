@@ -7,3 +7,5 @@ cloud-services/.local
 .cache
 *.log
 wonder.zip
+# deployment tooling never runs inside the app container; keeps .ts + mock datasets out of the whitened image
+solutions/pocito/on-prem
