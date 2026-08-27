@@ -24,7 +24,8 @@ for image in "wonder-server:$tag" "marketplace-server:$tag" "$LLM_LITE_IMAGE" "$
 done
 kubectl create namespace wonder --dry-run=client -o yaml | kubectl apply -f -
 kubectl -n wonder create secret generic wonder-secrets --dry-run=client -o yaml \
-  --from-literal=S3_ACCESS_KEY="$S3_ACCESS_KEY" --from-literal=S3_SECRET_KEY="$S3_SECRET_KEY" | kubectl apply -f -
+  --from-literal=S3_ACCESS_KEY="$S3_ACCESS_KEY" --from-literal=S3_SECRET_KEY="$S3_SECRET_KEY" \
+  --from-literal=LLM_API_KEY="${LLM_API_KEY:-}" | kubectl apply -f -
 helm upgrade --install wonder helm/wonder -n wonder -f helm/wonder/values-local.yaml --wait --timeout 10m \
   --set-string images.wonder="wonder-server:$tag" --set-string images.marketplace="marketplace-server:$tag" \
   --set-string images.litellm="$LLM_LITE_IMAGE" --set-string images.minio="$MINIO_IMAGE" \

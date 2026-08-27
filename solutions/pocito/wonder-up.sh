@@ -19,7 +19,7 @@ if [[ "$MODE" == clean ]]; then compose -f compose.dev.yml --profile local-minio
 [[ -n "$ENVFILE" ]] && cp "$ENVFILE" .env.site
 [[ -f .env.site ]] || cp .env.site.template .env.site
 grep -q '^LLM_LITE_CONFIG=' .env.site 2> /dev/null || [[ -f llm-lite-config.yaml ]] \
-  || cp llm-lite-config.template.yaml llm-lite-config.yaml   # upstream endpoint + api key live here (unless LLM_LITE_CONFIG points elsewhere)
+  || cp llm-lite-config.template.yaml llm-lite-config.yaml   # upstream endpoint lives here; the key is .env.site LLM_API_KEY (unless LLM_LITE_CONFIG points at a site yaml)
 while IFS= read -r line; do key="${line%%=*}"; grep -q "^$key=" .env.site || echo "$line" >> .env.site; done \
   < <(grep -E '^[A-Z_]+=' .env.site.template | sed -E 's/[[:space:]]+#.*$//')   # backfill keys added by newer templates,
   # comment-stripped (compose reads "KEY=  # x" as value "# x"); your existing values always win

@@ -13,7 +13,7 @@ docker's `host-gateway`; on OpenShift, cluster DNS and routes provide the same n
 solutions/pocito/on-prem/build-images.sh --base    # dependency bases; needs network, so outside only
 solutions/pocito/on-prem/build-images.sh           # app layers, built with --network=none; prints IMAGE_TAG=dd-mm-yyyy-HH-MM-<sha>
 cd solutions/pocito/on-prem && cp .env.site.template .env.site               # SITE_HOST=$(hostname), IMAGE_TAG, LLM_MODEL
-cp llm-lite-config.template.yaml llm-lite-config.yaml                      # upstream endpoint + api key live here
+cp llm-lite-config.template.yaml llm-lite-config.yaml                      # upstream endpoint; the api key is typed into .env.site LLM_API_KEY
 docker compose --env-file .env.site -f docker-compose.yml -f compose.airgap.yml --profile local-minio up -d
 ./sim-check.sh    # waits for readiness, then: anonymous room/applet storage, /llmProxy, CRUD, presign, AgentOS run
 ```
@@ -78,9 +78,10 @@ Everything else — scheme, published ports, buckets, storage class, postgres cr
 the `pgvector-data` volume; set `PGVECTOR_URL` only for an external PostgreSQL. Wonder's global MinIO needs buckets
 `indiviai-wonder` and `wonder-code-packages` with anonymous read+write.
 
-LLM routing and secrets live only in `llm-lite-config.yaml` (gitignored, next to `.env.site`): the site's own
-LiteLLM yaml with the internal OpenAI-compatible endpoint and its api key inline — nothing LLM-related in env,
-no proxy key. If the upstream is https behind an internal CA, add the CA via a small override:
+LLM routing lives in `llm-lite-config.yaml` (gitignored, next to `.env.site`): the internal OpenAI-compatible
+endpoint and the model list. The api key is typed into `.env.site` as `LLM_API_KEY` on the machine that runs the
+stack — no kit, image or config file ever carries it (a site-owned yaml may instead inline its own key and skip
+`LLM_API_KEY`). If the upstream is https behind an internal CA, add the CA via a small override:
 `services: {llm-lite: {volumes: ["./site-ca.pem:/site-ca.pem:ro"], environment: {SSL_CERT_FILE: /site-ca.pem}}}`.
 
 In-gap code edits: update source from `wonder.bundle`, run `build-images.sh` (COPY-only layers, fully offline from

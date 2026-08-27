@@ -111,7 +111,9 @@ services:
     ports: ["${LLM_LITE_PUBLISHED_PORT:-58047}:4000"]
     networks: [edge]
     command: ["--config", "/etc/litellm/config.yaml", "--port", "4000"]
-    volumes: ["${LLM_LITE_CONFIG:-./llm-lite-config.yaml}:/etc/litellm/config.yaml:ro"]   # routing + secrets live in that file (copy its .template)
+    volumes: ["${LLM_LITE_CONFIG:-./llm-lite-config.yaml}:/etc/litellm/config.yaml:ro"]   # routing lives in that file (copy its .template)
+    environment:
+      LLM_API_KEY: ${LLM_API_KEY:-}   # the config's os.environ/LLM_API_KEY - typed into .env on the running machine, never in a kit file
 
   flapi-mock:   # stand-in for the site's FLAPI package service - sim/dev only (wonder-up --flapi); site: set FLAPI_BASE_URL
     image: wonder-flapi-mock:latest
