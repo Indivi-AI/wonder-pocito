@@ -17,7 +17,9 @@ images=(wonder-server-base:latest marketplace-server-base:latest "wonder-server:
 if ! printf '%s\n' "${images[@]}" | xargs -n1 docker image inspect >/dev/null 2>&1; then
   command -v sha256sum >/dev/null && command -v gzip >/dev/null || { echo 'sha256sum and gzip are required' >&2; exit 1; }
   sha256sum -c SHA256SUMS
-  gzip -dc images.tar.gz | docker load
+  for archive in images.tar.gz *.image.tar.gz; do   # combined kit or per-image split kit
+    if [[ -f "$archive" ]]; then gzip -dc "$archive" | docker load; fi
+  done
 fi
 printf '%s\n' "${images[@]}" | xargs -n1 docker image inspect >/dev/null
 
