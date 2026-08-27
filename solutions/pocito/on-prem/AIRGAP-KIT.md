@@ -6,6 +6,11 @@ An `-apps` kit (created with `create-docker-airgap-kit.sh --no-pinned`) carries 
 and their bases — deploy it on a machine that already loaded litellm + pgvector from a previous full `-lean` kit
 (`docker-up.sh` verifies they are present).
 
+A `-split` kit (`--separate`) is the same content as loose files — one `*.image.tar.gz` per image, `wonder.bundle`,
+and the config/script files — so a gate that rejects the combined tar can judge each file separately. Carry every
+file into ONE directory inside; the same `docker-up.sh` flow then works unchanged (it loads whatever image files
+are present).
+
 Kit arrived as `*.tar.part-*` files (created with `create-docker-airgap-kit.sh --parts N`)? Reassemble first:
 `cat wonder-docker-airgap-*-lean.tar.part-* > kit.tar && sha256sum -c --ignore-missing wonder-docker-airgap-*-lean.tar.sha256`, then untar `kit.tar`.
 
