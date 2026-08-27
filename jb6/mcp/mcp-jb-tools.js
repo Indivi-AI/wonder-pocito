@@ -302,7 +302,7 @@ await coreUtils.writeServiceResult({ done, harvestError, errors, logs, html, tim
 })
 
 Tool('playwrightHarvest', {
-  description: `Load a URL in Chromium, run ui-action<react> automation, and harvest logs, browser errors, HTML, and timeline.`,
+  description: 'Load a URL in Chromium, run ui-action<react> automation, and harvest logs, browser errors, HTML, and timeline.\nIn the Wonder project use roomAppletHarvest for room applet URLs.',
   params: [
     {id: 'url', as: 'string', asIs: true, mandatory: true},
     {id: 'automation', as: 'string', asIs: true},

@@ -24,10 +24,12 @@ Data('wonderPlatformMarketplaceRequest', {
 
 Data('wonderPlatformFlapiPackage', {
   params: [
-    {id: 'packageId', as: 'string', mandatory: true}
+    {id: 'packageId', as: 'string', mandatory: true},
+    {id: 'baseUrl', as: 'string'}
   ],
-  impl: async (ctx, {}, {packageId}) => {
-    const response = await fetch(`/flapi/package/${encodeURIComponent(packageId)}`)
+  impl: async (ctx, {}, {packageId, baseUrl}) => {
+    const flapiBase = (baseUrl || globalThis.FLAPI_BASE_URL || globalThis.process?.env?.FLAPI_BASE_URL || 'http://localhost:6001').replace(/\/$/, '')
+    const response = await fetch(`${flapiBase}/flapi/package/${encodeURIComponent(packageId)}`)
     if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || `FLAPI ${response.status}`)
     return response.json()
   }

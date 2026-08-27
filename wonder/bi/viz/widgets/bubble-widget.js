@@ -12,8 +12,10 @@ const {
   },
   test: {
     Test,
-    'ui-action': { delay, clickVizShape },
     test: { reactTest },
+  },
+  react: {
+    'ui-action': { delay, clickVizShape },
   },
 } = dsls
 

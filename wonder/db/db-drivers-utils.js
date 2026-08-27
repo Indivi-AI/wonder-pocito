@@ -24,7 +24,12 @@ async function wresolve(url, _ctx, method = 'GET') {
   const ext = (url.endsWith('/') || fileName?.includes('.')) ? '' : '.json'
   const path = await calcPath(ctx, extracted) + ext
   const driver = await jb.wonderUtils.getDBDriver(url, ctx)
-  return driver?.filePathUrl(ctx.setVars({ ...extracted, path }))
+  // No driver is unrecoverable, and returning undefined here is worse than throwing: the undefined travels
+  // into read_parquet('undefined') and surfaces as an IO error many layers away with no mention of drivers.
+  // Most common cause by far: a `:fs//` url when db-drivers-live-repo.js (which registers FS.*) was never imported.
+  if (!driver) throw new Error(`wresolve: no db-driver for '${url}' (db=${db}, host=${coreUtils.isNode ? 'node' : 'browser'}). `
+    + `If this is a fs/local url, import '@wonder/db/db-drivers-live-repo.js' — db-drivers.js does not load it.`)
+  return driver.filePathUrl(ctx.setVars({ ...extracted, path }))
 }
 
 async function wresolveInfo(url, _ctx, method = 'GET') {
@@ -35,7 +40,7 @@ async function wresolveInfo(url, _ctx, method = 'GET') {
   const fullyResolvedWUrl = url.replace(/^(\w+):[^/]*\/\//, `$1:${db}//`)
   const isLocal = resolved != null && !/^https?:\/\//.test(resolved)   // wresolve returns a directly-readable path (fs or repo-relative mirror) for local; an https url for remote
   return { url, db, fullyResolvedWUrl, rangeUrl: coreUtils.isNode ? resolved : fullyResolvedWUrl,
-    resolved, isWUrl: resolved != null, isLocal, needsWcache: resolved != null && !isLocal }
+    resolved, isWUrl: resolved != null, isLocal, needsFullFileCache: resolved != null && !isLocal }
 }
 
 // the whole env->storage contract: process boundaries (mcp tools, express server) opt in via ctx vars; db resolution itself never reads env
@@ -73,45 +78,47 @@ async function wputMany(items, ctx) {
   return { ok: !failed.length, responses: results.map(({ response }) => response), failed: failedItems }
 }
 
-async function wcachePopulate(wUrl, _ctx, { validate = false } = {}) {
-  const dbLogger = _ctx.vars.dbLogger
+async function fullFileCachePopulate(wUrl, ctx, { validate = false } = {}) {
+  const dbLogger = ctx.vars.dbLogger
   if (!coreUtils.isNode) {
     const script = `import { coreUtils, jb } from '@jb6/core'
 import '@wonder/db/db-drivers.js'
-const { wcachePopulate } = jb.wonderUtils
+const { fullFileCachePopulate } = jb.wonderUtils
 ;(async()=>{ try {
-  await coreUtils.writeServiceResult(await wcachePopulate(${JSON.stringify(wUrl)}, new coreUtils.Ctx(), { validate: ${validate} }))
+  const ctx = new coreUtils.Ctx().setVars({db: ${JSON.stringify(ctx.vars.db)}})
+  await coreUtils.writeServiceResult(await fullFileCachePopulate(${JSON.stringify(wUrl)}, ctx, { validate: ${validate} }))
 } catch (e) { await coreUtils.writeServiceResult({ error: e.stack || String(e) }) } })()`
-    return (await coreUtils.runCliInContext(script, { ctx: _ctx, bindLoggers: 'dbLogger' })).result
+    return (await coreUtils.runCliInContext(script, { ctx, bindLoggers: 'dbLogger' })).result
   }
-  const ctx = _ctx.setVars({ db: 'gcs' })
   try {
-    const t0 = Date.now(), cachePath = await wresolve(wUrl, ctx.setVars({ db: 'wcache' })), fs = await import('fs/promises')
+    const t0 = Date.now(), cachePath = await wresolve(wUrl, ctx.setVars({ db: 'fullFileCache' })), fs = await import('fs/promises')
     if (validate) {
       const remoteMtime = (await jb.wonderUtils.wfetch2(wUrl, { method: 'HEAD' }, ctx))?.headers?.get?.('Last-Modified')
       const localMtime = await fs.stat(cachePath).then(s => s.mtime.toISOString()).catch(() => null)
       if (localMtime && (!remoteMtime || localMtime >= remoteMtime)) {
-        dbLogger?.info?.({ t: 'wcache hit', cachePath, localMtime, remoteMtime, validateMs: Date.now() - t0 }, {}, { ctx })
+        dbLogger?.info?.({ t: 'fullFileCache hit', cachePath, localMtime, remoteMtime, validateMs: Date.now() - t0 }, {}, { ctx })
         return cachePath
       }
     }
-    const binary = /\.(parquet|jpg|jpeg|png|gif|webp|mp4|webm|wav|mp3|tar\.gz)$/i.test(wUrl)
     const res = await jb.wonderUtils.wfetch2(wUrl, { method: 'GET' }, ctx)
-    if (!res?.ok) { dbLogger?.info?.({ t: 'wcache miss', wUrl, cachePath }, {}, { ctx }); return false }
-    const content = binary ? Buffer.from(await res.arrayBuffer()) : rawFileExts.test(wUrl) ? await res.text()
-      : await (async d => d == null ? null : typeof d === 'string' ? d : JSON.stringify(d, null, 2))(await res.json())
-    if (content == null) { dbLogger?.info?.({ t: 'wcache empty', wUrl, cachePath }, {}, { ctx }); return false }
+    if (!res?.ok) { dbLogger?.info?.({ t: 'fullFileCache miss', wUrl, cachePath }, {}, { ctx }); return false }
+    const type = res.headers?.get?.('content-type') || (/\.json(?:[?#]|$)/i.test(wUrl) ? 'application/json'
+      : /\.(md|txt|csv|tsv|js|mjs|css|html|svg|jsonl)(?:[?#]|$)/i.test(wUrl) ? 'text/plain' : 'application/octet-stream')
+    const content = /json(?:;|$)/i.test(type) ? JSON.stringify(await res.json(), null, 2)
+      : /^text\/|ndjson|javascript|svg/i.test(type) ? await res.text() : Buffer.from(await res.arrayBuffer())
+    if (content == null) { dbLogger?.info?.({ t: 'fullFileCache empty', wUrl, cachePath }, {}, { ctx }); return false }
     await fs.mkdir(cachePath.replace(/\/[^/]*$/, ''), { recursive: true })
     await fs.writeFile(cachePath, content)
-    dbLogger?.info?.({ t: 'wcache populated', cachePath, bytes: content.length, downloadMs: Date.now() - t0 }, {}, { ctx })
+    dbLogger?.info?.({ t: 'fullFileCache populated', cachePath, bytes: content.length, downloadMs: Date.now() - t0 }, {}, { ctx })
     return cachePath
-  } catch (e) { coreUtils.logException(e, 'wcache failed', { ctx, wUrl }); return false }
+  } catch (e) { coreUtils.logException(e, 'fullFileCache failed', { ctx, wUrl }); return false }
 }
 
 async function saveRoomBigLog2(ctx, id = formatTimeWithRandom()) {
   if (!ctx.vars.roomBigLogLogger2 || !ctx.vars.roomWUrl) return
   const wUrl = `${ctx.vars.roomWUrl}/admin/bigLogs/${id}.json`
-  const res = await jb.wonderUtils.wfetch2(wUrl, { method: 'PUT', body: coreUtils.harvestBigLog(ctx) }, ctx)
+  const res = await jb.wonderUtils.wfetch2(wUrl, { method: 'PUT', body: JSON.stringify(coreUtils.harvestBigLog(ctx)),
+    headers: {'content-type': 'application/json'} }, ctx)
   return res.ok && wUrl
 }
 
@@ -294,7 +301,7 @@ async function checkPermissionDenial(ctx, room, file, method) {
   if (!ctx.vars.authLogger || !coreUtils.isNode || process.env.K_SERVICE || !/^[\w.-]+$/.test(room)) return
   const {execFile} = await import('node:child_process'), {promisify} = await import('node:util')
   const {stdout} = await promisify(execFile)('gsutil', ['cat', `gs://indiviai-wonder-protected/${room}/admin/users.json`])
-  const parsed = JSON.parse(stdout), users = parsed?.content ?? parsed, username = ctx.vars.userEmail || await auth.devEmail(ctx)
+  const users = JSON.parse(stdout), username = ctx.vars.userEmail || await auth.devEmail(ctx)
   const role = users.admins.includes(username) ? 'admin'
     : users.users.includes(username) || users.users.includes('authenticated') ? 'user' : null
   const [accessLevel, pathUserId] = file.split('/'), permissions = users.accessLevels[accessLevel]?.[role] || ''
@@ -305,38 +312,22 @@ async function checkPermissionDenial(ctx, room, file, method) {
     requiresUserMatch, userMatches, allowed, permissionDenied: !allowed}
 }
 
-const isLocalFile = (body, opts) => typeof body === 'string' && opts?.headers?.['x-wonder-body'] === 'localFile'
+const fullFileCachePath = (bucketName, path) => `${fullFileCacheRoot()}/${bucketName}/${path}`
 
-const rawFileUtils = (text, binary) => {
-  const mimeTypes = {...text, ...binary}
-  rawFileExts = new RegExp(`\\.(${Object.keys(mimeTypes).join('|')})$`, 'i')
-  const isTextMime = contentType => Object.values(text).includes(contentType)
-  return { mimeTypes, rawFileExts, isTextMime, rawFileBody: async (body, contentType, opts) => {
-    if (typeof body !== 'string') return body
-    if (isLocalFile(body, opts)) { const fs = await import('fs'); return fs.readFileSync(body) }
-    const isText = isTextMime(contentType)
-    return coreUtils.isNode ? Buffer.from(body, isText ? 'utf8' : 'base64')
-      : isText ? new TextEncoder().encode(body) : Uint8Array.from(atob(body), c => c.charCodeAt(0))
-  }}
-}
-
-const wcachePath = (bucketName, path) => `${wcacheRoot()}/${bucketName}/${path}`
-
-Object.assign(jb.wonderUtils, { formatDay, formatTimeWithRandom, wresolve, wresolveInfo, wputMany, wcachePopulate, storageEnvVars,
+Object.assign(jb.wonderUtils, { formatDay, formatTimeWithRandom, wresolve, wresolveInfo, wputMany, fullFileCachePopulate, storageEnvVars,
   saveRoomBigLog2, prefetchSignedUrls, getIdToken, getAccessToken,
   storagePrefix, wonderBucketName, successResult, errorResultByException, notFoundResult,
   calcPath, extractFromUrl, wonderRepoRoot, bustCdnCache, paginateGcsList, gcsStorage,
-  getCachedSignedUrl, isLocalFile, rawFileUtils, wcachePath })
+  getCachedSignedUrl, fullFileCachePath })
 
 // private
-let rawFileExts
 const localhostServer = ctx => ctx.vars.localhostServer || globalThis.process?.env?.WONDER_LOCAL_SERVER || 'http://localhost:3000'
 const signedUrlServerOf = ctx => ctx.vars.signedUrlServer
   || 'https://w-staging.indivi.ai/signed-url'
 const methodToAction = method => method === 'GET' || method === 'HEAD' ? 'read' : 'write'
 const sigsStorageKey = roomId => `sigs_${roomId}_${auth.currentPrincipal()}`
 const loadedRooms = new Set()
-const wcacheRoot = () => process.env?.WCACHE_DIR || '/tmp/wcache'
+const fullFileCacheRoot = () => process.env?.FULL_FILE_CACHE_DIR || '/tmp/fullFileCache'
 
 function loadSignaturesFromStorage(roomId) {
   if (coreUtils.isNode) return

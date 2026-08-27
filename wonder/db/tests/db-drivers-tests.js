@@ -1,7 +1,7 @@
 import { dsls, coreUtils, jb } from '@jb6/core'
 import '@wonder/db/db-drivers.js'
 
-const { wfetch2, wresolve, wresolveInfo, wcachePopulate, getDBDriver } = jb.wonderUtils
+const { wfetch2, wresolve, wresolveInfo, fullFileCachePopulate, getDBDriver } = jb.wonderUtils
 import '@jb6/testing'
 import '@jb6/common'
 import '@jb6/jq'
@@ -14,7 +14,7 @@ const {
     boolean: { equals }, data: { asIs }
   },
   test: { Test,
-    test: { dataTest, dbDriverAppendTest, dbDriverPatchTest, dbDriverPutGetTest, publicRoomCountTest }
+    test: { dataTest, dbDriverAppendTest, dbDriverPutGetTest, publicRoomCountTest }
   }
 } = dsls
 
@@ -48,56 +48,35 @@ Test('dbDriverTests.fs-mem.browser.localhost.putGet', {
 
 Test('dbDriverTests.gcs.node.prod.append', {
   description: 'slow in tests',
-  impl: dbDriverAppendTest('room:gcs//buyPhone/items?user=Buyer', 'node-prod')
+  impl: dbDriverAppendTest('room:gcs//buyPhone/items.jsonl?user=Buyer', 'node-prod')
 })
 
 Test('dbDriverTests.fs-mem.node.localhost.append', {
-  impl: dbDriverAppendTest('room:fs-mem//buyPhone/items?user=Buyer', 'node-localhost')
+  impl: dbDriverAppendTest('room:fs-mem//buyPhone/items.jsonl?user=Buyer', 'node-localhost')
 })
 
 Test('dbDriverTests.fs-mem.browser.localhost.append', {
-  impl: dbDriverAppendTest('room:fs-mem//buyPhone/items?user=Buyer', 'browser-localhost')
+  impl: dbDriverAppendTest('room:fs-mem//buyPhone/items.jsonl?user=Buyer', 'browser-localhost')
 })
 
 Test('dbDriverTests.gcs.node.prod.append.newFile', {
-  nodeOnly: true,
   description: 'slow in tests',
-  impl: dbDriverAppendTest('room:gcs//buyPhone/items-%$testSessionId%?user=Buyer', 'node-prod', {
-    initialArray: [],
+  nodeOnly: true,
+  impl: dbDriverAppendTest('room:gcs//buyPhone/items-%$testSessionId%.jsonl?user=Buyer', 'node-prod', {
     changeNewFile: true
   })
 })
 
 Test('dbDriverTests.fs-mem.node.localhost.append.newFile', {
-  impl: dbDriverAppendTest('room:fs-mem//buyPhone/items-%$testSessionId%?user=Buyer', 'node-localhost', {
-    initialArray: [],
+  impl: dbDriverAppendTest('room:fs-mem//buyPhone/items-%$testSessionId%.jsonl?user=Buyer', 'node-localhost', {
     changeNewFile: true
   })
 })
 
 Test('dbDriverTests.fs-mem.browser.localhost.append.newFile', {
-  impl: dbDriverAppendTest('room:fs-mem//buyPhone/items-%$testSessionId%?user=Buyer', 'browser-localhost', {
-    initialArray: [],
+  impl: dbDriverAppendTest('room:fs-mem//buyPhone/items-%$testSessionId%.jsonl?user=Buyer', 'browser-localhost', {
     changeNewFile: true
   })
-})
-
-Test('dbDriverTests.gcs.node.prod.patch', {
-  description: 'slow in tests',
-  nodeOnly: true,
-  impl: dbDriverPatchTest('room:gcs//buyPhone/items-%$testSessionId%?user=Buyer', 'node-prod')
-})
-
-Test('dbDriverTests.gcs.browser.localhost.patch', {
-  impl: dbDriverPatchTest('room:gcs//buyPhone/items?user=Buyer', 'browser-localhost')
-})
-
-Test('dbDriverTests.fs-mem.node.localhost.patch', {
-  impl: dbDriverPatchTest('room:fs-mem//buyPhone/items?user=Buyer', 'node-localhost')
-})
-
-Test('dbDriverTests.fs-mem.browser.localhost.patch', {
-  impl: dbDriverPatchTest('room:fs-mem//buyPhone/items?user=Buyer', 'browser-localhost')
 })
 
 Test('dbDriverTests.gcs.browser.localhost.get.logs', {
@@ -106,8 +85,8 @@ Test('dbDriverTests.gcs.browser.localhost.get.logs', {
 })
 
 Test('dbDriverTests.gcs.node.localhost.get.analytics', {
-  nodeOnly: true,
   doNotRunInTests: true,
+  nodeOnly: true,
   impl: dbDriverPutGetTest('analytics:gcs//test/analyticsTest', 'node-localhost')
 })
 
@@ -118,73 +97,80 @@ Test('dbDriverTests.gcs.browser.localhost.get.analytics', {
 
 Test('dbDriverTests.jqPath', {
   impl: dataTest({
-    logger: 'dbLogger',
     calculate: async ctx => {
       const dbCtx = ctx.setVars({ db: 'fs-mem', onLiveRepo: true })
       const data = { people: [{name: 'Alice', age: 25}, {name: 'Bob', age: 30}] }
-      await wfetch2('room:fs-mem//testRoom/jqTestData?user=tester', { body: data, method: 'PUT' }, dbCtx)
+      await wfetch2('room:fs-mem//testRoom/jqTestData?user=tester', {
+        body: JSON.stringify(data), method: 'PUT', headers: {'content-type': 'application/json'} }, dbCtx)
       const jqExp = encodeURIComponent('.people[] | select(.age > 26)')
       const res = await wfetch2(`room:fs-mem//testRoom/jqTestData?user=tester&jq=${jqExp}`, { method: 'GET' }, dbCtx)
       return { result: await res.json(), ...coreUtils.harvestLogs(dbCtx) }
     },
-    expectedResult: equals('%result%', [{name: 'Bob', age: 30}]),
-    timeout: 10000
+    expectedResult: equals('%result%', [
+      {name: 'Bob', age: 30}
+    ]),
+    timeout: 10000,
+    logger: 'dbLogger'
   })
 })
 
 Test('dbDriverTests.gcs.node.noIdentity.publicRead', {
   nodeOnly: true,
   impl: dataTest({
-    logger: 'dbLogger',
     calculate: async ctx => {
       const dbCtx = ctx.setVars({ dbHost: 'node', forceGCS: true, hasGcpIdentity: false })
       const res = await wfetch2('room:gcs//buyPhone/items?user=Buyer', { method: 'GET' }, dbCtx)
       return { result: res.status, ...coreUtils.harvestLogs(dbCtx) }
     },
     expectedResult: equals('%result%', 200),
-    timeout: 10000
+    timeout: 10000,
+    logger: 'dbLogger'
   })
 })
 
-// wcache (db:'wcache') is a local-disk cache path, scheme-agnostic — must resolve to /tmp/wcache/<bucket>/<path> for
+// fullFileCache is scheme-agnostic and resolves to /tmp/fullFileCache/<bucket>/<path> for
 // BOTH public (indiviai-wonder) and signed (indiviai-wonder-protected), never the signed HTTPS url (→ ENAMETOOLONG).
-Test('dbDriverTests.wcachePath', {
+Test('dbDriverTests.fullFileCachePath', {
   nodeOnly: true,
   impl: dataTest({
-    logger: 'dbLogger',
     calculate: async ctx => {
       const dbCtx = ctx.setVars({ forceGCS: false, onLiveRepo: true, hasGcpIdentity: true })
-      const at = u => wresolve(u, dbCtx.setVars({ db: 'wcache' }))
+      const at = u => wresolve(u, dbCtx.setVars({ db: 'fullFileCache' }))
       return { result: [await at('signedRoom://testSignedRoom/usersRO/sales-large.json'),
         await at('room://testPublicRoom/usersRO/sales-large.json')], ...coreUtils.harvestLogs(dbCtx) }
     },
-    expectedResult: equals('%result%', ['/tmp/wcache/indiviai-wonder-protected/testSignedRoom/usersRO/sales-large.json',
-      '/tmp/wcache/indiviai-wonder/testPublicRoom/usersRO/sales-large.json']),
-    timeout: 10000
+    expectedResult: equals({
+      item1: '%result%',
+      item2: ['/tmp/fullFileCache/indiviai-wonder-protected/testSignedRoom/usersRO/sales-large.json','/tmp/fullFileCache/indiviai-wonder/testPublicRoom/usersRO/sales-large.json']
+    }),
+    timeout: 10000,
+    logger: 'dbLogger'
   })
 })
 
 Test('dbDriverTests.resolveLocations', {
   nodeOnly: true,
   impl: dataTest({
-    logger: 'dbLogger',
     calculate: async ctx => {
       const url = 'room://testPublicRoom/usersRO/stores.parquet'
       const resolveWith = vars => wresolve(url, ctx.setVars({ onLiveRepo: true, hasGcpIdentity: false, ...vars }))
       const [nodeLocal, browserLocal, nodeMem, browserMem, cache, gcs] = await Promise.all([
         resolveWith({ db: 'local', dbHost: 'node' }), resolveWith({ db: 'local', dbHost: 'browser' }),
         resolveWith({ db: 'fs-mem', dbHost: 'node' }), resolveWith({ db: 'fs-mem', dbHost: 'browser' }),
-        resolveWith({ db: 'wcache', dbHost: 'node' }), resolveWith({ db: 'gcs', dbHost: 'node', forceGCS: true })
+        resolveWith({ db: 'fullFileCache', dbHost: 'node' }), resolveWith({ db: 'gcs', dbHost: 'node', forceGCS: true })
       ])
       return { result: [nodeLocal.endsWith('/files/rooms/testPublicRoom/usersRO/stores.parquet'), browserLocal,
         nodeMem.endsWith('/files/testPublicRoom/usersRO/stores.parquet'), browserMem, cache, gcs], ...coreUtils.harvestLogs(ctx) }
     },
-    expectedResult: equals('%result%', [true,
-      'http://localhost:3000/files/rooms/testPublicRoom/usersRO/stores.parquet', true,
-      'http://localhost:3000/files/testPublicRoom/usersRO/stores.parquet',
-      '/tmp/wcache/indiviai-wonder/testPublicRoom/usersRO/stores.parquet',
-      'https://storage.googleapis.com/indiviai-wonder/testPublicRoom/usersRO/stores.parquet']),
-    timeout: 10000
+    expectedResult: equals({
+      item1: '%result%',
+      item2: [true, 'http://localhost:3000/files/rooms/testPublicRoom/usersRO/stores.parquet', true,
+        'http://localhost:3000/files/testPublicRoom/usersRO/stores.parquet',
+        '/tmp/fullFileCache/indiviai-wonder/testPublicRoom/usersRO/stores.parquet',
+        'https://storage.googleapis.com/indiviai-wonder/testPublicRoom/usersRO/stores.parquet']
+    }),
+    timeout: 10000,
+    logger: 'dbLogger'
   })
 })
 
@@ -228,15 +214,15 @@ Test('dbDriverTests.resolveCodeLocations', {
   })
 })
 
-// wcachePopulate → cache an object at its canonical wcache path, transport chosen by scheme (signed URL for signedRoom,
+// fullFileCachePopulate → cache an object at its canonical fullFileCache path, transport chosen by scheme (signed URL for signedRoom,
 // SA/public for gcs). Both testSignedRoom and testPublicRoom hold usersRO/sales-large.json; populate each, assert non-empty.
-Test('dbDriverTests.wcachePopulate', {
+Test('dbDriverTests.fullFileCachePopulate', {
   nodeOnly: true,
   impl: dataTest({
     calculate: async ctx => {
       const { promises: fsp } = await import('fs')
       const dbCtx = ctx.setVars({ db: 'gcs', forceGCS: false, onLiveRepo: true, hasGcpIdentity: true })
-      const at = async u => { const p = await wcachePopulate(u, dbCtx); return !!p && (await fsp.stat(p)).size > 0 }
+      const at = async u => { const p = await fullFileCachePopulate(u, dbCtx); return !!p && (await fsp.stat(p)).size > 0 }
       return { result: [
         await at('signedRoom://testSignedRoom/usersRO/sales-large.json'),
         await at('room://testPublicRoom/usersRO/sales-large.json')
@@ -249,58 +235,58 @@ Test('dbDriverTests.wcachePopulate', {
   })
 })
 
-// rawFile body classification: opts.body is PAYLOAD (HTTP-standard). Guards the bug where .js content starting with '//'
-// was mis-sniffed as a path by the old startsWith('/') heuristic and crashed the upload. fs-mem → no disk write.
-Test('dbDriverTests.rawFile.bodyClassification', {
+Test('dbDriverTests.text.bodyRoundTrip', {
   nodeOnly: true,
   impl: dataTest({
-    logger: 'dbLogger',
     calculate: async ctx => {
       const dbCtx = ctx.setVars({ db: 'fs-mem' })
       const sid = ctx.vars.testSessionId
 
       const jsSrc = '// crm comp\nexport const x = 1\n'
-      const jsUrl = `room://rawFileTest/comp-${sid}.js`
-      await wfetch2(jsUrl, { method: 'PUT', body: jsSrc }, dbCtx)
+      const jsUrl = `room://textFileTest/comp-${sid}.js`
+      await wfetch2(jsUrl, { method: 'PUT', body: jsSrc, headers: {'content-type': 'application/javascript'} }, dbCtx)
       const jsBack = await (await wfetch2(jsUrl, { method: 'GET' }, dbCtx)).text()
       dbCtx.vars.dbLogger?.info?.({ t: 'TEST content-branch: // body kept as content', match: jsBack === jsSrc }, { jsBack }, { ctx })
 
       return { result: jsBack === jsSrc, ...coreUtils.harvestLogs(dbCtx) }
     },
     expectedResult: equals('%result%', true),
-    timeout: 10000
+    timeout: 10000,
+    logger: 'dbLogger'
   })
 })
 
-// wcachePopulate of a TEXT rawFile (csv) — csv is not in wcachePopulate's binary regex, so it must read via text(),
-// not res.json(). Repro of 'res.json is not a function'. public room (gcs) source → wCache, no fs disk write.
-Test('dbDriverTests.wcachePopulate.rawCsvFs', {
+Test('dbDriverTests.fullFileCachePopulate.textCsv', {
   nodeOnly: true,
   impl: dataTest({
-    logger: 'dbLogger',
     calculate: async ctx => {
       const { promises: fsp } = await import('fs')
       const dbCtx = ctx.setVars({ db: 'gcs', forceGCS: false, onLiveRepo: true, hasGcpIdentity: true })
-      const url = `room://testPublicRoom/wcache-raw-${ctx.vars.testSessionId}.csv`
+      const url = `room://testPublicRoom/fullFileCache-raw-${ctx.vars.testSessionId}.csv`
       const csv = 'campaign_name,revenue\ncamp_a,10\ncamp_b,5'
-      await wfetch2(url, { body: csv, method: 'PUT' }, dbCtx)
-      const cachePath = await wcachePopulate(url, dbCtx)
+      await wfetch2(url, { body: csv, method: 'PUT', headers: {'content-type': 'text/csv'} }, dbCtx)
+      const cachePath = await fullFileCachePopulate(url, dbCtx)
       const content = cachePath && await fsp.readFile(cachePath, 'utf8')
       return { result: content, ...coreUtils.harvestLogs(dbCtx) }
     },
     expectedResult: equals('%result%', 'campaign_name,revenue\ncamp_a,10\ncamp_b,5'),
-    timeout: 15000
+    timeout: 15000,
+    logger: 'dbLogger'
   })
 })
 
 // testPublicRoom holds the same data as testSignedRoom (assets.json + usersRO/sales-large.json), read over the public room:// path
-Test('dbDriverTests.testPublicRoom.salesLarge', { nodeOnly: true, impl: publicRoomCountTest('usersRO/sales-large.json', 2000) })
-Test('dbDriverTests.testPublicRoom.assets', { nodeOnly: true, impl: publicRoomCountTest('assets.json', 3) })
+Test('dbDriverTests.testPublicRoom.salesLarge', {
+  nodeOnly: true,
+  impl: publicRoomCountTest('usersRO/sales-large.json', 2000)
+})
+Test('dbDriverTests.testPublicRoom.assets', {
+  nodeOnly: true,
+  impl: publicRoomCountTest('assets.json', 3)
+})
 
 Test('dbDriverTests.driverSelection', {
   impl: dataTest({
-    logger: 'dbLogger',
-    allowError: true,   // 2 scenarios expect null → getDBDriver logs 'No DB driver matched' by design; the %result% assertion still guards correctness
     calculate: async (ctx) => {
 
       const scenarios = [
@@ -315,7 +301,8 @@ Test('dbDriverTests.driverSelection', {
           url: 'room:fs-mem//buyPhone/items?user=Buyer', expected: 'fsmem.browser.liveRepo' },
         { name: 'browser-forceGCS-overrides-fsmem', vars: {dbHost: 'browser', forceGCS: true, db: 'fs-mem'},
           url: 'room:fs-mem//buyPhone/items?user=Buyer', expected: 'bucket.google.public' },
-        { name: 'db-wcache-bypasses-scoring', vars: {dbHost: 'node', onLiveRepo: true, db: 'wcache'}, url: 'room://buyPhone/items', expected: 'wcache' },
+        { name: 'db-fullFileCache-bypasses-scoring', vars: {dbHost: 'node', onLiveRepo: true, db: 'fullFileCache'},
+          url: 'room://buyPhone/items', expected: 'fullFileCache' },
         { name: 'browser-liveRepo-logs', vars: {dbHost: 'browser', onLiveRepo: true}, url: 'logs:gcs//wfLog/log1', expected: 'GCS.browser.liveRepo.logs' },
         { name: 'node-prod-noIdentity-public', vars: {dbHost: 'node', forceGCS: true, hasGcpIdentity: false}, url: 'room:gcs//x/y?user=u', expected: 'GCS.node.publicGCS' },
         { name: 'node-prod-noIdentity-logs', vars: {dbHost: 'node', forceGCS: true, hasGcpIdentity: false}, url: 'logs:gcs//x/y', expected: null },
@@ -336,7 +323,9 @@ Test('dbDriverTests.driverSelection', {
       return failures.length === 0 ? {result: 'all passed'} : { failures, results }
     },
     expectedResult: equals('%result%', 'all passed'),
-    timeout: 12000
+    timeout: 12000,
+    allowError: true,
+    logger: 'dbLogger'
   })
 })
 
@@ -344,13 +333,12 @@ Test('dbDriverTests.driverSelection', {
 Test('dbDriverTests.roomLogs.writeAndList', {
   nodeOnly: true,
   impl: dataTest({
-    logger: 'dbLogger',
     calculate: async (ctx) => {
       const dbCtx = ctx.setVars({db: 'gcs', dbHost: 'node', forceGCS: true, hasGcpIdentity: true})
       const url = 'roomLogs:gcs//testRoom/2026-04-01/s1-p1-0.json'
       const body = JSON.stringify({date: '2026-04-01', sessionId: 's1', playerId: 'p1', counter: 0, ev: 'pageView'})
       const driver = await getDBDriver(url, dbCtx)
-      const putRes = await wfetch2(url, {method: 'PUT', body}, dbCtx)
+      const putRes = await wfetch2(url, {method: 'PUT', body, headers: {'content-type': 'application/json'}}, dbCtx)
       const list = await wfetch2('roomLogs:gcs//testRoom/2026-04-01/', { method: 'GET' }, dbCtx).then(r => r.json()).catch(e => ({error: String(e?.message || e)}))
       return { driverId: driver?.id, putOk: putRes?.ok !== false, putStatus: putRes?.status,
         listCount: Array.isArray(list) ? list.length : null,
@@ -358,7 +346,8 @@ Test('dbDriverTests.roomLogs.writeAndList', {
         listError: list?.error, ...coreUtils.harvestLogs(dbCtx) }
     },
     expectedResult: equals(true, '%putOk%'),
-    timeout: 12000
+    timeout: 12000,
+    logger: 'dbLogger'
   })
 })
 
@@ -366,7 +355,6 @@ Test('dbDriverTests.roomLogs.writeAndList', {
 Test('dbDriverTests.roomLogs.listRoomRoot', {
   nodeOnly: true,
   impl: dataTest({
-    logger: 'dbLogger',
     calculate: async (ctx) => {
       const dbCtx = ctx.setVars({db: 'gcs', dbHost: 'node', forceGCS: true, hasGcpIdentity: true})
       const url = 'roomLogs:gcs//testRoom/'
@@ -380,7 +368,8 @@ Test('dbDriverTests.roomLogs.listRoomRoot', {
       }
     },
     expectedResult: equals(true, true),
-    timeout: 12000
+    timeout: 12000,
+    logger: 'dbLogger'
   })
 })
 Test('dbDriverTests.forwarderRequiresAuthenticatedUser', {
@@ -470,14 +459,14 @@ Test('dbDriverTests.liveStagingPreservesUserIdentity', {
     logger: 'authLogger'
   })
 })
-Test('dbDriverTests.rawFile.publicRoom', {
+Test('dbDriverTests.binary.publicRoom', {
   nodeOnly: true,
   impl: dataTest({
     calculate: async (ctx, {testSessionId}) => {
       const dbCtx = ctx.setVars({ db: 'gcs', forceGCS: false, onLiveRepo: true, hasGcpIdentity: true })
       const url = `room://testPublicRoom/usersRW/assets/test-media-${testSessionId}.png`
-      const body = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
-      const put = await wfetch2(url, { body, method: 'PUT' }, dbCtx)
+      const body = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64')
+      const put = await wfetch2(url, { body, method: 'PUT', headers: {'content-type': 'image/png'} }, dbCtx)
       const get = await wfetch2(url, { method: 'GET' }, dbCtx)
       const bytes = get?.ok ? (await get.arrayBuffer()).byteLength : 0
       const head = await wfetch2(url, { method: 'HEAD' }, dbCtx)

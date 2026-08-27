@@ -13,30 +13,36 @@ const runtimeDb = ctx => ctx.vars.db || (!coreUtils.isNode && new URLSearchParam
 const gcsProxyBase = ctx => ctx.vars.wonderServiceBase || globalThis.location?.origin
   || globalThis.process?.env?.WONDER_SERVICE_URL || 'https://wonder-lambda-me-west1.indivi.ai'
 const { wresolve, successResult, errorResultByException, notFoundResult, bustCdnCache, paginateGcsList, calcPath,
-  extractFromUrl, wonderRepoRoot, isLocalFile, rawFileUtils, wcachePath } = wonderUtils
+  extractFromUrl, wonderRepoRoot, fullFileCachePath } = wonderUtils
 
 Data('wFetch', {
-  description: ['Read & write room content. GET a file, PUT to overwrite, POST/PATCH to append/merge,',
-    'or GET a trailing-"/" url to list. Wraps wfetch2 — same wUrl scheme, scopes and drivers.'].join(' '),
+  description: 'Read or write JSON, text and binary room content. POST appends JSONL text; a trailing slash lists.',
   params: [
-    { id: 'url', as: 'string', dynamic: true, mandatory: true,
-      description: 'wUrl: <scheme>://<roomId>/<dir>/<file>?user=<id>. room:// is public; signedRoom:// is signed' },
-    { id: 'method', as: 'string', defaultValue: 'GET',
-      description: 'GET (read/list) | PUT (overwrite) | POST (append array) | PATCH (merge object) | HEAD' },
-    { id: 'body', dynamic: true, description: 'content to write: whole value, append items, or merge object' },
-    { id: 'headers', as: 'object', defaultValue: {},
-      description: 'extra headers. x-wonder-body=localFile makes body a server-side path to stream' },
-    { id: 'stream', as: 'boolean', description: 'false (default) returns parsed json; true returns the raw Response (for binaries / large media)' },
-    { id: 'isStaging', as: 'boolean', description: 'route signed-url to staging from MCP/dev' },
-    { id: 'logger', as: 'string', description: 'comma-separated loggers to harvest. returns {result, ...harvestedLogs}; implies no stream' }
+    {id: 'url', as: 'string', dynamic: true, mandatory: true, description: 'wUrl: <scheme>://<roomId>/<dir>/<file>?user=<id>. room:// is public; signedRoom:// is signed'},
+    {id: 'method', as: 'string', defaultValue: 'GET', description: 'GET (read/list) | PUT (overwrite) | POST (append JSONL text) | HEAD'},
+    {id: 'body', dynamic: true, description: 'PUT value or POST JSONL records'},
+    {id: 'headers', as: 'object', defaultValue: {}, description: 'standard HTTP headers; x-wonder-body=localFile streams a Node-local body path'},
+    {id: 'stream', as: 'boolean', description: 'return the untouched Response', type: 'boolean<common>'},
+    {id: 'isStaging', as: 'boolean', description: 'route signed-url to staging from MCP/dev', type: 'boolean<common>'},
+    {id: 'logger', as: 'string', description: 'comma-separated loggers to harvest. returns {result, ...harvestedLogs}; implies no stream'}
   ],
   impl: async (ctx, {}, { url, method, body, headers, stream, isStaging, logger }) => {
     const fetchCtx = coreUtils.ensureLoggers(logger, { ctx: ctx.setVars({ ...(isStaging && { isStaging }) }) })
-    const res = await wfetch2(url(ctx), { method, headers, ...(body.profile ? { body: await body(ctx) } : {}) }, fetchCtx)
+    const target = url(ctx), suffix = target.split(/[?#]/)[0].match(/\.([^.\/]+)$/)?.[1]?.toLowerCase()
+    const suppliedType = Object.entries(headers).find(([name]) => name.toLowerCase() === 'content-type')?.[1]
+    const append = (method || 'GET').toUpperCase() === 'POST'
+    const type = suppliedType || (append || suffix === 'jsonl' ? 'application/x-ndjson' : suffix === 'json' || !suffix ? 'application/json'
+      : ['md','txt','csv','tsv','js','mjs','css','html','svg'].includes(suffix) ? 'text/plain'
+      : 'application/octet-stream')
+    const value = body.profile && await body(ctx)
+    const requestBody = append && typeof value !== 'string' ? coreUtils.asArray(value).map(item => JSON.stringify(item)).join('\n') + '\n'
+      : /json(?:;|$)/i.test(type) && typeof value !== 'string' ? JSON.stringify(value) : value
+    const res = await wfetch2(target, { method, headers: { ...headers, 'content-type': type }, ...(body.profile && { body: requestBody }) }, fetchCtx)
     const readBody = () => (method || 'GET').toUpperCase() === 'HEAD'
       ? { ok: res.ok, status: res.status, lastModified: res.headers?.get?.('last-modified'),
           contentLength: res.headers?.get?.('content-length'), contentLocation: res.headers?.get?.('content-location') }
-      : res.json()
+      : /json(?:;|$)/i.test(res.headers?.get?.('content-type') || type) ? res.json()
+      : /^text\/|ndjson|javascript|svg/i.test(res.headers?.get?.('content-type') || type) ? res.text() : res.arrayBuffer()
     if (logger) return { result: await readBody(), ...coreUtils.harvestLogs(fetchCtx, logger.split(',')) }
     return stream ? res : readBody()
   }
@@ -209,7 +215,9 @@ ObjectStore('gcs', {
 
 ObjectStore('fs', { impl: objectStore({ categories: ['fs'] }) })
 ObjectStore('fsmem', { impl: objectStore({ categories: ['fsmem'] }) })
-ObjectStore('wcache', { impl: objectStore({ categories: ['wcache'] }) })
+ObjectStore('fullFileCache', {
+  impl: objectStore(['fullFileCache'])
+})
 
 const AuthToken = TgpType('auth-token', 'wonder', { typescript: '{ value, expired() }' })
 const AuthMethod = TgpType('auth-method', 'wonder', { typescript: '{ enrichRequest(fetchReq, authToken, ctx): fetchReq }' })
@@ -288,8 +296,8 @@ async function getDBDriver(url, ctx) {
   const scopeId = extracted?.scope?.id
   const store = dsls.wonder['object-store'][dbNormalized]?.$runWithCtx(ctx)
 
-  if (dbNormalized === 'wcache')
-    return coreUtils.globalsOfType(dsls.wonder['db-driver']).find(d => d.id === 'wcache')
+  if (dbNormalized === 'fullFileCache')
+    return coreUtils.globalsOfType(dsls.wonder['db-driver']).find(d => d.id === 'fullFileCache')
 
   const categories = {
     [host]: true, [dbNormalized]: true, [scopeId?.toLowerCase()]: true,
@@ -384,7 +392,7 @@ async function wfetch2(_url, opts, _ctx) {
   const path = isList && !rawPath.endsWith('/') ? rawPath + '/' : rawPath
 
   let driverMethod = isList ? 'list' : (opts.method || 'GET').toLowerCase()
-  driverMethod = driverMethod == 'post' || driverMethod == 'patch' ? 'append' : driverMethod
+  driverMethod = driverMethod === 'post' ? 'append' : driverMethod
 
   // pre interceptors — short-circuit before driver selection
   const preCtx = ctx.setVars({ ...extracted, path, bucketName, driverMethod, method: opts.method })
@@ -447,20 +455,12 @@ async function wfetch2(_url, opts, _ctx) {
   etlStatus?.(`${driverMethod.toUpperCase()} ${driver.id} ${path} → ${res?.status || '?'}`)
   if (driverMethod == 'get' && res?.status == 404) return notFoundResult
   // media HEAD = resolve: synthesize Content-Location (the resolved GCS url) onto the real HEAD response,
-  // preserving its Last-Modified. resolveThumb / wcachePopulate validate read Content-Location to get the url.
-  if (driverMethod == 'head' && res?.ok && rawFileExts.test(path)) {
+  // preserving its Last-Modified. resolveThumb / fullFileCachePopulate validate read Content-Location to get the url.
+  if (driverMethod == 'head' && res?.ok) {
     const orig = res.headers.get.bind(res.headers)
     res.headers.get = h => h.toLowerCase() == 'content-location' ? filePathUrl : orig(h)
     dbLogger?.info?.({ t: 'media HEAD → Content-Location resolved', method: driverMethod,
       lastModified: res.headers.get('Last-Modified') }, { url, contentLocation: filePathUrl }, { ctx })
-  }
-  if (driverMethod == 'get' && res?.json && res.ok) {
-    const origJson = res.json
-    res.json = async () => {
-      const data = await origJson()
-      if (Array.isArray(data)) data[Symbol.for('bigData')] = url
-      return data
-    }
   }
   return res
   } catch (e) {
@@ -500,16 +500,7 @@ GetMethod('wget.viaBucketApi', {
         dbLogger?.error?.({ t: 'viaBucketApi GET failure' }, { url }, { ctx, response })
       return response
     }
-    let data
-    try { data = await response.json() } catch(e) {
-      coreUtils.logException(e, 'viaBucketApi GET json parse failed', { ctx, status: response.status, url })
-      return { ok: false, status: 500, text: async () => null, json: async () => null }
-    }
-    const content = data.content ?? data
-    dbLogger?.info?.({ t: 'viaBucketApi GET parsed', contentKind: Array.isArray(content) ? 'array' : typeof content,
-      items: Array.isArray(content) ? content.length : content && typeof content === 'object' ? Object.keys(content).length : null },
-    { url }, { ctx })
-    return { ok: true, status: 200, text: async () => JSON.stringify(content), json: async () => content }
+    return response
   }
 })
 
@@ -522,41 +513,41 @@ GetMethod('wget.viaGcsProxy', {
       else dbLogger?.error?.({ t: 'viaGcsProxy GET failure' }, { url }, { ctx, response })
       return response
     }
-    const data = await response.json(), content = data.content ?? data
-    dbLogger?.info?.({ t: 'viaGcsProxy GET', bytes: JSON.stringify(data).length }, { url, data }, { ctx })
-    return { ok: true, status: 200, text: async () => JSON.stringify(content), json: async () => content }
+    dbLogger?.info?.({ t: 'viaGcsProxy GET', bytes: response.headers.get('content-length') }, { url }, { ctx })
+    return response
   }
 })
 
 PutMethod('wput.viaGcsProxy', {
   impl: async (ctx, { dbLogger, bucketName, path, opts }) => {
     const url = `${gcsProxyBase(ctx)}/gcs-proxy/${bucketName}/${path}`
-    const jsonStr = JSON.stringify(opts.headers?.['x-wonder-json'] === 'as-is' ? opts.body : { content: opts.body })
-    const response = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: jsonStr })
+    const response = await fetch(url, { method: 'PUT', headers: opts.headers, body: opts.body })
     if (!response.ok) { dbLogger?.error?.({ t: 'viaGcsProxy PUT failure' }, { url }, { ctx, response }); return response }
-    dbLogger?.info?.({ t: 'viaGcsProxy PUT', bytes: jsonStr.length }, {}, { ctx })
+    dbLogger?.info?.({ t: 'viaGcsProxy PUT' }, {}, { ctx })
     return successResult
   }
 })
 
 PutMethod('wput.viaBucketApi', {
   impl: async (ctx, { filePathUrl, dbLogger, opts, authToken, authMethod }) => {
-    const jsonStr = JSON.stringify(opts.headers?.['x-wonder-json'] === 'as-is' ? opts.body : { content: opts.body })
-    const curl = `curl -X PUT -H "Content-Type: application/json" -d '${jsonStr}' "${filePathUrl}"`
-    let response, jsonRes
+    let response
     try {
-      const fetchReq = new Request(filePathUrl, { headers: { 'Content-Type': 'application/json' }, method: 'PUT', body: jsonStr })
+      const headers = new Headers(opts.headers), localFile = headers.get('x-wonder-body') === 'localFile'
+      headers.delete('x-wonder-body')
+      const body = localFile ? (await import('fs')).createReadStream(opts.body) : opts.body
+      const fetchReq = new Request(filePathUrl, { headers, method: 'PUT', body,
+        ...(coreUtils.isNode && body?.pipe && { duplex: 'half' }) })
       response = await fetch(await authMethod.enrichRequest(fetchReq, authToken, ctx))
       await response.text()
     } catch (error) {
-      coreUtils.logException(error, 'wput.viaBucketApi failed', { ctx, filePathUrl, curl, response })
+      coreUtils.logException(error, 'wput.viaBucketApi failed', { ctx, filePathUrl, response })
       return errorResultByException(error)
     }
     if (!response.ok) {
-      dbLogger?.error?.({ t: 'viaBucketApi PUT failure', bytes: jsonStr.length }, { curl }, { ctx, response })
+      dbLogger?.error?.({ t: 'viaBucketApi PUT failure' }, {}, { ctx, response })
       return response
     }
-    dbLogger?.info?.({ t: 'viaBucketApi PUT', bytes: jsonStr.length }, {}, { ctx, response })
+    dbLogger?.info?.({ t: 'viaBucketApi PUT' }, {}, { ctx, response })
     return successResult
   }
 })
@@ -564,27 +555,21 @@ PutMethod('wput.viaBucketApi', {
 // append-method
 AppendMethod('wappend.singleWriterGetPut', {
   params: [
-    {id: 'get', type: 'get-method', dynamic: true,  byName: true},
+    {id: 'get', type: 'get-method', dynamic: true, byName: true},
     {id: 'put', type: 'put-method', dynamic: true}
   ],
-  impl: async (ctx, {dbLogger, opts, method}, {get, put}) => {
+  impl: async (ctx, {dbLogger, opts}, {get, put}) => {
     try {      
-      let existing = method == 'PATCH' ? {} : []
+      let existing = ''
       try {
         const resp = await get(ctx)
-        if (resp.status != 404) {
-          const res = await resp.json()
-          existing = res || existing
-        }
+        if (resp.status != 404) existing = await resp.text()
       } catch (error) {
         dbLogger?.error?.({t: 'wappend.singleWriterGetPut get failed'}, {}, {ctx, error})
         return errorResultByException(error)
       }
       
-      const bodyData = opts.body
-      
-      const merged = method == 'PATCH' ? {...existing, ...bodyData} : [...existing, ...bodyData]
-      await put(ctx.setVars({opts: {...opts, body: merged }}))
+      await put(ctx.setVars({opts: {...opts, body: existing + opts.body }}))
       return successResult
     } catch (error) {
       dbLogger?.error?.({t: `wappend.singleWriterGetPut put failed`}, {}, {ctx, error})
@@ -706,27 +691,27 @@ DbDriver('GCS.browser.gcsHTTPBlockedByCORS', {
   })
 })
 
-ListMethod('wlist.wcache', {
+ListMethod('wlist.fullFileCache', {
   impl: async (ctx, { dbLogger, bucketName, path }) => {
     const fs = await import('fs/promises')
-    const dir = wcachePath(bucketName, path).replace(/\/$/, '')
+    const dir = fullFileCachePath(bucketName, path).replace(/\/$/, '')
     let entries = []
     try { entries = await fs.readdir(dir, { withFileTypes: true }) } catch (e) {
-      if (e.code !== 'ENOENT') coreUtils.logException(e, 'wlist.wcache failed', { ctx, dir })
+      if (e.code !== 'ENOENT') coreUtils.logException(e, 'wlist.fullFileCache failed', { ctx, dir })
     }
     const items = entries.filter(e => e.isFile()).map(e => ({ name: `${path}${e.name}` }))
     const dirs = entries.filter(e => e.isDirectory()).map(e => ({ name: `${path}${e.name}/`, isDir: true }))
-    dbLogger?.info?.({ t: 'wlist.wcache', dir, items: items.length, dirs: dirs.length }, {}, { ctx })
+    dbLogger?.info?.({ t: 'wlist.fullFileCache', dir, items: items.length, dirs: dirs.length }, {}, { ctx })
     return [...dirs, ...items]
   }
 })
 
-DbDriver('wcache', {
+DbDriver('fullFileCache', {
   impl: dbDriver({
     whenAndWhyToUse: 'Whole-file local mirror for non-Parquet, or for etls that need to scan the whole parquet',
     designConcerns: 'WARNING: Do not use for large GCS Parquet in lambda; whole-file downloads defeat colsCache range reads. Callers own population and freshness.',
-    list: wlist.wcache(),
-    filePathUrl: (ctx, { path, bucketName }) => wcachePath(bucketName, path)
+    list: wlist.fullFileCache(),
+    filePathUrl: (ctx, { path, bucketName }) => fullFileCachePath(bucketName, path)
   })
 })
 
@@ -756,87 +741,6 @@ const dbDriverInterceptor = Component('dbDriverInterceptor', {
   ]
 })
 
-const rawText = { csv: 'text/csv', tsv: 'text/tab-separated-values', jsonl: 'application/x-ndjson', mjs: 'application/javascript',
-  js: 'application/javascript', html: 'text/html', css: 'text/css', txt: 'text/plain', md: 'text/markdown', svg: 'image/svg+xml', manifest: 'text/plain' }
-const rawBinary = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp', mp4: 'video/mp4',
-  mov: 'video/quicktime', webm: 'video/webm', wav: 'audio/wav', mp3: 'audio/mpeg', m4a: 'audio/mp4', pdf: 'application/pdf', zip: 'application/zip',
-  parquet: 'application/vnd.apache.parquet', 'tar.gz': 'application/gzip' }
-const { mimeTypes, rawFileExts, isTextMime, rawFileBody } = rawFileUtils(rawText, rawBinary)
-
-DbDriverInterceptor('rawFile', {
-  impl: dbDriverInterceptor({
-    whenAndWhyToUse: ['Raw media, document and tabular formats that must be stored and returned as their original bytes',
-      'instead of the standard {content: value} JSON envelope.'].join(' '),
-    designConcerns: ['Text string bodies are UTF-8; binary string bodies are base64. A server-side file path is accepted',
-      'only with x-wonder-body=localFile.'].join(' '),
-    pre: async (ctx, { url, driverMethod, dbLogger, path }) => {
-      if ((extractFromUrl(url, ctx)?.db || '') !== 'fs') return null
-      const { resolve, dirname } = await import('path')
-      const fs = await import('fs')
-      const filePath = resolve(await wonderRepoRoot(), `files/${path}`)
-      const rawExt = path.match(rawFileExts)
-      if (driverMethod === 'get') {
-        if (!fs.existsSync(filePath)) return notFoundResult
-        const buf = fs.readFileSync(filePath)
-        dbLogger?.info?.({ t: 'rawFile fs GET', filePath, bytes: buf.length }, {}, { ctx })
-        return { ok: true, status: 200, arrayBuffer: async () => buf, text: async () => buf.toString('utf8'), json: async () => JSON.parse(buf.toString('utf8')) }
-      }
-      if (driverMethod === 'put') {
-        const opts = ctx.vars.opts, body = opts?.body, fromLocalFile = isLocalFile(body, opts)
-        fs.mkdirSync(dirname(filePath), { recursive: true })
-        if (fromLocalFile) fs.copyFileSync(body, filePath) // body is a server-side file path → copy, no heap buffering
-        else if (rawExt) fs.writeFileSync(filePath, await rawFileBody(body, mimeTypes[rawExt[1].toLowerCase()] || 'application/octet-stream', opts)) // body is the payload bytes
-        else fs.writeFileSync(filePath, typeof body === 'string' ? body : JSON.stringify(body, null, 2))
-        dbLogger?.info?.({ t: 'rawFile fs PUT', filePath, bytes: fs.statSync(filePath).size, fromLocalFile }, {}, { ctx })
-        return successResult
-      }
-      if (driverMethod === 'list') {   // list the local mirror dir → {name: path+entry} items, so wfetch2(dir/) lists on fs like the gcs drivers do
-        const entries = fs.existsSync(filePath) ? fs.readdirSync(filePath, { withFileTypes: true }) : []
-        const items = entries.map(e => ({ name: `${path}${e.name}${e.isDirectory() ? '/' : ''}`, isDir: e.isDirectory() }))
-        dbLogger?.info?.({ t: 'rawFile fs LIST', filePath, items: items.length }, {}, { ctx })
-        return { ok: true, status: 200, json: async () => items }
-      }
-    },
-    post: async (ctx, { url, driverMethod, filePathUrl, opts, dbLogger, path, bucketName }) => {
-      if (!rawFileExts.test(path) || (extractFromUrl(url, ctx)?.db || '').match(/^fs/)) return null
-      if (driverMethod === 'get')
-        return { status: 302, headers: { get: h => h.toLowerCase() === 'location' ? filePathUrl : null } }
-      if (driverMethod === 'put') {
-        const contentType = mimeTypes[path.match(rawFileExts)[1].toLowerCase()] || 'application/octet-stream'
-        const body = opts.body, isFile = isLocalFile(body, opts)
-        const fs = isFile ? await import('fs') : null
-        const sendBody = isFile ? fs.createReadStream(body) : await rawFileBody(body, contentType, opts)
-        const bytes = isFile ? fs.statSync(body).size : sendBody.length
-        // encoding of a STRING body: text mimes (rawText) → utf8; binary mimes (rawBinary) → the string is base64 → decoded.
-        // a text format missing from rawText would fall to base64 and CORRUPT (e.g. jsonl mangled as base64 before it was classified text).
-        dbLogger?.info?.({ t: 'rawFile PUT', contentType, bytes, streamed: isFile, encoding: isFile ? 'stream' : isTextMime(contentType) ? 'utf8' : 'base64' }, {}, { ctx })
-        const uploadStarted = Date.now()
-        const { authToken, authMethod } = ctx.vars
-        try {
-          const request = new Request(filePathUrl, { method: 'PUT', headers: { 'content-type': contentType }, body: sendBody })
-          const response = await fetch(await authMethod.enrichRequest(request, authToken, ctx))
-          const responseBody = await response.text(), uploadMs = Date.now() - uploadStarted
-          dbLogger?.info?.({ t: 'rawFile PUT transport', driverId: ctx.vars.driverId,
-            uploadMs, status: response.status, statusText: response.statusText }, {}, { ctx })
-          if (!response.ok) {
-            dbLogger?.error?.({ t: 'rawFile PUT failed', uploadMs, status: response.status,
-              statusText: response.statusText, bytes }, { responseBody }, { ctx })
-            return { ok: false, status: response.status, statusText: response.statusText,
-              text: async () => responseBody, json: async () => ({ error: responseBody }) }
-          }
-          dbLogger?.info?.({ t: 'rawFile PUT done', uploadMs, status: response.status, bytes }, {}, { ctx })
-          return successResult
-        } catch (error) {
-          coreUtils.logException(error, 'rawFile PUT transport failed', { ctx, filePathUrl })
-          dbLogger?.error?.({ t: 'rawFile PUT transport failed', uploadMs: Date.now() - uploadStarted,
-            bytes, error: error.message }, {}, { ctx })
-          return errorResultByException(error)
-        }
-      }
-    }
-  })
-})
-
 DbDriverInterceptor('jqPath', {
   impl: dbDriverInterceptor({
     pre: async (ctx, { url, dbLogger }) => {
@@ -853,8 +757,9 @@ DbDriverInterceptor('jqPath', {
     }
   })
 })
+
 AppendMethod('wappend.appendMultiUser', {
-  description: 'Conflict-safe HTTP read, merge, conditional write, and retry using ObjectStore.revisionProtocol.',
+  description: 'Conflict-safe HTTP text append with conditional write and retry using ObjectStore.revisionProtocol.',
   params: [
     {id: 'maxAttempts', as: 'number', defaultValue: 5}
   ],
@@ -864,16 +769,14 @@ AppendMethod('wappend.appendMultiUser', {
       return { ok: false, status: 500, statusText: 'object store has no revision protocol',
         text: async () => '', json: async () => ({ error: 'object store has no revision protocol' }) }
     }
-    const method = (opts.method || 'POST').toUpperCase()
-    const newItems = opts.body
+    const newText = opts.body
     const urlOf = operation => driver.filePathUrl(ctx.setVars({ path, bucketName, method: operation }))
     const started = Date.now()
-    dbLogger?.info?.({ t: 'appendMultiUser start', maxAttempts,
-      addedItems: Array.isArray(newItems) ? newItems.length : Object.keys(newItems || {}).length }, {}, { ctx })
+    dbLogger?.info?.({ t: 'appendMultiUser start', maxAttempts, addedBytes: new TextEncoder().encode(newText).length }, {}, { ctx })
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        const getRequest = new Request(await urlOf('GET'), { headers: { accept: 'application/json' } })
+        const getRequest = new Request(await urlOf('GET'))
         const getResponse = await fetch(await authMethod.enrichRequest(getRequest, authToken, ctx))
         const exists = getResponse.status !== 404
         if (!getResponse.ok && exists) {
@@ -888,15 +791,15 @@ AppendMethod('wappend.appendMultiUser', {
           return { ok: false, status: 500, statusText: 'object response has no revision',
             text: async () => '', json: async () => ({ error: 'object response has no revision' }) }
         }
-        const current = exists ? (await getResponse.json()).content : method === 'PATCH' ? {} : []
-        const merged = method === 'PATCH' ? { ...current, ...newItems } : [...current, ...newItems]
+        const current = exists ? await getResponse.text() : ''
+        const merged = current + newText
         dbLogger?.info?.({ t: 'appendMultiUser read', attempt, exists, expectedRevision,
-          existingItems: Array.isArray(current) ? current.length : Object.keys(current).length }, {}, { ctx })
+          existingBytes: new TextEncoder().encode(current).length }, {}, { ctx })
 
-        const headers = revisionProtocol.enrichHeaders({ 'content-type': 'application/json' },
+        const headers = revisionProtocol.enrichHeaders({ 'content-type': 'application/x-ndjson' },
           { expectedRevision, createOnly: !exists })
         const putRequest = new Request(await urlOf('PUT'), {
-          method: 'PUT', headers, body: JSON.stringify({ content: merged })
+          method: 'PUT', headers, body: merged
         })
         const putResponse = await fetch(await authMethod.enrichRequest(putRequest, authToken, ctx))
         const responseBody = await putResponse.text()
@@ -911,8 +814,7 @@ AppendMethod('wappend.appendMultiUser', {
           return { ok: false, status: putResponse.status, statusText: putResponse.statusText,
             text: async () => responseBody, json: async () => ({ error: responseBody }) }
         }
-        dbLogger?.info?.({ t: 'appendMultiUser done', attempt,
-          items: Array.isArray(merged) ? merged.length : Object.keys(merged).length,
+        dbLogger?.info?.({ t: 'appendMultiUser done', attempt, bytes: new TextEncoder().encode(merged).length,
           appendMs: Date.now() - started }, {}, { ctx })
         return successResult
       } catch (error) {

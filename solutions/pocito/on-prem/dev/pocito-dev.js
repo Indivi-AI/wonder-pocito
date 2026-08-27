@@ -1,0 +1,148 @@
+import { spawn, execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
+import { existsSync, readFileSync, mkdirSync, writeFileSync, copyFileSync, constants } from 'node:fs'
+import { createServer } from 'node:net'
+import { dirname, resolve, join } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import { parseEnv } from 'node:util'
+import { setTimeout as delay } from 'node:timers/promises'
+
+const pocito = resolve(dirname(fileURLToPath(import.meta.url)), '../..'), root = resolve(pocito, '../..')
+
+export async function startPocito() {
+  const envFile = join(pocito, '.env.onprem')
+  if (!existsSync(envFile)) copyFileSync(`${envFile}.example`, envFile, constants.COPYFILE_EXCL)
+  const env = { ...parseEnv(readFileSync(envFile, 'utf8')), ...process.env }
+  const state = resolve(pocito, env.POCITO_DATA_DIR || '.local-data'), host = env.POCITO_BIND_HOST || '127.0.0.1'
+  const ports = { pocito: env.POCITO_PORT || '3000', marketplace: env.MARKETPLACE_PORT || '7777',
+    agno: env.AGENT_OS_PORT || '7778', litellm: env.LITELLM_PORT || '4000', flapi: env.FLAPI_PORT || '6001' }
+  const url = name => `http://localhost:${ports[name]}`
+  const minio = env.MINIO_ENDPOINT, storageClass = env.MINIO_STORAGE_CLASS || 'STANDARD'
+  if (!minio || !env.PGVECTOR_URL) throw new Error('Set MINIO_ENDPOINT and PGVECTOR_URL in .env.onprem')
+  Object.assign(env, {
+    ENV_PATH: envFile, WONDER_AUTH_MODE: 'none', STORAGE_PROVIDER: 'minio', MINIO_ENDPOINT: minio,
+    MINIO_STORAGE_CLASS: storageClass, WONDER_STORAGE_URL: minio, WONDER_CDN_URL: `${url('pocito')}/jb6_packages/react/lib`,
+    WONDER_LOCAL_SERVER: url('pocito'), WONDER_SERVICE_URL: url('pocito'),
+    MARKETPLACE_API_URL: url('marketplace'), AGNO_API_URL: url('agno'), FLAPI_BASE_URL: url('flapi'),
+    LLM_PROXY_URL: `${url('pocito')}/llmProxy`, LLM_PROXY_TARGET: url('litellm'), LLM_MODEL: 'openai/chat',
+    OPENAI_BASE_URL: `${url('litellm')}/v1`, OPENAI_API_KEY: 'local-dev', OPENAI_MODEL: 'chat',
+    OPENAI_EMBEDDING_MODEL: 'embeddings', OPENAI_EMBEDDING_DIMENSIONS: env.OPENAI_EMBEDDING_DIMENSIONS || '1536',
+    MARKETPLACE_HOST: host, MARKETPLACE_PORT: ports.marketplace, AGENT_OS_HOST: host, AGENT_OS_PORT: ports.agno,
+    MARKETPLACE_S3_ENDPOINT: minio, MARKETPLACE_S3_PUBLIC_ENDPOINT: minio,
+    MARKETPLACE_S3_ACCESS_KEY: env.MINIO_ACCESS_KEY || 'wonder', MARKETPLACE_S3_SECRET_KEY: env.MINIO_SECRET_KEY || 'wonder-minio-local',
+    MARKETPLACE_S3_BUCKET: 'wonder-marketplace', MARKETPLACE_S3_STORAGE_CLASS: storageClass, PGVECTOR_URL: env.PGVECTOR_URL,
+    MARKETPLACE_DATA_DIR: join(state, 'marketplace'), MCP_BEARER_TOKEN: '',
+    CORS_ALLOWED_ORIGINS: `${url('pocito')},http://127.0.0.1:${ports.pocito}`, PYTHONUNBUFFERED: '1',
+    LITELLM_LOCAL_MODEL_COST_MAP: 'True', LITELLM_LOCAL_POLICY_TEMPLATES: 'true', LITELLM_LOCAL_BLOG_POSTS: 'True'
+  })
+  mkdirSync(state, { recursive: true })
+  const children = new Set()
+  let stopping = false
+  const signal = (child, value) => { try { process.kill(-child.pid, value) } catch {} }
+  const stop = async code => {
+    if (stopping) return
+    stopping = true
+    const active = [...children]
+    active.forEach(child => signal(child, 'SIGTERM'))
+    const timer = setTimeout(() => active.forEach(child => signal(child, 'SIGKILL')), 5000)
+    await Promise.allSettled(active.map(child => child.done))
+    clearTimeout(timer)
+    process.exit(code)
+  }
+  process.once('SIGINT', () => void stop(0))
+  process.once('SIGTERM', () => void stop(0))
+  const launch = (file, args, options = {}) => {
+    if (stopping) throw new Error('Pocito is stopping')
+    const child = spawn(file, args, { cwd: root, env, detached: true, stdio: ['ignore', 'pipe', 'inherit'], ...options })
+    children.add(child)
+    child.output = ''
+    child.stdout?.on('data', chunk => { child.output += chunk })
+    child.done = new Promise((ok, fail) => {
+      child.once('error', fail)
+      child.once('exit', code => code === 0 ? ok(child.output) : fail(new Error(`${file} exited with ${code}`)))
+    })
+    child.done.then(() => children.delete(child), () => children.delete(child))
+    return child
+  }
+  const run = (file, args, options) => launch(file, args, options).done
+  const service = (name, file, args, options = {}) => {
+    const child = launch(file, args, { ...options, stdio: 'inherit' })
+    child.done.then(() => { if (!stopping) { console.error(`${name} stopped`); void stop(1) } }, error => {
+      if (!stopping) { console.error(`${name}: ${error.message}`); void stop(1) }
+    })
+  }
+  const waitFor = async (name, check) => {
+    for (let attempt = 0; attempt < 120 && !stopping; attempt++) {
+      if (await check().catch(() => false)) return
+      await delay(500)
+    }
+    throw new Error(`${name} was not ready within 60 seconds`)
+  }
+  const ready = async address => (await fetch(address, { signal: AbortSignal.timeout(2000) })).ok
+  try {
+    const requiredPorts = Object.values(ports)
+    if (new Set(requiredPorts).size !== requiredPorts.length) throw new Error('Service ports must be distinct')
+    for (const port of requiredPorts) await new Promise((ok, fail) => {
+      const socket = createServer().once('error', () => fail(new Error(`Port ${port} is occupied; stop its owner or configure an external service`)))
+      socket.listen(Number(port), host, () => socket.close(ok))
+    })
+    console.log('Preparing Pocito dependencies')
+    for (const directory of [root, join(pocito, 'flapi-mock')])
+      if (!existsSync(join(directory, 'node_modules'))) await run('npm', ['ci'], { cwd: directory, stdio: 'inherit' })
+    if (!env.UV_DEFAULT_INDEX && !env.UV_INDEX_URL) {
+      let pip = {}
+      try {
+        pip = Object.fromEntries(execFileSync('python3', ['-m', 'pip', 'config', 'list'], { env, stdio: ['ignore', 'pipe', 'ignore'] })
+          .toString().trim().split('\n').filter(line => line.includes('=')).map(line => {
+            const at = line.indexOf('='); return [line.slice(0, at), line.slice(at + 1).replace(/^['"]|['"]$/g, '')]
+          }))
+      } catch {}
+      const index = env.PIP_INDEX_URL || pip['install.index-url'] || pip['global.index-url']
+      if (index) env.UV_DEFAULT_INDEX = index
+    }
+    if (env.PIP_EXTRA_INDEX_URL && !env.UV_EXTRA_INDEX_URL) env.UV_EXTRA_INDEX_URL = env.PIP_EXTRA_INDEX_URL
+    const environments = {}
+    for (const name of ['marketplace-server', 'agno-server', 'on-prem/litellm']) {
+      const project = join(pocito, name), venv = join(env.POCITO_DEPS_DIR || state, 'venvs', name.split('/').pop())
+      const stamp = createHash('sha256').update(readFileSync(join(project, 'pyproject.toml'))).update(readFileSync(join(project, 'uv.lock'))).digest('hex')
+      const stampFile = join(venv, '.pocito-lock')
+      if (!existsSync(stampFile) || readFileSync(stampFile, 'utf8').trim() !== stamp) {
+        const requirements = join(state, `${name.split('/').pop()}.requirements.txt`)
+        await run('uv', ['export', '--frozen', '--no-dev', '--no-emit-project', '--project', project, '--output-file', requirements])
+        if (!existsSync(join(venv, 'bin/python'))) await run('uv', ['venv', '--python', '3.12.12', venv])
+        await run('uv', ['pip', 'sync', '--require-hashes', '--python', join(venv, 'bin/python'), requirements], { stdio: 'inherit' })
+        writeFileSync(stampFile, stamp)
+      }
+      environments[name] = join(venv, 'bin')
+    }
+    const python = name => join(environments[name], 'python')
+    const config = join(pocito, 'on-prem/litellm/config.local.yaml')
+    if (!existsSync(config)) copyFileSync(join(dirname(config), 'config.yaml'), config, constants.COPYFILE_EXCL)
+    service('LiteLLM', join(environments['on-prem/litellm'], 'litellm'), ['--config', config, '--host', host, '--port', ports.litellm])
+    service('FLAPI', process.execPath, ['--import', 'tsx', 'server.ts'], {
+      cwd: join(pocito, 'flapi-mock'), env: { ...env, MOCK_PORT: ports.flapi }
+    })
+    service('Marketplace', python('marketplace-server'), [join(pocito, 'marketplace-server/marketplace_server.py')])
+    await waitFor('LiteLLM', () => ready(`${url('litellm')}/health/liveliness`))
+    await waitFor('FLAPI', () => ready(`${url('flapi')}/health`))
+    await waitFor('Marketplace', async () => {
+      const health = await (await fetch(`${url('marketplace')}/healthz`, { signal: AbortSignal.timeout(2000) })).json()
+      return health.status === 'ok' && health.object_store === 'ok'
+    })
+    service('Agno', python('agno-server'), [join(pocito, 'agno-server/agno_server.py')])
+    await waitFor('Agno', async () => {
+      const health = await (await fetch(`${url('agno')}/healthz`, { signal: AbortSignal.timeout(2000) })).json()
+      return health.status === 'ok' && health.object_store === 'ok'
+    })
+    service('Pocito', process.execPath, ['--import', join(root, 'nodejs-importmap.js'), join(pocito, 'on-prem/dev/pocito-local-server.js')], {
+      env: { ...env, PORT: ports.pocito, POCITO_BIND_HOST: host }
+    })
+    await waitFor('Pocito', () => ready(`${url('pocito')}/health`))
+    console.log(`Pocito: ${url('pocito')}/room/<room>/applet/<applet>\nModel configuration: ${config}\nCtrl+C stops the local services.`)
+  } catch (error) {
+    if (!stopping) console.error(error.message)
+    await stop(1)
+  }
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) await startPocito()

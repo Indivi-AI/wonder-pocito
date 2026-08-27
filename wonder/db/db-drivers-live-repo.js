@@ -14,13 +14,12 @@ const testMemory = globalThis.testMemory = globalThis.testMemory || {}
 const nodeFilePath = async path => (await import('path')).resolve(globalThis.__repoRoot || process.cwd(), 'files', path)
 
 GetMethod('wget.nodeFS', {
-  impl: async (ctx, {dbLogger, filePath }) => {
+  impl: async (ctx, {dbLogger, filePath, path }) => {
     try {
         const { readFile } = await import('fs/promises')
-        const txt = await readFile(filePath, 'utf8')
-        const data = JSON.parse(txt)
-        dbLogger?.info?.({t: 'FSNode GET', bytes: txt.length}, {data}, {ctx})
-        return { ok: true, status: 200, text: async () => JSON.stringify(data.content), json: async () => data.content }
+        const data = await readFile(filePath || await nodeFilePath(path))
+        dbLogger?.info?.({t: 'FSNode GET', bytes: data.length}, {}, {ctx})
+        return new Response(data)
     } catch (error) {
         if (error.code === 'ENOENT') {
             dbLogger?.info?.({t: 'FSNode GET no file'}, {}, {ctx})
@@ -40,16 +39,16 @@ GetMethod('wget.wrapWithMem', {
     testMemory[testSessionId] = testMemory[testSessionId] || {}
     if (testMemory[testSessionId][path] !== undefined) {
       dbLogger?.info?.({t: 'wrapWithMem GET from memory'}, {path, data: testMemory[testSessionId][path]}, {ctx})
-      return { ok: true, status: 200, text: async () => testMemory[testSessionId][path], json: async () => testMemory[testSessionId][path] }
+      return new Response(testMemory[testSessionId][path])
     }
 
     const response = await get(ctx)
     if (!response.ok)
         return response
-    const content = testMemory[testSessionId][path] = (await response.json())
+    const content = testMemory[testSessionId][path] = await response.text()
     dbLogger?.info?.({t: 'wrapWithMem GET from getter'}, {path, content }, {ctx})
 
-    return { ok: true, status: 200, text: async () => JSON.stringify(content), json: async () => content }
+    return new Response(content)
   }
 })
 
@@ -64,12 +63,11 @@ PutMethod('wput.intoMem', {
 PutMethod('wput.nodeFS', {
   impl: async (ctx, {dbLogger, opts, filePath}) => {
     try {
-        const { writeFile, mkdir } = await import('fs/promises')
+        const { writeFile, copyFile, mkdir } = await import('fs/promises')
         const { dirname } = await import('path')
         await mkdir(dirname(filePath), { recursive: true })
-        const jsonStr = JSON.stringify({content: opts.body}, null, 2)
-        await writeFile(filePath, jsonStr, 'utf8')
-        dbLogger?.info?.({t: 'FSNode PUT', bytes: jsonStr.length}, {}, {ctx})
+        await (opts.headers?.['x-wonder-body'] === 'localFile' ? copyFile(opts.body, filePath) : writeFile(filePath, opts.body))
+        dbLogger?.info?.({t: 'FSNode PUT'}, {}, {ctx})
         return successResult
     } catch (error) {
         dbLogger?.error?.({t: 'FSNode PUT failed'}, {}, {ctx, error})
