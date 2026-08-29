@@ -81,7 +81,7 @@ curl -s -X POST http://localhost:3000/mcp -H 'Content-Type: application/json' -d
 - runTgpSnippet({profileText: '...', logger}) — execute a JSON profile. All `$` references are auto-resolved — source files discovered
   and imported automatically from `$location` on comp definitions. Returns execution result + logger output.
 - runTest({testId: 'tst1'}) — shorthand for `runTgpSnippet({profileText: "{$: 'test<test>tst1'}"})`
-- playwrightHarvest({url,..,uiAction, logger}) - run in browser, after the fast test in node, check the logs- not the ui
+- roomAppletHarvest({url,waitForText,waitForSelector, ..., logger}) - run in browser, after the fast test in node, check the logs- not the ui
 - runProbe({probePath: 'test<test>myTest~impl~calculate~items~0'}) — run a circuit and capture intermediate `{in,out}` at a probePath.
   Auto-detects the enclosing circuit; returns `{in,out}` + visits + circuitRes + logs/errors.
   `resolution: 'input'|'output'|'all'` narrows/expands the detail.
@@ -103,7 +103,6 @@ react/tests/react-tests.js - use cases
 
 admin/room/room-applet-tests.js - usage in wonder
 
-use mcp playwrightHarvest({url,..., logger}) - test in the browser, after the fast test in node, check the logs- not the ui
 use `localhost:3000/room/:roomId/applet/:appletId` for public and `/signed-room/:roomId/applet/:appletId` for signed liverepo runs
 provide clickable links for the master
 

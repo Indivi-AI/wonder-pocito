@@ -1,6 +1,7 @@
 import { jb, coreUtils } from '@jb6/core'
 import '@jb6/core/misc/jb-remote-via-cli.js'
 import '@jb6/lang-service/src/tgp-snippet.js'
+import './db-drivers-live-repo.js'
 
 const asJbComp = c => typeof c == 'string' ? coreUtils.compByFullId(c) : c?.[Symbol.for('asJbComp')] || (c?.$location ? c : null)
 

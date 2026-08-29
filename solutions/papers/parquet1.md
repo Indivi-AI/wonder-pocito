@@ -1,6 +1,8 @@
 # Why Parquet Structure Matters for Fast Queries
 
-If you think you already know this, feel free to scroll down. There is a summary table at the end, followed by useful references for you—or your LLM.
+*By Shai Ben-Yehuda*
+
+☕ If you think you already know this, feel free to scroll down. There is a summary table at the end, followed by useful references for you—or your LLM.
 
 Otherwise, let's start with a simple coffee business and follow the bytes.
 
@@ -10,7 +12,8 @@ Otherwise, let's start with a simple coffee business and follow the bytes.
 
 Imagine a coffee-shop network similar to Starbucks.
 
-Over the last three years, the network collected about **100 MB of sales data**. Every transaction produces a row describing what was sold, where it was sold, when it happened, and for how much.
+Over the last three years, the network collected about **100 GB of sales data**. Every transaction produces a row describing what was sold,
+where it was sold, when it happened, and for how much.
 
 The original data could look like a CSV file:
 
@@ -73,11 +76,11 @@ These queries look simple.
 
 But underneath them is the main subject of this paper:
 
-> **What data does the computer actually have to read in order to answer the query?**
+> **What data does the computer actually have to scan in order to answer the query?**
 
 ---
 
-# 2. Fast Queries Start by Reading Less
+# 2. Scan Less, Query Faster
 
 Consider the monthly revenue query:
 
@@ -101,9 +104,9 @@ The other seven columns are irrelevant.
 
 If the data is stored as ordinary CSV rows, we keep encountering information the query does not need.
 
-> **Query performance is often less about processing data faster and more about reading less data in the first place.**
+> **Query performance is often less about processing data faster and more about scanning less data in the first place.**
 
-## Why Reading Less Matters
+## Why Scanning Less Matters
 
 Data must physically move before the CPU can process it.
 
@@ -125,7 +128,7 @@ Object Store / Network
          CPU
 ```
 
-If a query needs only 20 MB of useful information from a 100 MB dataset, reading all 100 MB and throwing away 80 MB is work that ideally should never happen.
+If a query needs only 1GB of useful information from a 100 GB dataset, scanning all 100 GB and throwing away 99GB is work that ideally should never happen.
 
 ---
 
@@ -143,7 +146,7 @@ CSV is organized by rows:
 
 Analytical queries frequently use only a few columns.
 
-Columnar storage organizes values by column, so our revenue query can read only:
+Columnar storage organizes values by column, so our revenue query can scan only:
 
 ```text
 timestamp
@@ -192,7 +195,7 @@ Real columnar formats use techniques such as dictionary encoding, run-length enc
           │               │                │
           └───────────────┴────────────────┘
                           ↓
-                   fewer bytes read
+                  fewer bytes scanned
                           ↓
                     faster queries
 ```
@@ -573,17 +576,17 @@ not the complete row-group size.
 
 # 10. What We Learned
 
-| Chapter | Chapter name                                   | What we learned                                                                                                                                           |
-| ------: | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|   **1** | **From Coffee Sales to Business Questions**    | Coffee can make business.                                                                                                                                 |
-|   **2** | **Fast Queries Start by Reading Less**         | Avoiding the irrelevant data is the key.                                                                                                                  |
-|   **3** | **Why Columnar Storage Is Fast**               | Binary representation and compression.                                                                                                                    |
-|   **4** | **The Cost of Scanning Too Much**              | Avoiding irrelevant rows is the key.                                                                                                                      |
-|   **5** | **Partitioning the Data by Time**              | Make useful parts of the data independently skippable.                                                                                                    |
-|   **6** | **How Parquet Knows Which Row Groups to Skip** | Footer min/max statistics make row-group skipping possible.                                                                                               |
-|   **7** | **The DayMonthQuarterYear Pattern**            | One useful example of designing row-group boundaries around query patterns.                                                                               |
-|   **8** | **Object Storage Changes the Storage Model**   | S3/GCS + Parquet separate cheap persistent storage from temporary compute. Remote data transfer becomes important.                                        |
-|   **9** | **Column Size Matters**                        | We can fetch specific columns from object storage; there is no need to fetch the complete row group. Physical Parquet layout therefore matters even more. |
+| Chapter | Chapter name | What we learned |
+| ------: | ------------ | --------------- |
+| **1** | **From Coffee Sales to Business Questions** | Coffee can make business. |
+| **2** | **Scan Less, Query Faster** | Avoiding the irrelevant data is the key. |
+| **3** | **Why Columnar Storage Is Fast** | Binary representation and compression. |
+| **4** | **The Cost of Scanning Too Much** | Avoiding irrelevant rows is the key. |
+| **5** | **Partitioning the Data by Time** | Make useful parts of the data independently skippable. |
+| **6** | **How Parquet Knows Which Row Groups to Skip** | Footer min/max statistics make row-group skipping possible. |
+| **7** | **The DayMonthQuarterYear Pattern** | One useful example of designing row-group boundaries around query patterns. |
+| **8** | **Object Storage Changes the Storage Model** | S3/GCS + Parquet separates storage from compute. Remote transfer becomes important. |
+| **9** | **Column Size Matters** | Fetch needed columns, not the complete row group. Physical Parquet layout matters even more. |
 
 > **The important question is not how quickly we can scan our Parquet file. It is how we can structure the file so that most of it never needs to be scanned.**
 
@@ -593,7 +596,8 @@ not the complete row-group size.
 
 1. **Amazon Athena Documentation**
    `https://docs.aws.amazon.com/athena/`
-   A direct industry example of the architecture discussed in Part III: Athena is serverless and queries data directly in S3 using SQL, without requiring a persistent query cluster.
+   A direct industry example of the architecture discussed in Part III: Athena is serverless and queries data directly in S3 using SQL,
+   without requiring a persistent query cluster.
 
 2. **Apache Parquet — Nested Encoding**
    `https://parquet.apache.org/docs/file-format/nestedencoding/`
