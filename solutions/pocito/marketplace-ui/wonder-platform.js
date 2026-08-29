@@ -237,7 +237,7 @@ ReactComp('wonderPlatform', {
         conversations: repo.conversations.map(item => item.id == updated.id ? updated : item)})
       const newConversation = async (agentId = '') => {
         const agent = repo.agents.find(item => item.id == agentId)
-        const title = agent ? `שיחה · ${agent.name}` : `שיחה ${repo.conversations.length + 1}`
+        const title = agent ? `שיחה · ${agent.name}` : 'שיחה חופשית'
         const created = {id: `c-${Date.now()}`, title, agentId, when: 'עכשיו', messages: [],
           pluginIds: [], skillIds: [], toolIds: [], knowledgeIds: []}
         await persistRepo({...repo, conversations: [created, ...repo.conversations]})
@@ -274,10 +274,19 @@ ReactComp('wonderPlatform', {
           baseline: JSON.stringify({...result.saved, originalId: result.saved.id})}]); flash('נשמר')
         setRunningSet(result.saved.id); await runEval(result.saved, 'agents', target, next); setRunningSet('')
       }
-      if (loadError) return h('div:grid min-h-screen place-items-center p-6 text-center', {}, h('div', {}, h(
-        'L:CircleAlert', {size: 30, className: 'mx-auto mb-3 text-red-600'}), h('b:block', {}, 'המרקטפלייס אינו זמין'),
-      h('p:mt-2 max-w-lg text-sm text-[#2e2e2e]', {}, String(loadError.message || loadError))))
-      if (!repo) return h('div:grid min-h-screen place-items-center', {}, h('L:Loader2', {size: 24, className: 'animate-spin'}))
+      const shell = body => h('div:wp-app grid min-h-screen place-items-center bg-[var(--wp-canvas)] p-6', {dir: 'rtl', lang: 'he'},
+        h('style', {}, dsls.common.data.wonderPlatformCss.$run()), body)
+      if (loadError) return shell(h(`div:${config.classes.panel} max-w-md p-8 text-center`, {},
+        h('span:mx-auto mb-4 grid h-11 w-11 place-items-center rounded-full bg-[var(--wp-danger-soft)] text-[var(--wp-danger)]',
+          {}, h('L:CircleAlert', {size: 20})),
+        h(`h1:${config.classes.h2}`, {}, 'הקטלוג אינו זמין'),
+        h(`p:mt-2 ${config.classes.body}`, {}, 'לא הצלחנו לטעון את הקטלוג. בדקו את החיבור ונסו שוב.'),
+        h('p:mt-3 truncate text-[12px] text-[var(--wp-ink-4)]', {dir: 'ltr', title: String(loadError.message || loadError)},
+          String(loadError.message || loadError)),
+        h(`button:${config.classes.primary} mt-5`, {onClick: () => location.reload()}, 'טעינה מחדש')))
+      if (!repo) return h('div:wp-app min-h-screen bg-[var(--wp-canvas)]', {dir: 'rtl', lang: 'he'},
+        h('style', {}, dsls.common.data.wonderPlatformCss.$run()),
+        h('div:mx-auto flex w-full max-w-[1720px]', {}, hh(ctx, dsls.react['react-comp'].wonderPlatformAppSkeleton, {})))
       const content = view == 'workspace' && workspace ? hh(ctx, dsls.react['react-comp'].wonderPlatformWorkspace, {workspace, repo,
         back: () => openView(workspace.resource), saveWorkspace, deleteWorkspace, openPicker: openWorkspacePicker, setDirty: setWorkspaceDirty,
         openEditor: openWorkspaceEditor, runTarget, runEval}) : view == 'chat' ? hh(ctx, dsls.react['react-comp'].wonderPlatformChat, {
@@ -288,9 +297,9 @@ ReactComp('wonderPlatform', {
               save: saveBase, deleteItem: deleteBase, back: () => requestLeave(() => setEditors([])), repo, openPicker: openEditorPicker,
               loadPackage, saveAndRun, runningSet})
               : hh(ctx, dsls.react['react-comp'].wonderPlatformCatalog, {view, repo, search, setSearch, openItem, createItem, importItem})
-      return h('div:min-h-screen overflow-x-clip bg-white text-[#0f0f10] antialiased', {dir: 'rtl', lang: 'he', style: {
-        fontFamily: '"Inter", "Assistant", system-ui, sans-serif', letterSpacing: '-0.005em'}},
-      h('div:mx-auto flex w-full max-w-[2000px]', {}, hh(ctx, dsls.react['react-comp'].wonderPlatformNavigation, {
+      return h('div:wp-app min-h-screen overflow-x-clip bg-[var(--wp-canvas)] text-[var(--wp-ink)]', {dir: 'rtl', lang: 'he'},
+      h('style', {}, dsls.common.data.wonderPlatformCss.$run()),
+      h('div:mx-auto flex w-full max-w-[1720px]', {}, hh(ctx, dsls.react['react-comp'].wonderPlatformNavigation, {
         view: view == 'workspace' ? workspace?.resource : view, openView, brand, brandTagline, brandIcon, extraPrimaryNav, extraLibraryNav,
         conversations: repo.conversations, conversationId, newConversation,
         openConversation: id => (setConversationId(id), openView('chat'))}), content),
@@ -298,14 +307,11 @@ ReactComp('wonderPlatform', {
         dsls.react['react-comp'].wonderPlatformResourceEditor, {editors, setEditors, repo, saveEditor, deleteEditor,
           loadPackage, openPicker: openEditorPicker, requestClose: requestLeave}),
       picker && hh(ctx, dsls.react['react-comp'].wonderPlatformAttachPicker, {picker, repo, setPicker, attachSelected, createNested}),
-      pendingLeave && h('div:fixed inset-0 z-[90] grid place-items-center bg-black/25 p-4', {}, h(
-        'section:w-full max-w-md rounded-2xl border border-[#e8e8ea] bg-white p-5 shadow-2xl', {}, h(
-        'div:flex items-center justify-between', {}, h('b:text-base font-semibold', {}, 'שינויים שלא נשמרו'),
-        h('button:rounded-lg p-1.5 hover:bg-gray-100', {onClick: () => setPendingLeave(), 'aria-label': 'סגירה'}, h('L:X'))),
-        h('p:mt-2 text-sm text-[#6b6b6f]', {}, 'ערכתם פריט שעדיין לא נשמר. מה תרצו לעשות?'),
-        h('div:mt-5 flex flex-wrap gap-2', {}, h(`button:${config.classes.primary}`, {onClick: saveAndLeave, disabled: saving}, 'שמירה ועזיבה'),
-          h(`button:${config.classes.button}`, {onClick: () => (setPendingLeave(), pendingLeave()), disabled: saving}, 'עזיבה בלי שמירה')))),
-      notice && h('div:fixed bottom-5 left-5 z-[100] rounded-xl border border-[#d8d8dc] bg-[#f4f4f5] px-4 py-2 text-sm text-[#0f0f10]', {}, notice))
+      pendingLeave && hh(ctx, dsls.react['react-comp'].wonderPlatformDialog, {title: 'שינויים שלא נשמרו',
+        body: 'ערכתם פריט שעדיין לא נשמר. מה תרצו לעשות?', close: () => setPendingLeave(), busy: saving,
+        actions: [['שמירה ועזיבה', saveAndLeave, true], ['עזיבה בלי שמירה', () => (setPendingLeave(), pendingLeave())]]}),
+      notice && h('div:fixed bottom-5 left-5 z-[100] flex items-center gap-2 rounded-[8px] bg-[var(--wp-ink)] px-3.5 py-2 ' +
+        'text-[13px] font-medium text-white shadow-[var(--wp-sh-2)]', {}, h('L:Check', {size: 14}), notice))
     }
   })
 })
