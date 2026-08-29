@@ -11,4 +11,4 @@ COPY cloud-services ./cloud-services
 RUN git config --system --add safe.directory /usr/src/app   # the dev overlay mounts the host repo, owned by another uid
 ENV HOME=/tmp
 USER 1001
-CMD ["node", "--import", "./nodejs-importmap.js", "cloud-services/express-server/local-server.js"]
+CMD ["node", "--import", "./nodejs-importmap.js", "solutions/pocito/on-prem/pocito-on-prem-server.js"]

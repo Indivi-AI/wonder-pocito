@@ -4,7 +4,7 @@ A marketplace + agents platform: the `wonderPlatform` browser applet (`solutions
 
 | Service | Role | Local dev | Deployed (published on `SITE_HOST`) |
 |---|---|---|---|
-| wonder server | serves applets live from the repo, `/wfetch`, `/mcp`, `/llmProxy` | :3000 | :58045 |
+| wonder server | serves applets live from the repo, `/wfetch`, `/mcp`, `/llmProxy` | :3005 | :58045 |
 | marketplace | resource CRUD, versions, audit, presign (`marketplace_server.py`) | :7777 | :58046 |
 | agno (AgentOS) | agent runs (`agno_server.py`, same package/image; shares only S3 with the marketplace) | :7778 | :58049 |
 | llm-lite (LiteLLM) | the one OpenAI-compatible gateway to the LLM | not needed (cloud proxy) | :58047 |
@@ -35,12 +35,12 @@ Run, one terminal each:
 
 ```sh
 npm run start-min-io                                        # MinIO :9000 (console :9001, wonder / wonder-minio-local)
-npm run local                                               # wonder :3000
+npm run pocito-local                                        # Pocito wonder :3005
 ./solutions/pocito/marketplace-server/start-marketplace.sh     # marketplace CRUD :7777
 ./solutions/pocito/marketplace-server/start-agno.sh            # agno (AgentOS) agent runs :7778
 ```
 
-Verify: [platform UI](http://localhost:3000/jb6_packages/react/react-comp-view.html?cmpId=wonderPlatform&urlsToLoad=@solution/pocito/marketplace-ui/wonder-platform.js),
+Verify: [platform UI](http://localhost:3005/jb6_packages/react/react-comp-view.html?cmpId=wonderPlatform&urlsToLoad=@solution/pocito/marketplace-ui/wonder-platform.js),
 [marketplace health](http://localhost:7777/healthz) and [agno health](http://localhost:7778/healthz) (`object_store: ok`),
 [API docs](http://localhost:7777/docs).
 Tests: `node --import ./nodejs-importmap.js jb6/testing/run-tests-cli.js .jb6/entry-points-pocito.js --pattern=wonderPlatform`

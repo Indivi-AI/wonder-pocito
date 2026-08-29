@@ -6,7 +6,8 @@
   "scripts": {
     "start-min-io": "env MINIO_ROOT_USER=wonder MINIO_ROOT_PASSWORD=wonder-minio-local $HOME/.local/bin/minio server $HOME/.minio-data --console-address :9001",
     "local": "node --import ./nodejs-importmap.js cloud-services/express-server/local-server.js",
-    "onprem": "WONDER_ENV=onprem npm run local",
+    "pocito-local": "node --import ./nodejs-importmap.js solutions/pocito/on-prem/pocito-local-server.js",
+    "onprem": "WONDER_ENV=onprem PORT=3000 node --import ./nodejs-importmap.js solutions/pocito/on-prem/pocito-on-prem-server.js",
     "build-wonder-base": "bash cloud-services/build-wonder-base.sh",
     "build-wonder": "bash cloud-services/build-wonder-image.sh",
     "deploy-wonder": "bash cloud-services/deploy-cloud-run-staging.sh",
