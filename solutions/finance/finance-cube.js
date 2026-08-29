@@ -16,7 +16,7 @@ const {
 // single source of truth: the finance-demo remote bucket — resolveFroms pins db:'bucket', immune to the ambient ctx db
 // (so browser-LIVE's db:'local' Ask-AI var can't re-route it to nonexistent files/rooms). Realms differ only in HOW
 // they read it: the linux lambda (native ext) and browser LIVE (static-wasm) byte-range via the cols_cache extension;
-// only mac/node dev mirrors whole files to /tmp/wcache (fullFileCache) — the browser has no disk and its wasm engine reads solely through cols_cache.
+// only mac/node dev mirrors whole files to /tmp/fullFileCache (fullFileCache) — the browser has no disk and its wasm engine reads solely through cols_cache.
 const DATA_ROOT = 'room://finance-demo/usersRO/data'
 const CACHE_STRATEGY = !coreUtils.isNode || globalThis.process?.platform === 'linux' ? 'colsCache' : 'fullFileCache'
 

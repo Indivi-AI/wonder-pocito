@@ -67,7 +67,7 @@ Test rooms (in the db-driver test suite, `public/core/db-drivers-tests.js`):
 
 | roomId | scheme | used by |
 |---|---|---|
-| `testSignedRoom` | `signedRoom://` | wcache/media/permissions over signed bucket (`usersRO/`,`usersRW/`) |
+| `testSignedRoom` | `signedRoom://` | fullFileCache, media, and permission tests over the signed bucket (`usersRO/`, `usersRW/`) |
 | `testPublicRoom` | `room://` | same data as testSignedRoom over the public path |
 | `buyPhone` | `room:gcs`/`room:fs` | put/get/append/patch driver tests (`items`) |
 

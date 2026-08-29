@@ -35,7 +35,7 @@ async function wresolveInfo(url, _ctx, method = 'GET') {
   const fullyResolvedWUrl = url.replace(/^(\w+):[^/]*\/\//, `$1:${db}//`)
   const isLocal = resolved != null && !/^https?:\/\//.test(resolved)   // wresolve returns a directly-readable path (fs or repo-relative mirror) for local; an https url for remote
   return { url, db, fullyResolvedWUrl, rangeUrl: coreUtils.isNode ? resolved : fullyResolvedWUrl,
-    resolved, isWUrl: resolved != null, isLocal, needsWcache: resolved != null && !isLocal }
+    resolved, isWUrl: resolved != null, isLocal, needsFullFileCache: resolved != null && !isLocal }
 }
 
 // the whole env->storage contract: process boundaries (mcp tools, express server) opt in via ctx vars; db resolution itself never reads env
@@ -73,40 +73,40 @@ async function wputMany(items, ctx) {
   return { ok: !failed.length, responses: results.map(({ response }) => response), failed: failedItems }
 }
 
-async function wcachePopulate(wUrl, _ctx, { validate = false } = {}) {
-  const dbLogger = _ctx.vars.dbLogger
+async function fullFileCachePopulate(wUrl, ctx, { validate = false } = {}) {
+  const dbLogger = ctx.vars.dbLogger
   if (!coreUtils.isNode) {
     const script = `import { coreUtils, jb } from '@jb6/core'
 import '@wonder/db/db-drivers.js'
-const { wcachePopulate } = jb.wonderUtils
+const { fullFileCachePopulate } = jb.wonderUtils
 ;(async()=>{ try {
-  await coreUtils.writeServiceResult(await wcachePopulate(${JSON.stringify(wUrl)}, new coreUtils.Ctx(), { validate: ${validate} }))
+  const ctx = new coreUtils.Ctx().setVars({db: ${JSON.stringify(ctx.vars.db)}})
+  await coreUtils.writeServiceResult(await fullFileCachePopulate(${JSON.stringify(wUrl)}, ctx, { validate: ${validate} }))
 } catch (e) { await coreUtils.writeServiceResult({ error: e.stack || String(e) }) } })()`
-    return (await coreUtils.runCliInContext(script, { ctx: _ctx, bindLoggers: 'dbLogger' })).result
+    return (await coreUtils.runCliInContext(script, { ctx, bindLoggers: 'dbLogger' })).result
   }
-  const ctx = _ctx.setVars({ db: 'gcs' })
   try {
-    const t0 = Date.now(), cachePath = await wresolve(wUrl, ctx.setVars({ db: 'wcache' })), fs = await import('fs/promises')
+    const t0 = Date.now(), cachePath = await wresolve(wUrl, ctx.setVars({ db: 'fullFileCache' })), fs = await import('fs/promises')
     if (validate) {
       const remoteMtime = (await jb.wonderUtils.wfetch2(wUrl, { method: 'HEAD' }, ctx))?.headers?.get?.('Last-Modified')
       const localMtime = await fs.stat(cachePath).then(s => s.mtime.toISOString()).catch(() => null)
       if (localMtime && (!remoteMtime || localMtime >= remoteMtime)) {
-        dbLogger?.info?.({ t: 'wcache hit', cachePath, localMtime, remoteMtime, validateMs: Date.now() - t0 }, {}, { ctx })
+        dbLogger?.info?.({ t: 'fullFileCache hit', cachePath, localMtime, remoteMtime, validateMs: Date.now() - t0 }, {}, { ctx })
         return cachePath
       }
     }
     const res = await jb.wonderUtils.wfetch2(wUrl, { method: 'GET' }, ctx)
-    if (!res?.ok) { dbLogger?.info?.({ t: 'wcache miss', wUrl, cachePath }, {}, { ctx }); return false }
+    if (!res?.ok) { dbLogger?.info?.({ t: 'fullFileCache miss', wUrl, cachePath }, {}, { ctx }); return false }
     const type = res.headers?.get?.('content-type') || (/\.json(?:[?#]|$)/i.test(wUrl) ? 'application/json'
       : /\.(md|txt|csv|tsv|js|mjs|css|html|svg|jsonl)(?:[?#]|$)/i.test(wUrl) ? 'text/plain' : 'application/octet-stream')
     const content = /json(?:;|$)/i.test(type) ? JSON.stringify(await res.json(), null, 2)
       : /^text\/|ndjson|javascript|svg/i.test(type) ? await res.text() : Buffer.from(await res.arrayBuffer())
-    if (content == null) { dbLogger?.info?.({ t: 'wcache empty', wUrl, cachePath }, {}, { ctx }); return false }
+    if (content == null) { dbLogger?.info?.({ t: 'fullFileCache empty', wUrl, cachePath }, {}, { ctx }); return false }
     await fs.mkdir(cachePath.replace(/\/[^/]*$/, ''), { recursive: true })
     await fs.writeFile(cachePath, content)
-    dbLogger?.info?.({ t: 'wcache populated', cachePath, bytes: content.length, downloadMs: Date.now() - t0 }, {}, { ctx })
+    dbLogger?.info?.({ t: 'fullFileCache populated', cachePath, bytes: content.length, downloadMs: Date.now() - t0 }, {}, { ctx })
     return cachePath
-  } catch (e) { coreUtils.logException(e, 'wcache failed', { ctx, wUrl }); return false }
+  } catch (e) { coreUtils.logException(e, 'fullFileCache failed', { ctx, wUrl }); return false }
 }
 
 async function saveRoomBigLog2(ctx, id = formatTimeWithRandom()) {
@@ -307,13 +307,13 @@ async function checkPermissionDenial(ctx, room, file, method) {
     requiresUserMatch, userMatches, allowed, permissionDenied: !allowed}
 }
 
-const wcachePath = (bucketName, path) => `${wcacheRoot()}/${bucketName}/${path}`
+const fullFileCachePath = (bucketName, path) => `${fullFileCacheRoot()}/${bucketName}/${path}`
 
-Object.assign(jb.wonderUtils, { formatDay, formatTimeWithRandom, wresolve, wresolveInfo, wputMany, wcachePopulate, storageEnvVars,
+Object.assign(jb.wonderUtils, { formatDay, formatTimeWithRandom, wresolve, wresolveInfo, wputMany, fullFileCachePopulate, storageEnvVars,
   saveRoomBigLog2, prefetchSignedUrls, getIdToken, getAccessToken,
   storagePrefix, wonderBucketName, successResult, errorResultByException, notFoundResult,
   calcPath, extractFromUrl, wonderRepoRoot, bustCdnCache, paginateGcsList, gcsStorage,
-  getCachedSignedUrl, wcachePath })
+  getCachedSignedUrl, fullFileCachePath })
 
 // private
 const localhostServer = ctx => ctx.vars.localhostServer || globalThis.process?.env?.WONDER_LOCAL_SERVER || 'http://localhost:3000'
@@ -322,7 +322,7 @@ const signedUrlServerOf = ctx => ctx.vars.signedUrlServer
 const methodToAction = method => method === 'GET' || method === 'HEAD' ? 'read' : 'write'
 const sigsStorageKey = roomId => `sigs_${roomId}_${auth.currentPrincipal()}`
 const loadedRooms = new Set()
-const wcacheRoot = () => process.env?.WCACHE_DIR || '/tmp/wcache'
+const fullFileCacheRoot = () => process.env?.FULL_FILE_CACHE_DIR || '/tmp/fullFileCache'
 
 function loadSignaturesFromStorage(roomId) {
   if (coreUtils.isNode) return

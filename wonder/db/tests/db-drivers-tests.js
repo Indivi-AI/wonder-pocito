@@ -1,7 +1,7 @@
 import { dsls, coreUtils, jb } from '@jb6/core'
 import '@wonder/db/db-drivers.js'
 
-const { wfetch2, wresolve, wresolveInfo, wcachePopulate, getDBDriver } = jb.wonderUtils
+const { wfetch2, wresolve, wresolveInfo, fullFileCachePopulate, getDBDriver } = jb.wonderUtils
 import '@jb6/testing'
 import '@jb6/common'
 import '@jb6/jq'
@@ -128,20 +128,20 @@ Test('dbDriverTests.gcs.node.noIdentity.publicRead', {
   })
 })
 
-// wcache (db:'wcache') is a local-disk cache path, scheme-agnostic — must resolve to /tmp/wcache/<bucket>/<path> for
+// fullFileCache is scheme-agnostic and resolves to /tmp/fullFileCache/<bucket>/<path> for
 // BOTH public (indiviai-wonder) and signed (indiviai-wonder-protected), never the signed HTTPS url (→ ENAMETOOLONG).
-Test('dbDriverTests.wcachePath', {
+Test('dbDriverTests.fullFileCachePath', {
   nodeOnly: true,
   impl: dataTest({
     calculate: async ctx => {
       const dbCtx = ctx.setVars({ forceGCS: false, onLiveRepo: true, hasGcpIdentity: true })
-      const at = u => wresolve(u, dbCtx.setVars({ db: 'wcache' }))
+      const at = u => wresolve(u, dbCtx.setVars({ db: 'fullFileCache' }))
       return { result: [await at('signedRoom://testSignedRoom/usersRO/sales-large.json'),
         await at('room://testPublicRoom/usersRO/sales-large.json')], ...coreUtils.harvestLogs(dbCtx) }
     },
     expectedResult: equals({
       item1: '%result%',
-      item2: ['/tmp/wcache/indiviai-wonder-protected/testSignedRoom/usersRO/sales-large.json','/tmp/wcache/indiviai-wonder/testPublicRoom/usersRO/sales-large.json']
+      item2: ['/tmp/fullFileCache/indiviai-wonder-protected/testSignedRoom/usersRO/sales-large.json','/tmp/fullFileCache/indiviai-wonder/testPublicRoom/usersRO/sales-large.json']
     }),
     timeout: 10000,
     logger: 'dbLogger'
@@ -157,14 +157,17 @@ Test('dbDriverTests.resolveLocations', {
       const [nodeLocal, browserLocal, nodeMem, browserMem, cache, gcs] = await Promise.all([
         resolveWith({ db: 'local', dbHost: 'node' }), resolveWith({ db: 'local', dbHost: 'browser' }),
         resolveWith({ db: 'fs-mem', dbHost: 'node' }), resolveWith({ db: 'fs-mem', dbHost: 'browser' }),
-        resolveWith({ db: 'wcache', dbHost: 'node' }), resolveWith({ db: 'gcs', dbHost: 'node', forceGCS: true })
+        resolveWith({ db: 'fullFileCache', dbHost: 'node' }), resolveWith({ db: 'gcs', dbHost: 'node', forceGCS: true })
       ])
       return { result: [nodeLocal.endsWith('/files/rooms/testPublicRoom/usersRO/stores.parquet'), browserLocal,
         nodeMem.endsWith('/files/testPublicRoom/usersRO/stores.parquet'), browserMem, cache, gcs], ...coreUtils.harvestLogs(ctx) }
     },
     expectedResult: equals({
       item1: '%result%',
-      item2: [true,'http://localhost:3000/files/rooms/testPublicRoom/usersRO/stores.parquet',true,'http://localhost:3000/files/testPublicRoom/usersRO/stores.parquet','/tmp/wcache/indiviai-wonder/testPublicRoom/usersRO/stores.parquet','https://storage.googleapis.com/indiviai-wonder/testPublicRoom/usersRO/stores.parquet']
+      item2: [true, 'http://localhost:3000/files/rooms/testPublicRoom/usersRO/stores.parquet', true,
+        'http://localhost:3000/files/testPublicRoom/usersRO/stores.parquet',
+        '/tmp/fullFileCache/indiviai-wonder/testPublicRoom/usersRO/stores.parquet',
+        'https://storage.googleapis.com/indiviai-wonder/testPublicRoom/usersRO/stores.parquet']
     }),
     timeout: 10000,
     logger: 'dbLogger'
@@ -211,15 +214,15 @@ Test('dbDriverTests.resolveCodeLocations', {
   })
 })
 
-// wcachePopulate → cache an object at its canonical wcache path, transport chosen by scheme (signed URL for signedRoom,
+// fullFileCachePopulate → cache an object at its canonical fullFileCache path, transport chosen by scheme (signed URL for signedRoom,
 // SA/public for gcs). Both testSignedRoom and testPublicRoom hold usersRO/sales-large.json; populate each, assert non-empty.
-Test('dbDriverTests.wcachePopulate', {
+Test('dbDriverTests.fullFileCachePopulate', {
   nodeOnly: true,
   impl: dataTest({
     calculate: async ctx => {
       const { promises: fsp } = await import('fs')
       const dbCtx = ctx.setVars({ db: 'gcs', forceGCS: false, onLiveRepo: true, hasGcpIdentity: true })
-      const at = async u => { const p = await wcachePopulate(u, dbCtx); return !!p && (await fsp.stat(p)).size > 0 }
+      const at = async u => { const p = await fullFileCachePopulate(u, dbCtx); return !!p && (await fsp.stat(p)).size > 0 }
       return { result: [
         await at('signedRoom://testSignedRoom/usersRO/sales-large.json'),
         await at('room://testPublicRoom/usersRO/sales-large.json')
@@ -253,16 +256,16 @@ Test('dbDriverTests.text.bodyRoundTrip', {
   })
 })
 
-Test('dbDriverTests.wcachePopulate.textCsv', {
+Test('dbDriverTests.fullFileCachePopulate.textCsv', {
   nodeOnly: true,
   impl: dataTest({
     calculate: async ctx => {
       const { promises: fsp } = await import('fs')
       const dbCtx = ctx.setVars({ db: 'gcs', forceGCS: false, onLiveRepo: true, hasGcpIdentity: true })
-      const url = `room://testPublicRoom/wcache-raw-${ctx.vars.testSessionId}.csv`
+      const url = `room://testPublicRoom/fullFileCache-raw-${ctx.vars.testSessionId}.csv`
       const csv = 'campaign_name,revenue\ncamp_a,10\ncamp_b,5'
       await wfetch2(url, { body: csv, method: 'PUT', headers: {'content-type': 'text/csv'} }, dbCtx)
-      const cachePath = await wcachePopulate(url, dbCtx)
+      const cachePath = await fullFileCachePopulate(url, dbCtx)
       const content = cachePath && await fsp.readFile(cachePath, 'utf8')
       return { result: content, ...coreUtils.harvestLogs(dbCtx) }
     },
@@ -298,7 +301,8 @@ Test('dbDriverTests.driverSelection', {
           url: 'room:fs-mem//buyPhone/items?user=Buyer', expected: 'fsmem.browser.liveRepo' },
         { name: 'browser-forceGCS-overrides-fsmem', vars: {dbHost: 'browser', forceGCS: true, db: 'fs-mem'},
           url: 'room:fs-mem//buyPhone/items?user=Buyer', expected: 'bucket.google.public' },
-        { name: 'db-wcache-bypasses-scoring', vars: {dbHost: 'node', onLiveRepo: true, db: 'wcache'}, url: 'room://buyPhone/items', expected: 'wcache' },
+        { name: 'db-fullFileCache-bypasses-scoring', vars: {dbHost: 'node', onLiveRepo: true, db: 'fullFileCache'},
+          url: 'room://buyPhone/items', expected: 'fullFileCache' },
         { name: 'browser-liveRepo-logs', vars: {dbHost: 'browser', onLiveRepo: true}, url: 'logs:gcs//wfLog/log1', expected: 'GCS.browser.liveRepo.logs' },
         { name: 'node-prod-noIdentity-public', vars: {dbHost: 'node', forceGCS: true, hasGcpIdentity: false}, url: 'room:gcs//x/y?user=u', expected: 'GCS.node.publicGCS' },
         { name: 'node-prod-noIdentity-logs', vars: {dbHost: 'node', forceGCS: true, hasGcpIdentity: false}, url: 'logs:gcs//x/y', expected: null },

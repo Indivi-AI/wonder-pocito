@@ -243,14 +243,14 @@ const rmFiles = Component('rmFiles', {
 
 Test('cliEtl.cachedWonderUrl.json', {
   impl: dataTest({
-    setup: rmFiles(['/tmp/etl-test-wonder-output.csv', '/tmp/wcache/indiviai-wonder/testPublicRoom/usersRO/sales-large.json']),
+    setup: rmFiles(['/tmp/etl-test-wonder-output.csv', '/tmp/fullFileCache/indiviai-wonder/testPublicRoom/usersRO/sales-large.json']),
     calculate: cliEtl({
       extract: cachedWonderUrl('room://testPublicRoom/usersRO/sales-large.json'),
       transform: duckdb("SELECT category, count(*) as sales, sum(amount) as total FROM read_json_auto('{%$inputFile%}') GROUP BY category ORDER BY total DESC"),
       load: copyToFile('/tmp/etl-test-wonder-output.csv')
     }),
     expectedResult: and(
-      contains('wcache populated', { allText: join('\n', { items: '%dbLog/t%' }) }),
+      contains('fullFileCache populated', { allText: join('\n', { items: '%dbLog/t%' }) }),
       contains('cliEtl complete', { allText: join('\n', { items: '%etlLog/t%' }) })
     ),
     timeout: 12000,

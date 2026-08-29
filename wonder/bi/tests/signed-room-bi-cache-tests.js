@@ -109,11 +109,15 @@ const biTaxiColsCacheCloudTest = Component('biTaxiColsCacheCloudTest', {
 // ── LOCAL (in-process) ───────────────────────────────────────────────────────────────────────────────────────────
 Test('biCacheTest.local.fs',                { impl: biCacheLocalTest('fs', { expectedVia: 'fs mirror' }) })
 Test('biCacheTest.local.gcs.colsCache',     { impl: biCacheLocalTest('gcs', { cacheStrategy: 'colsCache', expectedVia: 'colsCache extension' }) })
-Test('biCacheTest.local.gcs.fullFileCache', { impl: biCacheLocalTest('gcs', { cacheStrategy: 'fullFileCache', expectedVia: 'fullFileCache wcache' }) })
+Test('biCacheTest.local.gcs.fullFileCache', {
+  impl: biCacheLocalTest('gcs', { cacheStrategy: 'fullFileCache', expectedVia: 'fullFileCache' })
+})
 
 // ── CLOUD (roomLambda wire — uploads the lambda) ─────────────────────────────────────────────────────────────────
 Test('biCacheTest.cloud.colsCache',     { impl: biCacheCloudTest('colsCache', { expectedVia: 'colsCache extension' }) })
-Test('biCacheTest.cloud.fullFileCache', { impl: biCacheCloudTest('fullFileCache', { expectedVia: 'fullFileCache wcache' }) })
+Test('biCacheTest.cloud.fullFileCache', {
+  impl: biCacheCloudTest('fullFileCache', { expectedVia: 'fullFileCache' })
+})
 
 // ── TAXI (45MB protected parquet, colsCache only — byte-range a real column chunk) ───────────────────────────────
 Test('biCacheTest.taxi.local.colsCache', { impl: biTaxiColsCacheLocalTest() })

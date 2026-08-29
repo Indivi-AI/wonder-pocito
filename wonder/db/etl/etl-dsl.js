@@ -3,7 +3,7 @@ import '@jb6/llm-guide/essentials.js'
 import '@jb6/core/misc/jb-cli.js'   // assigns runBashScript onto coreUtils (node CLI helpers)
 import '@wonder/db/db-drivers.js'
 
-const { wfetch2, wresolve, wcachePopulate } = jb.wonderUtils
+const { wfetch2, wresolve, fullFileCachePopulate } = jb.wonderUtils
 const {
   tgp: { TgpType, TgpTypeModifier, Component, 'ctx-enricher': { sameCtx } },
   common: { Data },
@@ -486,15 +486,15 @@ Component('polars', {
 
 const normalizeTimestamp = v => v && new Date(/^\d+$/.test(String(v)) ? +v * 1000 : v).toISOString()
 
-// cache the source under the canonical wcache path (/tmp/wcache/<bucket>/<path>) so dev + lambda + parallel-download share it
-const urlToCachePath = (u, ctx) => wresolve(u, ctx.setVars({ db: 'wcache' }))
+// cache the source under the canonical fullFileCache path (/tmp/fullFileCache/<bucket>/<path>) so dev + lambda + parallel-download share it
+const urlToCachePath = (u, ctx) => wresolve(u, ctx.setVars({ db: 'fullFileCache' }))
 
 Component('cachedWonderUrl', {
     type: 'cli-extract<etl>',
     params: [{id: 'url', as: 'string', dynamic: true}],
     impl: (_ctx, {}, { url }) => ({
         url,
-        inputFile: async (ctx) => await wcachePopulate(url(ctx), ctx, { validate: true }) || await urlToCachePath(url(ctx), ctx),
+        inputFile: async (ctx) => await fullFileCachePopulate(url(ctx), ctx, { validate: true }) || await urlToCachePath(url(ctx), ctx),
         lastModified: async (ctx) => {
             const res = await wfetch2(url(ctx), { method: 'HEAD' }, ctx.setVars({ db: 'gcs' }))
             return res?.headers?.get?.('Last-Modified') || null

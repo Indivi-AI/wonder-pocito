@@ -13,7 +13,7 @@ const runtimeDb = ctx => ctx.vars.db || (!coreUtils.isNode && new URLSearchParam
 const gcsProxyBase = ctx => ctx.vars.wonderServiceBase || globalThis.location?.origin
   || globalThis.process?.env?.WONDER_SERVICE_URL || 'https://wonder-lambda-me-west1.indivi.ai'
 const { wresolve, successResult, errorResultByException, notFoundResult, bustCdnCache, paginateGcsList, calcPath,
-  extractFromUrl, wonderRepoRoot, wcachePath } = wonderUtils
+  extractFromUrl, wonderRepoRoot, fullFileCachePath } = wonderUtils
 
 Data('wFetch', {
   description: 'Read or write JSON, text and binary room content. POST appends JSONL text; a trailing slash lists.',
@@ -215,7 +215,9 @@ ObjectStore('gcs', {
 
 ObjectStore('fs', { impl: objectStore({ categories: ['fs'] }) })
 ObjectStore('fsmem', { impl: objectStore({ categories: ['fsmem'] }) })
-ObjectStore('wcache', { impl: objectStore({ categories: ['wcache'] }) })
+ObjectStore('fullFileCache', {
+  impl: objectStore(['fullFileCache'])
+})
 
 const AuthToken = TgpType('auth-token', 'wonder', { typescript: '{ value, expired() }' })
 const AuthMethod = TgpType('auth-method', 'wonder', { typescript: '{ enrichRequest(fetchReq, authToken, ctx): fetchReq }' })
@@ -294,8 +296,8 @@ async function getDBDriver(url, ctx) {
   const scopeId = extracted?.scope?.id
   const store = dsls.wonder['object-store'][dbNormalized]?.$runWithCtx(ctx)
 
-  if (dbNormalized === 'wcache')
-    return coreUtils.globalsOfType(dsls.wonder['db-driver']).find(d => d.id === 'wcache')
+  if (dbNormalized === 'fullFileCache')
+    return coreUtils.globalsOfType(dsls.wonder['db-driver']).find(d => d.id === 'fullFileCache')
 
   const categories = {
     [host]: true, [dbNormalized]: true, [scopeId?.toLowerCase()]: true,
@@ -453,7 +455,7 @@ async function wfetch2(_url, opts, _ctx) {
   etlStatus?.(`${driverMethod.toUpperCase()} ${driver.id} ${path} → ${res?.status || '?'}`)
   if (driverMethod == 'get' && res?.status == 404) return notFoundResult
   // media HEAD = resolve: synthesize Content-Location (the resolved GCS url) onto the real HEAD response,
-  // preserving its Last-Modified. resolveThumb / wcachePopulate validate read Content-Location to get the url.
+  // preserving its Last-Modified. resolveThumb / fullFileCachePopulate validate read Content-Location to get the url.
   if (driverMethod == 'head' && res?.ok) {
     const orig = res.headers.get.bind(res.headers)
     res.headers.get = h => h.toLowerCase() == 'content-location' ? filePathUrl : orig(h)
@@ -689,27 +691,27 @@ DbDriver('GCS.browser.gcsHTTPBlockedByCORS', {
   })
 })
 
-ListMethod('wlist.wcache', {
+ListMethod('wlist.fullFileCache', {
   impl: async (ctx, { dbLogger, bucketName, path }) => {
     const fs = await import('fs/promises')
-    const dir = wcachePath(bucketName, path).replace(/\/$/, '')
+    const dir = fullFileCachePath(bucketName, path).replace(/\/$/, '')
     let entries = []
     try { entries = await fs.readdir(dir, { withFileTypes: true }) } catch (e) {
-      if (e.code !== 'ENOENT') coreUtils.logException(e, 'wlist.wcache failed', { ctx, dir })
+      if (e.code !== 'ENOENT') coreUtils.logException(e, 'wlist.fullFileCache failed', { ctx, dir })
     }
     const items = entries.filter(e => e.isFile()).map(e => ({ name: `${path}${e.name}` }))
     const dirs = entries.filter(e => e.isDirectory()).map(e => ({ name: `${path}${e.name}/`, isDir: true }))
-    dbLogger?.info?.({ t: 'wlist.wcache', dir, items: items.length, dirs: dirs.length }, {}, { ctx })
+    dbLogger?.info?.({ t: 'wlist.fullFileCache', dir, items: items.length, dirs: dirs.length }, {}, { ctx })
     return [...dirs, ...items]
   }
 })
 
-DbDriver('wcache', {
+DbDriver('fullFileCache', {
   impl: dbDriver({
     whenAndWhyToUse: 'Whole-file local mirror for non-Parquet, or for etls that need to scan the whole parquet',
     designConcerns: 'WARNING: Do not use for large GCS Parquet in lambda; whole-file downloads defeat colsCache range reads. Callers own population and freshness.',
-    list: wlist.wcache(),
-    filePathUrl: (ctx, { path, bucketName }) => wcachePath(bucketName, path)
+    list: wlist.fullFileCache(),
+    filePathUrl: (ctx, { path, bucketName }) => fullFileCachePath(bucketName, path)
   })
 })
 
@@ -755,6 +757,7 @@ DbDriverInterceptor('jqPath', {
     }
   })
 })
+
 AppendMethod('wappend.appendMultiUser', {
   description: 'Conflict-safe HTTP text append with conditional write and retry using ObjectStore.revisionProtocol.',
   params: [

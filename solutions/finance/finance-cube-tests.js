@@ -4,7 +4,7 @@ import './finance-cube.js'
 import './finance-analytics.js'   // the Ask-AI closure — its jb.workflowUtils writers are guarded below
 import { cubeWidgets, widgetSql, widgetWhere, widgetSpec, widgetFilters, unitOf } from '@wonder/bi/cube-widget-builder.js'
 import '@wonder/db/db-drivers.js'
-const { wcachePopulate } = jb.wonderUtils
+const { fullFileCachePopulate } = jb.wonderUtils
 
 const {
   tgp: { 'ctx-enricher': { setupCube, setVars, Var } },
@@ -13,10 +13,10 @@ const {
   bi: { cube: { financeCube }, report: { financeTopPayers } }
 } = dsls
 
-// the cube reads the finance-demo room (mirrored to /tmp/wcache on non-linux); legacy baselines compare it
+// the cube reads the finance-demo room (mirrored to /tmp/fullFileCache on non-linux); legacy baselines compare it
 // against hand-written SQL over the room CSVs, mirrored the same way (Last-Modified-validated, so always fresh)
 const legacyCsv = (ctx, persona = 'freelancer') =>
-  wcachePopulate(`room://finance-demo/usersRO/data/finance_${persona}_realistic.csv`, ctx, { validate: true })
+  fullFileCachePopulate(`room://finance-demo/usersRO/data/finance_${persona}_realistic.csv`, ctx, { validate: true })
 
 // the widget-builder engine bound to financeCube — the same one-line binding the demo does (finance-demo.js CW)
 const FW = cubeWidgets(financeCube.$run(), { exclude: ['Currency'] })
@@ -290,11 +290,11 @@ Test('financeCube.realmReadPaths', {
       const mirrorSql = await compileCubeSql.$runWithCtx(ctx, financeCube(), `select count(*) as "n" from ${mirror}`)
       const extSql = await compileCubeSql.$runWithCtx(ctx, financeCube(), `select count(*) as "n" from ${ext}`)
       return {
-        mirrorIsLocalFile: mirror.includes('/wcache/') && mirror.includes('finance_freelancer_realistic.parquet'),
+        mirrorIsLocalFile: mirror.includes('/fullFileCache/') && mirror.includes('finance_freelancer_realistic.parquet'),
         mirrorSqlNoColsCacheLoad: !/cols_cache/i.test(mirrorSql),   // mac must NOT load the linux-only cols_cache ext (cache_httpfs is fine)
         extReadsRoom: ext.includes(`cols_cache(['room:gcs//finance-demo/usersRO/data/finance_freelancer_realistic.parquet'])`),   // cols_cache takes a LIST of wUrls
         extSqlLoadsExtension: /^LOAD /.test(extSql),
-        askAiImmuneToLocalDb: askAi.includes('/wcache/') && !askAi.includes('files/rooms')
+        askAiImmuneToLocalDb: askAi.includes('/fullFileCache/') && !askAi.includes('files/rooms')
       }
     },
     expectedResult: and(equals(true, '%mirrorIsLocalFile%'), equals(true, '%mirrorSqlNoColsCacheLoad%'), equals(true, '%extReadsRoom%'),
