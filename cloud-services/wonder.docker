@@ -29,4 +29,4 @@ RUN if [ "$BUILD_TARGET" != runtime ]; then cp "cloud-services/express-server/.e
  && grep -q WHAPI_TOKEN_WONDER_DEMO .env; fi
 
 EXPOSE 8080
-CMD [ "node", "--experimental-vm-modules", "--expose-gc", "--import", "./nodejs-importmap.js", "cloud-services/express-server/server.js" ]
+CMD [ "node", "--experimental-vm-modules", "--expose-gc", "--import", "./nodejs-importmap.js", "cloud-services/express-server/wonder-cloud-server.js" ]
