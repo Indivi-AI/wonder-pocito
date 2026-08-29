@@ -110,10 +110,12 @@ export const createDashboardDraft = async (ctx, { id = 'dashboards.reportCanvas'
   const widget = widgetFromPlan(planRows), draftDashboard = appendWidget(ctx.vars.currentDashboard, widget), editedCode = canvasEdit([widget])
   dashboardUrl = String(dashboardUrl).includes('%$dashboardUrl%') ? ctx.vars.dashboardUrl : dashboardUrl
   const code = await readJs(dashboardUrl, ctx), baseCode = dashboardWidgetBlock(code, id) ? code : jb.dashboardUtils?.defaultDashboardJs || code, nextCode = replaceDashboardWidgetBlock(baseCode, id, editedCode), draftUrl = draftUrlOf(dashboardUrl)
-  const put = await wfetch2(draftUrl, { method: 'PUT', body: nextCode }, ctx)
+  const put = await wfetch2(draftUrl, { method: 'PUT', body: nextCode, headers: {'content-type': 'application/javascript'} }, ctx)
   const res = put?.ok ? { text: `יצרתי טיוטה עם "${widget.title}". אפשר לשמור או לבטל.`, id, dashboardUrl, draftUrl, editedCode, code: nextCode, draftDashboard, widget, sql: planRows.sql, rowsCount: planRows.rowsCount, reportId: planRows.reportId }
     : { error: `failed saving dashboard draft: ${put?.status || ''} ${put?.statusText || ''}`.trim(), id, dashboardUrl }
-  if (!res.error) await wfetch2(manifestUrl(ctx.vars.roomWUrl), { method: 'PUT', body: { title: 'Dashboards draft', dashboardUrl, draftUrl, widgetId: widget.id, updatedAt: Date.now() } }, ctx)
+  if (!res.error) await wfetch2(manifestUrl(ctx.vars.roomWUrl), { method: 'PUT',
+    body: JSON.stringify({ title: 'Dashboards draft', dashboardUrl, draftUrl, widgetId: widget.id, updatedAt: Date.now() }),
+    headers: {'content-type': 'application/json'} }, ctx)
   workflowLogger?.workflowTrace?.push({ flowIndex, output: { ...res, code: undefined, editedCode: res.editedCode?.slice(0, 500) } })
   return res
 }

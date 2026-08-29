@@ -2,6 +2,7 @@ import { dsls } from '@jb6/core'
 import '@jb6/react/tests/react-testers.js'
 import '@jb6/mcp/mcp-jb-tools.js'
 import '@wonder/db/oauth2.js'
+import './gmail-test-users.js'
 import './room-test-applets.js'
 
 // How to run the test via mcp:
@@ -12,10 +13,19 @@ import './room-test-applets.js'
 //   To save time, look at the logs, do not trust green tests
 
 const {
-  common: { boolean: { and, contains, equals }, data: { join, playwrightHarvest } },
+  tgp: { 'ctx-enricher': { testUser } },
+  common: { Data, boolean: { and, contains, equals }, data: { join, playwrightHarvest } },
   test: { Test, test: { dataTest, reactTest } },
   react: { 'react-comp': { storeCountApplet }, 'ui-action': { click, waitForText } }
 } = dsls
+
+Data('mintWonderTestUserAuth2', {
+  impl: async ctx => {
+    const idToken = (await testUser.$runWithCtx(ctx)).vars.idToken
+    return {auth2: {id_token: idToken, access_token: idToken, expiresAt: 9999999999999}}
+  }
+})
+
 Test('roomAppletTest.cubeQuery.wasm', {
   impl: reactTest(storeCountApplet(), contains('storeCount":28'), {
     userActions: waitForText('storeCount'),
@@ -32,7 +42,7 @@ Test('roomAppletTest.signedSummaryApplet.cloud', {
       automation: waitForText('categories'),
       timeout: 10000,
       domSelector: '#root',
-      seedLocalStorage: 'mintWonderAuth2'
+      seedLocalStorage: 'mintWonderTestUserAuth2'
     }),
     expectedResult: and(
       equals(true, '%done%'),

@@ -1039,7 +1039,8 @@ Test('comaxReports.loadToRoomAsAssets', {
     logger: 'assetLogger,dbLogger',
     calculate: async (ctx, {}, {roomWUrl, db}) => {
       const dbCtx = ctx.setVars({ roomWUrl, onLiveRepo: true, db })
-      await wfetch2(`${roomWUrl}/assets.json`, { method: 'PUT', body: [] }, dbCtx)
+      await wfetch2(`${roomWUrl}/assets.json`, {
+        method: 'PUT', body: '[]', headers: {'content-type': 'application/json'} }, dbCtx)
       const am = dsls.asset['asset-model'].assetModel.$runWithCtx(dbCtx)
       const ids = await loadVerifiedReportsAsAssets.$runWithCtx(dbCtx.setVars({ assetModel: am }))
       return { published: ids.length, catalog: am.catalog.length }

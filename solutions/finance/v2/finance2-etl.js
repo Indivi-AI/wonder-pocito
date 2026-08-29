@@ -72,7 +72,8 @@ Data('finance2BuildData', {
     const segments = await jb.biUtils.writeMonthQuarterYearParquet({ source: raw, outFile: mqy, dateColumn: 'date' })
     files.push([raw, `${room}/bronze/finance.parquet`], [mqy, `${room}/finance-mqy.parquet`])
     await Promise.all(files.map(([file, url]) =>
-      wfetch2(url, { method: 'PUT', body: file, headers: { 'x-wonder-body': 'localFile' } }, ctx)))
+      wfetch2(url, { method: 'PUT', body: file, headers: {
+        'x-wonder-body': 'localFile', 'content-type': 'application/vnd.apache.parquet'} }, ctx)))
     await Promise.all(files.map(([file]) => import('fs/promises').then(fs => fs.rm(file))))
     return { rows: 100000, segments, files: files.map(([, url]) => url) }
   }

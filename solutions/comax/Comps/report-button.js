@@ -55,7 +55,7 @@ const roomIdOf = roomWUrl => reportBaseUrl(roomWUrl).replace(/^\w+:\/\//, '').sp
 // Reports are a single stable room applet (comaxAnalyticsReport); each report is the same applet URL with its own ?ctx-reportUrl=.
 export async function createComaxAnalyticsReport(ctx, answer, { roomWUrl = ctx.vars.roomWUrl, preferLocal = false, rowLimit } = {}) {
   const report = comaxReportFromAnswer(answer, { rowLimit }), baseUrl = reportBaseUrl(roomWUrl), reportUrl = `${baseUrl}/reports/${report.id}.json`
-  const put = await wfetch2(reportUrl, { method: 'PUT', body: report }, ctx)
+  const put = await wfetch2(reportUrl, { method: 'PUT', body: JSON.stringify(report), headers: {'content-type': 'application/json'} }, ctx)
   if (!put?.ok) throw new Error(`report payload upload failed: ${put?.status || ''} ${put?.statusText || ''}`.trim())
   const uploaded = await callToolJson(ctx, 'uploadRoomApplet', {
     roomId: roomIdOf(roomWUrl), entryPath: '@solution/comax/Comps/report-index.js', entryCompFullId: 'react-comp<react>comaxAnalyticsReport'

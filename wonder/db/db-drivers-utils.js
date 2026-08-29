@@ -95,11 +95,12 @@ const { wcachePopulate } = jb.wonderUtils
         return cachePath
       }
     }
-    const binary = /\.(parquet|jpg|jpeg|png|gif|webp|mp4|webm|wav|mp3|tar\.gz)$/i.test(wUrl)
     const res = await jb.wonderUtils.wfetch2(wUrl, { method: 'GET' }, ctx)
     if (!res?.ok) { dbLogger?.info?.({ t: 'wcache miss', wUrl, cachePath }, {}, { ctx }); return false }
-    const content = binary ? Buffer.from(await res.arrayBuffer()) : rawFileExts.test(wUrl) ? await res.text()
-      : await (async d => d == null ? null : typeof d === 'string' ? d : JSON.stringify(d, null, 2))(await res.json())
+    const type = res.headers?.get?.('content-type') || (/\.json(?:[?#]|$)/i.test(wUrl) ? 'application/json'
+      : /\.(md|txt|csv|tsv|js|mjs|css|html|svg|jsonl)(?:[?#]|$)/i.test(wUrl) ? 'text/plain' : 'application/octet-stream')
+    const content = /json(?:;|$)/i.test(type) ? JSON.stringify(await res.json(), null, 2)
+      : /^text\/|ndjson|javascript|svg/i.test(type) ? await res.text() : Buffer.from(await res.arrayBuffer())
     if (content == null) { dbLogger?.info?.({ t: 'wcache empty', wUrl, cachePath }, {}, { ctx }); return false }
     await fs.mkdir(cachePath.replace(/\/[^/]*$/, ''), { recursive: true })
     await fs.writeFile(cachePath, content)
@@ -111,7 +112,8 @@ const { wcachePopulate } = jb.wonderUtils
 async function saveRoomBigLog2(ctx, id = formatTimeWithRandom()) {
   if (!ctx.vars.roomBigLogLogger2 || !ctx.vars.roomWUrl) return
   const wUrl = `${ctx.vars.roomWUrl}/admin/bigLogs/${id}.json`
-  const res = await jb.wonderUtils.wfetch2(wUrl, { method: 'PUT', body: coreUtils.harvestBigLog(ctx) }, ctx)
+  const res = await jb.wonderUtils.wfetch2(wUrl, { method: 'PUT', body: JSON.stringify(coreUtils.harvestBigLog(ctx)),
+    headers: {'content-type': 'application/json'} }, ctx)
   return res.ok && wUrl
 }
 
@@ -294,7 +296,7 @@ async function checkPermissionDenial(ctx, room, file, method) {
   if (!ctx.vars.authLogger || !coreUtils.isNode || process.env.K_SERVICE || !/^[\w.-]+$/.test(room)) return
   const {execFile} = await import('node:child_process'), {promisify} = await import('node:util')
   const {stdout} = await promisify(execFile)('gsutil', ['cat', `gs://indiviai-wonder-protected/${room}/admin/users.json`])
-  const parsed = JSON.parse(stdout), users = parsed?.content ?? parsed, username = ctx.vars.userEmail || await auth.devEmail(ctx)
+  const users = JSON.parse(stdout), username = ctx.vars.userEmail || await auth.devEmail(ctx)
   const role = users.admins.includes(username) ? 'admin'
     : users.users.includes(username) || users.users.includes('authenticated') ? 'user' : null
   const [accessLevel, pathUserId] = file.split('/'), permissions = users.accessLevels[accessLevel]?.[role] || ''
@@ -305,31 +307,15 @@ async function checkPermissionDenial(ctx, room, file, method) {
     requiresUserMatch, userMatches, allowed, permissionDenied: !allowed}
 }
 
-const isLocalFile = (body, opts) => typeof body === 'string' && opts?.headers?.['x-wonder-body'] === 'localFile'
-
-const rawFileUtils = (text, binary) => {
-  const mimeTypes = {...text, ...binary}
-  rawFileExts = new RegExp(`\\.(${Object.keys(mimeTypes).join('|')})$`, 'i')
-  const isTextMime = contentType => Object.values(text).includes(contentType)
-  return { mimeTypes, rawFileExts, isTextMime, rawFileBody: async (body, contentType, opts) => {
-    if (typeof body !== 'string') return body
-    if (isLocalFile(body, opts)) { const fs = await import('fs'); return fs.readFileSync(body) }
-    const isText = isTextMime(contentType)
-    return coreUtils.isNode ? Buffer.from(body, isText ? 'utf8' : 'base64')
-      : isText ? new TextEncoder().encode(body) : Uint8Array.from(atob(body), c => c.charCodeAt(0))
-  }}
-}
-
 const wcachePath = (bucketName, path) => `${wcacheRoot()}/${bucketName}/${path}`
 
 Object.assign(jb.wonderUtils, { formatDay, formatTimeWithRandom, wresolve, wresolveInfo, wputMany, wcachePopulate, storageEnvVars,
   saveRoomBigLog2, prefetchSignedUrls, getIdToken, getAccessToken,
   storagePrefix, wonderBucketName, successResult, errorResultByException, notFoundResult,
   calcPath, extractFromUrl, wonderRepoRoot, bustCdnCache, paginateGcsList, gcsStorage,
-  getCachedSignedUrl, isLocalFile, rawFileUtils, wcachePath })
+  getCachedSignedUrl, wcachePath })
 
 // private
-let rawFileExts
 const localhostServer = ctx => ctx.vars.localhostServer || globalThis.process?.env?.WONDER_LOCAL_SERVER || 'http://localhost:3000'
 const signedUrlServerOf = ctx => ctx.vars.signedUrlServer
   || 'https://w-staging.indivi.ai/signed-url'

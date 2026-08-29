@@ -133,7 +133,8 @@ const ensureDashboardModule = async (_ctx, roomWUrl) => {
   const ctx = io(_ctx),
     url = roomPath(roomWUrl, DASHBOARD_FILE),
     code = await readText(url, ctx)
-  if (!code.includes('dashboard-widget:start')) (await wfetch2(url, { method: 'PUT', body: defaultDashboardJs }, ctx), await saveManifest(ctx, roomWUrl, url))
+  if (!code.includes('dashboard-widget:start')) (await wfetch2(url, { method: 'PUT', body: defaultDashboardJs,
+    headers: {'content-type': 'application/javascript'} }, ctx), await saveManifest(ctx, roomWUrl, url))
   await importDashboardModule(url, ctx)
   return url
 }
@@ -252,7 +253,8 @@ ReactComp('Dashboards', {
         }
         const applyDraft = async () => {
           if (!draftEdit?.code) return
-          await wfetch2(dashboardUrl, { method: 'PUT', body: draftEdit.code }, io(ctx))
+          await wfetch2(dashboardUrl, { method: 'PUT', body: draftEdit.code,
+            headers: {'content-type': 'application/javascript'} }, io(ctx))
           await saveManifest(io(ctx), roomWUrl, dashboardUrl)
           await cancelDraft()
           setMsgs((xs) => [...xs, { role: 'ai', text: 'שמרתי את הטיוטה כדשבורד הפעיל.' }])

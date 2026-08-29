@@ -54,7 +54,7 @@ The exact GET and PUT calls are:
 ```js
 const response = await jb.wonderUtils.wfetch2(assetUrl, { method: 'GET' }, ctx)
 const value = response.ok ? await response.json() : seed
-await jb.wonderUtils.wfetch2(assetUrl, { method: 'PUT', body: value }, ctx)
+await jb.wonderUtils.wfetch2(assetUrl, { method: 'PUT', body: JSON.stringify(value), headers: {'content-type': 'application/json'} }, ctx)
 ```
 
 If GET is missing, PUT the seed once, then use it as state.

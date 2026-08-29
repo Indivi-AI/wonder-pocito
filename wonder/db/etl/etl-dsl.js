@@ -241,7 +241,8 @@ Component('loadIntoUrl', {
         {id: 'url', as: 'string', dynamic: true}
     ],
     impl: (_ctx,{},{url}) => ({
-        saveToDB: async ctx => wfetch2(url(ctx), { method: 'PUT', body: ctx.data }, ctx),
+        saveToDB: async ctx => wfetch2(url(ctx), {
+          method: 'PUT', body: JSON.stringify(ctx.data), headers: {'content-type': 'application/json'} }, ctx),
         lastModified: async ctx => {
             const res = await wfetch2(url(ctx), { method: 'HEAD' }, ctx)
             return res.headers?.get('Last-Modified')
@@ -255,7 +256,8 @@ Component('wonderPut', {
         {id: 'url', as: 'string', dynamic: true},
         {id: 'body', dynamic: true, defaultValue: '%%'}
     ],
-    impl: async (ctx, {}, {url, body}) => wfetch2(url(ctx), { method: 'PUT', body: body(ctx) }, ctx)
+    impl: async (ctx, {}, {url, body}) => wfetch2(url(ctx), {
+      method: 'PUT', body: JSON.stringify(body(ctx)), headers: {'content-type': 'application/json'} }, ctx)
 })
 
 // coerce a bare string: a url pattern (has ://, e.g. room://, signedRoom://, room:gcs//) → cachedWonderUrl (db-drivers GET,
@@ -522,7 +524,9 @@ Component('toWonderUrl', {
     impl: (_ctx, {}, { url }) => ({
         save: async (ctx, { etlLogger, outputFile }) => {
             const u = url(ctx)
-            await wfetch2(u, { method: 'PUT', body: outputFile, headers: { 'x-wonder-body': 'localFile' } }, ctx)
+            const type = outputFile.endsWith('.json') ? 'application/json' : outputFile.endsWith('.csv') ? 'text/csv' : 'application/octet-stream'
+            await wfetch2(u, { method: 'PUT', body: outputFile, headers: {
+              'x-wonder-body': 'localFile', 'content-type': type} }, ctx)
             etlLogger?.info({ t: 'uploaded', url: u }, {}, {ctx})
         },
         lastModified: async (ctx) => {

@@ -84,7 +84,7 @@ Marketplace-API section (non-tool resources, `repo.marketplace && item._marketpl
 ## Testing
 
 - Update/extend `wonder-platform-tests.js` where wizard behavior changes existing assertions (`marketplaceToolEditor` tool editor flow; new assertions: 3 tool stages, stages 2-3 disabled before load, mock load enables them; agents wizard renders the 6 steps).
-- Manual browser check via `playwrightHarvest` after implementation.
+- Manual browser check via `roomAppletHarvest` after implementation.
 
 ## Constraints (binding)
 

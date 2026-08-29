@@ -435,7 +435,8 @@ const runDashboardEdit = async (ctx, message, id) => {
     reportsRoot: 'signedRoom://comaxDemo/usersRO/parquet/OEM_BI_4466', reportsRegistry: reports,
     currentReportId: 'promotions', userMessage: message, widgetId: 'dashboards.reportCanvas', duckdbMemoryLimit: '2GB',
     duckdbThreads: 4, duckDbSqlCache: false, doNotWriteLogs: true })
-  await wfetch2(url, { method: 'PUT', body: jb.dashboardUtils.defaultDashboardJs }, vars)
+  await wfetch2(url, { method: 'PUT', body: jb.dashboardUtils.defaultDashboardJs,
+    headers: {'content-type': 'application/javascript'} }, vars)
   const res = await dsls.ai.workflow['dashboards-edit'].$run({ model: 'openai/gpt-5.5' }).calcWorkflow(vars)
   const code = res.runRes?.draftUrl ? await readLocalJs(res.runRes.draftUrl, vars) : ''
   return { ...res.runRes, adminUrl: res.adminUrl, bigLogRes: res.bigLogRes, code: undefined, editedCode: undefined,

@@ -239,6 +239,7 @@ Follow the repo's short loop: write a test, run it with loggers via MCP, read th
 
 **Applet (reactTest via MCP `runTest({ testId, logger:'uiLogger' })`)**
 - Add a `reactTest` for `AnalyticsAssistantResponse` fed an element with `narrative`, `widgets` (one with `drill`), `sql`, `rows`, `followUps`: assert the narrative text, a follow-up chip label, and that the "Show SQL / data" section reveals the SQL string and a table. Read `uiLog`, not just `success`.
-- Manual: render the live applet via its room-applet URL (`http://localhost:3000/room/comax/applet/<appletName>?logger=uiLogger,…`) and `playwrightHarvest`; verify a chip tap and a bar click both re-enter `send` (one new user turn each).
+- Manual: render the live applet via its room-applet URL (`http://localhost:3000/room/comax/applet/<appletName>?logger=uiLogger,…`) and `roomAppletHarvest`;
+  verify a chip tap and a bar click both re-enter `send` (one new user turn each).
 
 **Definition of done for P0:** all existing viz + workflow tests green; new contract fields emitted and rendered; a chip tap and a chart click each produce a new answer; the SQL/data toggle reveals the exact query and rows.

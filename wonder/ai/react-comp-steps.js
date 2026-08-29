@@ -136,7 +136,7 @@ Data('uploadReactComp', {
   impl: async (ctx, {workflowLogger}, {wUrl, compId, source}) => {
     const valid = await ctx.setData(source).run(evalReactCompSource(compId))
     if (valid.error) return { error: valid.error, wUrl, compId }
-    const res = await wfetch2(wUrl, { method: 'PUT', body: source }, ctx)
+    const res = await wfetch2(wUrl, { method: 'PUT', body: source, headers: {'content-type': 'application/javascript'} }, ctx)
     workflowLogger?.info({ t: 'uploadReactComp', wUrl, compId, ok: !!res?.ok, bytes: source.length }, {}, { ctx })
     return res?.ok ? { ok: true, wUrl, compId, bytes: source.length } : { error: `uploadReactComp PUT ${res?.status}`, wUrl, compId }
   }
@@ -152,7 +152,7 @@ Data('seedRoomCompFromModule', {
     const { readFile } = await import('fs/promises')
     const source = (await readFile(`${await coreUtils.calcRepoRoot()}/${modulePath}`, 'utf8'))
       .split('\n').filter(line => !line.startsWith('import ')).join('\n')
-    const res = await wfetch2(wUrl, { method: 'PUT', body: source }, ctx)
+    const res = await wfetch2(wUrl, { method: 'PUT', body: source, headers: {'content-type': 'application/javascript'} }, ctx)
     dbLogger?.info?.({ t: 'seedRoomCompFromModule', modulePath, wUrl, ok: !!res?.ok, bytes: source.length }, {}, { ctx })
     return { seeded: !!res?.ok, seedBytes: source.length, wUrl }
   }

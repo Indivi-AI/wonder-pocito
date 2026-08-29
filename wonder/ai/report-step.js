@@ -151,7 +151,8 @@ const roomCacheRead = async (ctx, sub, key) => {
   return val && typeof val == 'object' ? val : null
 }
 const roomCacheWrite = async (ctx, sub, key, val) => ctx.vars.reportsCacheWrite && key &&
-  wfetch2(`${ctx.vars.reportsCacheRoot}/${sub}/${key}.json`, { method: 'PUT', body: val }, ctx)
+  wfetch2(`${ctx.vars.reportsCacheRoot}/${sub}/${key}.json`, {
+    method: 'PUT', body: JSON.stringify(val), headers: {'content-type': 'application/json'} }, ctx)
 // a warmed full_data parquet in the room — returned as a wUrl duckDbSql resolves, so slices read the small parquet, not the base
 const roomParquet = async (ctx, key) => {
   if (!ctx.vars.reportsCacheRoot || !key) return null
@@ -426,7 +427,8 @@ Data('queryReportFullData', {
       sourceF = persistentMatF
       await (ctx.vars.reportsCacheWrite && wfetch2(
         `${ctx.vars.reportsCacheRoot}/report-full-data/${fullKey}.parquet`,
-        {method: 'PUT', headers: {'x-wonder-body': 'localFile'}, body: persistentMatF}, ctx))
+        {method: 'PUT', headers: {'x-wonder-body': 'localFile',
+          'content-type': 'application/vnd.apache.parquet'}, body: persistentMatF}, ctx))
     }
     const matRun = cache && report?.materialize && ctx.vars.duckdbMatRun
     const matF = matRun ? matFile(matRun, reportId, sectionId) : null

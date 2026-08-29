@@ -404,7 +404,7 @@ Expected: all PASS with no logger errors. (`marketplaceUiAgentE2e` is `doNotRunI
 
 - [ ] **Step 2: Manual browser check**
 
-Use `playwrightHarvest` (or the Playwright MCP browser tools) against `http://localhost:3000/room/wonder-platform/applet/wonderAgents`. Verify:
+Use `roomAppletHarvest` against `http://localhost:3000/room/wonder-platform/applet/wonderAgents`. Verify:
 1. Open an existing connector tool (e.g. "חיפוש Jira"): read-only view, "לא ניתן לעריכה", no Save, no Delete.
 2. Open "כלים" → "כלי חדש ממארז Flow": wizard with rail (כללי active); id input + טעינת מארז button; type a 6-8 digit id, click load; "נבחר:" line appears; פרמטרים + קוביות פלט steps unlock; each step shows its content.
 3. Open an agent editor: 6 steps render; clicking הנחיות/פלאגינים/מיומנויות/כלים/ידע switches content; פלאגינים step shows "צירוף מהקטלוג".

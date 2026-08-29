@@ -120,6 +120,10 @@ DbDriverInterceptor('roomLambda', {
       const authAt = performance.now()
       const idToken = ctx.vars.noAuth ? null : await getIdToken(ctx)
       const authMs = performance.now() - authAt
+      const tokenSegments = idToken?.split('.').length, tokenHasWhitespace = /\s/.test(idToken || '')
+      if (idToken && (tokenSegments !== 3 || tokenHasWhitespace)) roomLogger?.error?.({t: 'roomLambda invalid Google ID token',
+        roomId, name, tokenLength: idToken.length, tokenSegments, tokenHasWhitespace,
+        hint: 'check seeded auth/localStorage or mint-wonder-token; never pass an error response as a header'}, {}, {ctx})
       const authHeaders = { 'Content-Type': 'application/json', ...(idToken && { 'x-user-authorization': `Bearer ${idToken}` }) }
       // forward the caller's room + the active logger names (revived server-side, kept OUT of packedCtx)
       const requestAtEpoch = Date.now()

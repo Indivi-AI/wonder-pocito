@@ -1,4 +1,4 @@
-// REAL browser with REAL modules (no stubs), use the mcp tool `playwrightHarvest`
+// REAL browser with REAL modules (no stubs), use `playwrightHarvest`, or `roomAppletHarvest` in the Wonder project
 import { coreUtils, dsls, ns } from '@jb6/core'
 import './react-testers.js'
 import '@jb6/react/progress-indicators.js'

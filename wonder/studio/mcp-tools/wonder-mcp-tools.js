@@ -30,9 +30,9 @@ Tool('wFetch', {
   description: 'Read a room wUrl through db-drivers; room:// is public and signedRoom:// uses the Gmail admin test user.',
   params: [
     {id: 'url', as: 'string', asIs: true, mandatory: true, description: 'room wUrl; trailing slash lists, and ?jq=<encoded-expression> slices JSON'},
-    {id: 'method', as: 'string', defaultValue: 'GET', options: 'GET,PUT,POST,PATCH,HEAD'},
-    {id: 'body', asIs: true, description: 'JSON body; PUT replaces, POST appends, PATCH merges. x-wonder-body:localFile makes it a file path.'},
-    {id: 'headers', asIs: true, description: 'JSON object of extra headers. {"x-wonder-body":"localFile"} streams the file at `body` path (for binary: parquet/jpg/mp4).'},
+    {id: 'method', as: 'string', defaultValue: 'GET', options: 'GET,PUT,POST,HEAD'},
+    {id: 'body', asIs: true, description: 'PUT replaces; POST appends JSONL text; localFile header makes this a Node-local path.'},
+    {id: 'headers', asIs: true, description: 'standard HTTP headers; x-wonder-body=localFile streams the body path'},
     {id: 'logger', as: 'string', defaultValue: 'dbLogger', description: 'comma-separated loggers to harvest; result returns {result, ...logs}'}
   ],
   impl: mcpTool({
@@ -49,7 +49,9 @@ Tool('wFetch', {
           catch { throw new Error(`wFetch '${name}' is not valid JSON: ${v.slice(0,80)}`) }
         }
         const hdrs = asObj(headers, 'headers')
-        const rawBody = hdrs?.['x-wonder-body'] === 'localFile' ? body : asObj(body, 'body')
+        const type = hdrs?.['content-type'] || hdrs?.['Content-Type']
+        const rawBody = hdrs?.['x-wonder-body'] === 'localFile' ? body
+          : /json(?:;|$)/i.test(type || '') || !type && /\.json(?:[?#]|$)/i.test(url) ? asObj(body, 'body') : body
         const res = await dsls.common.data.wFetch.$runWithCtx(ctx, {
           url, method, logger, ...(hdrs && { headers: hdrs }), ...(body != null && { body: rawBody })
         })
@@ -446,7 +448,7 @@ await coreUtils.writeServiceResult({ ...packageInfo, dir })
         const def = {lambdaV: result.lambdaV, lambdaCodeWUrl: result.lambdaCodeWUrl,
           entryPath: compPath, entryCompFullId: compFullId, dir: result.dir, roomWUrl}
         const defPath = `${roomWUrl}/lambdas/${lambdaId}.json`
-        await wfetch2(defPath, {method: 'PUT', body: def, headers: { 'x-wonder-json': 'as-is' }}, ctx.setVars(storageEnvVars()))
+        await wfetch2(defPath, {method: 'PUT', body: JSON.stringify(def), headers: {'content-type': 'application/json'}}, ctx.setVars(storageEnvVars()))
         timer.phase('writeManifest')
         ctx.vars.mcpLogger?.info?.({t: 'upload room lambda done', compFullId, entryPath, compPath,
           lambdaCodeWUrl: result.lambdaCodeWUrl, userEmail: ctx.vars.userEmail,
@@ -503,9 +505,9 @@ try {
     const og = Object.fromEntries(Object.entries({ogTitle, ogDescription, ogImage: imageUrl || ogImage}).filter(([, v]) => v))
     const [imageRes, defRes] = await Promise.all([
       imageName && wfetch2(imageWUrl, {method: 'PUT', body: ogImageLocalPath, headers: {'x-wonder-body': 'localFile'}}, dbCtx),
-      wfetch2(`${roomWUrl}/applets/${cmpId}.json`, {method: 'PUT', headers: {'x-wonder-json': 'as-is'},
-        body: {cmpId, urlsToLoad: entryPath, appletV, clientCodeWUrl, roomWUrl,
-          entryCompFullId, ...(Object.keys(og).length && {og})}}, dbCtx)
+      wfetch2(`${roomWUrl}/applets/${cmpId}.json`, {method: 'PUT', headers: {'content-type': 'application/json'},
+        body: JSON.stringify({cmpId, urlsToLoad: entryPath, appletV, clientCodeWUrl, roomWUrl,
+          entryCompFullId, ...(Object.keys(og).length && {og})})}, dbCtx)
     ])
     if (imageRes?.ok === false) return JSON.stringify({error: `applet image PUT failed: ${imageRes.status}`, imageWUrl})
     if (defRes?.ok === false) return JSON.stringify({error: `applet def PUT failed: ${defRes.status}`, defPath: `${roomWUrl}/applets/${cmpId}.json`})
@@ -539,7 +541,8 @@ const defsIn = async dir => {
     return { name, url, def: await (await jb.wonderUtils.wfetch2(url, { method: 'GET' }, dbCtx)).json() }
   }))
 }
-const save = (url, obj) => jb.wonderUtils.wfetch2(url, { method: 'PUT', body: obj, headers: { 'x-wonder-json': 'as-is' } }, dbCtx)
+const save = (url, obj) => jb.wonderUtils.wfetch2(url, {
+  method: 'PUT', body: JSON.stringify(obj), headers: {'content-type': 'application/json'}}, dbCtx)
 
 const lambdas = await defsIn('lambdas')
 const lambdaResults = await Promise.all(lambdas.map(async ({ name, url, def }) => {

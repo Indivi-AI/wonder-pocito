@@ -538,7 +538,8 @@ Component('materializedView', {
     if (!path) {
       const stamp = Date.now()
       const local = await rowsToParquet(await rows(ctx), `/tmp/${name}-${stamp}.parquet`, `/tmp/${name}-${stamp}.json`, ctx)
-      await wfetch2(wUrl, { method: 'PUT', body: local, headers: { 'x-wonder-body': 'localFile' } }, ctx)
+      await wfetch2(wUrl, { method: 'PUT', body: local, headers: {
+        'x-wonder-body': 'localFile', 'content-type': 'application/vnd.apache.parquet'} }, ctx)
       path = local
       log?.info?.({ event: 'materializedView built', name, wUrl, path }, {}, { ctx })
     }

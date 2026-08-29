@@ -134,7 +134,7 @@ export async function readDef(roomWUrl, path) {
   const def = roomWUrl.startsWith('signedRoom://')
     ? await (await import('./signed-url.js')).readJson(`${roomWUrl.split('://')[1]}/${path}`)
     : await jb.wonderUtils.wfetch2(`${roomWUrl}/${path}`, { method: 'GET' }, new coreUtils.Ctx().setVars(storageEnvVars())).then(r => r.ok ? r.json() : null, () => null)
-  return def?.content ?? def
+  return def
 }
 
 // authorize a caller against a room: authenticate → load policy (null ⇒ public) → role. Returns { who, policy, role }.

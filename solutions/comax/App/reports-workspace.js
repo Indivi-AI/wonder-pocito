@@ -12,9 +12,9 @@ const {
 
 const SLOT_DEPTHS = ['executiveSummary', 'summary', 'inDepth']
 const gcsBase = roomId => `https://storage.googleapis.com/indiviai-wonder/${roomId}`
-const unwrap = j => { const c = j?.content ?? j; return typeof c == 'string' ? JSON.parse(c) : c }
-const fetchJson = async url => { const r = await fetch(`${url}?t=${Date.now()}`).catch(() => null); return r?.ok ? unwrap(await r.json()) : null }
-const putJson = (base, file, content) => fetch(`${base}/${file}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content }) })
+const fetchJson = async url => { const r = await fetch(`${url}?t=${Date.now()}`).catch(() => null); return r?.ok ? r.json() : null }
+const putJson = (base, file, content) => fetch(`${base}/${file}`, {
+  method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(content)})
 
 ReactComp('reportsWorkspace', {
   impl: comp({

@@ -186,7 +186,8 @@ SilverBuilder('materializeFromEvents', {
       const outWUrl = (parquetFiles?.[0]?.wUrlPattern || '').replace('${period}', period).replace('{period}', period)
       let outUrl = null
       const upload = async (wUrl, file) => {
-        const res = await wfetch2(wUrl, { method: 'PUT', body: file, headers: { 'x-wonder-body': 'localFile' } }, ctx)
+        const res = await wfetch2(wUrl, { method: 'PUT', body: file, headers: {
+          'x-wonder-body': 'localFile', 'content-type': 'application/vnd.apache.parquet'} }, ctx)
         if (!res.ok) throw new Error(`upload failed: ${res.status} ${res.statusText}`)
         return wUrl
       }

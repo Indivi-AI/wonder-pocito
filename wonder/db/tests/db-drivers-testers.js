@@ -12,7 +12,8 @@ const {
     test: { dataTest }
   },
   common: {
-    data: { asIs, list, extendWithObj },
+    Data,
+    data: { asIs },
     boolean: { equals }
   }
 } = dsls
@@ -21,26 +22,90 @@ const signedUrlServerForTests = env => env === 'staging'
   ? 'https://w-staging.indivi.ai/signed-url'
   : 'http://localhost:3000/signed-url'
 
+Data('dbDriverPutGet', {
+  params: [
+    {id: 'args', as: 'object'},
+    {id: 'useNode', as: 'boolean', type: 'boolean<common>'}
+  ],
+  impl: async (ctx, {}, {args, useNode}) => {
+    const {url, body} = args, {dbLogger} = ctx.vars
+    try {
+      if (!coreUtils.isNode && useNode) {
+        const script = `
+          import { coreUtils, dsls } from '@jb6/core'
+          import '@wonder/db/tests/db-drivers-testers.js'
+          const args = ${JSON.stringify(args)}
+          const ctx = new coreUtils.Ctx().setVars(args)
+          await coreUtils.writeServiceResult(await dsls.common.data.dbDriverPutGet.$runWithCtx(ctx, args, true))`
+        return (await coreUtils.runNodeCliViaJbWebServer(script, {importMapsInCli: './nodejs-importmap.js'})).result
+      }
+      const putRes = await wfetch2(url, {body: JSON.stringify(body), method: 'PUT', headers: {'content-type': 'application/json'}}, ctx)
+      const res = await wfetch2(url, {method: 'GET'}, ctx)
+      if (!res) return {error: `dbDriverPutGet: can not get ${url}`}
+      const result = await res.json()
+      dbLogger?.info?.({t: 'final Get result'}, {result}, {ctx})
+      return {result, putRes, ...coreUtils.harvestLogs(ctx)}
+    } catch (error) {
+      coreUtils.logException(error, 'dbDriverPutGet failed', {ctx, url, args})
+      return {content: null, error: error.stack}
+    }
+  }
+})
+
+Data('dbDriverAppendGet', {
+  params: [
+    {id: 'args', as: 'object'},
+    {id: 'useNode', as: 'boolean', type: 'boolean<common>'}
+  ],
+  impl: async (ctx, {}, {args, useNode}) => {
+    const {url, initialText, appendText, changeNewFile} = args, {dbLogger} = ctx.vars
+    try {
+      if (!coreUtils.isNode && useNode) {
+        const script = `
+          import { coreUtils, dsls } from '@jb6/core'
+          import '@wonder/db/tests/db-drivers-testers.js'
+          const args = ${JSON.stringify(args)}
+          const ctx = new coreUtils.Ctx().setVars(args)
+          await coreUtils.writeServiceResult(await dsls.common.data.dbDriverAppendGet.$runWithCtx(ctx, args, true))`
+        return (await coreUtils.runNodeCliViaJbWebServer(script, {importMapsInCli: './nodejs-importmap.js'})).result
+      }
+      const headers = {'content-type': 'application/x-ndjson'}
+      if (!changeNewFile) await wfetch2(url, {body: initialText, method: 'PUT', headers}, ctx)
+      await wfetch2(url, {body: appendText, method: 'POST', headers}, ctx)
+      const res = await wfetch2(url, {method: 'GET'}, ctx)
+      if (!res) return {error: `dbDriverAppendGet: can not get ${url}`}
+      const result = await res.text()
+      dbLogger?.info?.({t: 'final Get result'}, {result}, {ctx})
+      return {result, ...coreUtils.harvestLogs(ctx)}
+    } catch (error) {
+      coreUtils.logException(error, 'dbDriverAppendGet failed', {ctx, url, args})
+      return {content: null, error: error.stack}
+    }
+  }
+})
+
+const {dbDriverPutGet, dbDriverAppendGet} = dsls.common.data
+
 Test('dbDriverPutGetTest', {
   circuit: 'dbDriverTests.fsMem.browser.putGet',
   params: [
     {id: 'url', as: 'string'},
     {id: 'mode', options: 'browser-prod,browser-localhost,node-prod,node-localhost'},
     {id: 'content', as: 'object', defaultValue: asIs({a: 5})},
-    {id: 'includeLogs', as: 'boolean', defaultValue: true}
+    {id: 'includeLogs', as: 'boolean', defaultValue: true, type: 'boolean<common>'}
   ],
   impl: dataTest({
-    logger: 'dbLogger',
     calculate: async (ctx, {testSessionId}, {url, content, mode, includeLogs}) => {
       const onLiveRepo = mode.includes('localhost')
       const forceGCS = mode.includes('prod')
       const useNode = mode.includes('node')
       const dbCtx = ctx.setVars({forceGCS, onLiveRepo, hasGcpIdentity: useNode})
-      const result = await putGet({url, body: content, forceGCS, onLiveRepo, testSessionId}, useNode, dbCtx)
+      const result = await dbDriverPutGet.$runWithCtx(dbCtx, {url, body: content, forceGCS, onLiveRepo, testSessionId}, useNode)
       return includeLogs ? {...result, ...coreUtils.harvestLogs(dbCtx)} : result
     },
     expectedResult: equals('%result%', '%$content%'),
-    timeout: 10000
+    timeout: 10000,
+    logger: 'dbLogger'
   })
 })
 
@@ -49,22 +114,23 @@ Test('dbDriverAppendTest', {
   params: [
     {id: 'url', as: 'string', dynamic: true},
     {id: 'mode', options: 'browser-prod,browser-localhost,node-prod,node-localhost'},
-    {id: 'initialArray', as: 'array', defaultValue: asIs([{id: 0}])},
-    {id: 'appendItems', as: 'array', defaultValue: asIs([{id: 1}])},
-    {id: 'changeNewFile', as: 'boolean'}
+    {id: 'initialText', as: 'string', defaultValue: '{"id":0}\n'},
+    {id: 'appendText', as: 'string', defaultValue: '{"id":1}\n'},
+    {id: 'changeNewFile', as: 'boolean', type: 'boolean<common>'}
   ],
   impl: dataTest({
-    logger: 'dbLogger',
-    calculate: async (ctx, {testSessionId}, {url: urlF, initialArray, appendItems, mode, changeNewFile}) => {
+    calculate: async (ctx, {testSessionId}, {url: urlF, initialText, appendText, mode, changeNewFile}) => {
       const onLiveRepo = mode.includes('localhost')
       const forceGCS = mode.includes('prod')
       const useNode = mode.includes('node')
       const dbCtx = ctx.setVars({forceGCS, onLiveRepo, hasGcpIdentity: useNode})
-      const result = await putChangeGet({url: urlF(ctx), initialArray, appendItems, forceGCS, onLiveRepo, testSessionId, changeNewFile}, useNode, dbCtx)
+      const result = await dbDriverAppendGet.$runWithCtx(dbCtx,
+        {url: urlF(ctx), initialText, appendText, forceGCS, onLiveRepo, testSessionId, changeNewFile}, useNode)
       return result
     },
-    expectedResult: equals('%result%', list('%$initialArray%','%$appendItems%')),
-    timeout: 10000
+    expectedResult: ({data}, {}, {initialText, appendText, changeNewFile}) => data.result === `${changeNewFile ? '' : initialText}${appendText}`,
+    timeout: 10000,
+    logger: 'dbLogger'
   })
 })
 
@@ -82,7 +148,7 @@ Test('signedRoomPutGetTest', {
       const dbCtx = signedRoomCtx(ctx, env)
       const url = 'signedRoom://testSignedRoom/admin/adminStuff.json'
       try {
-        await wfetch2(url, { body: { a: 5, ts: Date.now() }, method: 'PUT' }, dbCtx)
+        await wfetch2(url, { body: JSON.stringify({ a: 5, ts: Date.now() }), method: 'PUT', headers: {'content-type': 'application/json'} }, dbCtx)
         const res = await wfetch2(url, { method: 'GET' }, dbCtx)
         return { result: await res.json(), ...coreUtils.harvestLogs(dbCtx) }
       } catch(e) {
@@ -104,18 +170,18 @@ Test('signedRoomAppendTest', {
   impl: dataTest({
     calculate: async (ctx, {}, {env}) => {
       const dbCtx = signedRoomCtx(ctx, env)
-      const url = 'signedRoom://testSignedRoom/admin/testAppend'
+      const url = 'signedRoom://testSignedRoom/admin/testAppend.jsonl', headers = {'content-type': 'application/x-ndjson'}
       try {
-        await wfetch2(url, { body: [{id: 0}], method: 'PUT' }, dbCtx)
-        await wfetch2(url, { body: [{id: 1}], method: 'POST' }, dbCtx)
+        await wfetch2(url, { body: '{"id":0}\n', method: 'PUT', headers }, dbCtx)
+        await wfetch2(url, { body: '{"id":1}\n', method: 'POST', headers }, dbCtx)
         const res = await wfetch2(url, { method: 'GET' }, dbCtx)
-        return { result: await res.json(), ...coreUtils.harvestLogs(dbCtx) }
+        return { result: await res.text(), ...coreUtils.harvestLogs(dbCtx) }
       } catch(e) {
         coreUtils.logException(e, 'signedRoomAppendTest failed', { ctx: dbCtx })
         return null
       }
     },
-    expectedResult: equals('%result%', [{id: 0}, {id: 1}]),
+    expectedResult: equals('%result%', '{"id":0}\n{"id":1}\n'),
     setup: testAdminUser(),
     timeout: 12000,
     logger: 'dbLogger'
@@ -206,7 +272,7 @@ Test('signedRoomUsersRWTest', {
       const dbCtx = signedRoomCtx(ctx, env)
       const url = 'signedRoom://testSignedRoom/usersRW/testUsersRW'
       try {
-        await wfetch2(url, { body: { a: 42, ts: Date.now() }, method: 'PUT' }, dbCtx)
+        await wfetch2(url, { body: JSON.stringify({ a: 42, ts: Date.now() }), method: 'PUT', headers: {'content-type': 'application/json'} }, dbCtx)
         const res = await wfetch2(url, { method: 'GET' }, dbCtx)
         return { result: await res.json(), ...coreUtils.harvestLogs(dbCtx) }
       } catch(e) {
@@ -230,8 +296,8 @@ Test('signedRoomListTest', {
       const dbCtx = signedRoomCtx(ctx, env)
       const dir = 'signedRoom://testSignedRoom/usersRW/listTest'
       try {
-        await wfetch2(`${dir}/a.json`, { body: { x: 1 }, method: 'PUT' }, dbCtx)
-        await wfetch2(`${dir}/b.json`, { body: { x: 2 }, method: 'PUT' }, dbCtx)
+        await wfetch2(`${dir}/a.json`, { body: '{"x":1}', method: 'PUT', headers: {'content-type': 'application/json'} }, dbCtx)
+        await wfetch2(`${dir}/b.json`, { body: '{"x":2}', method: 'PUT', headers: {'content-type': 'application/json'} }, dbCtx)
         const list = await (await wfetch2(`${dir}/`, { method: 'GET' }, dbCtx)).json()
         const names = (Array.isArray(list) ? list : []).map(e => e.name).filter(n => /\/(a|b)\.json$/.test(n))
         return { result: names.length, ...coreUtils.harvestLogs(dbCtx) }
@@ -254,7 +320,8 @@ Test('signedRoomTrailingSlashGetTest', {
   impl: dataTest({
     calculate: async (ctx, {}, {env}) => {
       const dbCtx = signedRoomCtx(ctx, env)
-      await wfetch2('signedRoom://testSignedRoom/usersRW/listTest/a.json', { body: { x: 1 }, method: 'PUT' }, dbCtx)
+      await wfetch2('signedRoom://testSignedRoom/usersRW/listTest/a.json', {
+        body: '{"x":1}', method: 'PUT', headers: {'content-type': 'application/json'}}, dbCtx)
       const res = await wfetch2('signedRoom://testSignedRoom/usersRW/listTest/', { method: 'GET' }, dbCtx)
       const list = await res.json()
       return { result: (Array.isArray(list) ? list : []).some(e => /\/a\.json$/.test(e.name)), ...coreUtils.harvestLogs(dbCtx) }
@@ -276,8 +343,8 @@ Test('signedRoomMediaPutGetTest', {
       const url = 'signedRoom://testSignedRoom/usersRW/assets/test-media.png'
       try {
         const testB64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
-        const body = coreUtils.isNode ? Buffer.from(testB64, 'base64').toString('base64') : testB64
-        const putRes = await wfetch2(url, { body, method: 'PUT' }, dbCtx)
+        const body = coreUtils.isNode ? Buffer.from(testB64, 'base64') : Uint8Array.from(atob(testB64), c => c.charCodeAt(0))
+        const putRes = await wfetch2(url, { body, method: 'PUT', headers: {'content-type': 'image/png'} }, dbCtx)
         if (!putRes.ok) return { result: `put:${putRes.status}`, ...coreUtils.harvestLogs(dbCtx) }
         const res = await wfetch2(url, { method: 'HEAD' }, dbCtx)
         if (!res.ok) return { result: `head:${res.status}`, ...coreUtils.harvestLogs(dbCtx) }
@@ -312,110 +379,18 @@ Test('signedRoomSigningTest', {
 
 // public room read: assets.json + usersRO/sales-large.json are seeded identically in testPublicRoom (public bucket) and testSignedRoom
 Test('publicRoomCountTest', {
-  params: [{id: 'file', as: 'string'}, {id: 'count', as: 'number'}],
+  params: [
+    {id: 'file', as: 'string'},
+    {id: 'count', as: 'number'}
+  ],
   impl: dataTest({
-    logger: 'dbLogger',
     calculate: async (ctx, {}, {file}) => {
       const dbCtx = ctx.setVars({ dbHost: 'node', forceGCS: true, hasGcpIdentity: false })
       const res = await wfetch2(`room:gcs//testPublicRoom/${file}`, { method: 'GET' }, dbCtx)
       return { result: (await res.json()).length, ...coreUtils.harvestLogs(dbCtx) }
     },
     expectedResult: equals('%result%', '%$count%'),
-    timeout: 10000
+    timeout: 10000,
+    logger: 'dbLogger'
   })
 })
-
-Test('dbDriverPatchTest', {
-  circuit: 'dbDriverTests.fsMem.browser.patch',
-  params: [
-    {id: 'url', as: 'string'},
-    {id: 'mode', options: 'browser-prod,browser-localhost,node-prod,node-localhost'},
-    {id: 'initialObj', as: 'object', defaultValue: asIs({a: 3})},
-    {id: 'patchData', as: 'object', defaultValue: asIs({title: 'patched'})},
-  ],
-  impl: dataTest({
-    logger: 'dbLogger',
-    calculate: async (ctx, {testSessionId}, {url, initialObj, patchData, mode}) => {
-      const onLiveRepo = mode.includes('localhost')
-      const forceGCS = mode.includes('prod')
-      const useNode = mode.includes('node')
-      const dbCtx = ctx.setVars({forceGCS, onLiveRepo, hasGcpIdentity: useNode})
-      const result = await putChangeGet({url, initialObj, patchData, forceGCS, onLiveRepo, testSessionId}, useNode, dbCtx)
-      return result
-    },
-    expectedResult: equals('%result%', extendWithObj('%$initialObj%', '%$patchData%')),
-    timeout: 10000
-  })
-})
-
-export async function putGet(args, useNode, ctx) {
-  const { url, body } = args
-  const dbLogger = ctx.vars.dbLogger
-  try {
-    if (!coreUtils.isNode && useNode) {
-      const script = `
-        import { coreUtils, jb } from '@jb6/core'
-        import {putGet} from '@wonder/db/tests/db-drivers-testers.js'
-        try {
-          debugger
-          const { testSessionId, forceGCS, db, onLiveRepo } = ${JSON.stringify(args)}
-          const ctx = new coreUtils.Ctx().setVars({testSessionId, forceGCS, db, onLiveRepo})
-          const result = await putGet(${JSON.stringify(args)},true,ctx)
-          await coreUtils.writeServiceResult(result)
-        } catch (error) {
-          await coreUtils.writeServiceResult(error.stack || error)
-        }`
-        const res = await coreUtils.runNodeCliViaJbWebServer(script,{importMapsInCli: './nodejs-importmap.js'})
-        return res.result
-      }
-
-      const putRes = await wfetch2(url, {body, method: 'PUT'}, ctx)
-      const res = await wfetch2(url, {method: 'GET'}, ctx)
-      if (!res) {
-        return { error: `putGet tester: can not get ${url}`}
-      }
-      const result = await res.json()
-      dbLogger?.info?.({t:'final Get result'},{result},{ctx})
-      return {result, putRes, ...coreUtils.harvestLogs(ctx)}
-  } catch (error) {
-    coreUtils.logException(error, 'putGet failed', { ctx, url, args })
-    return {content: null, error: error.stack}
-  }
-}
-
-export async function putChangeGet(args, useNode, ctx) {
-  const { url, initialArray, appendItems, initialObj, patchData, changeNewFile } = args
-  const { dbLogger } = ctx.vars
-  try {
-    if (!coreUtils.isNode && useNode) {
-      const script = `
-        import { coreUtils } from '@jb6/core'
-        import {putChangeGet} from '@wonder/db/tests/db-drivers-testers.js'
-        try {
-          const args = ${JSON.stringify(args)}
-          const ctx = new coreUtils.Ctx().setVars(args)
-          const result = await putChangeGet(args,true,ctx)
-          await coreUtils.writeServiceResult(result)
-        } catch (error) {
-          await coreUtils.writeServiceResult(error.stack || error)
-        }`
-      return (await coreUtils.runNodeCliViaJbWebServer(script,{importMapsInCli: './nodejs-importmap.js'})).result
-    }
-
-    if (initialArray) {
-      !changeNewFile && await wfetch2(url, {body: initialArray, method: 'PUT'}, ctx)
-      await wfetch2(url, {body: appendItems, method: 'POST'}, ctx)
-    } else {
-      !changeNewFile && await wfetch2(url, {body: initialObj, method: 'PUT'}, ctx)
-      await wfetch2(url, {body: patchData, method: 'PATCH'}, ctx)  
-    }
-    const res = await wfetch2(url, {method: 'GET'}, ctx)
-    if (!res) return { error: `putAppendGet tester: can not get ${url}`}
-    const result = await res.json()
-    dbLogger?.info?.({t:'final Get result'},{result},{ctx})
-    return {result, ...coreUtils.harvestLogs(ctx)}
-  } catch (error) {
-    coreUtils.logException(error, 'putAppendGet failed', { ctx, url, args })
-    return {content: null, error: error.stack}
-  }
-}

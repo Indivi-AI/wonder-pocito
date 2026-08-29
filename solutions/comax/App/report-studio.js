@@ -38,16 +38,17 @@ const reportProfile = r => ({ $: 'verified-report<verified-queries>verifiedRepor
 const saveStudio = async (ctx, roomWUrl, report) => {
   const createdAt = Date.now(), reportUrl = roomFile(roomWUrl, `${REPORT_ID}.json`), tgpUrl = roomFile(roomWUrl, `${REPORT_ID}.tgp.json`), compUrl = roomFile(roomWUrl, `${RC_ID}.reactComp.json`)
   await Promise.all([
-    wfetch2(reportUrl, { method: 'PUT', body: report }, ctx),
-    wfetch2(tgpUrl, { method: 'PUT', body: reportProfile(report) }, ctx),
-    wfetch2(compUrl, { method: 'PUT', body: { cmpId: RC_ID, urlsToLoad: URLS, reportId: REPORT_ID, savedAt: createdAt } }, ctx)
+    wfetch2(reportUrl, { method: 'PUT', body: JSON.stringify(report), headers: {'content-type': 'application/json'} }, ctx),
+    wfetch2(tgpUrl, { method: 'PUT', body: JSON.stringify(reportProfile(report)), headers: {'content-type': 'application/json'} }, ctx),
+    wfetch2(compUrl, { method: 'PUT', body: JSON.stringify({ cmpId: RC_ID, urlsToLoad: URLS, reportId: REPORT_ID, savedAt: createdAt }),
+      headers: {'content-type': 'application/json'} }, ctx)
   ])
   const assetsUrl = `${roomWUrl}/assets.json`, oldAssets = await loadJson(assetsUrl, ctx), assets = Array.isArray(oldAssets) ? oldAssets : [], ids = new Set([`${REPORT_ID}.reportStudio.latest`, `${RC_ID}.reportStudio.latest`])
-  await wfetch2(assetsUrl, { method: 'PUT', body: [
+  await wfetch2(assetsUrl, { method: 'PUT', body: JSON.stringify([
     ...assets.filter(v => !ids.has(v.variantId)),
     { variantId: `${REPORT_ID}.reportStudio.latest`, assetType: 'verifiedQueries', format: 'json', assetId: REPORT_ID, categories: ['reportStudio', 'latest'], url: reportUrl, tgpUrl, createdAt, sectionCount: (report.sections || []).length, questionCount: (report.questionsCovered || []).length },
     { variantId: `${RC_ID}.reportStudio.latest`, assetType: 'reactComp', assetId: RC_ID, categories: ['reportStudio', 'latest'], compId: RC_ID, urlsToLoad: URLS, url: compUrl, createdAt, rels: [{ rel: 'viewOf', asset: `${REPORT_ID}.reportStudio.latest` }] }
-  ] }, ctx)
+  ]), headers: {'content-type': 'application/json'} }, ctx)
 }
 const chatEdit = (text, key, report) => {
   const s = text.trim(), sql = s.match(/```sql\s*([\s\S]*?)```/i)?.[1]?.trim(), cmd = s.match(/^(?:set\s+)?(sql|goal|title)\s*:\s*([\s\S]+)/i)
