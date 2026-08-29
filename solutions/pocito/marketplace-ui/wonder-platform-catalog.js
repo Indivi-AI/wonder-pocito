@@ -1,12 +1,13 @@
 import { dsls } from '@jb6/core'
 import '@jb6/react'
 import './wonder-platform-domain.js'
+import './wonder-platform-kit.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
 ReactComp('wonderPlatformCatalog', {
   impl: comp({
-    hFunc: (ctx, {react: {h, useState}}) => ({view, repo, search, setSearch, openItem, createItem, importItem}) => {
+    hFunc: (ctx, {react: {h, hh, useState}}) => ({view, repo, search, setSearch, openItem, createItem, importItem}) => {
       const {resources, classes, ownerTabs} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx), config = resources[view]
       const [ownerTab, setOwnerTab] = useState('mine'), ownable = !!importItem
       const items = (repo[view] || []).filter(item => !search || `${item.name} ${item.desc}`.includes(search))
@@ -18,59 +19,57 @@ ReactComp('wonderPlatformCatalog', {
         return view == 'tools' && (plugin.toolIds?.includes(item.id) || viaSkillTools(plugin.skillIds)
           || subs.some(sub => sub.toolIds?.includes(item.id) || viaSkillTools(sub.skillIds)))
       })
-      const note = text => h('p:mt-1 text-sm text-[#6b6b6f]', {}, text)
-      const [emptyTitle, emptyBody] = search ? ['לא נמצאו תוצאות', note('נסו מונח חיפוש אחר')]
-        : ownerTab == 'global' ? ['הקטלוג המשותף ריק', note('פריטים שיפורסמו לקטלוג יופיעו כאן')]
-        : ['אין כאן עדיין פריטים', h(`button:${classes.primary} mt-3`, {onClick: () => createItem(view)}, config.create)]
-      const chip = (text, title) => h(`span:${classes.chip}`, {title}, text)
-      const lastRun = item => (repo.evalRuns || []).filter(run => run.targetId == item.id)
-        .sort((a, b) => b.startedAt - a.startedAt)[0]
+      const lastRun = item => (repo.evalRuns || []).filter(run => run.targetId == item.id).sort((a, b) => b.startedAt - a.startedAt)[0]
       const humanDate = value => /^\d{4}-\d{2}-\d{2}T/.test(value || '')
-        ? new Date(value).toLocaleString('he-IL', {dateStyle: 'short', timeStyle: 'short'}) : value
-      return h('main:min-h-screen min-w-0 flex-1 overflow-x-hidden pb-24 sm:pb-10', {},
-        h('div:px-5 pt-10 sm:px-10', {}, h('div:mx-auto max-w-[1600px]', {},
-        h('div', {}, h('h1:text-[26px] font-semibold tracking-[-0.02em] text-[#0f0f10]', {}, config.title),
-          h('p:mt-1.5 text-sm text-[#6b6b6f]', {}, config.subtitle)),
-      h('div:mt-8 flex flex-wrap items-center justify-between gap-3 border-b border-[#e8e8ea] pb-3', {},
-        h('div:flex items-center gap-3', {}, ownable && h('div:flex gap-1', {}, ownerTabs.map(([id, title]) => h(
-          `button:relative rounded-md px-2.5 py-1.5 text-[13px] transition-colors ${ownerTab == id
-            ? 'font-medium text-[#0f0f10]' : 'text-[#6b6b6f] hover:text-[#2e2e2e]'}`, {key: id, onClick: () => setOwnerTab(id)}, title,
-          ownerTab == id && h('span:absolute inset-x-2.5 -bottom-[13px] h-px bg-[#0f0f10]')))),
-          h(`button:${classes.primary}`, {onClick: () => createItem(view)}, h('L:Plus', {size: 15}), config.create)),
-        h('div:relative w-64 max-w-full', {}, h('L:Search', {size: 14, className: 'absolute right-3 top-2.5 text-[#6b7280]'}),
-          h('input:w-full rounded-[10px] border border-[#e8e8ea] bg-white py-2 pl-3 pr-9 text-[13px] outline-none ' +
-            'transition-colors placeholder:text-[#6b7280] focus:border-[#c9c9ce]', {'aria-label': 'חיפוש', value: search,
-            placeholder: 'חיפוש…', onInput: event => setSearch(event.target.value)}))),
-      items.length ? h('div:mt-5 grid [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))] gap-3', {}, items.map(item => {
-        const editable = !(view == 'tools' && item.managed), users = usedBy(item)
-        return h(`article:${classes.card} group flex flex-col ${editable ? 'cursor-pointer hover:border-[#0f0f10]' : ''}`, {key: item.id,
-          role: editable ? 'button' : undefined, tabIndex: editable ? 0 : undefined, onClick: editable ? () => openItem(view, item) : undefined,
-          onKeyDown: editable ? event => {if (event.key == 'Enter' || event.key == ' ') {event.key == ' ' && event.preventDefault(); openItem(view, item)}} : undefined},
-        h('div:flex items-start justify-between gap-3', {},
-          h('div:min-w-0 flex-1', {}, h('h3:truncate text-[14px] font-medium text-[#0f0f10]', {}, item.name),
-            view == 'tools' && h('div:mt-0.5 text-[12px] text-[#6b7280]', {}, item.kind == 'flow' ? 'Flow · מארז' : 'Connector · MCP')),
-          h('span:shrink-0 font-mono text-[11px] text-[#6b7280]', {}, (v => /^[vV]/.test(v) ? v : 'v' + v)(item.version || 'V0'))),
-        h('p:mt-3 line-clamp-2 text-[13px] leading-[1.5] text-[#6b6b6f]', {}, item.desc),
-        h('div:mt-3 flex flex-wrap gap-1.5', {},
-          (config.relations || []).map(([field, resource, label]) => (item[field]?.length || 0) > 0 && chip(
-            `${item[field].length} ${label}`,
-            item[field].map(id => repo[resource].find(value => value.id == id)?.name).filter(Boolean).join('\n'))),
-          view == 'skills' && (item.categories?.length || 0) > 0 && chip(`${item.categories.length} קטגוריות`,
-            item.categories.join('\n')), item.managed && chip('מנוהל'),
-          view == 'knowledge' && item.fileCount > 0 && chip(`${item.fileCount} קבצים`),
-          view == 'knowledge' && item.syncStatus && chip(item.syncStatus),
-          view == 'agents' && lastRun(item) && chip(`הרצה אחרונה · ${lastRun(item).started}`, lastRun(item).status),
-          view != 'plugins' && users.length > 0 && chip(`${users.length} פלאגינים`, users.map(plugin => plugin.name).join('\n'))),
-        h('div:mt-auto flex items-center justify-between gap-2 pt-4', {},
-          h('span:truncate text-[11px] text-[#6b7280]', {}, `עודכן ${humanDate(item.updated) || 'עכשיו'}`),
-          h('div:flex shrink-0 items-center gap-2', {},
-            ownable && h('span:text-[11px] text-[#6b7280]', {},
-              {me: 'שלי', imported: 'מיובא', other: 'מיובא', global: 'גלובלי'}[item.owner] || 'שלי'),
-            ownable && item.owner == 'global' && h(`button:${classes.button} px-2 py-1 text-[12px]`, {onClick: event => (
-              event.stopPropagation(), importItem(view, item))}, 'ייבוא'))))
-      })) : h('div:mt-5 rounded-2xl border border-dashed border-[#d8d8dc] p-12 text-center', {},
-        h(`L:${config.icon}`, {size: 28, className: 'mx-auto mb-3 text-[#6b6b6f]'}), h('b:block', {}, emptyTitle), emptyBody)
-    )))
+        ? new Date(value).toLocaleDateString('he-IL', {day: '2-digit', month: '2-digit'}) : value
+      const counter = (icon, value, title) => value > 0 && h('span:flex items-center gap-1 text-[var(--wp-ink-3)]', {key: icon, title},
+        h(`L:${icon}`, {size: 13}), h('span:wp-num text-[11px]', {}, value))
+      const empty = search ? ['Search', 'לא נמצאו תוצאות', `לא נמצא פריט שתואם ל״${search}״. נסו מונח אחר.`]
+        : ownerTab == 'global' ? ['Globe', 'הקטלוג המשותף ריק',
+          'פריטים שיפורסמו לקטלוג הארגוני יופיעו כאן לשימוש חוזר.']
+          : [config.icon, `אין עדיין ${config.title}`, config.subtitle]
+      const card = item => {
+        const editable = !(view == 'tools' && item.managed), users = usedBy(item), run = lastRun(item)
+        const owner = {me: 'שלי', imported: 'מיובא', other: 'מיובא', global: 'גלובלי'}[item.owner] || 'שלי'
+        const kind = view == 'tools' ? (item.kind == 'flow' ? 'Flow · מארז' : 'Connector · MCP') : owner
+        const version = (v => /^[vV]/.test(v) ? v : 'v' + v)(item.version || 'V0')
+        return h(`article:${classes.card} group flex flex-col gap-2.5 ` +
+          `${editable ? 'cursor-pointer hover:border-[var(--wp-border-strong)] hover:shadow-[var(--wp-sh-1)]' : ''}`,
+        {key: item.id, role: editable ? 'button' : undefined, tabIndex: editable ? 0 : undefined,
+          onClick: editable ? () => openItem(view, item) : undefined,
+          onKeyDown: editable ? event => {if (event.key == 'Enter' || event.key == ' ') {
+            event.key == ' ' && event.preventDefault(); openItem(view, item)}} : undefined},
+        h('div:flex items-start gap-3', {},
+          hh(ctx, dsls.react['react-comp'].wonderPlatformMark, {icon: item.icon || config.icon, text: item.mark}),
+          h('div:min-w-0 flex-1', {}, h(`h3:${classes.h3} truncate`, {}, item.name),
+            h('p:mt-0.5 truncate text-[12px] text-[var(--wp-ink-4)]', {}, kind))),
+        h('p:line-clamp-2 text-[13px] leading-[1.6] text-[var(--wp-ink-3)]', {}, item.desc || 'אין תיאור'),
+        (item.managed || item.syncStatus || run) && h('div:flex flex-wrap gap-1.5', {},
+          item.managed && h(`span:${classes.chip}`, {}, 'מנוהל'),
+          item.syncStatus && h(`span:${classes.chip}`, {}, item.syncStatus),
+          run && h(`span:${classes.badge}`, {title: run.started}, `הרצה · ${run.status}`)),
+        h(`div:mt-auto flex items-center justify-between gap-3 border-t border-[var(--wp-border)] pt-2.5`, {},
+          h('div:flex min-w-0 items-center gap-3.5', {},
+            (config.relations || []).map(([field, resource]) => counter(resources[resource]?.icon || 'Dot', item[field]?.length || 0,
+              (item[field] || []).map(id => repo[resource].find(value => value.id == id)?.name).filter(Boolean).join('\n'))),
+            view == 'skills' && (item.categories?.length || 0) > 0 && h('span:text-[11px] text-[var(--wp-ink-4)]',
+              {key: 'cat', title: item.categories.join('\n')}, `${item.categories.length} קטגוריות`),
+            view == 'knowledge' && counter('File', item.fileCount || item.files?.length || 0, 'קבצים'),
+            view != 'plugins' && counter('PlugZap', users.length, users.map(plugin => plugin.name).join('\n')),
+            h('span:truncate text-[12px] text-[var(--wp-ink-4)]', {}, `${version} · עודכן ${humanDate(item.updated) || 'עכשיו'}`)),
+          ownable && item.owner == 'global'
+            ? h(`button:${classes.button} shrink-0 px-2.5`,
+              {onClick: event => (event.stopPropagation(), importItem(view, item))}, 'ייבוא')
+            : h('L:ArrowLeft', {size: 15, className: 'shrink-0 text-[var(--wp-ink-4)] opacity-0 transition-opacity group-hover:opacity-100'})))
+      }
+      return h(`main:${classes.page} wp-scroll`, {},
+        hh(ctx, dsls.react['react-comp'].wonderPlatformPageHeader, {title: config.title, subtitle: config.subtitle,
+          count: items.length, search, setSearch, tab: ownerTab, setTab: setOwnerTab, tabs: ownable ? ownerTabs : [],
+          actions: h(`button:${classes.primary}`, {onClick: () => createItem(view)}, h('L:Plus', {size: 15}), config.create)}),
+        h(`div:${classes.content} pb-16`, {},
+          items.length ? h('div:mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3', {}, items.map(card))
+            : hh(ctx, dsls.react['react-comp'].wonderPlatformEmpty, {icon: empty[0], title: empty[1], body: empty[2],
+              actionLabel: search || ownerTab == 'global' ? '' : config.create, onAction: () => createItem(view)})))
     }
   })
 })
