@@ -41,6 +41,7 @@ ReactComp('wonderPlatformResourceFields', {
           : h('div:flex items-center justify-between rounded-2xl border border-[#e8e8ea] px-4 py-3', {}, h('b:text-sm', {}, title), addButton)
       }
       const generalStep = () => h('div:space-y-4', {},
+        field('שם להצגה', input('name', {placeholder: 'שם להצגה…', 'aria-label': 'display_name'}), 'display_name'),
         field('מזהה', input('id', {dir: 'ltr', placeholder: 'uiRenderingSkill', disabled: !!item.originalId}), 'id'),
         field('תיאור באנגלית', h(`textarea:${classes.field} min-h-24 resize-y`, {dir: 'ltr', value: item.apiDescription || '',
           onInput: event => update({...item, apiDescription: event.target.value})}), 'description'),
@@ -200,6 +201,7 @@ ReactComp('wonderPlatformResourceFields', {
             rows: item.rows.map((value, rowIndex) => rowIndex == index ? {...value, notes: event.target.value} : value)})})))
       const legacyTool = () => h('div:space-y-5', {},
         h('section:rounded-2xl border border-[#e8e8ea] p-4', {},
+          field('שם להצגה', h(`div:${classes.field} text-[#6b6b6f]`, {'aria-label': 'display_name'}, item.name || '—'), 'display_name'),
           field('תיאור באנגלית', h(`div:${classes.field} text-[#6b6b6f]`, {dir: 'ltr'}, item.apiDescription || '—'), 'description'),
           field('תיאור בעברית', h(`div:${classes.field} text-[#6b6b6f]`, {}, item.desc || '—'), 'hebrew_description')),
         h('p:text-xs leading-5 text-[#6b6b6f]', {}, 'כלי Connector מנוהל — לא ניתן לעריכה מכאן.'))
@@ -215,6 +217,7 @@ ReactComp('wonderPlatformResourceFields', {
       const loaded = !!item.packageId
       const toolSteps = [
         {id: 'general', label: 'כללי', render: () => h('div:space-y-4', {},
+          field('שם להצגה', input('name', {placeholder: 'שם להצגה…', 'aria-label': 'display_name'}), 'display_name'),
           field('מזהה הכלי', input('id', {dir: 'ltr', placeholder: 'ecommerceAnalyticsTool', disabled: !!item.originalId}), 'id'),
           h('div:flex items-end gap-2', {}, h('div:flex-1', {},
             field('מזהה מארז Flow', input('packageId', {dir: 'ltr', placeholder: '7', inputMode: 'numeric'}), 'packageId')),
@@ -239,7 +242,9 @@ ReactComp('wonderPlatformResourceFields', {
         const target = repo.agents.find(agent => agent.id == item.targetId), running = runningSet == item.id
         const ready = item.name?.trim() && target && item.rows?.some(row => row.input?.trim())
         const evalSteps = [
-          {id: 'general', label: 'הגדרה', render: () => h('div:space-y-4', {}, h('section:rounded-2xl border border-[#e8e8ea] p-5', {}, h(
+          {id: 'general', label: 'הגדרה', render: () => h('div:space-y-4', {}, h('section:rounded-2xl border border-[#e8e8ea] p-5', {},
+            field('שם להצגה', input('name', {placeholder: 'שם להצגה…', 'aria-label': 'display_name'}), 'display_name')),
+            h('section:rounded-2xl border border-[#e8e8ea] p-5', {}, h(
             'h2:text-base font-semibold', {}, 'מה רוצים לבדוק?'), h(`textarea:${classes.field} min-h-20 resize-y`, {value: item.desc || '',
               placeholder: 'תארו בקצרה את מטרת הבדיקה', onInput: event => update({...item, desc: event.target.value})})), h(
             'section:rounded-2xl border border-[#e8e8ea] p-5', {}, h('div:flex items-start gap-3', {}, h(

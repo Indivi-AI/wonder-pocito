@@ -7,27 +7,27 @@ const { common: { Data } } = dsls
 Data('wonderPlatformSeed', {
   impl: () => {
     const rows = (keys, values) => values.map(row => Object.fromEntries(keys.map((key, index) => [key, row[index]])))
-    const plugins = rows(['id', 'name', 'mark', 'version', 'status', 'desc', 'skillIds', 'toolIds', 'subagentIds', 'evaluationId'], [
-      ['p1', 'אנליסט הוכחת קיום', 'הק', 'V3', 'פורסם',
+    const plugins = rows(['id', 'name', 'mark', 'icon', 'version', 'status', 'desc', 'skillIds', 'toolIds', 'subagentIds', 'evaluationId'], [
+      ['p1', 'אנליסט הוכחת קיום', 'הק', 'ShieldCheck', 'V3', 'פורסם',
         'בודק טענות מול מקורות ארגוניים ומחזיר תשובה מנומקת עם ראיות.',
         ['evidenceVerification', 'documentationGaps'], ['t1', 't3'], ['a1'], 'e1'],
-      ['p2', 'מפרט שירות', 'מש', 'V2', 'פורסם', 'מנסח מפרטי שירות עקביים מתוך מסמכי ידע, CRM ותקדימים.',
+      ['p2', 'מפרט שירות', 'מש', 'FileText', 'V2', 'פורסם', 'מנסח מפרטי שירות עקביים מתוך מסמכי ידע, CRM ותקדימים.',
         ['serviceSpecification'], ['t2', 't3'], ['a3'], 'e2'],
-      ['p3', 'מבקר תפעולי', 'מת', 'V4', 'טיוטה', 'מאתר חריגות במדדים תפעוליים ומנסח תמונת מצב ניתנת לפעולה.',
-        ['operationalMetrics'], ['t4', 't6'], ['a2'], 'e3'],
-      ['p4', 'חבילת ספק', 'חס', 'V1', 'פורסם', 'מרכז מסמכי ספק, פערים ואישורים לחבילה אחת מוכנה לבקרה.',
+      ['p3', 'מבקר תפעולי', 'מת', 'Gauge', 'V4', 'טיוטה',
+        'מאתר חריגות במדדים תפעוליים ומנסח תמונת מצב ניתנת לפעולה.', ['operationalMetrics'], ['t4', 't6'], ['a2'], 'e3'],
+      ['p4', 'חבילת ספק', 'חס', 'Package', 'V1', 'פורסם', 'מרכז מסמכי ספק, פערים ואישורים לחבילה אחת מוכנה לבקרה.',
         ['evidenceVerification', 'serviceSpecification'], ['t2', 't5'], [], 'e4']
     ]).map(item => ({...item, created: '08/2026', updated: 'היום',
       instructions: 'בסס כל מסקנה על מקורות, ציין פערים והחזר תשובה תמציתית שניתנת לאימות.',
       categories: item.id == 'p1' ? ['audit', 'he'] : item.id == 'p2' ? ['regulated', 'he'] : item.id == 'p3' ? ['warehouse', 'he'] : ['audit']}))
     const skills = dsls.common.data.wonderPlatformSkillDefinitions.$run()
-    const tools = rows(['id', 'name', 'mark', 'desc', 'kind', 'managed', 'packageId'], [
-      ['t1', 'חיפוש Jira', 'Ji', 'איתור משימות, סטטוסים וקישורים.', 'connector', true, ''],
-      ['t2', 'חיפוש Confluence', 'Co', 'איתור דפים ומקטעי ידע ארגוני.', 'connector', true, ''],
-      ['t3', 'CRM ארגוני', 'CR', 'קריאת חשבונות, אנשי קשר והזדמנויות.', 'connector', true, ''],
-      ['t4', 'איחוד דוחות שבועיים', 'דש', 'איחוד דוחות לפי טווח תאריכים.', 'flow', false, '4821037'],
-      ['t5', 'שליחת חבילת מסמכים', 'שמ', 'אריזה ושליחת מסמכים בדוא״ל.', 'flow', false, '4821048'],
-      ['t6', 'מדדי מחסן', 'ממ', 'שאילתת מדדי תפעול ומלאי.', 'flow', false, '4821062']
+    const tools = rows(['id', 'name', 'mark', 'icon', 'desc', 'kind', 'managed', 'packageId'], [
+      ['t1', 'חיפוש Jira', 'Ji', 'Ticket', 'איתור משימות, סטטוסים וקישורים.', 'connector', true, ''],
+      ['t2', 'חיפוש Confluence', 'Co', 'FileSearch', 'איתור דפים ומקטעי ידע ארגוני.', 'connector', true, ''],
+      ['t3', 'CRM ארגוני', 'CR', 'Users', 'קריאת חשבונות, אנשי קשר והזדמנויות.', 'connector', true, ''],
+      ['t4', 'איחוד דוחות שבועיים', 'דש', 'FileBarChart2', 'איחוד דוחות לפי טווח תאריכים.', 'flow', false, '4821037'],
+      ['t5', 'שליחת חבילת מסמכים', 'שמ', 'Send', 'אריזה ושליחת מסמכים בדוא״ל.', 'flow', false, '4821048'],
+      ['t6', 'מדדי מחסן', 'ממ', 'Warehouse', 'שאילתת מדדי תפעול ומלאי.', 'flow', false, '4821062']
     ]).map(item => ({...item, version: 'V0', created: '08/2026', updated: 'היום', inputSchema: [], outputCubes: []}))
     const subagents = rows(['id', 'name', 'mark', 'desc', 'skillIds', 'toolIds'], [
       ['a1', 'מחלץ ישויות', 'מי', 'מחלץ ארגונים, אנשים, תאריכים ומזהים.', [], ['t1', 't2']],
@@ -69,21 +69,22 @@ Data('wonderPlatformSeed', {
       {Id: 4821048, Name: 'שליחת חבילת מסמכים', Description: 'מארז Flow לשליחת מסמכים.', Quick: {}, Queries: []},
       {Id: 4821062, Name: 'מדדי מחסן', Description: 'מארז Flow לשאילתת מדדים.', Quick: {}, Queries: []}
     ]
-    const agents = rows(['id', 'name', 'mark', 'desc', 'pluginIds', 'skillIds', 'toolIds', 'knowledgeIds', 'owner'], [
-      ['ag1', 'סוכן תמיכת לקוחות B2B', 'סת', 'עונה לפניות לקוחות עסקיים ומנתב תקלות מורכבות לצוות אנושי.',
-        ['p2'], [], [], ['k1'], 'me'],
-      ['ag2', 'סוכן ביקורת ספקים', 'סב', 'עוקב אחר בקרת ספקים ומחזיר תמונת מצב מבוססת ראיות.',
-        ['p1', 'p4'], [], [], [], 'other'],
-      ['ag3', 'סוכן אנליטיקת שוק', 'סש', 'מנתח נתוני שוק גלובליים וממליץ על הזדמנויות.', [], [], [], ['k2'], 'global']
+    const agents = rows(['id', 'name', 'mark', 'icon', 'desc', 'pluginIds', 'skillIds', 'toolIds', 'knowledgeIds', 'owner'], [
+      ['ag1', 'סוכן תמיכת לקוחות B2B', 'סת', 'Headset',
+        'עונה לפניות לקוחות עסקיים ומנתב תקלות מורכבות לצוות אנושי.', ['p2'], [], [], ['k1'], 'me'],
+      ['ag2', 'סוכן ביקורת ספקים', 'סב', 'ClipboardCheck',
+        'עוקב אחר בקרת ספקים ומחזיר תמונת מצב מבוססת ראיות.', ['p1', 'p4'], [], [], [], 'other'],
+      ['ag3', 'סוכן אנליטיקת שוק', 'סש', 'TrendingUp',
+        'מנתח נתוני שוק גלובליים וממליץ על הזדמנויות.', [], [], [], ['k2'], 'global']
     ]).map(item => ({...item, version: 'V0', created: '08/2026', updated: 'היום', evaluationId: '',
       instructions: 'ענה על בסיס המקורות המצורפים בלבד וציין כל פער מידע.',
       backendConfig: {harness: 'agno', harness_type: 'deepagents'}}))
-    const knowledge = rows(['id', 'name', 'mark', 'desc', 'files', 'owner'], [
-      ['k1', 'נהלי שירות לקוחות', 'נש', 'אוסף נהלי שירות, תסריטי שיחה ומדיניות החזרות עדכנית.',
+    const knowledge = rows(['id', 'name', 'mark', 'icon', 'desc', 'files', 'owner'], [
+      ['k1', 'נהלי שירות לקוחות', 'נש', 'BookOpen', 'אוסף נהלי שירות, תסריטי שיחה ומדיניות החזרות עדכנית.',
         [{name: 'service-procedures.pdf', size: 482304}, {name: 'return-policy.docx', size: 108552}], 'me'],
-      ['k2', 'מחקרי שוק גלובליים', 'מש', 'מחקרי שוק וסיכומי מגמות ממקורות חיצוניים.',
+      ['k2', 'מחקרי שוק גלובליים', 'מש', 'Globe', 'מחקרי שוק וסיכומי מגמות ממקורות חיצוניים.',
         [{name: 'market-trends-2026.pdf', size: 934210}, {name: 'competitor-summary.xlsx', size: 65120}], 'global'],
-      ['k3', 'מסמכים אישיים', 'מא', 'טיוטות מחקר וסיכומים אישיים.', [{name: 'draft-notes.txt', size: 4210}], 'other']
+      ['k3', 'מסמכים אישיים', 'מא', 'StickyNote', 'טיוטות מחקר וסיכומים אישיים.', [{name: 'draft-notes.txt', size: 4210}], 'other']
     ]).map(item => ({...item, version: 'V0', created: '08/2026', updated: 'היום'}))
     return {version: 5, plugins, skills, tools, subagents, agents, knowledge, evaluations, evalRuns: [],
       conversations, flowPackages}
