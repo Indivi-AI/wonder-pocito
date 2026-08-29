@@ -3,7 +3,8 @@
 The `wonderAgents` applet ships with real UI on top of **fake/local data** for three
 things the backend does not support yet. This document scopes what's missing.
 
-Live: `/room/:roomId/applet/wonderAgents` (Studio remains at `/applet/wonderPlatform`).
+Live: `/room/:roomId/applet/wonderAgents`. `wonderPlatform` is no longer deployed as its own applet;
+`wonderAgents` is the sole entry point (it configures the same shared component).
 
 ## 1. Agent as a marketplace resource
 

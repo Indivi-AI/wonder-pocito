@@ -9,34 +9,46 @@ const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 const wonderPlatformChatContextRows = [['pluginIds', 'plugins', 'פלאגינים'], ['skillIds', 'skills', 'מיומנויות'],
   ['toolIds', 'tools', 'כלים'], ['knowledgeIds', 'knowledge', 'ידע']]
 
+const wonderPlatformContextChildRows = {
+  agents: [['pluginIds', 'plugins'], ['skillIds', 'skills'], ['toolIds', 'tools'], ['knowledgeIds', 'knowledge']],
+  plugins: [['skillIds', 'skills'], ['toolIds', 'tools'], ['knowledgeIds', 'knowledge']],
+  skills: [['toolIds', 'tools']]
+}
+
 ReactComp('wonderPlatformChatContext', {
   impl: comp({
-    hFunc: (ctx, {react: {h, hh, useState}}) => ({repo, conversation, selectAgent, setContext, locked}) => {
-      const [closed, setClosed] = useState('')
-      const select = props => hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {bare: true, tall: true, ...props})
+    hFunc: (ctx, {react: {h}}) => ({repo, conversation}) => {
       const agent = repo.agents.find(item => item.id == conversation?.agentId)
-      const chipClass = dsls.common.data.wonderPlatformUi.$run().classes.chip
-      const section = (id, label, body) => h('div:mb-3', {key: id},
-        h(`button:flex w-full items-center justify-between border-b border-[#e8e8ea] py-1.5 text-base font-semibold text-[#0f0f10]`,
-          {onClick: () => setClosed(closed == id ? '' : id)}, label,
-          h(`L:${closed == id ? 'ChevronDown' : 'ChevronUp'}`, {size: 16})),
-        closed != id && h('div:pt-2', {}, body))
-      const chips = (id, label, names) => h('div:mb-3', {key: id},
-        h('div:border-b border-[#e8e8ea] pb-1.5 text-base font-semibold text-[#0f0f10]', {}, label),
-        h('div:flex flex-wrap gap-1.5 pt-2', {}, names.length
-          ? names.map(name => h(`span:${chipClass}`, {key: name}, name)) : h('span:text-[12px] text-[#6b7280]', {}, 'ללא')))
-      return h('aside:hidden w-[260px] shrink-0 overflow-y-auto bg-white px-4 py-5 shadow-[-8px_0_24px_rgba(0,0,0,0.07)] lg:block', {},
-        h('div:mb-5 text-[13px] font-semibold text-[#0f0f10]', {}, 'הקשר השיחה'),
-        locked
-          ? [chips('agent', 'סוכן', agent ? [agent.name] : []),
-              wonderPlatformChatContextRows.map(([field, resource, label]) => chips(field, label,
-                (conversation?.[field] || []).map(id => repo[resource].find(item => item.id == id)?.name || id)))]
-          : [section('agent', 'סוכן', select({items: repo.agents, value: conversation?.agentId || '', onChange: selectAgent,
-              placeholder: 'בחר סוכן', empty: 'ללא סוכן', testId: 'agent-selector'})),
-              wonderPlatformChatContextRows.map(([field, resource, label]) => section(field, label,
-                select({items: repo[resource], multi: true, value: conversation?.[field] || [],
-                  onChange: value => setContext(field, value), placeholder: `בחר ${label}`})))],
-        h('p:mt-2 text-[11px] leading-5 text-[#6b7280]', {}, locked
+      const ui = dsls.common.data.wonderPlatformUi.$run()
+      const buildNode = (resource, id, depth) => {
+        const item = repo[resource]?.find(value => value.id == id)
+        if (!item || depth > 6) return null
+        const children = (wonderPlatformContextChildRows[resource] || []).flatMap(([field, childResource]) =>
+          (item[field] || []).map(childId => buildNode(childResource, childId, depth + 1)).filter(Boolean))
+        return {resource, item, children}
+      }
+      const topNodes = wonderPlatformChatContextRows.flatMap(([field, resource]) =>
+        (conversation?.[field] || []).map(id => buildNode(resource, id, 1)).filter(Boolean))
+      const agentNode = agent && buildNode('agents', agent.id, 0)
+      const rootNodes = agentNode ? [agentNode, ...topNodes] : topNodes
+      const renderNode = (node, depth) => h('div', {key: `${node.resource}:${node.item.id}:${depth}`,
+        className: depth > 0 ? 'ms-3 border-s border-[#e8e8ea] ps-3' : ''},
+        h('div:flex items-center gap-2 py-1.5', {},
+          h(`span:grid shrink-0 place-items-center rounded-full bg-[#f4f4f5] font-bold text-[#0f0f10] ${
+            depth == 0 ? 'h-7 w-7 text-[11px]' : 'h-6 w-6 text-[10px]'}`, {},
+            node.item.icon ? h(`L:${node.item.icon}`, {size: depth == 0 ? 13 : 12}) : (node.item.mark || '·')),
+          h('span:min-w-0 flex-1', {},
+            h(`span:block truncate text-[#0f0f10] ${depth == 0 ? 'text-[13px] font-semibold' : 'text-[12.5px] font-medium'}`,
+              {}, node.item.name),
+            h('span:block text-[10.5px] text-[#6b7280]', {}, ui.labels[node.resource])),
+          h(`L:${ui.resources[node.resource].icon}`, {size: 13, className: 'shrink-0 text-[#a8a8ad]'})),
+        node.children.length > 0 && h('div:mt-0.5', {}, node.children.map(child => renderNode(child, depth + 1))))
+      return h('aside:hidden w-[280px] shrink-0 overflow-y-auto bg-white px-4 py-5 shadow-[-8px_0_24px_rgba(0,0,0,0.07)] lg:block', {},
+        h('div:mb-4 text-[13px] font-semibold text-[#0f0f10]', {}, 'הקשר השיחה'),
+        rootNodes.length > 0
+          ? h('div', {}, rootNodes.map(node => renderNode(node, 0)))
+          : h('p:text-[12px] text-[#6b7280]', {}, 'לא נבחרו נכסים עדיין.'),
+        h('p:mt-4 text-[11px] leading-5 text-[#6b7280]', {}, conversation?.messages?.length > 0
           ? 'ההקשר ננעל כשהשיחה התחילה. פתחו שיחה חדשה כדי לשנות אותו.'
           : 'הסוכן והנכסים שנבחרו מהווים את ההקשר שנשלח בכל פנייה בשיחה זו.'))
     }
@@ -46,21 +58,24 @@ ReactComp('wonderPlatformChatContext', {
 ReactComp('wonderPlatformChatContextBoard', {
   impl: comp({
     hFunc: (ctx, {react: {h, hh}}) => ({repo, conversation, selectAgent, setContext}) => {
-      const agent = repo.agents.find(item => item.id == conversation?.agentId)
-      const slot = (key, label, filled, body) => h('div:flex min-h-[92px] flex-col items-center justify-center gap-2 ' +
-        `rounded-[14px] border p-3 text-center ${filled ? 'border-[#d8d8dc] bg-[#f4f4f5]' : 'border-dashed border-[#d8d8dc] bg-white'}`,
-        {key}, h('span:text-[12px] font-medium text-[#2e2e2e]', {}, label), body)
-      return h('div:flex w-full max-w-lg flex-col items-center gap-5 text-center', {},
-        h('div', {}, h('h2:text-[15px] font-semibold text-[#0f0f10]', {}, 'הקשר השיחה'),
+      const ui = dsls.common.data.wonderPlatformUi.$run()
+      const mine = list => list.filter(item => (item.owner || 'me') != 'global')
+      const select = props => h('div:w-40', {key: props.testId},
+        hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {card: true, ...props}))
+      const [pluginRow, ...restRows] = wonderPlatformChatContextRows
+      const tile = ([field, resource, headerLabel]) => select({items: mine(repo[resource]), multi: true,
+        value: conversation?.[field] || [], onChange: value => setContext(field, value),
+        icon: ui.resources[resource].icon, label: headerLabel, placeholder: '+ הוספה', testId: `${field}-selector-board`})
+      return h('div:flex w-full max-w-2xl flex-col items-center gap-6 text-center', {},
+        h('div', {}, h('h2:text-[16px] font-semibold text-[#0f0f10]', {}, 'הקשר השיחה'),
           h('p:mt-1 text-[12px] text-[#6b7280]', {}, 'כולם אופציונליים')),
-        h('div:grid w-full grid-cols-3 gap-3', {},
-          slot('agent', 'סוכן', !!agent, hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {bare: true,
-            items: repo.agents, value: conversation?.agentId || '', onChange: selectAgent, placeholder: '+ הוספה',
-            empty: 'ללא סוכן', testId: 'agent-selector-board'})),
-          wonderPlatformChatContextRows.map(([field, resource, label]) => slot(field, label,
-            (conversation?.[field] || []).length > 0, hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {bare: true,
-              multi: true, items: repo[resource], value: conversation?.[field] || [],
-              onChange: value => setContext(field, value), placeholder: '+ הוספה'})))))
+        h('div:flex flex-col items-center gap-3', {},
+          h('div:flex flex-wrap justify-center gap-3', {},
+            select({items: mine(repo.agents), value: conversation?.agentId || '', onChange: selectAgent,
+              icon: ui.resources.agents.icon, label: ui.labels.agents, placeholder: '+ הוספה', empty: 'ללא סוכן',
+              testId: 'agent-selector-board'}),
+            tile(pluginRow)),
+          h('div:flex flex-wrap justify-center gap-3', {}, restRows.map(tile))))
     }
   })
 })
@@ -103,14 +118,14 @@ ReactComp('wonderPlatformChat', {
       const opikUrl = conversation?.messages.filter(item => item.opikUrl).at(-1)?.opikUrl
       const statusText = status => wonderPlatformRunStatusLabel[String(status).toLowerCase()] || status || 'הושלם'
       const locked = conversation?.messages.length > 0
-      const starterPrompts = agent && [agent.desc, `איך אתה יכול לעזור לי, ${agent.name}?`,
+      const starterPrompts = !locked && agent && [agent.desc, `איך אתה יכול לעזור לי, ${agent.name}?`,
         `תן לי דוגמה לשאלה שאפשר לשאול את ${agent.name}`]
       const board = h('div:flex w-full max-w-lg flex-col items-center gap-6', {},
-        hh(ctx, dsls.react['react-comp'].wonderPlatformChatContextBoard, {repo, conversation, selectAgent, setContext}),
-        starterPrompts && h('div:mt-1 flex w-full flex-col gap-2', {},
-          starterPrompts.map(prompt => h('button:rounded-[10px] border border-[#e8e8ea] bg-white px-3.5 py-2.5 ' +
-            'text-[12px] leading-5 text-[#2e2e2e] transition-colors hover:border-[#d8d8dc] hover:bg-[#fafafa]',
-            {key: prompt, onClick: () => setMessage(prompt)}, prompt))))
+        hh(ctx, dsls.react['react-comp'].wonderPlatformChatContextBoard, {repo, conversation, selectAgent, setContext}))
+      const suggestions = starterPrompts && h('div:mx-auto flex w-full max-w-3xl flex-wrap justify-center gap-1.5 px-5 pb-2', {},
+        starterPrompts.map(prompt => h('button:max-w-full truncate rounded-full border border-[#e8e8ea] bg-white ' +
+          'px-3 py-1.5 text-[11px] text-[#2e2e2e] transition-colors hover:border-[#d8d8dc] hover:bg-[#fafafa]',
+          {key: prompt, onClick: () => setMessage(prompt)}, prompt)))
       const messages = h('div:mx-auto max-w-3xl px-5 py-8', {},
         conversation?.messages.map(item => item.role == 'user'
           ? h('div:mb-4 flex', {key: item.id, 'data-message-role': 'user'},
@@ -134,13 +149,14 @@ ReactComp('wonderPlatformChat', {
         h('section:flex min-w-0 flex-1 flex-col', {},
           h('header:flex items-center justify-between border-b border-[#e8e8ea] bg-white px-6 py-3.5', {},
             h('div:min-w-0', {}, h('b:block truncate text-[14px] font-medium text-[#0f0f10]', {}, agent?.name || 'שיחה חופשית'),
-              conversation?.messages.length > 0 && h('span:text-[11px] text-[#6b7280]', {}, 'ההקשר נשמר בין הפניות')),
+              locked && h('span:text-[11px] text-[#6b7280]', {}, 'ההקשר נשמר בין הפניות')),
             opikUrl && h('a:shrink-0 text-[12px] text-[#2e2e2e]', {href: opikUrl}, 'ה-trace המלא ב-Opik ↗')),
-          h('div:flex-1 overflow-y-auto overflow-x-hidden', {},
-            conversation?.messages.length || busy ? messages
-              : h('div:mx-auto flex h-full max-w-3xl items-center justify-center px-5 py-8', {}, board)),
+          h(`div:flex-1 ${locked || busy ? 'overflow-y-auto overflow-x-hidden' : 'overflow-visible'}`, {},
+            locked || busy ? messages
+              : h('div:mx-auto flex max-w-3xl justify-center px-5 py-8 pt-14 sm:pt-20', {}, board)),
+          suggestions,
           hh(ctx, dsls.react['react-comp'].wonderPlatformChatComposer, {repo, conversation, message, setMessage, busy, send, model, setModel})),
-        hh(ctx, dsls.react['react-comp'].wonderPlatformChatContext, {repo, conversation, selectAgent, setContext, locked})))
+        hh(ctx, dsls.react['react-comp'].wonderPlatformChatContext, {repo, conversation})))
     }
   })
 })

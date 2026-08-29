@@ -12,7 +12,8 @@ ReactComp('wonderPlatformWorkspace', {
     hFunc: (ctx, {react: {h, hh, useEffect, useState}}) => props => {
       const {workspace, repo, back, saveWorkspace, deleteWorkspace, openPicker, openEditor, runTarget, runEval, setDirty} = props
       const {classes, labels} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx), [draft, setDraft] = useState({...workspace.item})
-      const [panelOpen, setPanelOpen] = useState(() => window.innerWidth >= 1600), [confirmDelete, setConfirmDelete] = useState(false)
+      const [panelOpen, setPanelOpen] = useState(() => ['plugins', 'agents'].includes(workspace.resource) || window.innerWidth >= 1600),
+        [confirmDelete, setConfirmDelete] = useState(false)
       const [tab, setTab] = useState('test'), [testInput, setTestInput] = useState('')
       const [runs, setRuns] = useState([]), [evaluationId, setEvaluationId] = useState(workspace.item.evaluationId || '')
       const [evaluationRun, setEvaluationRun] = useState(), [detail, setDetail] = useState(-1)
@@ -139,7 +140,10 @@ ReactComp('wonderPlatformWorkspace', {
       shownRun && h('div:mt-4', {}, h('div:flex items-center gap-2', {}, h(`span:${classes.chip}`, {}, shownRun.status),
         h('span:text-xs text-[#6b6b6f]', {}, shownRun.started || 'עכשיו')), h('div:mt-4 space-y-2', {}, (shownRun.rows || []).map(evalRow))))
       const steps = [{id: 'general', label: 'כללי', render: () => h('div:space-y-4', {},
-        h(`section:${classes.card} space-y-4`, {}, h('label:block text-xs font-semibold', {}, fieldLabel('מזהה', 'id'), h(
+        h(`section:${classes.card} space-y-4`, {}, h('label:block text-xs font-semibold', {}, fieldLabel('שם להצגה', 'display_name'), h(
+          'input:mt-2 w-full rounded-xl border border-[#e8e8ea] bg-[#fafafa] p-3 text-sm font-semibold', {value: draft.name || '',
+            placeholder: 'שם להצגה…', 'aria-label': 'display_name', onInput: event => setDraft({...draft, name: event.target.value})})),
+        h('label:block text-xs font-semibold', {}, fieldLabel('מזהה', 'id'), h(
           'input:mt-2 w-full rounded-xl border border-[#e8e8ea] bg-[#fafafa] p-3 font-mono text-sm', {dir: 'ltr', value: draft.id || '',
             placeholder: 'uiRenderingSkill', disabled: !!draft.originalId,
             onInput: event => setDraft({...draft, id: event.target.value})})), h('label:block text-xs font-semibold', {},
@@ -185,20 +189,18 @@ ReactComp('wonderPlatformWorkspace', {
       const saveWorkspaceDisabled = !draft.name?.trim() || !draft.id?.trim()
         || (isAgent && (!draft.apiDescription?.trim() || !draft.desc?.trim() || !draft.instructions?.trim()))
         || (isPlugin && (!draft.apiDescription?.trim() || !draft.desc?.trim() || !draft.readme?.trim()))
-      return h('main:min-h-screen min-w-0 flex-1 overflow-x-clip pb-24 sm:pb-0', {}, h('header:sticky top-0 z-20 flex flex-wrap items-center ' +
-        'gap-3 border-b border-[#e8e8ea] bg-white px-5 py-4', {}, h('button:rounded-lg p-2 hover:bg-[#f4f4f5]', {onClick: back,
+      return h('main:min-h-screen min-w-0 flex-1 overflow-x-clip pb-24 sm:pb-0', {}, h('header:sticky top-0 z-20 flex items-center ' +
+        'justify-between gap-2 border-b border-[#e8e8ea] bg-white px-3 py-2', {}, h('div:flex items-center gap-1', {},
+        h('button:rounded-lg p-2 hover:bg-[#f4f4f5]', {onClick: back,
         'aria-label': `חזרה ל${{plugins: 'פלאגינים', subagents: 'סאב-אייג׳נטים', agents: 'סוכנים'}[workspace.resource]}`},
         h('L:ChevronRight', {size: 16})), draft.originalId && h('button:rounded-lg p-2 text-[#6b6b6f] hover:bg-red-50 hover:text-red-600', {
         onClick: () => setConfirmDelete(true), 'aria-label': `מחיקת ${draft.name || targetLabel}`,
-        title: `מחיקת ${draft.name || targetLabel}`}, h('L:Trash2', {size: 16})),
-      h('span:text-xs text-[#6b6b6f]', {}, labels[workspace.resource]), h('input:min-w-0 flex-1 text-xl font-bold outline-none', {
-        value: draft.name, placeholder: 'שם להצגה…', 'aria-label': 'display_name',
-        onInput: event => setDraft({...draft, name: event.target.value})}),
-      h(`span:${classes.chip}`, {}, draft.version || 'V0'), h(`button:${classes.button} ${panelOpen ? 'bg-[#f4f4f5] font-semibold' : ''}`, {
+        title: `מחיקת ${draft.name || targetLabel}`}, h('L:Trash2', {size: 16}))),
+      h('div:flex items-center gap-1', {}, h(`button:rounded-lg p-2 ${panelOpen ? 'bg-[#f4f4f5]' : ''}`, {
         onClick: () => setPanelOpen(!panelOpen), 'aria-label': panelOpen ? 'סגירת פאנל הרצת ניסוי' : 'פתיחת פאנל הרצת ניסוי',
-        'aria-expanded': panelOpen, title: 'הרצת ניסוי'}, h('L:MessageCircle', {size: 14}), 'הרצת ניסוי'), h(`button:${classes.primary}`, {
-        disabled: saveWorkspaceDisabled, onClick: () => saveWorkspace(draft),
-        'aria-label': 'שמירת סביבת עבודה'}, 'שמירה')),
+        'aria-expanded': panelOpen, title: 'הרצת ניסוי'}, h('L:MessageCircle', {size: 16})),
+      h('button:rounded-lg bg-[#0f0f10] p-2 text-white disabled:opacity-40', {disabled: saveWorkspaceDisabled,
+        onClick: () => saveWorkspace(draft), 'aria-label': 'שמירת סביבת עבודה', title: 'שמירה'}, h('L:Save', {size: 16})))),
       h('div:flex min-h-[calc(100vh-65px)] max-lg:block', {}, h(`section:min-w-0 flex-1 space-y-4 p-5 ${panelOpen ? 'lg:max-w-[58%]' : ''}`, {},
         hh(ctx, dsls.react['react-comp'].wonderPlatformWizard, {steps, activeId: stepId, onStep: setStepId})), panelOpen && h(
         'aside:w-full shrink-0 self-start border-r border-[#e8e8ea] bg-[#fafafa] lg:sticky lg:top-[65px] lg:h-[calc(100vh-65px)] ' +
