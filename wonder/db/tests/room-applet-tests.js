@@ -1,7 +1,8 @@
-import { dsls } from '@jb6/core'
+import { dsls, ns } from '@jb6/core'
 import '@jb6/react/tests/react-testers.js'
 import '@jb6/mcp/mcp-jb-tools.js'
 import '@wonder/db/oauth2.js'
+import '@wonder/studio/mcp-tools/wonder-mcp-tools.js'
 import './gmail-test-users.js'
 import './room-test-applets.js'
 
@@ -13,11 +14,13 @@ import './room-test-applets.js'
 //   To save time, look at the logs, do not trust green tests
 
 const {
-  tgp: { 'ctx-enricher': { testUser } },
-  common: { Data, boolean: { and, contains, equals }, data: { join, playwrightHarvest } },
+  tgp: { any: { typeAdapter }, 'ctx-enricher': { Var, testUser } },
+  common: { Data, boolean: { and, contains }, data: { first, join, pipe } },
+  mcp: { tool: { roomAppletHarvest, uploadRoomApplet } },
   test: { Test, test: { dataTest, reactTest } },
   react: { 'react-comp': { storeCountApplet }, 'ui-action': { click, waitForText } }
 } = dsls
+const { json } = ns
 
 Data('mintWonderTestUserAuth2', {
   impl: async ctx => {
@@ -34,19 +37,26 @@ Test('roomAppletTest.cubeQuery.wasm', {
   })
 })
 
-Test('roomAppletTest.signedSummaryApplet.cloud', {
+Test('dbDriverTests.signedRoomAppletUploadAndRun', {
   nodeOnly: true,
   impl: dataTest({
-    calculate: playwrightHarvest({
-      url: 'https://w-staging.indivi.ai/signed-room/testSignedRoom/applet/summaryApplet?logger=roomLogger,dbLogger',
-      automation: waitForText('categories'),
-      timeout: 10000,
-      domSelector: '#root',
-      seedLocalStorage: 'mintWonderTestUserAuth2'
-    }),
+    calculate: pipe(
+      typeAdapter('tool<mcp>', roomAppletHarvest({
+        url: 'https://w-staging.indivi.ai/signed-room/testSignedRoom/applet/summaryApplet',
+        logger: 'roomLogger,dbLogger,authLogger',
+        waitForText: '1 categories',
+        timeout: 12000,
+        seedLocalStorage: 'mintWonderTestUserAuth2'
+      })),
+      '%content/0/text%',
+      json.parse(),
+      (ctx, {uploadedApplet}) => ({...ctx.data, appletIdentity: uploadedApplet?.appletV
+        === ctx.data.logs?.roomLogger?.roomLog?.find(e => e.t === 'serve applet page')?.appletV})
+    ),
     expectedResult: and(
-      equals(true, '%done%'),
-      equals(0, '%errors/length%'),
+      '%done%',
+      '%errors/length% == 0',
+      '%appletIdentity%',
       contains('1 categories', { allText: '%html%' }),
       contains('serve applet page', { allText: join(',', { items: '%logs/roomLogger/roomLog/t%' }) }),
       contains('roomLambda invoke', { allText: join(',', { items: '%logs/roomLogger/roomLog/t%' }) }),
@@ -54,6 +64,13 @@ Test('roomAppletTest.signedSummaryApplet.cloud', {
         allText: join(',', { items: '%logs/roomLogger/roomLog/event%' })
       })
     ),
-    timeout: 12000
+    setup: Var('uploadedApplet', pipe(
+      typeAdapter('tool<mcp>', uploadRoomApplet('signedRoom://testSignedRoom', 'react-comp<react>summaryApplet')),
+      '%content/0/text%',
+      json.parse(),
+      first()
+    )),
+    timeout: 14000,
+    logger: 'mcpLogger'
   })
 })
