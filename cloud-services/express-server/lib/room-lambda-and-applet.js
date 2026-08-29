@@ -64,7 +64,8 @@ const runAutomation = async mCtx => {
 }
 // extendCtxWithUrl seeds ctx-* query params (e.g. ?ctx-reportUrl=…) + loggers from the URL; then add react + the applet's roomWUrl.
 const ctx = reactUtils.extendCtxWithUrl().setVars({ react: reactUtils, db: globalThis.WONDER_STORAGE_PROVIDER,
-  bucketEndpoint: globalThis.WONDER_STORAGE_URL, ...(roomWUrl && { roomWUrl }), ...(noAuth && { noAuth: true }) })
+  bucketEndpoint: globalThis.WONDER_STORAGE_URL, ...appletSpec.runtimeVars,
+  ...(roomWUrl && { roomWUrl }), ...(noAuth && { noAuth: true }) })
 const uiSource = appletSpec.liveRepo
   ? 'live-repo (localhost /jb6_packages, /wonder, /solution, /indiviai)'
   : 'appletV snapshot ' + appletSpec.appletV + ' (bucket share, NOT live-repo) - edit-to-live needs uploadRoomApplet'
