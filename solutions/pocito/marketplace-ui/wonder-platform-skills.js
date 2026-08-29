@@ -8,7 +8,7 @@ const {
 } = dsls
 
 Doclet('evidenceVerification', {
-  title: 'הוכחת קיום — תהליך מלא', mark: 'הק', toolIds: ['t1', 't2', 't6'],
+  title: 'הוכחת קיום — תהליך מלא', mark: 'הק', icon: 'ShieldCheck', toolIds: ['t1', 't2', 't6'],
   description: 'פירוק טענה, איסוף ראיות, הצלבה וניסוח מסקנה.',
   impl: `# הוכחת קיום
 
@@ -39,7 +39,7 @@ Doclet('evidenceVerification.audit.he', {
 })
 
 Doclet('serviceSpecification', {
-  title: 'בניית מפרט שירות', mark: 'מש', toolIds: ['t2', 't3'],
+  title: 'בניית מפרט שירות', mark: 'מש', icon: 'FileText', toolIds: ['t2', 't3'],
   description: 'הפקת מפרט שירות מובנה ממקורות ארגוניים.',
   impl: `# בניית מפרט שירות
 
@@ -58,7 +58,7 @@ Doclet('serviceSpecification.regulated', {
 })
 
 Doclet('documentationGaps', {
-  title: 'איתור פערי תיעוד', mark: 'פת', toolIds: ['t2'],
+  title: 'איתור פערי תיעוד', mark: 'פת', icon: 'FileSearch', toolIds: ['t2'],
   description: 'השוואת מסמכים ואיתור מידע חסר או סותר.',
   impl: `# איתור פערי תיעוד
 
@@ -68,7 +68,7 @@ Doclet('documentationGaps', {
 })
 
 Doclet('operationalMetrics', {
-  title: 'חילוץ מדדים תפעוליים', mark: 'מת', toolIds: ['t6', 't4'],
+  title: 'חילוץ מדדים תפעוליים', mark: 'מת', icon: 'Gauge', toolIds: ['t6', 't4'],
   description: 'חילוץ, נרמול וסיכום מדדים מתוך דוחות תפעול.',
   impl: `# מדדים תפעוליים
 
@@ -91,8 +91,8 @@ Data('wonderPlatformSkillDefinitions', {
   impl: ({}, {}, {roomWUrl}) => ['evidenceVerification', 'serviceSpecification', 'documentationGaps', 'operationalMetrics'].map(id => {
     const comp = coreUtils.asComp(dsls['llm-guide'].doclet[id])
     const variants = Object.keys(dsls['llm-guide'].doclet).filter(variant => variant == id || variant.startsWith(`${id}.`))
-    return {id, name: comp.title, mark: comp.mark, desc: comp.description, version: '1.0.0', created: '08/2026', updated: 'פורסם',
-      toolIds: comp.toolIds || [], docletUrl: `${roomWUrl}/doclets/${id}`, variants,
+    return {id, name: comp.title, mark: comp.mark, icon: comp.icon, desc: comp.description, version: '1.0.0', created: '08/2026',
+      updated: 'פורסם', toolIds: comp.toolIds || [], docletUrl: `${roomWUrl}/doclets/${id}`, variants,
       categories: [...new Set(variants.flatMap(variant => variant.split('.').slice(1)))]}
   })
 })
