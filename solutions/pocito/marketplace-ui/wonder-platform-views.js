@@ -1,3 +1,4 @@
+import './wonder-platform-kit.js'
 import './wonder-platform-navigation.js'
 import './wonder-platform-catalog.js'
 import './wonder-platform-resource-editor.js'
