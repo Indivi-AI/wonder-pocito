@@ -165,24 +165,85 @@ Data('wonderPlatformUi', {
     primaryNav: [['plugins', 'PlugZap', 'פלאגינים']],
     libraryNav: [['skills', 'BookOpenText', 'מיומנויות'], ['tools', 'Wrench', 'כלים'], ['knowledge', 'Database', 'ידע'],
       ['evaluations', 'SquareCheckBig', 'אבלואציה']],
-    mobileNav: [['plugins', 'PlugZap', 'פלאגינים'], ['skills', 'BookOpenText', 'מיומנויות'], ['tools', 'Wrench', 'כלים'],
+    mobileNav: [['chat', 'MessageCircle', 'צ׳אט'], ['plugins', 'PlugZap', 'פלאגינים'],
+      ['skills', 'BookOpenText', 'מיומנויות'], ['tools', 'Wrench', 'כלים'],
       ['knowledge', 'Database', 'ידע'], ['evaluations', 'SquareCheckBig', 'אבלואציה']],
     labels: {plugins: 'פלאגין', skills: 'מיומנות', tools: 'כלי', subagents: 'סאב-אייג׳נט', knowledge: 'ידע', agents: 'סוכן',
       evaluations: 'סט אבלואציה'},
     ownerTabs: [['mine', 'שלי'], ['global', 'קטלוג גלובלי']],
     classes: {
-      button: 'inline-flex items-center justify-center gap-2 rounded-[10px] border border-[#e8e8ea] bg-white px-3 py-2 ' +
-        'text-[13px] font-medium text-[#2e2e2e] transition-colors hover:border-[#d8d8dc] hover:bg-[#fafafa] ' +
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f0f10] focus-visible:ring-offset-2',
-      primary: 'inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#0f0f10] px-3.5 py-2 text-[13px] ' +
-        'font-medium text-white transition-opacity hover:opacity-85 disabled:opacity-30 ' +
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f0f10] focus-visible:ring-offset-2',
-      field: 'mt-1.5 w-full rounded-[10px] border border-[#e8e8ea] bg-white px-3 py-2 text-[13px] text-[#0f0f10] ' +
-        'outline-none transition-colors placeholder:text-[#6b7280] focus:border-[#c9c9ce] ' +
-        'focus-visible:ring-2 focus-visible:ring-[#0f0f10] focus-visible:ring-offset-2',
-      card: 'rounded-xl border border-[#e8e8ea] bg-white p-4 transition-colors ' +
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f0f10] focus-visible:ring-offset-2',
-      chip: 'rounded-md border border-[#e8e8ea] px-2 py-0.5 text-[11px] font-medium text-[#6b6b6f]'
+      page: 'min-h-screen min-w-0 flex-1 bg-[var(--wp-surface)] pb-24 sm:pb-0',
+      content: 'mx-auto w-full max-w-[1180px] px-6 sm:px-8',
+      h1: 'text-[22px] font-semibold leading-[1.25] text-[var(--wp-ink)]',
+      h2: 'text-[15px] font-semibold text-[var(--wp-ink)]',
+      h3: 'text-[14px] font-semibold text-[var(--wp-ink)]',
+      body: 'text-[14px] leading-[1.65] text-[var(--wp-ink-2)]',
+      meta: 'text-[12px] text-[var(--wp-ink-3)]',
+      mono: 'wp-num text-[11px] text-[var(--wp-ink-3)]',
+      button: 'inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-[8px] border border-[var(--wp-border)] ' +
+        'bg-[var(--wp-surface)] px-3 text-[13px] font-medium text-[var(--wp-ink)] transition-colors ' +
+        'hover:border-[var(--wp-border-strong)] hover:bg-[var(--wp-surface-2)] disabled:pointer-events-none disabled:opacity-40',
+      primary: 'inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-[8px] bg-[var(--wp-ink)] px-3.5 ' +
+        'text-[13px] font-medium text-white transition-colors hover:bg-[var(--wp-ink-hover)] ' +
+        'disabled:pointer-events-none disabled:bg-[var(--wp-border-strong)]',
+      ghost: 'inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-[8px] px-2.5 text-[13px] font-medium ' +
+        'text-[var(--wp-ink-2)] transition-colors hover:bg-[var(--wp-surface-3)] hover:text-[var(--wp-ink)]',
+      icon: 'grid h-8 w-8 shrink-0 place-items-center rounded-[8px] text-[var(--wp-ink-2)] transition-colors ' +
+        'hover:bg-[var(--wp-surface-3)] hover:text-[var(--wp-ink)] disabled:pointer-events-none disabled:opacity-40',
+      danger: 'inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-[8px] bg-[var(--wp-danger)] px-3.5 ' +
+        'text-[13px] font-medium text-white transition-opacity hover:opacity-90',
+      label: 'block text-[13px] font-medium text-[var(--wp-ink)]',
+      help: 'mt-1 text-[12px] leading-[1.5] text-[var(--wp-ink-3)]',
+      fieldBare: 'h-9 w-full rounded-[8px] border border-[var(--wp-border)] bg-[var(--wp-surface)] px-3 text-[13px] ' +
+        'text-[var(--wp-ink)] outline-none transition-colors placeholder:text-[var(--wp-ink-4)] ' +
+        'wp-noring hover:border-[var(--wp-border-strong)] focus:border-[var(--wp-ink-4)]',
+      field: 'mt-1.5 h-9 w-full rounded-[8px] border border-[var(--wp-border)] bg-[var(--wp-surface)] px-3 text-[13px] ' +
+        'text-[var(--wp-ink)] outline-none transition-colors placeholder:text-[var(--wp-ink-4)] ' +
+        'wp-noring hover:border-[var(--wp-border-strong)] focus:border-[var(--wp-ink-4)]',
+      area: 'mt-1.5 w-full rounded-[8px] border border-[var(--wp-border)] bg-[var(--wp-surface)] px-3 py-2 text-[13px] ' +
+        'leading-[1.6] text-[var(--wp-ink)] outline-none transition-colors placeholder:text-[var(--wp-ink-4)] ' +
+        'wp-noring hover:border-[var(--wp-border-strong)] focus:border-[var(--wp-ink-4)]',
+      card: 'rounded-[12px] border border-[var(--wp-border)] bg-[var(--wp-surface)] p-4 transition-colors',
+      panel: 'rounded-[12px] border border-[var(--wp-border)] bg-[var(--wp-surface)]',
+      inset: 'rounded-[8px] border border-[var(--wp-border)] bg-[var(--wp-surface-2)]',
+      row: 'group flex w-full items-center gap-3 px-3 text-right transition-colors hover:bg-[var(--wp-surface-2)]',
+      divider: 'border-t border-[var(--wp-border)]',
+      chip: 'inline-flex items-center gap-1 rounded-[6px] border border-[var(--wp-border)] bg-[var(--wp-surface-2)] ' +
+        'px-1.5 py-[3px] text-[11px] font-medium text-[var(--wp-ink-3)]',
+      badge: 'inline-flex items-center gap-1 rounded-full bg-[var(--wp-surface-3)] px-2 py-[3px] text-[11px] ' +
+        'font-medium text-[var(--wp-ink-2)]',
+      segment: 'inline-flex items-center gap-0.5 rounded-[8px] border border-[var(--wp-border)] bg-[var(--wp-surface-2)] p-[3px]',
+      tab: 'rounded-[6px] px-2.5 py-1 text-[13px] font-medium text-[var(--wp-ink-3)] transition-colors hover:text-[var(--wp-ink)]',
+      tabOn: 'rounded-[6px] bg-[var(--wp-surface)] px-2.5 py-1 text-[13px] font-medium text-[var(--wp-ink)] shadow-[var(--wp-sh-1)]',
+      overlay: 'fixed inset-0 z-[90] grid place-items-center bg-[rgb(9_9_11/0.36)] p-4',
+      dialog: 'w-full rounded-[12px] border border-[var(--wp-border)] bg-[var(--wp-surface)] shadow-[var(--wp-sh-2)]'
     }
   })
+})
+
+Data('wonderPlatformCss', {
+  impl: () => `@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300..700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+:root {
+  --wp-canvas: #f3f3f4; --wp-surface: #ffffff; --wp-surface-2: #fafafa; --wp-surface-3: #f1f1f3;
+  --wp-border: #e5e5e8; --wp-border-strong: #d2d2d8;
+  --wp-ink: #111114; --wp-ink-hover: #2c2c33; --wp-ink-2: #3f3f46; --wp-ink-3: #5c5c66; --wp-ink-4: #71717a;
+  --wp-danger: #b3261e; --wp-danger-soft: #fdf1f0;
+  --wp-warn: #8a5a12; --wp-warn-soft: #fdf4e6;
+  --wp-sh-1: 0 1px 2px rgb(17 17 19 / 0.06);
+  --wp-sh-2: 0 20px 44px -16px rgb(17 17 19 / 0.28), 0 1px 2px rgb(17 17 19 / 0.06);
+}
+.wp-app { font-family: 'Assistant', system-ui, sans-serif; letter-spacing: normal; -webkit-font-smoothing: antialiased;
+  caret-color: var(--wp-ink); scrollbar-color: var(--wp-border-strong) transparent; }
+.wp-app :focus-visible { outline: 1px solid var(--wp-ink-4); outline-offset: 2px; border-radius: 8px; }
+.wp-app .wp-noring:focus-visible { outline: none; }
+.wp-app ::selection { background: var(--wp-surface-3); color: var(--wp-ink); }
+.wp-num { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+.wp-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+.wp-scroll::-webkit-scrollbar-track { background: transparent; }
+.wp-scroll::-webkit-scrollbar-thumb { background: var(--wp-border-strong); border: 3px solid transparent;
+  background-clip: content-box; border-radius: 99px; }
+.wp-scroll::-webkit-scrollbar-thumb:hover { background: var(--wp-ink-4); border: 3px solid transparent; background-clip: content-box; }
+@keyframes wp-skel { 0%, 100% { opacity: .5 } 50% { opacity: 1 } }
+.wp-skel { background: var(--wp-surface-3); border-radius: 6px; animation: wp-skel 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .wp-app * { animation-duration: .01ms !important; transition-duration: .01ms !important } }`
 })

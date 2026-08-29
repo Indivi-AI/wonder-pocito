@@ -1,19 +1,26 @@
 import { dsls } from '@jb6/core'
 import '@jb6/react'
+import './wonder-platform-domain.js'
+import './wonder-platform-kit.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
 ReactComp('wonderPlatformSearchableSelect', {
   impl: comp({
-    hFunc: (ctx, {react: {h, useState, useEffect, useRef}}) =>
-      ({items, value, onChange, placeholder, empty, testId, multi, bare, icon, label, card}) => {
-      const [open, setOpen] = useState(false), [query, setQuery] = useState('')
-      const ref = useRef()
+    hFunc: (ctx, {react: {h, hh, useState, useEffect, useRef}}) =>
+      ({items, value, onChange, placeholder, empty, testId, multi, bare, icon, label, card, full}) => {
+      const {classes} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
+      const [open, setOpen] = useState(false), [query, setQuery] = useState(''), [rect, setRect] = useState()
+      const ref = useRef(), toggle = () => (setRect(ref.current.getBoundingClientRect()), setOpen(!open))
       useEffect(() => {
         if (!open) return
         const close = event => { if (!ref.current?.contains(event.target)) setOpen(false) }
+        const dismiss = () => setOpen(false)
         document.addEventListener('pointerdown', close)
-        return () => document.removeEventListener('pointerdown', close)
+        window.addEventListener('scroll', close, true)
+        window.addEventListener('resize', dismiss)
+        return () => { document.removeEventListener('pointerdown', close)
+          window.removeEventListener('scroll', close, true), window.removeEventListener('resize', dismiss) }
       }, [open])
       const chosen = multi ? (value || []) : [], selected = multi ? null : items.find(item => item.id == value)
       const isChosen = item => multi ? chosen.includes(item.id) : item.id == value
@@ -23,58 +30,50 @@ ReactComp('wonderPlatformSearchableSelect', {
         ? onChange(chosen.includes(id) ? chosen.filter(entry => entry != id) : [...chosen, id])
         : (onChange(id), setOpen(false), setQuery(''))
       const chosenItem = id => items.find(item => item.id == id)
-      const mark = item => h('span:grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#f4f4f5] ' +
-        'text-[10px] font-bold text-[#0f0f10]', {key: 'mark'},
-        item?.icon ? h(`L:${item.icon}`, {size: 12}) : (item?.mark || '·'))
-      const row = item => h(`div:flex cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-sm hover:bg-[#fafafa]${
-        isChosen(item) ? ' bg-[#f7f7f8] font-semibold text-[#0f0f10]' : ''}`, {key: item.id,
+      const mark = item => hh(ctx, dsls.react['react-comp'].wonderPlatformMark,
+        {key: 'mark', icon: item?.icon, text: item?.mark, size: 'sm'})
+      const row = item => h(`div:flex cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-[13px] hover:bg-[var(--wp-surface-2)]${
+        isChosen(item) ? ' bg-[var(--wp-surface-3)] font-semibold text-[var(--wp-ink)]' : ''}`, {key: item.id,
         onMouseDown: event => event.preventDefault(), onClick: () => pick(item.id)},
       mark(item), h('span:flex-1 truncate', {}, item.name),
-      isChosen(item) && h('L:Check', {size: 14, className: 'shrink-0 text-[#0f0f10]'}))
-      const dropdown = open && h('div:absolute z-20 mt-2 w-full min-w-[260px] overflow-hidden rounded-2xl border ' +
-        'border-[#e8e8ea] bg-white shadow-[0_16px_40px_rgba(0,0,0,0.14)]', {},
-        h('input:w-full border-b border-[#e8e8ea] px-3.5 py-2.5 text-sm outline-none', {value: query, autoFocus: true,
+      isChosen(item) && h('L:Check', {size: 14, className: 'shrink-0 text-[var(--wp-ink)]'}))
+      const view = document.documentElement, below = rect ? view.clientHeight - rect.bottom : 0, above = rect ? rect.top : 0
+      const up = below < 260 && above > below
+      const dropdown = open && rect && h(`div:${classes.panel} fixed z-[80] flex flex-col overflow-hidden shadow-[var(--wp-sh-2)]`,
+        {style: {right: view.clientWidth - rect.right, minWidth: Math.max(rect.width, 260), maxWidth: view.clientWidth - 24,
+          maxHeight: Math.min(360, (up ? above : below) - 12), ...(up ? {bottom: view.clientHeight - rect.top + 6} : {top: rect.bottom + 6})}},
+        h('input:w-full shrink-0 border-b border-[var(--wp-border)] px-3.5 py-2.5 text-[13px] outline-none ' +
+          'wp-noring', {value: query, autoFocus: true,
           placeholder: 'חיפוש…', onInput: event => setQuery(event.target.value)}),
-        h('div:max-h-64 overflow-y-auto', {}, !multi && h('div:cursor-pointer px-3.5 py-2.5 text-sm text-[#6b6b6f] ' +
-          'hover:bg-[#fafafa]', {onMouseDown: event => event.preventDefault(), onClick: () => pick('')},
+        h('div:min-h-0 flex-1 overflow-y-auto wp-scroll', {}, !multi && h('div:cursor-pointer px-3.5 py-2.5 text-[13px] text-[var(--wp-ink-3)] ' +
+          'hover:bg-[var(--wp-surface-2)]', {onMouseDown: event => event.preventDefault(), onClick: () => pick('')},
           empty || 'ללא בחירה'),
-        filtered.map(row), filtered.length == 0 && h('div:px-3.5 py-2.5 text-xs text-[#6b6b6f]', {}, 'אין תוצאות')),
-        multi && h('button:w-full border-t border-[#e8e8ea] px-3.5 py-2.5 text-xs font-medium text-[#0f0f10] ' +
-          'hover:bg-[#fafafa]', {onClick: () => (setOpen(false), setQuery(''))}, 'סיום'))
+        filtered.map(row), filtered.length == 0 && h('div:px-3.5 py-2.5 text-[12px] text-[var(--wp-ink-3)]', {}, 'אין תוצאות')),
+        multi && h('button:w-full shrink-0 border-t border-[var(--wp-border)] px-3.5 py-2.5 text-[12px] font-medium text-[var(--wp-ink)] ' +
+          'hover:bg-[var(--wp-surface-2)]', {onClick: () => (setOpen(false), setQuery(''))}, 'סיום'))
       if (card) {
-        const filled = multi ? chosen.length > 0 : !!selected
-        return h('div:relative', {ref}, h(`button:flex w-full min-h-[136px] flex-col items-center justify-center ` +
-          `gap-2.5 rounded-2xl border p-4 text-center transition-all duration-150 shadow-[0_2px_8px_rgba(0,0,0,0.04)] ` +
-          `hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(0,0,0,0.10)] ${filled
-            ? 'border-[#d8d8dc] bg-[#f7f7f8]' : 'border-dashed border-[#d8d8dc] bg-white hover:border-[#b8b8bd]'}`,
-          {type: 'button', 'data-testid': testId, onClick: () => setOpen(!open)},
-          h(`span:grid h-11 w-11 shrink-0 place-items-center rounded-full ${filled ? 'bg-white' : 'bg-[#f4f4f5]'}`,
-            {}, h(`L:${icon || 'Plus'}`, {size: 19, className: filled ? 'text-[#0f0f10]' : 'text-[#6b6b6f]'})),
-          h('span:text-[13px] font-semibold text-[#0f0f10]', {}, label),
-          filled
-            ? h('span:flex w-full flex-wrap items-center justify-center gap-1', {},
-                multi ? chosen.map(id => h('span:flex max-w-full items-center gap-1 rounded-md bg-white py-1 pe-2 ps-1.5 ' +
-                  'text-[11.5px] font-medium leading-snug text-[#2e2e2e] shadow-[0_1px_2px_rgba(0,0,0,0.06)]', {key: id},
-                  chosenItem(id)?.icon && h(`L:${chosenItem(id).icon}`, {size: 11, className: 'shrink-0'}),
-                  h('span:break-words', {}, chosenItem(id)?.name || id)))
-                  : h('span:flex max-w-full items-center gap-1 rounded-md bg-white py-1 pe-2 ps-1.5 text-[11.5px] ' +
-                    'font-medium leading-snug text-[#2e2e2e] shadow-[0_1px_2px_rgba(0,0,0,0.06)]', {},
-                    selected?.icon && h(`L:${selected.icon}`, {size: 11, className: 'shrink-0'}),
-                    h('span:break-words', {}, selected?.name)))
-            : h('span:text-[11px] font-medium text-[#8a8a8f]', {}, placeholder || 'הוספה')),
-          dropdown)
+        const count = multi ? chosen.length : (selected ? 1 : 0)
+        return h('div:relative', {ref}, h(`button:flex h-9 ${full ? 'w-full' : 'w-[184px]'} items-center gap-2 ` +
+          'rounded-full border px-3 ' +
+          `text-[13px] transition-colors ${count ? 'border-[var(--wp-border-strong)] bg-[var(--wp-surface-3)]'
+            : 'border-dashed border-[var(--wp-border-strong)] hover:bg-[var(--wp-surface-2)]'}`,
+        {type: 'button', 'data-testid': testId, onClick: toggle},
+        h(`L:${icon || 'Plus'}`, {size: 14, className: 'shrink-0 text-[var(--wp-ink-4)]'}),
+        h('span:min-w-0 flex-1 truncate text-start font-medium text-[var(--wp-ink)]', {}, label),
+        count ? h('span:wp-num shrink-0 text-[12px] text-[var(--wp-ink-3)]', {}, count)
+          : h('L:Plus', {size: 13, className: 'shrink-0 text-[var(--wp-ink-4)]'})), dropdown)
       }
       const triggerLabel = multi ? placeholder : (selected?.name || placeholder)
-      return h('div:relative', {ref}, h(`button:flex w-full items-center justify-between gap-2 px-3.5 py-3 text-sm ${
-        bare ? '' : 'rounded-2xl border border-[#e8e8ea] bg-[#fafafa] shadow-[0_1px_2px_rgba(0,0,0,0.03)]'} ` +
-        'transition-colors hover:border-[#c9c9ce]', {type: 'button', 'data-testid': testId, onClick: () => setOpen(!open)},
+      return h('div:relative', {ref}, h(`button:flex w-full items-center justify-between gap-2 px-3.5 py-3 text-[13px] ${
+        bare ? '' : 'rounded-[12px] border border-[var(--wp-border)] bg-[var(--wp-surface-2)] shadow-[var(--wp-sh-1)]'} ` +
+        'transition-colors hover:border-[var(--wp-border-strong)]', {type: 'button', 'data-testid': testId, onClick: toggle},
       multi && chosen.length
         ? h('span:flex flex-1 flex-wrap items-center gap-1.5', {}, chosen.map(id => h('span:flex items-center gap-1 ' +
-          'rounded-md bg-[#f4f4f5] py-0.5 pe-2 ps-1 text-xs', {key: id}, mark(chosenItem(id)), chosenItem(id)?.name || id)))
+          'rounded-[8px] bg-[var(--wp-surface-3)] py-0.5 pe-2 ps-1 text-[12px]', {key: id}, mark(chosenItem(id)), chosenItem(id)?.name || id)))
         : !multi && selected
           ? h('span:flex flex-1 items-center gap-2 truncate', {}, mark(selected), selected.name)
-          : h('span:truncate text-[#8a8a8f]', {}, triggerLabel || 'בחירה'),
-      h('L:ChevronDown', {size: 14, className: 'shrink-0 text-[#6b6b6f]'})), dropdown)
+          : h('span:truncate text-[var(--wp-ink-4)]', {}, triggerLabel || 'בחירה'),
+      h('L:ChevronDown', {size: 14, className: 'shrink-0 text-[var(--wp-ink-3)]'})), dropdown)
     }
   })
 })
