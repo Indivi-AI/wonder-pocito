@@ -30,3 +30,5 @@ solutions/pocito/.local-data/
 solutions/pocito/on-prem/litellm/config.local.yaml
 
 solutions/pocito/flapi-mock/node_modules/
+# Playwright MCP generated artifacts
+.playwright-mcp/
