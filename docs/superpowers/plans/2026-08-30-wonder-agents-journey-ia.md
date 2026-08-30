@@ -39,7 +39,8 @@
 | D11 | **`נסה` and `בדיקה` drive the side panel**, they do not replace the main column. Selecting them opens the panel on the matching tab while the main column keeps showing capabilities. | |
 | D12 | **Chat context board keeps all four multi-selects**, grouped under a small "חיבורים נוספים" label. | |
 | D13 | **One Create Agent experience.** Home's "צור סוכן" and the Agents catalog's "סוכן חדש" run the identical journey. | |
-| D14 | **Breadcrumb collapse = truncate each crumb, then middle-ellipsis** into a `…` menu once the row still overflows. | |
+| D14 | ~~Breadcrumb collapse = truncate each crumb, then middle-ellipsis into a `…` menu.~~ **SUPERSEDED by D22.** | |
+| D22 | **No breadcrumb collapse.** All crumbs render; the row scrolls horizontally when it overflows. The `…` middle-ellipsis menu is removed. | The user reviewed the running build and asked for the collapse to be removed. This overrides D14. Reviewers must not report its absence as a defect. |
 | D15 | **Catalog nav group is open iff the current view is a catalog view.** | Keeps the 15 existing `click('כלים')`-style test call sites green, and is the correct behavior anyway. |
 | D16 | Component named `wonderPlatformJourney`, not `wonderPlatformBuilder`. State field named `createdInJourney`. | |
 | D17 | **Name first, then straight into capabilities.** Step 1 takes the agent's name; `המשך` lands on the capabilities step. Instructions move after capabilities. | Added after the user tested the live build and found the plugin was not the obvious first move. |
