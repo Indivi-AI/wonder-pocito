@@ -434,7 +434,7 @@ Test('wonderPlatform.moduleContracts', {
       'data<common>wonderPlatformMarketplaceDetail', 'data<common>wonderPlatformFlapiPackage',
       'data<common>wonderPlatformAgentOsRequest', 'data<common>wonderPlatformAgentOsRun',
       'workflow<ai>wonderPlatformAgent', 'react-comp<react>wonderPlatformNavigation', 'react-comp<react>wonderPlatformCatalog',
-      'react-comp<react>wonderPlatformAttachPicker', 'react-comp<react>wonderPlatformResourceEditor',
+      'react-comp<react>wonderPlatformAttachPicker', 'react-comp<react>wonderPlatformJourney',
       'react-comp<react>wonderPlatformWizard',
       'react-comp<react>wonderPlatformWorkspace', 'react-comp<react>wonderPlatformChat',
       'react-comp<react>wonderPlatformEvaluation', 'react-comp<react>wonderPlatform'].every(id => coreUtils.compByFullId(id))}),
@@ -778,13 +778,28 @@ Test('wonderPlatform.workspaceSavesOnlyFromButton', {
       waitForText('אנליסט הוכחת קיום'),
       click('אנליסט הוכחת קיום'),
       wonderPlatformSetControl({selector: '[aria-label="display_name"]', value: 'פלאגין שנשמר'}),
-      click('aria-label="שמירת סביבת עבודה"'),
+      click('aria-label="שמירת המסע"'),
       waitForText('נשמר'),
       click('aria-label="חזרה לפלאגינים"'),
       waitForText('פלאגין שנשמר')
     ),
     logger: 'uiLogger'
   })
+})
+
+Test('wonderPlatform.journeyBreadcrumb', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(),
+    and(contains('אנליסט הוכחת קיום'), contains('מיומנות חדשה'), notContains('סביבת עבודה')), {
+    userActions: actions(
+      waitForText('אנליסט הוכחת קיום'),
+      click('אנליסט הוכחת קיום'),
+      waitForText('חיבורים'),
+      click('חיבורים'),
+      wonderPlatformClickInSection('מיומנויות', 'הוספת'),
+      waitForText('אישור בחירה'),
+      click('מיומנות חדשה'),
+      waitForText('שמירה וחזרה לאנליסט הוכחת קיום')),
+    logger: 'uiLogger'})
 })
 
 Test('wonderPlatform.stackDeepDirtyGuard', {
@@ -989,4 +1004,11 @@ Test('wonderPlatform.marketplaceUiAgentE2e', {
     setup: wonderPlatformMarketplaceE2eSetup(),
     timeout: 120000
   })
+})
+
+Test('wonderPlatform.chatBoardGroupsExtras', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(),
+    and(contains('במה נתחיל?'), contains('חיבורים נוספים'), contains('התחלות מהירות')), {
+    userActions: actions(waitForText('פלאגין חדש'), click('שיחה חדשה'), waitForText('במה נתחיל?')),
+    logger: 'uiLogger'})
 })
