@@ -26,7 +26,8 @@ ReactComp('wonderPlatformWorkspace', {
       const savedConfig = runtimeConfig(workspace.item), [chatSessionId, setChatSessionId] = useState(`${workspace.item.id}-${Date.now()}`)
       const [sessionConfig, setSessionConfig] = useState(savedConfig), draftConfig = runtimeConfig(draft)
       const draftDirty = draftConfig != savedConfig, sessionOutdated = runs.length > 0 && sessionConfig != savedConfig
-      useEffect(() => { setDraft({...workspace.item}); setEvaluationId(workspace.item.evaluationId || ''); setStepId('general') }, [workspace.item])
+      useEffect(() => { setDraft({...workspace.item}); setEvaluationId(workspace.item.evaluationId || '') }, [workspace.item])
+      useEffect(() => { setStepId('general') }, [workspace.item.id])
       useEffect(() => { setDirty?.(draftDirty) }, [draftDirty])
       useEffect(() => {
         setRuns([]); setChatSessionId(`${workspace.item.id}-${Date.now()}`); setSessionConfig(runtimeConfig(workspace.item))
@@ -87,7 +88,7 @@ ReactComp('wonderPlatformWorkspace', {
               h('p:truncate text-[12px] leading-[1.5] text-[var(--wp-ink-3)]', {}, item.desc),
               managed && h('span:mt-0.5 block text-[11px] text-[var(--wp-ink-4)]',
                 {title: 'כלי מנוהל — לא ניתן לעריכה'}, 'Connector · MCP · מנוהל')),
-            !managed && h(`button:${classes.icon} opacity-0 group-hover:opacity-100`, {onClick: () => openEditor(resource, item),
+            !managed && h(`button:${classes.icon} opacity-0 group-hover:opacity-100`, {onClick: () => openEditor(resource, item, field),
               'aria-label': `עריכת ${item.name}`, title: `עריכת ${item.name}`}, h('L:Pencil', {size: 14})),
             h(`button:${classes.icon} opacity-0 hover:bg-[var(--wp-danger-soft)] hover:text-[var(--wp-danger)] group-hover:opacity-100`,
               {onClick: () => remove(id), 'aria-label': `הסרת ${item.name}`, title: `הסרת ${item.name}`}, h('L:X', {size: 14}))),
