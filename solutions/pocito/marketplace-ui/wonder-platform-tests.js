@@ -213,7 +213,13 @@ ReactComp('wonderPlatformAgentChatTestApp', {
   })
 })
 
-const { wonderPlatformAgentChatTestApp, wonderPlatformMarketplaceTestApp, wonderPlatformTestApp } = dsls.react['react-comp']
+ReactComp('wonderPlatformHomeTestApp', {
+  impl: wonderPlatform({loadRepo: wonderPlatformSeed(), saveRepo: dsls.common.data.wonderPlatformTestSave(),
+    defaultView: 'home'})
+})
+
+const { wonderPlatformAgentChatTestApp, wonderPlatformMarketplaceTestApp, wonderPlatformTestApp, wonderPlatformHomeTestApp } =
+  dsls.react['react-comp']
 
 Test('wonderPlatform.marketplaceApiRoutes', {
   impl: dataTest({
@@ -484,6 +490,13 @@ Test('wonderPlatform.navTiers', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(),
     and(contains('ניהול נכסים'), contains('סוכן חדש'), contains('בית')), {
     userActions: actions(waitForText('פלאגין חדש'), waitForText('ניהול נכסים')), logger: 'uiLogger'})
+})
+
+Test('wonderPlatform.homeLauncher', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformHomeTestApp(),
+    and(contains('מה נעשה היום?'), contains('צור סוכן'), contains('התחל שיחה'),
+      contains('סוכן תמיכת לקוחות B2B'), notContains('ארגז הכלים שעומד ברשות הסוכנים')), {
+    userActions: actions(waitForText('מה נעשה היום?')), logger: 'uiLogger'})
 })
 
 Test('wonderPlatform.marketplacePluginWorkspace', {
