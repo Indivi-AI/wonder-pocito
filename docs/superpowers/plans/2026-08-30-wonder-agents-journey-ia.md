@@ -46,6 +46,7 @@
 | D18 | **Guided but not gated.** Every step carries a primary `המשך` and a numbered progress rail; step tabs stay freely clickable. | Refines D4 rather than reversing it. |
 | D19 | **Not toyish.** No emoji, gradients, oversized illustration, celebratory microcopy, colour-coded stepper, or new animation. Monochrome `--wp-*` tokens and the existing radius/border scale only. | Binds Task 5's rail, choice panels and readiness bar. |
 | D20 | **The test drawer is reachable from every step.** The header panel toggle stays available throughout; `נסה` and `בדיקה` additionally open it on the matching tab. | Strengthens the round-3 decision that steps drive the panel. |
+| D21 | **The guidance continues inside the plugin.** A plugin frame gets the same guided treatment as the agent: its capabilities step leads with building or connecting Skills, Tools and Knowledge. One shared component renders both, parameterised by which resources are primary. | Without this the journey teaches "you need a plugin" and then drops the user into an unguided form — the exact complaint one level down. |
 
 ## File Structure
 
@@ -722,11 +723,37 @@ git commit -m "feat(journey): full-page frame chrome with breadcrumb, drop neste
 | 4 | `try` | נסה | Main column keeps showing the capabilities content; selecting the step opens the side panel on the test tab. |
 | 5 | `evaluate` | בדיקה | Same, opening the panel on the evaluation tab. |
 
-`plugins` and `subagents` keep their existing three steps (`general` / `instructions` / `connections`) with their existing labels, so their tests stay green.
+#### Step order for `plugins`
+
+Per D21 the plugin frame is guided the same way. `subagents` keep their existing three steps and labels untouched.
+
+| # | id | label | content |
+|---|---|---|---|
+| 1 | `identity` | מה הפלאגין עושה | Name as the hero field, descriptions under `פרטים נוספים`. `המשך` advances to `capabilities`. |
+| 2 | `capabilities` | יכולות | The centrepiece: build or connect Skills, Tools and Knowledge. |
+| 3 | `documentation` | תיעוד | The existing `README.md` textarea, unchanged content. |
+
+`marketplacePluginWorkspace` and `pluginWorkspace` reference the labels `חיבורים` and `הנחיות`; update those references to `יכולות` and `תיעוד`. `pluginWorkspace` is already red for an unrelated pre-existing reason — update its strings for consistency but do not chase its failure.
+
+#### One shared capabilities component
+
+Both step sets render the same registered component, `wonderPlatformCapabilityStep`, parameterised by which resources are primary. Writing it twice would guarantee the two levels drift apart.
+
+```js
+ReactComp('wonderPlatformCapabilityStep', {
+  impl: comp({
+    hFunc: (ctx, {react: {h, hh, useState}}) => ({item, update, repo, openPicker, buildNew, question, blurb, primary, secondary}) => { ... }
+  })
+})
+```
+
+`primary` and `secondary` are arrays of `[field, resource, label, blurb]`. For **agents**: primary is the single plugins row; secondary is skills, tools and knowledge. For **plugins**: primary is skills, tools and knowledge; secondary is empty and the `מתקדם · חיבור ישיר` disclosure is omitted entirely rather than rendered empty.
+
+`buildNew(resource, field)` opens a nested frame for a new child; `openPicker(field, resource, label)` opens the attach picker.
 
 #### The capabilities step
 
-When the agent has no plugins attached, the step leads with a single question and two side-by-side choice panels — restrained bordered surfaces, not tiles:
+**Agent, nothing attached.** One question, one explanatory line, and two side-by-side choice panels — restrained bordered surfaces using `classes.card`, not marketing tiles:
 
 ```
 מה הסוכן צריך לדעת לעשות?
@@ -737,13 +764,32 @@ When the agent has no plugins attached, the step leads with a single question an
 │  בניית פלאגין חדש         │  │  חיבור פלאגין קיים        │
 │  הגדירו יכולת חדשה        │  │  בחרו מתוך הקטלוג        │
 └──────────────────────────┘  └──────────────────────────┘
+
+מתקדם · חיבור ישיר של מיומנות, כלי או ידע          ⌄
 ```
 
-Build opens a nested plugin frame (`createNested`-equivalent through `openPicker`'s create path); connect opens the attach picker on `pluginIds`.
+The `מתקדם · חיבור ישיר` disclosure is a single collapsed text row — deliberately quieter than the panels, per the requirement that direct connection of other things be smaller and less inviting. It expands to the `skillIds`, `toolIds` and `knowledgeIds` relation groups, and starts expanded only if any of them is already non-empty. This is D2.
 
-Once at least one plugin is attached, the panels shrink to a single `הוספת פלאגין` row beneath the attached list, and the attached plugins render with their skills/tools/knowledge nested inline — reuse the recursive `buildNode` / `renderNode` shape from `wonder-platform-chat.js:24-43` rather than writing a second tree renderer.
+**Plugin, nothing attached.** Same shape, three primary rows instead of one pair of panels, because a plugin has three kinds of capability and three double-panels would be visual noise:
 
-Below the plugin area, a collapsed disclosure labelled `מתקדם · חיבור ישיר` holds the other three relation groups (`skillIds`, `toolIds`, `knowledgeIds`), collapsed by default when empty and expanded when any of them is non-empty. This is D2: direct attach stays available, visually secondary.
+```
+מה הפלאגין יודע לעשות?
+מיומנויות, כלים וידע הם אבני הבניין שהפלאגין מספק לסוכן.
+
+┌────────────────────────────────────────────────────────┐
+│ [icon] מיומנויות  תהליכי ביצוע למשימות   [בנה] [חבר]   │
+├────────────────────────────────────────────────────────┤
+│ [icon] כלים       פעולות מול מערכות      [בנה] [חבר]   │
+├────────────────────────────────────────────────────────┤
+│ [icon] ידע        מסמכים ומקורות מידע    [בנה] [חבר]   │
+└────────────────────────────────────────────────────────┘
+```
+
+One bordered panel, three divided rows, two small secondary-styled actions each. No `מתקדם` disclosure here — for a plugin these three *are* the primary work, so `secondary` is empty and the disclosure is omitted rather than rendered empty.
+
+**Either level, once something is attached.** The hero shrinks: attached items render first, each on its own row, and the build/connect affordances become a single quiet `הוספת …` row per resource beneath them. Attached plugins render with their skills, tools and knowledge nested inline — reuse the recursive `buildNode` / `renderNode` shape from `wonder-platform-chat.js:24-43` rather than writing a second tree renderer.
+
+`buildNew(resource, field)` pushes a nested frame for a new child, carrying `attachTo: {frameIndex, field}` so the child returns into the right parent slot. `openPicker(field, resource, label)` opens the attach picker. From an agent, building a plugin this way puts the user two frames deep — agent → plugin — and the plugin frame then presents its own capabilities step, which is the continuous journey the whole plan exists to produce.
 
 #### The progress rail
 
@@ -802,6 +848,25 @@ Test('wonderPlatform.agentJourneyReadinessNote', {
     logger: 'uiLogger'})
 })
 
+Test('wonderPlatform.pluginGuidanceContinuesFromAgent', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformHomeTestApp(),
+    and(contains('מה הפלאגין יודע לעשות?'), contains('מיומנויות'), contains('כלים'), contains('ידע')), {
+    userActions: actions(
+      waitForText('מה נעשה היום?'), click('צור סוכן'), waitForText('מי הסוכן'),
+      click('יכולות'), waitForText('מה הסוכן צריך לדעת לעשות?'),
+      click('בניית פלאגין חדש'), waitForText('מה הפלאגין יודע לעשות?')),
+    logger: 'uiLogger'})
+})
+
+Test('wonderPlatform.directConnectIsSecondary', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformHomeTestApp(),
+    and(contains('מתקדם · חיבור ישיר'), notContains('הוספת מיומנויות')), {
+    userActions: actions(
+      waitForText('מה נעשה היום?'), click('צור סוכן'), waitForText('מי הסוכן'),
+      click('יכולות'), waitForText('מה הסוכן צריך לדעת לעשות?')),
+    logger: 'uiLogger'})
+})
+
 Test('wonderPlatform.agentJourneyTestDrawerAlwaysReachable', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformHomeTestApp(),
     contains('הרצת ניסוי'), {
@@ -831,7 +896,23 @@ In `wonder-platform-wizard.js`, keep the existing plain tab row for step sets wi
 
 - [ ] **Step 4: Restructure the agent step set and build the capabilities hero**
 
-In `wonder-platform-workspace.js`, define the five agent steps in the order in the table above, with `identity` rendering the name hero plus the `פרטים נוספים` block, and `capabilities` rendering the two choice panels, the attached-plugin tree, and the collapsed `מתקדם · חיבור ישיר` disclosure. Keep `plugins` and `subagents` on their existing three steps.
+Create `wonderPlatformCapabilityStep` first, in its own file `solutions/pocito/marketplace-ui/wonder-platform-capability-step.js`, with the props listed above. Both step sets render it; do not inline two copies.
+
+Then in `wonder-platform-workspace.js` define the five agent steps and the three plugin steps per the tables above. `identity` renders the name hero plus the `פרטים נוספים` block. `capabilities` renders `wonderPlatformCapabilityStep` with:
+
+```js
+        // agents
+        {question: 'מה הסוכן צריך לדעת לעשות?', blurb: 'פלאגין אורז מיומנויות, כלים וידע ליחידה אחת שהסוכן יכול להשתמש בה.',
+          primary: [['pluginIds', 'plugins', 'פלאגין', 'הגדירו יכולת חדשה']],
+          secondary: [['skillIds', 'skills', 'מיומנויות'], ['toolIds', 'tools', 'כלים'], ['knowledgeIds', 'knowledge', 'ידע']]}
+        // plugins
+        {question: 'מה הפלאגין יודע לעשות?', blurb: 'מיומנויות, כלים וידע הם אבני הבניין שהפלאגין מספק לסוכן.',
+          primary: [['skillIds', 'skills', 'מיומנויות', 'תהליכי ביצוע למשימות'], ['toolIds', 'tools', 'כלים', 'פעולות מול מערכות'],
+            ['knowledgeIds', 'knowledge', 'ידע', 'מסמכים ומקורות מידע']],
+          secondary: []}
+```
+
+Keep `subagents` on their existing three steps and labels.
 
 Wire the step handler so `try` and `evaluate` open the panel:
 
