@@ -767,7 +767,7 @@ Test('wonderPlatform.chatRunsSelectedAgent', {
       waitForText('פלאגין חדש'),
       click('שיחה חדשה'),
       waitForText('הקשר השיחה'),
-      click('בחר סוכן'),
+      click('data-testid="agent-selector-board"'),
       waitForText('סוכן תמיכת לקוחות B2B'),
       click('סוכן תמיכת לקוחות B2B'),
       wonderPlatformSetControl({ placeholder: 'כתוב הודעה…', value: 'Question' }),
@@ -900,4 +900,3 @@ Test('wonderPlatform.marketplaceUiAgentE2e', {
     timeout: 120000
   })
 })
-
