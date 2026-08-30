@@ -11,12 +11,10 @@ const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 ReactComp('wonderPlatformWorkspace', {
   impl: comp({
     hFunc: (ctx, {react: {h, hh, useEffect, useState}}) => props => {
-      const {workspace, repo, back, saveWorkspace, deleteWorkspace, openPicker, openEditor, runTarget, runEval, update} = props
+      const {workspace, repo, openPicker, openEditor, runTarget, runEval, update, panelOpen, setPanelOpen, tab, setTab} = props
       const item = workspace.item
-      const {classes, labels, resources} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
-      const [panelOpen, setPanelOpen] = useState(() => ['plugins', 'agents'].includes(workspace.resource) || window.innerWidth >= 1600),
-        [confirmDelete, setConfirmDelete] = useState(false)
-      const [tab, setTab] = useState('test'), [testInput, setTestInput] = useState('')
+      const {classes, labels} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
+      const [testInput, setTestInput] = useState('')
       const [runs, setRuns] = useState([]), [evaluationId, setEvaluationId] = useState(item.evaluationId || '')
       const [evaluationRun, setEvaluationRun] = useState(), [detail, setDetail] = useState(-1)
       const [activeTab, setActiveTab] = useState('settings'), [stepId, setStepId] = useState('general')
@@ -211,38 +209,17 @@ ReactComp('wonderPlatformWorkspace', {
                 'text-[12px] text-[var(--wp-ink-3)]', {}, `הרצה אחרונה · ${lastRun.started} · ${lastRun.status}`,
               h('button:font-medium text-[var(--wp-ink)]', {onClick: () => (setPanelOpen(true), setTab('evaluation'))},
                 'היסטוריית הרצות'))))}]
-      const isAgent = ['agents', 'subagents'].includes(workspace.resource)
-      const isPlugin = workspace.resource == 'plugins'
-      const saveWorkspaceDisabled = !item.name?.trim() || !item.id?.trim()
-        || (isAgent && (!item.apiDescription?.trim() || !item.desc?.trim() || !item.instructions?.trim()))
-        || (isPlugin && (!item.apiDescription?.trim() || !item.desc?.trim() || !item.readme?.trim()))
-      const backLabels = {plugins: 'פלאגינים', subagents: 'סאב-אייג׳נטים', agents: 'סוכנים'}
-      return h(`main:${classes.page} overflow-x-clip`, {},
-        hh(ctx, dsls.react['react-comp'].wonderPlatformDetailHeader, {
-          title: item.name || `${targetLabel} חדש`, subtitle: item.id, icon: item.icon || resources[workspace.resource]?.icon,
-          back, backLabel: `חזרה ל${backLabels[workspace.resource]}`,
-          actions: [h(`button:${classes.icon} ${panelOpen ? 'bg-[var(--wp-surface-3)]' : ''}`,
-            {key: 'panel', onClick: () => setPanelOpen(!panelOpen), 'aria-expanded': panelOpen, title: 'הרצת ניסוי',
-              'aria-label': panelOpen ? 'סגירת פאנל הרצת ניסוי' : 'פתיחת פאנל הרצת ניסוי'}, h('L:MessageCircle', {size: 16})),
-          item.originalId && h(`button:${classes.icon} hover:bg-[var(--wp-danger-soft)] hover:text-[var(--wp-danger)]`,
-            {key: 'delete', onClick: () => setConfirmDelete(true), 'aria-label': `מחיקת ${item.name || targetLabel}`,
-              title: `מחיקת ${item.name || targetLabel}`}, h('L:Trash2', {size: 16})),
-          h(`button:${classes.primary}`, {key: 'save', disabled: saveWorkspaceDisabled,
-            onClick: () => saveWorkspace()}, 'שמירה')]}),
-      h('div:flex min-h-[calc(100vh-64px)] max-lg:block', {}, h(`section:min-w-0 flex-1 space-y-4 p-5 ${panelOpen ? 'lg:max-w-[58%]' : ''}`, {},
+      return h('div:flex min-h-full max-lg:block', {}, h(`section:min-w-0 flex-1 space-y-4 p-5 ${panelOpen ? 'lg:max-w-[58%]' : ''}`, {},
         hh(ctx, dsls.react['react-comp'].wonderPlatformWizard, {steps, activeId: stepId, onStep: setStepId})), panelOpen && h(
-        'aside:w-full shrink-0 self-start border-r border-[var(--wp-border)] bg-[var(--wp-surface-2)] lg:sticky lg:top-[64px] ' +
-          'lg:h-[calc(100vh-64px)] lg:w-[42%]', {}, h('div:flex items-center border-b border-[var(--wp-border)] bg-[var(--wp-surface)] p-3', {},
+        'aside:flex w-full shrink-0 flex-col self-start border-r border-[var(--wp-border)] bg-[var(--wp-surface-2)] ' +
+          'lg:sticky lg:top-0 lg:h-full lg:w-[42%]', {}, h('div:flex shrink-0 items-center border-b border-[var(--wp-border)] ' +
+          'bg-[var(--wp-surface)] p-3', {},
           h(`button:${classes.icon} ml-2`, {onClick: () => setPanelOpen(false), 'aria-label': 'סגירה', title: 'סגירת פאנל הרצת ניסוי'},
             h('L:X', {size: 15})),
           h(`div:${classes.segment}`, {}, [['test', 'הרצת ניסוי'], ['evaluation', 'אבלואציה']].map(([id, title]) => h(
             `button:${tab == id ? classes.tabOn : classes.tab}`, {key: id, onClick: () => setTab(id)}, title))),
           tab == 'test' && h('button:mr-auto text-[12px] text-[var(--wp-ink-3)]', {onClick: () => setRuns([])}, 'איפוס')),
-        h('div:h-[calc(100vh-125px)] max-lg:h-auto max-lg:min-h-[32rem]', {}, tab == 'test' ? testPanel : evalPanel))),
-      confirmDelete && hh(ctx, dsls.react['react-comp'].wonderPlatformDialog, {title: 'מחיקת פריט',
-        body: `למחוק לצמיתות את "${item.name || item.id}"? לא ניתן לשחזר פעולה זו.`, close: () => setConfirmDelete(false),
-        actions: [['מחיקה', () => (setConfirmDelete(false), deleteWorkspace()), 'danger'],
-          ['ביטול', () => setConfirmDelete(false)]]}))
+        h('div:min-h-0 flex-1 max-lg:h-auto max-lg:min-h-[32rem]', {}, tab == 'test' ? testPanel : evalPanel)))
     }
   })
 })
