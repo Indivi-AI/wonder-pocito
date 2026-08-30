@@ -246,6 +246,7 @@ ReactComp('wonderPlatform', {
         const saved = await saveTop(item)
         stackRef.current = []; setStack([]); await newConversation(saved.id)
       }
+      const finishAgent = async item => { const saved = await saveTop(item); setStack([]); await newConversation(saved.id) }
       const selectAgent = agentId => conversation.messages.length ? newConversation(agentId) : updateConversation({...conversation, agentId})
       const setContext = (field, value) => updateConversation({...conversation, [field]: value})
       const send = async () => {
