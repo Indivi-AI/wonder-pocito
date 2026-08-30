@@ -30,7 +30,7 @@ ReactComp('wonderPlatformJourney', {
   impl: comp({
     hFunc: (ctx, {react: {h, hh, useEffect, useRef, useState}}) => props => {
       const {stack, repo, popFrame, goToDepth, updateTop, saveTop, deleteTop, openPicker, openEditor,
-        loadPackage, saveAndRun, runningSet, runTarget, runEval, exit} = props
+        loadPackage, saveAndRun, runningSet, runTarget, runEval, finishAgent, exit} = props
       const {classes, labels, resources} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
       const [confirmDelete, setConfirmDelete] = useState(false)
       const active = stack.at(-1), {resource, item} = active, parent = stack.at(-2)
@@ -77,7 +77,7 @@ ReactComp('wonderPlatformJourney', {
             hh(ctx, dsls.react['react-comp'].wonderPlatformJourneyBar, {stack, goToDepth}))),
         h('div:wp-scroll min-h-0 flex-1 overflow-y-auto', {ref: bodyRef}, isComposite
           ? hh(ctx, dsls.react['react-comp'].wonderPlatformWorkspace, {workspace: active, repo,
-            openPicker, openEditor, runTarget, runEval, update: updateTop, panelOpen, setPanelOpen, tab, setTab})
+            openPicker, openEditor, runTarget, runEval, update: updateTop, panelOpen, setPanelOpen, tab, setTab, finishAgent})
           : h('div:mx-auto max-w-[820px] px-6 pb-24 pt-7', {},
             hh(ctx, dsls.react['react-comp'].wonderPlatformResourceFields,
               {resource, item, update: updateTop, repo, loadPackage, openPicker, saveAndRun, runningSet}))),
