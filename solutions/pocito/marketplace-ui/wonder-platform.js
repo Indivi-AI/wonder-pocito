@@ -214,6 +214,7 @@ ReactComp('wonderPlatform', {
         await persistRepo({...repo, conversations: [created, ...repo.conversations]})
         setConversationId(created.id); setMessage(''); openView('chat')
       }
+      const finishAgent = async item => { const saved = await saveTop(item); setStack([]); await newConversation(saved.id) }
       const selectAgent = agentId => conversation.messages.length ? newConversation(agentId) : updateConversation({...conversation, agentId})
       const setContext = (field, value) => updateConversation({...conversation, [field]: value})
       const send = async () => {
@@ -262,7 +263,7 @@ ReactComp('wonderPlatform', {
         openItem, openConversation: id => (setConversationId(id), openView('chat'))})
         : view == 'journey' && top ? hh(ctx, dsls.react['react-comp'].wonderPlatformJourney, {stack, repo,
           popFrame, goToDepth: index => requestLeave(() => setStack(stack.slice(0, index + 1))), updateTop, saveTop, deleteTop,
-          openPicker, openEditor, loadPackage, saveAndRun, runningSet, runTarget, runEval,
+          openPicker, openEditor, loadPackage, saveAndRun, runningSet, runTarget, runEval, finishAgent,
           exit: () => openView(stack[0].resource)})
           : view == 'chat' ? hh(ctx, dsls.react['react-comp'].wonderPlatformChat, {
             repo, conversation, message, setMessage, busy, send, selectAgent, setContext, model, setModel})
