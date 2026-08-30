@@ -15,8 +15,8 @@ tree mounted live, creates the buckets, smoke-checks everything, and prints your
 `claude mcp add ...` line for Claude Code.
 
 Your first applet: ask Claude Code (with the wonder MCP added) to call `uploadRoomApplet` with
-`{"roomId": "demo", "entryCompFullId": "react-comp<react>wonderPlatform"}`, then open
-`http://<your-host>:58045/room/demo/applet/wonderPlatform`. New applets are `.js` files under `solutions/pocito/` —
+`{"roomId": "demo", "entryCompFullId": "react-comp<react>wonderAgents"}`, then open
+`http://<your-host>:58045/room/demo/applet/wonderAgents`. New applets are `.js` files under `solutions/pocito/` —
 edits serve live, no rebuilds; after adding new server code run `docker compose restart wonder`.
 `./solutions/pocito/wonder-up.sh --clean` resets everything.
 
