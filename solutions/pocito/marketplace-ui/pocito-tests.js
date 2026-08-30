@@ -773,6 +773,24 @@ Test('wonderPlatform.stackDeepDirtyGuard', {
     logger: 'uiLogger'})
 })
 
+Test('wonderPlatform.workspaceEditSurvivesRelationAttach', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(),
+    contains('פלאגין שם חדש'), {
+    userActions: actions(
+      waitForText('אנליסט הוכחת קיום'),
+      click('אנליסט הוכחת קיום'),
+      waitForText('חיבורים'),
+      wonderPlatformSetControl({selector: '[aria-label="display_name"]', value: 'פלאגין שם חדש'}),
+      click('חיבורים'),
+      wonderPlatformClickInSection('מיומנויות', 'הוספת'),
+      waitForText('אישור בחירה'),
+      click('הוכחת קיום — תהליך מלא'),
+      click('אישור בחירה'),
+      wonderPlatformWaitForButtonGone('אישור בחירה'),
+      waitForText('פלאגין שם חדש')),
+    logger: 'uiLogger'})
+})
+
 Test('wonderPlatform.marketplaceAgentCreateRelations', {
   impl: reactTest({
     testedComp: wonderPlatformMarketplaceTestApp(),
