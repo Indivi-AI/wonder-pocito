@@ -753,6 +753,25 @@ Test('wonderPlatform.workspaceSavesOnlyFromButton', {
   })
 })
 
+Test('wonderPlatform.stackDeepDirtyGuard', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(),
+    contains('שינויים שלא נשמרו'), {
+    userActions: actions(
+      waitForText('אנליסט הוכחת קיום'),
+      click('אנליסט הוכחת קיום'),
+      waitForText('חיבורים'),
+      click('חיבורים'),
+      wonderPlatformClickInSection('מיומנויות', 'הוספת'),
+      waitForText('אישור בחירה'),
+      click('מיומנות חדשה'),
+      waitForText('שם להצגה'),
+      wonderPlatformSetControl({selector: '[aria-label="display_name"]', value: 'מיומנות לא שמורה'}),
+      click('aria-label="סגירה"'),
+      click('פלאגינים'),
+      waitForText('שינויים שלא נשמרו')),
+    logger: 'uiLogger'})
+})
+
 Test('wonderPlatform.marketplaceAgentCreateRelations', {
   impl: reactTest({
     testedComp: wonderPlatformMarketplaceTestApp(),
@@ -764,12 +783,12 @@ Test('wonderPlatform.marketplaceAgentCreateRelations', {
       click('סוכן חדש'),
       waitForText('חיבורים'),
       click('חיבורים'),
-      wonderPlatformClickInSection('מיומנויות', 'הוספה'),
+      wonderPlatformClickInSection('מיומנויות', 'הוספת'),
       waitForText('אישור בחירה'),
       click('מיומנות ראיות'),
       click('אישור בחירה'),
       wonderPlatformWaitForButtonGone('אישור בחירה'),
-      wonderPlatformClickInSection('פלאגינים', 'הוספה'),
+      wonderPlatformClickInSection('פלאגינים', 'הוספת'),
       waitForText('אישור בחירה'),
       click('פלאגין ראיות'),
       click('אישור בחירה'),
