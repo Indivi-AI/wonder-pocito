@@ -65,15 +65,14 @@ ReactComp('wonderPlatform', {
       const [repo, setRepo] = useState(), [loadError, setLoadError] = useState(), [search, setSearch] = useState('')
       const [stack, setStack] = useState([]), stackRef = useRef([])
       const [picker, setPicker] = useState(), [pendingLeave, setPendingLeave] = useState(), [saving, setSaving] = useState(false)
-      const viewRef = useRef(view), topDirtyRef = useRef(false)
-      stackRef.current = stack; viewRef.current = view
+      stackRef.current = stack
       const top = stack.at(-1)
       const frame = (resource, item, extra = {}) => ({resource, item, baseline: JSON.stringify(item), ...extra})
       const pushFrame = entry => setStack(current => [...current, entry])
       const popFrame = () => setStack(current => current.slice(0, -1))
       const updateTop = value => setStack(current => current.map((entry, index) => index == current.length - 1
         ? {...entry, item: typeof value == 'function' ? value(entry.item) : value} : entry))
-      const stackDirty = () => topDirtyRef.current || stackRef.current.some(entry => JSON.stringify(entry.item) != entry.baseline)
+      const stackDirty = () => stackRef.current.some(entry => JSON.stringify(entry.item) != entry.baseline)
       const [conversationId, setConversationId] = useState('c1'), [message, setMessage] = useState(''), [busy, setBusy] = useState(false)
       const [model, setModel] = useState(globalThis.LLM_MODEL || '')   // '' = the deployment default (wonderPlatformModel chain)
       const [runningSet, setRunningSet] = useState(''), [notice, setNotice] = useState('')
@@ -163,8 +162,11 @@ ReactComp('wonderPlatform', {
         const skillResult = active.resource == 'skills' && !repo.marketplace && await publishEditedSkill(active.item)
         const saved = skillResult ? skillResult.saved : await saveItem(active.resource, active.item)
         if (!active.attachTo) {
-          setStack([frame(active.resource, {...saved, originalId: saved.id}, {createLabel: active.createLabel})])
-          flash('נשמר'); return saved
+          const savedFrame = frame(active.resource, {...saved, originalId: saved.id}, {createLabel: active.createLabel})
+          if (['plugins', 'subagents', 'agents'].includes(active.resource)) { setStack([savedFrame]); flash('נשמר') }
+          else if (active.resource == 'evaluations') { setStack([savedFrame]); flash('נשמר בקטלוג המשותף') }
+          else { setStack([]); setView(active.resource); flash('נשמר בקטלוג המשותף') }
+          return saved
         }
         setStack(rest.map((entry, index) => index == active.attachTo.frameIndex
           ? {...entry, item: {...entry.item, [active.attachTo.field]:
@@ -259,10 +261,9 @@ ReactComp('wonderPlatform', {
         createAgent: () => createItem('agents'), startChat: () => newConversation(),
         openItem, openConversation: id => (setConversationId(id), openView('chat'))})
         : view == 'journey' && top ? (['plugins', 'subagents', 'agents'].includes(top.resource)
-          ? hh(ctx, dsls.react['react-comp'].wonderPlatformWorkspace, {workspace: top, repo,
+          ? hh(ctx, dsls.react['react-comp'].wonderPlatformWorkspace, {workspace: top, repo, update: updateTop,
             back: () => stack.length > 1 ? popFrame() : openView(top.resource), saveWorkspace: saveTop,
-            deleteWorkspace: deleteTop, openPicker, openEditor, runTarget, runEval,
-            setDirty: value => topDirtyRef.current = value})
+            deleteWorkspace: deleteTop, openPicker, openEditor, runTarget, runEval})
           : hh(ctx, dsls.react['react-comp'].wonderPlatformResourcePage, {active: top, update: updateTop,
             save: () => saveTop(), deleteItem: deleteTop, back: () => stack.length > 1 ? popFrame() : openView(top.resource),
             repo, openPicker, loadPackage, saveAndRun, runningSet}))

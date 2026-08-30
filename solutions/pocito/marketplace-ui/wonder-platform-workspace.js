@@ -11,27 +11,26 @@ const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 ReactComp('wonderPlatformWorkspace', {
   impl: comp({
     hFunc: (ctx, {react: {h, hh, useEffect, useState}}) => props => {
-      const {workspace, repo, back, saveWorkspace, deleteWorkspace, openPicker, openEditor, runTarget, runEval, setDirty} = props
-      const {classes, labels, resources} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx), [draft, setDraft] = useState({...workspace.item})
+      const {workspace, repo, back, saveWorkspace, deleteWorkspace, openPicker, openEditor, runTarget, runEval, update} = props
+      const item = workspace.item
+      const {classes, labels, resources} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
       const [panelOpen, setPanelOpen] = useState(() => ['plugins', 'agents'].includes(workspace.resource) || window.innerWidth >= 1600),
         [confirmDelete, setConfirmDelete] = useState(false)
       const [tab, setTab] = useState('test'), [testInput, setTestInput] = useState('')
-      const [runs, setRuns] = useState([]), [evaluationId, setEvaluationId] = useState(workspace.item.evaluationId || '')
+      const [runs, setRuns] = useState([]), [evaluationId, setEvaluationId] = useState(item.evaluationId || '')
       const [evaluationRun, setEvaluationRun] = useState(), [detail, setDetail] = useState(-1)
       const [activeTab, setActiveTab] = useState('settings'), [stepId, setStepId] = useState('general')
-      const runtimeConfig = item => JSON.stringify(item)
+      const runtimeConfig = value => JSON.stringify(value)
       const refKinds = {plugin: 'פלאגין', skill: 'מיומנות', tool: 'כלי', subagent: 'סאב-אייג׳נט', knowledge: 'ידע', agent: 'סוכן'}
-      const refRows = item => Array.isArray(item.references) ? item.references : item.references?.references || []
+      const refRows = value => Array.isArray(value.references) ? value.references : value.references?.references || []
       const fieldLabel = (title, key) => [title, h(`span:mr-2 ${classes.mono}`, {key}, key)]
-      const savedConfig = runtimeConfig(workspace.item), [chatSessionId, setChatSessionId] = useState(`${workspace.item.id}-${Date.now()}`)
-      const [sessionConfig, setSessionConfig] = useState(savedConfig), draftConfig = runtimeConfig(draft)
-      const draftDirty = draftConfig != savedConfig, sessionOutdated = runs.length > 0 && sessionConfig != savedConfig
-      useEffect(() => { setDraft({...workspace.item}); setEvaluationId(workspace.item.evaluationId || '') }, [workspace.item])
-      useEffect(() => { setStepId('general') }, [workspace.item.id])
-      useEffect(() => { setDirty?.(draftDirty) }, [draftDirty])
+      const savedConfig = workspace.baseline, [chatSessionId, setChatSessionId] = useState(`${item.id}-${Date.now()}`)
+      const [sessionConfig, setSessionConfig] = useState(savedConfig)
+      const itemDirty = runtimeConfig(item) != savedConfig, sessionOutdated = runs.length > 0 && sessionConfig != savedConfig
       useEffect(() => {
-        setRuns([]); setChatSessionId(`${workspace.item.id}-${Date.now()}`); setSessionConfig(runtimeConfig(workspace.item))
-      }, [workspace.item.id])
+        setStepId('general'); setEvaluationId(item.evaluationId || '')
+        setRuns([]); setChatSessionId(`${item.id}-${Date.now()}`); setSessionConfig(runtimeConfig(item))
+      }, [item.id])
       const targetLabels = {plugins: 'הפלאגין', subagents: 'הסאב-אייג׳נט', agents: 'הסוכן'}, targetLabel = targetLabels[workspace.resource]
       const relationRows = workspace.resource == 'plugins' ? [['skillIds', 'skills', 'מיומנויות'], ['toolIds', 'tools', 'כלים'],
           ['knowledgeIds', 'knowledge', 'ידע']]
@@ -39,15 +38,15 @@ ReactComp('wonderPlatformWorkspace', {
           ['toolIds', 'tools', 'כלים'], ['knowledgeIds', 'knowledge', 'ידע']]
         : repo.marketplace ? [['pluginIds', 'plugins', 'פלאגינים'], ['skillIds', 'skills', 'מיומנויות'], ['toolIds', 'tools', 'כלים']]
         : [['skillIds', 'skills', 'מיומנויות'], ['toolIds', 'tools', 'כלים']]
-      const semanticTrace = dsls.common.data.wonderPlatformTrace.$runWithCtx(ctx, {repo, target: draft})
-      const lastRun = repo.evalRuns.filter(run => run.targetId == draft.id).sort((a, b) => b.startedAt - a.startedAt)[0]
+      const semanticTrace = dsls.common.data.wonderPlatformTrace.$runWithCtx(ctx, {repo, target: item})
+      const lastRun = repo.evalRuns.filter(run => run.targetId == item.id).sort((a, b) => b.startedAt - a.startedAt)[0]
       const sendTest = async input => {
         const text = input.trim()
         if (!text || runs.some(run => run.status == 'מריץ…')) return
         const id = `test-${Date.now()}`, pending = {id, input: text, status: 'מריץ…', trace: semanticTrace}
         setRuns(items => [...items, pending]); setTestInput('')
         try {
-          const result = await runTarget(text, draft, chatSessionId)
+          const result = await runTarget(text, item, chatSessionId)
           setRuns(items => items.map(run => run.id == id ? {...run, ...result, output: result.text || result.output, status: result.status || 'הושלם',
             trace: [...semanticTrace, ...(result.runtimeSteps || [])]} : run))
         } catch (error) {
@@ -55,17 +54,17 @@ ReactComp('wonderPlatformWorkspace', {
         }
       }
       const executeEval = async () => {
-        const evaluation = repo.evaluations.find(item => item.id == evaluationId)
+        const evaluation = repo.evaluations.find(value => value.id == evaluationId)
         if (!evaluation || evaluationRun?.status == 'מריץ…') return
-        setEvaluationRun({status: 'מריץ…', rows: []}); setEvaluationRun(await runEval(evaluation, workspace.resource, draft))
+        setEvaluationRun({status: 'מריץ…', rows: []}); setEvaluationRun(await runEval(evaluation, workspace.resource, item))
       }
       const groupHead = (title, count) => h('div:flex items-center gap-2 border-b border-[var(--wp-border)] ' +
         'bg-[var(--wp-surface-2)] px-4 py-2', {},
       h('span:text-[12px] font-semibold text-[var(--wp-ink-2)]', {}, title),
       count > 0 && h('span:wp-num text-[12px] text-[var(--wp-ink-4)]', {}, count))
       const relationGroup = ([field, resource, title]) => {
-        const items = draft[field] || []
-        const remove = id => setDraft({...draft, [field]: items.filter(value => value != id)})
+        const items = item[field] || []
+        const remove = id => update({...item, [field]: items.filter(value => value != id)})
         const missingRow = id => {
           const label = {skills: 'מיומנות', tools: 'כלי', knowledge: 'ידע', plugins: 'פלאגין'}[resource] || 'משאב'
           return h('div:flex items-start gap-3 px-4 py-2.5', {key: id},
@@ -98,7 +97,7 @@ ReactComp('wonderPlatformWorkspace', {
         }
         const addRow = h('button:flex w-full items-center gap-3 px-4 py-2.5 text-[13px] text-[var(--wp-ink-3)] ' +
           'transition-colors hover:bg-[var(--wp-surface-2)] hover:text-[var(--wp-ink)]',
-        {onClick: () => openPicker(field, resource, title, items, selected => setDraft({...draft, [field]: selected}))},
+        {onClick: () => openPicker(field, resource, title)},
         h('span:grid h-9 w-9 shrink-0 place-items-center rounded-[8px] border border-dashed ' +
           'border-[var(--wp-border-strong)]', {}, h('L:Plus', {size: 14})), `הוספת ${title}`)
         return h('div', {key: field}, groupHead(title, items.length),
@@ -108,10 +107,10 @@ ReactComp('wonderPlatformWorkspace', {
           }), addRow))
       }
       const newChat = () => {
-        if (draftDirty) return
-        setRuns([]); setChatSessionId(`${draft.id}-${Date.now()}`); setSessionConfig(savedConfig)
+        if (itemDirty) return
+        setRuns([]); setChatSessionId(`${item.id}-${Date.now()}`); setSessionConfig(savedConfig)
       }
-      const configNotice = draftDirty ? 'יש שינויי תצורה שלא נשמרו' : sessionOutdated
+      const configNotice = itemDirty ? 'יש שינויי תצורה שלא נשמרו' : sessionOutdated
         ? 'תצורת הפלאגין עודכנה — פתח שיחה חדשה' : 'שיחת AgentOS פעילה'
       const chatRun = run => h('div:space-y-3', {key: run.id}, h('div:flex justify-end', {}, h(
         'div:max-w-[85%] whitespace-pre-wrap break-words rounded-[12px] rounded-br-sm bg-[var(--wp-ink)] px-4 py-3 text-[13px] text-white',
@@ -127,8 +126,8 @@ ReactComp('wonderPlatformWorkspace', {
               `span:${classes.chip}`, {}, step.kind), h('span:flex-1', {}, step.title)))))))
       const testPanel = h('div:flex h-full flex-col', {}, h('div:flex items-center justify-between gap-3 border-b ' +
         'border-[var(--wp-border)] bg-[var(--wp-surface)] p-3', {},
-        h(`span:text-[12px] ${draftDirty || sessionOutdated ? 'text-amber-700' : 'text-[var(--wp-ink-3)]'}`, {}, configNotice), h(
-          `button:${classes.button}`, {disabled: draftDirty, onClick: newChat}, draftDirty ? 'שמור תחילה' : 'שיחה חדשה')),
+        h(`span:text-[12px] ${itemDirty || sessionOutdated ? 'text-amber-700' : 'text-[var(--wp-ink-3)]'}`, {}, configNotice), h(
+          `button:${classes.button}`, {disabled: itemDirty, onClick: newChat}, itemDirty ? 'שמור תחילה' : 'שיחה חדשה')),
       h('div:flex-1 space-y-5 overflow-y-auto wp-scroll p-4', {}, runs.length ? runs.map(chatRun)
         : hh(ctx, dsls.react['react-comp'].wonderPlatformEmpty, {icon: 'MessageCircle', compact: true,
           title: `התחל שיחה עם ${targetLabel}`})),
@@ -141,7 +140,7 @@ ReactComp('wonderPlatformWorkspace', {
           'hover:bg-[var(--wp-ink-hover)] disabled:bg-[var(--wp-border-strong)]', {disabled: !testInput.trim(),
           onClick: () => sendTest(testInput), 'aria-label': 'הרצה'}, h('L:ArrowUp', {size: 15}))),
       h('p:mt-2 text-[11px] text-[var(--wp-ink-3)]', {}, 'ההקשר נשמר לאורך השיחה ב-AgentOS')))
-      const shownRun = evaluationRun || repo.evalRuns.filter(run => run.evaluationId == evaluationId && run.targetId == draft.id)
+      const shownRun = evaluationRun || repo.evalRuns.filter(run => run.evaluationId == evaluationId && run.targetId == item.id)
         .sort((a, b) => b.startedAt - a.startedAt)[0]
       const evalRow = (row, index) => h(`article:${classes.panel} p-3`, {key: index},
         h('div:flex items-center gap-3', {}, h('b:font-mono text-[12px]', {}, String(index + 1).padStart(2, '0')),
@@ -162,51 +161,51 @@ ReactComp('wonderPlatformWorkspace', {
         h('span:text-[12px] text-[var(--wp-ink-3)]', {}, shownRun.started || 'עכשיו')), h('div:mt-4 space-y-2', {}, (shownRun.rows || []).map(evalRow))))
       const steps = [{id: 'general', label: 'כללי', render: () => h('div:space-y-4', {},
         h(`section:${classes.card} space-y-4`, {}, h(`label:${classes.label}`, {}, fieldLabel('שם להצגה', 'display_name'), h(
-          `input:${classes.field} font-semibold`, {value: draft.name || '',
-            placeholder: 'שם להצגה…', 'aria-label': 'display_name', onInput: event => setDraft({...draft, name: event.target.value})})),
+          `input:${classes.field} font-semibold`, {value: item.name || '',
+            placeholder: 'שם להצגה…', 'aria-label': 'display_name', onInput: event => update({...item, name: event.target.value})})),
         h(`label:${classes.label}`, {}, fieldLabel('מזהה', 'id'), h(
-          `input:${classes.field} font-mono`, {dir: 'ltr', value: draft.id || '',
-            placeholder: 'uiRenderingSkill', disabled: !!draft.originalId,
-            onInput: event => setDraft({...draft, id: event.target.value})})), h(`label:${classes.label}`, {},
+          `input:${classes.field} font-mono`, {dir: 'ltr', value: item.id || '',
+            placeholder: 'uiRenderingSkill', disabled: !!item.originalId,
+            onInput: event => update({...item, id: event.target.value})})), h(`label:${classes.label}`, {},
           fieldLabel('תיאור באנגלית', 'description'), h(`textarea:${classes.area}`, {
-            dir: 'ltr', value: draft.apiDescription || '', onInput: event => setDraft({...draft, apiDescription: event.target.value})})),
+            dir: 'ltr', value: item.apiDescription || '', onInput: event => update({...item, apiDescription: event.target.value})})),
         h(`label:${classes.label}`, {}, 'תיאור בעברית', h(
-          `textarea:${classes.area}`, {value: draft.desc || '',
-            onInput: event => setDraft({...draft, desc: event.target.value})}))),
-        draft._marketplace && h(`section:${classes.card}`, {}, h('div:flex flex-wrap items-center gap-2', {}, h('b:text-[13px]', {},
-          'Marketplace API'), h(`span:${classes.chip}`, {}, `${draft.versions?.length || 0} גרסאות`), h(`span:${classes.chip}`, {},
-            `${draft.audit?.length || 0} אירועי ביקורת`)), draft.references && h('div:mt-3 space-y-1.5', {},
-            refRows(draft).map(ref => h('div:flex items-center gap-2 text-[12px]', {key: `${ref.resource_type}-${ref.name}`},
+          `textarea:${classes.area}`, {value: item.desc || '',
+            onInput: event => update({...item, desc: event.target.value})}))),
+        item._marketplace && h(`section:${classes.card}`, {}, h('div:flex flex-wrap items-center gap-2', {}, h('b:text-[13px]', {},
+          'Marketplace API'), h(`span:${classes.chip}`, {}, `${item.versions?.length || 0} גרסאות`), h(`span:${classes.chip}`, {},
+            `${item.audit?.length || 0} אירועי ביקורת`)), item.references && h('div:mt-3 space-y-1.5', {},
+            refRows(item).map(ref => h('div:flex items-center gap-2 text-[12px]', {key: `${ref.resource_type}-${ref.name}`},
               h(`L:${ref.exists === false ? 'CircleAlert' : 'Check'}`, {size: 14,
                 className: ref.exists === false ? 'text-[var(--wp-danger)]' : 'text-[var(--wp-ink-3)]'}),
               h('span:font-medium text-[var(--wp-ink)]', {}, ref.name),
               h('span:text-[var(--wp-ink-3)]', {}, refKinds[ref.resource_type] || ref.resource_type))),
-            refRows(draft).length == 0 && h('span:text-[12px] text-[var(--wp-ink-3)]', {}, 'אין קישורים לפריטים אחרים')),
-          draft.references && h('details:mt-3', {}, h('summary:cursor-pointer text-[12px] font-semibold text-[var(--wp-ink)]', {},
+            refRows(item).length == 0 && h('span:text-[12px] text-[var(--wp-ink-3)]', {}, 'אין קישורים לפריטים אחרים')),
+          item.references && h('details:mt-3', {}, h('summary:cursor-pointer text-[12px] font-semibold text-[var(--wp-ink)]', {},
             'פרטים טכניים'),
             h('pre:mt-2 overflow-x-auto rounded-[12px] bg-[var(--wp-surface-2)] p-3 text-[12px]', {dir: 'ltr'},
-              JSON.stringify(draft.references, null, 2))),
-          draft.configYaml && h('details:mt-3', {}, h('summary:cursor-pointer text-[12px] font-semibold text-[var(--wp-ink)]', {},
+              JSON.stringify(item.references, null, 2))),
+          item.configYaml && h('details:mt-3', {}, h('summary:cursor-pointer text-[12px] font-semibold text-[var(--wp-ink)]', {},
             'config.yaml'),
-            h('pre:mt-2 max-w-full overflow-x-auto rounded-[12px] bg-[var(--wp-surface-2)] p-3 text-[12px]', {dir: 'ltr'}, draft.configYaml))))},
+            h('pre:mt-2 max-w-full overflow-x-auto rounded-[12px] bg-[var(--wp-surface-2)] p-3 text-[12px]', {dir: 'ltr'}, item.configYaml))))},
         {id: 'instructions', label: 'הנחיות', render: () => h('div:space-y-4', {},
           h(`section:${classes.card}`, {}, h('div:flex items-center justify-between', {}, h('b:text-[13px]', {}, ...(workspace.resource == 'plugins'
             ? fieldLabel('תיעוד', 'README.md') : fieldLabel('הנחיות מערכת', 'system_prompt'))),
           h('span:text-[11px] text-[var(--wp-ink-3)]', {}, `טקסט חופשי · ${workspace.resource == 'plugins'
-              ? draft.readme?.length || 0 : draft.instructions?.length || 0} תווים`)), h(
+              ? item.readme?.length || 0 : item.instructions?.length || 0} תווים`)), h(
             `textarea:${classes.area} min-h-44 leading-7`, {
-              value: workspace.resource == 'plugins' ? draft.readme || '' : draft.instructions || '',
-              onInput: event => setDraft({...draft, [workspace.resource == 'plugins' ? 'readme' : 'instructions']: event.target.value})})),
-          ['subagents', 'agents'].includes(workspace.resource) && !draft.originalId && h(`section:${classes.card}`, {},
+              value: workspace.resource == 'plugins' ? item.readme || '' : item.instructions || '',
+              onInput: event => update({...item, [workspace.resource == 'plugins' ? 'readme' : 'instructions']: event.target.value})})),
+          ['subagents', 'agents'].includes(workspace.resource) && !item.originalId && h(`section:${classes.card}`, {},
             h('b:text-[13px]', {}, 'README (creation only)'), h(
               `textarea:${classes.area} min-h-32`, {
-                value: draft.readme || '', onInput: event => setDraft({...draft, readme: event.target.value})})))},
+                value: item.readme || '', onInput: event => update({...item, readme: event.target.value})})))},
         {id: 'connections', label: 'חיבורים', render: () =>
           h(`section:${classes.panel} divide-y divide-[var(--wp-border)] overflow-hidden`, {},
             relationRows.map(relationGroup),
             h('div', {}, groupHead('סט אבלואציה מקושר'),
               hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {items: repo.evaluations,
-                value: draft.evaluationId || '', bare: true, onChange: id => setDraft({...draft, evaluationId: id}),
+                value: item.evaluationId || '', bare: true, onChange: id => update({...item, evaluationId: id}),
                 placeholder: 'ללא סט מקושר', empty: 'ללא סט מקושר'}),
               lastRun && h('div:flex items-center justify-between gap-3 border-t border-[var(--wp-border)] px-4 py-2.5 ' +
                 'text-[12px] text-[var(--wp-ink-3)]', {}, `הרצה אחרונה · ${lastRun.started} · ${lastRun.status}`,
@@ -214,22 +213,22 @@ ReactComp('wonderPlatformWorkspace', {
                 'היסטוריית הרצות'))))}]
       const isAgent = ['agents', 'subagents'].includes(workspace.resource)
       const isPlugin = workspace.resource == 'plugins'
-      const saveWorkspaceDisabled = !draft.name?.trim() || !draft.id?.trim()
-        || (isAgent && (!draft.apiDescription?.trim() || !draft.desc?.trim() || !draft.instructions?.trim()))
-        || (isPlugin && (!draft.apiDescription?.trim() || !draft.desc?.trim() || !draft.readme?.trim()))
+      const saveWorkspaceDisabled = !item.name?.trim() || !item.id?.trim()
+        || (isAgent && (!item.apiDescription?.trim() || !item.desc?.trim() || !item.instructions?.trim()))
+        || (isPlugin && (!item.apiDescription?.trim() || !item.desc?.trim() || !item.readme?.trim()))
       const backLabels = {plugins: 'פלאגינים', subagents: 'סאב-אייג׳נטים', agents: 'סוכנים'}
       return h(`main:${classes.page} overflow-x-clip`, {},
         hh(ctx, dsls.react['react-comp'].wonderPlatformDetailHeader, {
-          title: draft.name || `${targetLabel} חדש`, subtitle: draft.id, icon: draft.icon || resources[workspace.resource]?.icon,
+          title: item.name || `${targetLabel} חדש`, subtitle: item.id, icon: item.icon || resources[workspace.resource]?.icon,
           back, backLabel: `חזרה ל${backLabels[workspace.resource]}`,
           actions: [h(`button:${classes.icon} ${panelOpen ? 'bg-[var(--wp-surface-3)]' : ''}`,
             {key: 'panel', onClick: () => setPanelOpen(!panelOpen), 'aria-expanded': panelOpen, title: 'הרצת ניסוי',
               'aria-label': panelOpen ? 'סגירת פאנל הרצת ניסוי' : 'פתיחת פאנל הרצת ניסוי'}, h('L:MessageCircle', {size: 16})),
-          draft.originalId && h(`button:${classes.icon} hover:bg-[var(--wp-danger-soft)] hover:text-[var(--wp-danger)]`,
-            {key: 'delete', onClick: () => setConfirmDelete(true), 'aria-label': `מחיקת ${draft.name || targetLabel}`,
-              title: `מחיקת ${draft.name || targetLabel}`}, h('L:Trash2', {size: 16})),
+          item.originalId && h(`button:${classes.icon} hover:bg-[var(--wp-danger-soft)] hover:text-[var(--wp-danger)]`,
+            {key: 'delete', onClick: () => setConfirmDelete(true), 'aria-label': `מחיקת ${item.name || targetLabel}`,
+              title: `מחיקת ${item.name || targetLabel}`}, h('L:Trash2', {size: 16})),
           h(`button:${classes.primary}`, {key: 'save', disabled: saveWorkspaceDisabled,
-            onClick: () => saveWorkspace(draft)}, 'שמירה')]}),
+            onClick: () => saveWorkspace()}, 'שמירה')]}),
       h('div:flex min-h-[calc(100vh-64px)] max-lg:block', {}, h(`section:min-w-0 flex-1 space-y-4 p-5 ${panelOpen ? 'lg:max-w-[58%]' : ''}`, {},
         hh(ctx, dsls.react['react-comp'].wonderPlatformWizard, {steps, activeId: stepId, onStep: setStepId})), panelOpen && h(
         'aside:w-full shrink-0 self-start border-r border-[var(--wp-border)] bg-[var(--wp-surface-2)] lg:sticky lg:top-[64px] ' +
@@ -241,7 +240,7 @@ ReactComp('wonderPlatformWorkspace', {
           tab == 'test' && h('button:mr-auto text-[12px] text-[var(--wp-ink-3)]', {onClick: () => setRuns([])}, 'איפוס')),
         h('div:h-[calc(100vh-125px)] max-lg:h-auto max-lg:min-h-[32rem]', {}, tab == 'test' ? testPanel : evalPanel))),
       confirmDelete && hh(ctx, dsls.react['react-comp'].wonderPlatformDialog, {title: 'מחיקת פריט',
-        body: `למחוק לצמיתות את "${draft.name || draft.id}"? לא ניתן לשחזר פעולה זו.`, close: () => setConfirmDelete(false),
+        body: `למחוק לצמיתות את "${item.name || item.id}"? לא ניתן לשחזר פעולה זו.`, close: () => setConfirmDelete(false),
         actions: [['מחיקה', () => (setConfirmDelete(false), deleteWorkspace()), 'danger'],
           ['ביטול', () => setConfirmDelete(false)]]}))
     }
