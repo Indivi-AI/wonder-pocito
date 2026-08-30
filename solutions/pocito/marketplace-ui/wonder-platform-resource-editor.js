@@ -60,32 +60,3 @@ ReactComp('wonderPlatformAttachPicker', {
     }
   })
 })
-
-ReactComp('wonderPlatformResourceEditor', {
-  impl: comp({
-    hFunc: (ctx, {react: {h, hh}}) =>
-      ({editors, setEditors, repo, loadPackage, saveEditor, deleteEditor, openPicker, requestClose}) => {
-        const {classes, labels, resources} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx), active = editors.at(-1)
-        if (!active) return null
-        const {resource, item} = active, update = value => setEditors(editors.map((entry, index) => index == editors.length - 1
-          ? {...entry, item: typeof value == 'function' ? value(entry.item) : value} : entry))
-        const readOnlyTool = resource == 'tools' && item.originalId && item.kind != 'flow'
-        const saveDisabled = !item.name?.trim() || !item.id?.trim() || resource == 'skills' && !repo.marketplace
-          && (!item.content?.trim() || !/^\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/.test(item.publishVersion))
-        const canDelete = !readOnlyTool && item.originalId && (resource != 'skills' || repo.marketplace)
-        return h(`div:${classes.overlay}`, {}, h('section:absolute inset-y-0 left-0 flex w-full max-w-3xl flex-col ' +
-          'bg-[var(--wp-surface)] shadow-[var(--wp-sh-2)]', {dir: 'rtl'},
-        hh(ctx, dsls.react['react-comp'].wonderPlatformDetailHeader, {
-          title: item.name || active.createLabel || `${labels[resource]} חדש`, subtitle: item.id,
-          icon: item.icon || resources[resource]?.icon, backLabel: 'סגירה',
-          back: () => requestClose(() => setEditors(editors.slice(0, -1))),
-          actions: [canDelete && h(`button:${classes.icon} hover:bg-[var(--wp-danger-soft)] hover:text-[var(--wp-danger)]`,
-            {key: 'delete', onClick: deleteEditor, 'aria-label': `מחיקת ${item.name || ''}`}, h('L:Trash2', {size: 16})),
-          !readOnlyTool && h(`button:${classes.primary}`, {key: 'save', disabled: saveDisabled, onClick: saveEditor},
-            'שמירה')]}),
-        h('div:wp-scroll min-h-0 flex-1 overflow-y-auto px-6 pb-16 pt-6', {},
-          hh(ctx, dsls.react['react-comp'].wonderPlatformResourceFields,
-            {resource, item, update, repo, loadPackage, openPicker}))))
-      }
-  })
-})
