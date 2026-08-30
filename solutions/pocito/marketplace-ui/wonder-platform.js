@@ -4,7 +4,7 @@ import './wonder-platform-domain.js'
 import './wonder-platform-marketplace-api.js'
 import './wonder-platform-repository.js'
 import './wonder-platform-views.js'
-import './wonder-platform-resource-page.js'
+import './wonder-platform-journey.js'
 import './wonder-platform-home.js'
 import './evaluation-page.js'
 
@@ -260,13 +260,10 @@ ReactComp('wonderPlatform', {
       const content = view == 'home' ? hh(ctx, dsls.react['react-comp'].wonderPlatformHome, {repo,
         createAgent: () => createItem('agents'), startChat: () => newConversation(),
         openItem, openConversation: id => (setConversationId(id), openView('chat'))})
-        : view == 'journey' && top ? (['plugins', 'subagents', 'agents'].includes(top.resource)
-          ? hh(ctx, dsls.react['react-comp'].wonderPlatformWorkspace, {workspace: top, repo, update: updateTop,
-            back: () => stack.length > 1 ? popFrame() : openView(top.resource), saveWorkspace: saveTop,
-            deleteWorkspace: deleteTop, openPicker, openEditor, runTarget, runEval})
-          : hh(ctx, dsls.react['react-comp'].wonderPlatformResourcePage, {active: top, update: updateTop,
-            save: () => saveTop(), deleteItem: deleteTop, back: () => stack.length > 1 ? popFrame() : openView(top.resource),
-            repo, openPicker, loadPackage, saveAndRun, runningSet}))
+        : view == 'journey' && top ? hh(ctx, dsls.react['react-comp'].wonderPlatformJourney, {stack, repo,
+          popFrame, goToDepth: index => requestLeave(() => setStack(stack.slice(0, index + 1))), updateTop, saveTop, deleteTop,
+          openPicker, openEditor, loadPackage, saveAndRun, runningSet, runTarget, runEval,
+          exit: () => openView(stack[0].resource)})
           : view == 'chat' ? hh(ctx, dsls.react['react-comp'].wonderPlatformChat, {
             repo, conversation, message, setMessage, busy, send, selectAgent, setContext, model, setModel})
             : view == 'evaluations' ? hh(ctx, dsls.react['react-comp'].EvaluationPage,
