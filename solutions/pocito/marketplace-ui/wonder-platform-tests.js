@@ -457,9 +457,9 @@ Test('wonderPlatform.wfetchApi', {
 })
 
 Test('wonderPlatform.pluginWorkspace', {
-  impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(), and(contains('חיבורים'), contains('הרצת ניסוי'),
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(), and(contains('יכולות'), contains('הרצת ניסוי'),
     contains('סט אבלואציה מקושר')), {userActions: actions(waitForText('אנליסט הוכחת קיום'), click('אנליסט הוכחת קיום'),
-      waitForText('חיבורים'), click('הנחיות'), waitForText('סט אבלואציה מקושר'))})
+      waitForText('יכולות'), click('תיעוד'), waitForText('סט אבלואציה מקושר'))})
 })
 
 Test('wonderPlatform.evaluationCatalog', {
@@ -501,9 +501,9 @@ Test('wonderPlatform.homeLauncher', {
 
 Test('wonderPlatform.marketplacePluginWorkspace', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformMarketplaceTestApp(),
-    and(contains('Marketplace API'), contains('2 גרסאות'), contains('config.yaml'), contains('חיבורים')), {
+    and(contains('Marketplace API'), contains('2 גרסאות'), contains('config.yaml'), contains('יכולות')), {
       userActions: actions(waitForText('פלאגין ראיות'), click('פלאגין ראיות'), waitForText('Marketplace API'),
-        click('הנחיות'), waitForText('README.md'), click('כללי'), waitForText('Marketplace API'))})
+        click('תיעוד'), waitForText('README.md'), click('כללי'), waitForText('Marketplace API'))})
 })
 
 Test('wonderPlatform.marketplaceSkillEditor', {
@@ -525,7 +525,7 @@ Test('wonderPlatform.marketplaceAgentWorkspace', {
   impl: reactTest({
     testedComp: {$: 'react-comp<react>wonderPlatformMarketplaceTestApp'},
     expectedResult: and(
-      contains('חיבורים'),
+      contains('יכולות'),
       contains('פלאגינים'),
       contains('ידע')
     ),
@@ -534,8 +534,8 @@ Test('wonderPlatform.marketplaceAgentWorkspace', {
       click('סוכנים'),
       waitForText('סוכן תמיכת לקוחות B2B'),
       click('סוכן תמיכת לקוחות B2B'),
-      waitForText('חיבורים'),
-      click('חיבורים'),
+      waitForText('יכולות'),
+      click('יכולות'),
       waitForText('הוספה'),
       waitForText('פלאגינים')
     )
@@ -545,7 +545,7 @@ Test('wonderPlatform.marketplaceAgentWorkspace', {
 Test('wonderPlatform.marketplaceAgentCreate', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformMarketplaceTestApp(), and(contains('README (creation only)'), contains('שמירה')), {
     userActions: actions(waitForText('פלאגין ראיות'), click('סוכנים'), waitForText('סוכן חדש'), click('סוכן חדש'),
-      waitForText('הנחיות'), click('הנחיות'), waitForText('README (creation only)'))})
+      waitForText('מי הסוכן'), click('הנחיות'), waitForText('README (creation only)'))})
 })
 
 ReactComp('wonderPlatformChatTestHost', {
@@ -759,8 +759,8 @@ Test('wonderPlatform.journeyBreadcrumb', {
     userActions: actions(
       waitForText('אנליסט הוכחת קיום'),
       click('אנליסט הוכחת קיום'),
-      waitForText('חיבורים'),
-      click('חיבורים'),
+      waitForText('יכולות'),
+      click('יכולות'),
       wonderPlatformClickInSection('מיומנויות', 'הוספת'),
       waitForText('אישור בחירה'),
       click('מיומנות חדשה'),
@@ -774,8 +774,8 @@ Test('wonderPlatform.stackDeepDirtyGuard', {
     userActions: actions(
       waitForText('אנליסט הוכחת קיום'),
       click('אנליסט הוכחת קיום'),
-      waitForText('חיבורים'),
-      click('חיבורים'),
+      waitForText('יכולות'),
+      click('יכולות'),
       wonderPlatformClickInSection('מיומנויות', 'הוספת'),
       waitForText('אישור בחירה'),
       click('מיומנות חדשה'),
@@ -793,9 +793,9 @@ Test('wonderPlatform.workspaceEditSurvivesRelationAttach', {
     userActions: actions(
       waitForText('אנליסט הוכחת קיום'),
       click('אנליסט הוכחת קיום'),
-      waitForText('חיבורים'),
+      waitForText('יכולות'),
       wonderPlatformSetControl({selector: '[aria-label="display_name"]', value: 'פלאגין שם חדש'}),
-      click('חיבורים'),
+      click('יכולות'),
       wonderPlatformClickInSection('מיומנויות', 'הוספת'),
       waitForText('אישור בחירה'),
       click('בניית מפרט שירות'),
@@ -814,8 +814,8 @@ Test('wonderPlatform.marketplaceAgentCreateRelations', {
       click('סוכנים'),
       waitForText('סוכן חדש'),
       click('סוכן חדש'),
-      waitForText('חיבורים'),
-      click('חיבורים'),
+      waitForText('מי הסוכן'),
+      click('יכולות'),
       wonderPlatformClickInSection('מיומנויות', 'הוספת'),
       waitForText('אישור בחירה'),
       click('מיומנות ראיות'),
@@ -829,6 +829,73 @@ Test('wonderPlatform.marketplaceAgentCreateRelations', {
     ),
     logger: 'uiLogger'
   })
+})
+
+Test('wonderPlatform.agentJourneySteps', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformHomeTestApp(),
+    and(contains('מי הסוכן'), contains('יכולות'), contains('נסה'), contains('בדיקה'),
+      contains('מה הסוכן צריך לדעת לעשות?'), contains('בניית פלאגין חדש'), contains('חיבור פלאגין קיים')), {
+    userActions: actions(
+      waitForText('מה נעשה היום?'), click('צור סוכן'), waitForText('מי הסוכן'),
+      click('יכולות'), waitForText('מה הסוכן צריך לדעת לעשות?')),
+    logger: 'uiLogger'})
+})
+
+Test('wonderPlatform.agentJourneyContinueAdvances', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformHomeTestApp(),
+    contains('מה הסוכן צריך לדעת לעשות?'), {
+    userActions: actions(
+      waitForText('מה נעשה היום?'), click('צור סוכן'), waitForText('מי הסוכן'),
+      wonderPlatformSetControl({selector: '[aria-label="display_name"]', value: 'סוכן המסע'}),
+      click('aria-label="המשך לשלב הבא"'), waitForText('מה הסוכן צריך לדעת לעשות?')),
+    logger: 'uiLogger'})
+})
+
+Test('wonderPlatform.agentJourneyReadinessNote', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformHomeTestApp(),
+    contains('אין עדיין יכולות — הסוכן יענה מהמודל בלבד'), {
+    userActions: actions(
+      waitForText('מה נעשה היום?'), click('צור סוכן'), waitForText('מי הסוכן'),
+      wonderPlatformSetControl({selector: '[aria-label="display_name"]', value: 'סוכן המסע'}),
+      wonderPlatformSetControl({selector: '[aria-label="id"]', value: 'journeyAgent'}),
+      wonderPlatformSetControl({selector: '[aria-label="description"]', value: 'journey agent'}),
+      wonderPlatformSetControl({selector: '[aria-label="hebrew_description"]', value: 'סוכן לבדיקה'}),
+      click('הנחיות'),
+      wonderPlatformSetControl({selector: '[aria-label="system_prompt"]', value: 'ענה על בסיס המקורות'}),
+      waitForText('אין עדיין יכולות — הסוכן יענה מהמודל בלבד')),
+    logger: 'uiLogger'})
+})
+
+Test('wonderPlatform.agentJourneyTestDrawerAlwaysReachable', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformHomeTestApp(),
+    contains('הרצת ניסוי'), {
+    userActions: actions(
+      waitForText('מה נעשה היום?'), click('צור סוכן'), waitForText('מי הסוכן'),
+      click('aria-label="פתיחת פאנל הרצת ניסוי"'), waitForText('הרצת ניסוי')),
+    logger: 'uiLogger'})
+})
+
+Test('wonderPlatform.pluginGuidanceContinuesFromAgent', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformHomeTestApp(),
+    contains('יכולות'), {
+    userActions: actions(
+      waitForText('מה נעשה היום?'), click('צור סוכן'), waitForText('מי הסוכן'),
+      wonderPlatformSetControl({selector: '[aria-label="display_name"]', value: 'סוכן בדיקה'}),
+      click('יכולות'), click('בניית פלאגין חדש'), waitForText('מי הפלאגין'),
+      click('יכולות')),
+    logger: 'uiLogger'})
+})
+
+Test('wonderPlatform.directConnectIsSecondary', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformHomeTestApp(),
+    and(contains('מתקדם · חיבור ישיר'), contains('הוספת מיומנויות')), {
+    userActions: actions(
+      waitForText('מה נעשה היום?'), click('צור סוכן'), waitForText('מי הסוכן'),
+      wonderPlatformSetControl({selector: '[aria-label="display_name"]', value: 'סוכן בדיקה'}),
+      click('יכולות'), click('בניית פלאגין חדש'), waitForText('מי הפלאגין'),
+      wonderPlatformSetControl({selector: '[aria-label="display_name"]', value: 'פלאגין בדיקה'}),
+      click('aria-label="המשך לשלב הבא"'), waitForText('מתקדם · חיבור ישיר')),
+    logger: 'uiLogger'})
 })
 
 Test('wonderPlatform.chatRunsSelectedAgent', {

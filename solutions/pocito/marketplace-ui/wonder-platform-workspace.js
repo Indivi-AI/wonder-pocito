@@ -5,6 +5,7 @@ import './wonder-platform-agent-results.js'
 import './wonder-platform-searchable-select.js'
 import './wonder-platform-wizard.js'
 import './wonder-platform-kit.js'
+import './wonder-platform-capability-step.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
@@ -157,48 +158,57 @@ ReactComp('wonderPlatformWorkspace', {
           disabled: !evaluationId || shownRun?.status == 'מריץ…', onClick: executeEval}, shownRun?.status == 'מריץ…' ? 'מריץ…' : 'הרצת הסט')),
       shownRun && h('div:mt-4', {}, h('div:flex items-center gap-2', {}, h(`span:${classes.chip}`, {}, shownRun.status),
         h('span:text-[12px] text-[var(--wp-ink-3)]', {}, shownRun.started || 'עכשיו')), h('div:mt-4 space-y-2', {}, (shownRun.rows || []).map(evalRow))))
-      const steps = [{id: 'general', label: 'כללי', render: () => h('div:space-y-4', {},
-        h(`section:${classes.card} space-y-4`, {}, h(`label:${classes.label}`, {}, fieldLabel('שם להצגה', 'display_name'), h(
-          `input:${classes.field} font-semibold`, {value: item.name || '',
-            placeholder: 'שם להצגה…', 'aria-label': 'display_name', onInput: event => update({...item, name: event.target.value})})),
-        h(`label:${classes.label}`, {}, fieldLabel('מזהה', 'id'), h(
-          `input:${classes.field} font-mono`, {dir: 'ltr', value: item.id || '',
-            placeholder: 'uiRenderingSkill', disabled: !!item.originalId,
-            onInput: event => update({...item, id: event.target.value})})), h(`label:${classes.label}`, {},
-          fieldLabel('תיאור באנגלית', 'description'), h(`textarea:${classes.area}`, {
-            dir: 'ltr', value: item.apiDescription || '', onInput: event => update({...item, apiDescription: event.target.value})})),
-        h(`label:${classes.label}`, {}, 'תיאור בעברית', h(
-          `textarea:${classes.area}`, {value: item.desc || '',
-            onInput: event => update({...item, desc: event.target.value})}))),
-        item._marketplace && h(`section:${classes.card}`, {}, h('div:flex flex-wrap items-center gap-2', {}, h('b:text-[13px]', {},
-          'Marketplace API'), h(`span:${classes.chip}`, {}, `${item.versions?.length || 0} גרסאות`), h(`span:${classes.chip}`, {},
-            `${item.audit?.length || 0} אירועי ביקורת`)), item.references && h('div:mt-3 space-y-1.5', {},
-            refRows(item).map(ref => h('div:flex items-center gap-2 text-[12px]', {key: `${ref.resource_type}-${ref.name}`},
-              h(`L:${ref.exists === false ? 'CircleAlert' : 'Check'}`, {size: 14,
-                className: ref.exists === false ? 'text-[var(--wp-danger)]' : 'text-[var(--wp-ink-3)]'}),
-              h('span:font-medium text-[var(--wp-ink)]', {}, ref.name),
-              h('span:text-[var(--wp-ink-3)]', {}, refKinds[ref.resource_type] || ref.resource_type))),
-            refRows(item).length == 0 && h('span:text-[12px] text-[var(--wp-ink-3)]', {}, 'אין קישורים לפריטים אחרים')),
-          item.references && h('details:mt-3', {}, h('summary:cursor-pointer text-[12px] font-semibold text-[var(--wp-ink)]', {},
-            'פרטים טכניים'),
-            h('pre:mt-2 overflow-x-auto rounded-[12px] bg-[var(--wp-surface-2)] p-3 text-[12px]', {dir: 'ltr'},
-              JSON.stringify(item.references, null, 2))),
-          item.configYaml && h('details:mt-3', {}, h('summary:cursor-pointer text-[12px] font-semibold text-[var(--wp-ink)]', {},
-            'config.yaml'),
-            h('pre:mt-2 max-w-full overflow-x-auto rounded-[12px] bg-[var(--wp-surface-2)] p-3 text-[12px]', {dir: 'ltr'}, item.configYaml))))},
-        {id: 'instructions', label: 'הנחיות', render: () => h('div:space-y-4', {},
-          h(`section:${classes.card}`, {}, h('div:flex items-center justify-between', {}, h('b:text-[13px]', {}, ...(workspace.resource == 'plugins'
+      const onStep = id => {
+        setStepId(id)
+        if (id == 'try') { setPanelOpen(true); setTab('test') }
+        if (id == 'evaluate') { setPanelOpen(true); setTab('evaluation') }
+      }
+      const isAgent = workspace.resource == 'agents', isPlugin = workspace.resource == 'plugins'
+      const baseDone = item.name && item.id && item.apiDescription && item.desc && item.instructions
+      const capDone = (item.pluginIds?.length || item.skillIds?.length || item.toolIds?.length || item.knowledgeIds?.length) > 0
+      const steps = !isAgent ? [
+        {id: 'general', label: 'כללי', render: () => h('div:space-y-4', {},
+          h(`section:${classes.card} space-y-4`, {}, h(`label:${classes.label}`, {}, fieldLabel('שם להצגה', 'display_name'), h(
+            `input:${classes.field} font-semibold`, {value: item.name || '',
+              placeholder: 'שם להצגה…', 'aria-label': 'display_name', onInput: event => update({...item, name: event.target.value})})),
+          h(`label:${classes.label}`, {}, fieldLabel('מזהה', 'id'), h(
+            `input:${classes.field} font-mono`, {dir: 'ltr', value: item.id || '',
+              placeholder: 'uiRenderingSkill', disabled: !!item.originalId,
+              onInput: event => update({...item, id: event.target.value})})), h(`label:${classes.label}`, {},
+            fieldLabel('תיאור באנגลית', 'description'), h(`textarea:${classes.area}`, {
+              dir: 'ltr', value: item.apiDescription || '', onInput: event => update({...item, apiDescription: event.target.value})})),
+          h(`label:${classes.label}`, {}, 'תיאור בעברית', h(
+            `textarea:${classes.area}`, {value: item.desc || '',
+              onInput: event => update({...item, desc: event.target.value})}))),
+          item._marketplace && h(`section:${classes.card}`, {}, h('div:flex flex-wrap items-center gap-2', {}, h('b:text-[13px]', {},
+            'Marketplace API'), h(`span:${classes.chip}`, {}, `${item.versions?.length || 0} גרסאות`), h(`span:${classes.chip}`, {},
+              `${item.audit?.length || 0} אירועי ביקורת`)), item.references && h('div:mt-3 space-y-1.5', {},
+              refRows(item).map(ref => h('div:flex items-center gap-2 text-[12px]', {key: `${ref.resource_type}-${ref.name}`},
+                h(`L:${ref.exists === false ? 'CircleAlert' : 'Check'}`, {size: 14,
+                  className: ref.exists === false ? 'text-[var(--wp-danger)]' : 'text-[var(--wp-ink-3)]'}),
+                h('span:font-medium text-[var(--wp-ink)]', {}, ref.name),
+                h('span:text-[var(--wp-ink-3)]', {}, refKinds[ref.resource_type] || ref.resource_type))),
+              refRows(item).length == 0 && h('span:text-[12px] text-[var(--wp-ink-3)]', {}, 'אין קישורים לפריטים אחרים')),
+            item.references && h('details:mt-3', {}, h('summary:cursor-pointer text-[12px] font-semibold text-[var(--wp-ink)]', {},
+              'פרטים טכניים'),
+              h('pre:mt-2 overflow-x-auto rounded-[12px] bg-[var(--wp-surface-2)] p-3 text-[12px]', {dir: 'ltr'},
+                JSON.stringify(item.references, null, 2)))),
+            item.configYaml && h('details:mt-3', {}, h('summary:cursor-pointer text-[12px] font-semibold text-[var(--wp-ink)]', {},
+              'config.yaml'),
+              h('pre:mt-2 max-w-full overflow-x-auto rounded-[12px] bg-[var(--wp-surface-2)] p-3 text-[12px]', {dir: 'ltr'}, item.configYaml)))},
+        {id: 'instructions', label: isPlugin ? 'תיעוד' : 'הנחיות', render: () => h('div:space-y-4', {},
+          h(`section:${classes.card}`, {}, h('div:flex items-center justify-between', {}, h('b:text-[13px]', {}, ...(isPlugin
             ? fieldLabel('תיעוד', 'README.md') : fieldLabel('הנחיות מערכת', 'system_prompt'))),
-          h('span:text-[11px] text-[var(--wp-ink-3)]', {}, `טקסט חופשי · ${workspace.resource == 'plugins'
+          h('span:text-[11px] text-[var(--wp-ink-3)]', {}, `טקסט חופשי · ${isPlugin
               ? item.readme?.length || 0 : item.instructions?.length || 0} תווים`)), h(
             `textarea:${classes.area} min-h-44 leading-7`, {
-              value: workspace.resource == 'plugins' ? item.readme || '' : item.instructions || '',
-              onInput: event => update({...item, [workspace.resource == 'plugins' ? 'readme' : 'instructions']: event.target.value})})),
-          ['subagents', 'agents'].includes(workspace.resource) && !item.originalId && h(`section:${classes.card}`, {},
+              value: isPlugin ? item.readme || '' : item.instructions || '',
+              onInput: event => update({...item, [isPlugin ? 'readme' : 'instructions']: event.target.value})})),
+          ['subagents'].includes(workspace.resource) && !item.originalId && h(`section:${classes.card}`, {},
             h('b:text-[13px]', {}, 'README (creation only)'), h(
               `textarea:${classes.area} min-h-32`, {
                 value: item.readme || '', onInput: event => update({...item, readme: event.target.value})})))},
-        {id: 'connections', label: 'חיבורים', render: () =>
+        {id: 'connections', label: 'יכולות', render: () =>
           h(`section:${classes.panel} divide-y divide-[var(--wp-border)] overflow-hidden`, {},
             relationRows.map(relationGroup),
             h('div', {}, groupHead('סט אבלואציה מקושר'),
@@ -209,8 +219,48 @@ ReactComp('wonderPlatformWorkspace', {
                 'text-[12px] text-[var(--wp-ink-3)]', {}, `הרצה אחרונה · ${lastRun.started} · ${lastRun.status}`,
               h('button:font-medium text-[var(--wp-ink)]', {onClick: () => (setPanelOpen(true), setTab('evaluation'))},
                 'היסטוריית הרצות'))))}]
+        : [{id: 'identity', label: 'מי הסוכן', done: item.name && item.id && item.apiDescription && item.desc,
+          render: () => h('div:space-y-4', {},
+          h(`section:${classes.card}`, {}, h('div:mb-4', {},
+            h(`label:${classes.label}`, {}, h('b:text-[16px]', {}, 'שם להצגה'), h(
+              `input:${classes.field} text-[15px] font-semibold`, {value: item.name || '',
+                placeholder: 'שם הסוכן…', 'aria-label': 'display_name', onInput: event => update({...item, name: event.target.value})}))),
+          h('details:border-t border-[var(--wp-border)] pt-4 mt-4', {},
+            h('summary:text-[12px] font-medium text-[var(--wp-ink-3)] cursor-pointer', {}, 'פרטים נוספים'),
+            h('div:mt-3 space-y-4', {},
+              h(`label:${classes.label}`, {}, fieldLabel('מזהה', 'id'), h(
+                `input:${classes.field} font-mono`, {dir: 'ltr', value: item.id || '',
+                  placeholder: 'agentId', disabled: !!item.originalId,
+                  onInput: event => update({...item, id: event.target.value})})),
+              h(`label:${classes.label}`, {}, fieldLabel('תיאור באנגלית', 'description'), h(
+                `textarea:${classes.area}`, {
+                  dir: 'ltr', value: item.apiDescription || '', onInput: event => update({...item, apiDescription: event.target.value})})),
+              h(`label:${classes.label}`, {}, 'תיאור בעברית', h(
+                `textarea:${classes.area}`, {value: item.desc || '',
+                  onInput: event => update({...item, desc: event.target.value})}))))))},
+        {id: 'capabilities', label: 'יכולות', done: capDone, render: () => hh(ctx,
+          dsls.react['react-comp'].wonderPlatformCapabilityStep,
+          {item, update, repo, openPicker, openEditor, classes, secondary: [['skillIds', 'skills', 'מיומנויות'],
+            ['toolIds', 'tools', 'כלים'], ['knowledgeIds', 'knowledge', 'ידע']]})},
+        {id: 'instructions', label: 'הנחיות', done: item.instructions, render: () => h('div:space-y-4', {},
+          h(`section:${classes.card}`, {}, h('div:flex items-center justify-between', {}, h('b:text-[13px]', {},
+            fieldLabel('הנחיות מערכת', 'system_prompt')),
+          h('span:text-[11px] text-[var(--wp-ink-3)]', {}, `טקסט חופשי · ${item.instructions?.length || 0} תווים`)), h(
+            `textarea:${classes.area} min-h-44 leading-7`, {
+              value: item.instructions || '', 'aria-label': 'system_prompt',
+              onInput: event => update({...item, instructions: event.target.value})})),
+          !item.originalId && h(`section:${classes.card}`, {},
+            h('b:text-[13px]', {}, 'README (creation only)'), h(
+              `textarea:${classes.area} min-h-32`, {
+                value: item.readme || '', onInput: event => update({...item, readme: event.target.value})})))},
+        {id: 'try', label: 'נסה', render: () => hh(ctx,
+          dsls.react['react-comp'].wonderPlatformCapabilityStep,
+          {item, update, repo, openPicker, openEditor, classes, secondary: []})},
+        {id: 'evaluate', label: 'בדיקה', render: () => hh(ctx,
+          dsls.react['react-comp'].wonderPlatformCapabilityStep,
+          {item, update, repo, openPicker, openEditor, classes, secondary: []})}]
       return h('div:flex min-h-full max-lg:block', {}, h(`section:min-w-0 flex-1 space-y-4 p-5 ${panelOpen ? 'lg:max-w-[58%]' : ''}`, {},
-        hh(ctx, dsls.react['react-comp'].wonderPlatformWizard, {steps, activeId: stepId, onStep: setStepId})), panelOpen && h(
+        hh(ctx, dsls.react['react-comp'].wonderPlatformWizard, {steps, activeId: stepId, onStep, rail: isAgent})), panelOpen && h(
         'aside:flex w-full shrink-0 flex-col self-start border-r border-[var(--wp-border)] bg-[var(--wp-surface-2)] ' +
           'lg:sticky lg:top-0 lg:h-full lg:w-[42%]', {}, h('div:flex shrink-0 items-center border-b border-[var(--wp-border)] ' +
           'bg-[var(--wp-surface)] p-3', {},
