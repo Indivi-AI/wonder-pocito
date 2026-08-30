@@ -42,6 +42,10 @@
 | D14 | **Breadcrumb collapse = truncate each crumb, then middle-ellipsis** into a `…` menu once the row still overflows. | |
 | D15 | **Catalog nav group is open iff the current view is a catalog view.** | Keeps the 15 existing `click('כלים')`-style test call sites green, and is the correct behavior anyway. |
 | D16 | Component named `wonderPlatformJourney`, not `wonderPlatformBuilder`. State field named `createdInJourney`. | |
+| D17 | **Name first, then straight into capabilities.** Step 1 takes the agent's name; `המשך` lands on the capabilities step. Instructions move after capabilities. | Added after the user tested the live build and found the plugin was not the obvious first move. |
+| D18 | **Guided but not gated.** Every step carries a primary `המשך` and a numbered progress rail; step tabs stay freely clickable. | Refines D4 rather than reversing it. |
+| D19 | **Not toyish.** No emoji, gradients, oversized illustration, celebratory microcopy, colour-coded stepper, or new animation. Monochrome `--wp-*` tokens and the existing radius/border scale only. | Binds Task 5's rail, choice panels and readiness bar. |
+| D20 | **The test drawer is reachable from every step.** The header panel toggle stays available throughout; `נסה` and `בדיקה` additionally open it on the matching tab. | Strengthens the round-3 decision that steps drive the panel. |
 
 ## File Structure
 
@@ -691,47 +695,145 @@ git commit -m "feat(journey): full-page frame chrome with breadcrumb, drop neste
 
 ### Task 5: The Create Agent journey
 
+**Revised after the user tested the live build.** The original version of this task merely renamed the existing tabs and added a readiness bar. That is not enough: the user reported that "צור סוכן" lands on what still reads as the ordinary new-agent form, and that choosing a Plugin is not the obvious first move. Four directives now bind this task:
+
+- **D17 — Name first, then straight into capabilities.** Step 1 asks for the agent's name and advances to the capabilities step. Capabilities, not identity, is where the user spends their time.
+- **D18 — Guided but not gated.** Every step carries a primary `המשך` action and a numbered progress rail. Step tabs stay freely clickable (D4 stands); the rail and buttons guide, they do not lock.
+- **D19 — Not toyish.** This is enterprise software. No emoji, no gradients, no oversized illustration, no celebratory microcopy, no colour-coded stepper, no animation beyond the `transition-colors` already in use. The choice panels and the rail are monochrome, using existing `--wp-*` tokens and the existing radius/border scale.
+- **D20 — The test drawer stays reachable from every step.** The side panel toggle in the header remains available at all times so the user can try the agent at any point. The `נסה` and `בדיקה` steps additionally open it on the matching tab.
+
 **Files:**
-- Modify: `solutions/pocito/marketplace-ui/wonder-platform-workspace.js:162-213` (step definitions), `:18-21` (panel state)
-- Modify: `solutions/pocito/marketplace-ui/wonder-platform.js` (`finishAgent`)
+- Modify: `solutions/pocito/marketplace-ui/wonder-platform-workspace.js` — step definitions, capabilities hero, readiness bar, panel wiring
+- Modify: `solutions/pocito/marketplace-ui/wonder-platform-wizard.js` — progress rail and completion dots
+- Modify: `solutions/pocito/marketplace-ui/wonder-platform.js` — `finishAgent`
 - Test: `solutions/pocito/marketplace-ui/wonder-platform-tests.js`
 
 **Interfaces:**
-- Consumes: `saveTop` from Task 3, `wonderPlatformJourney` from Task 4.
-- Produces: `wonderPlatformWorkspace` accepts new prop `finishAgent(item)`; `wonderPlatform` exposes `finishAgent(item) -> Promise<void>` which saves the item, creates a conversation bound to `saved.id`, and switches to the chat view.
+- Consumes: `saveTop(override)`, `updateTop`, `stack` from Task 3; `wonderPlatformJourney` from Task 4. The workspace is already controlled — it reads `workspace.item` and writes through `update`; it has no local `draft` (Task 3 fix round 1 lifted it).
+- Produces: `wonderPlatformWizard` accepts `steps` entries shaped `{id, label, done, render}` plus props `{activeId, onStep, onNext, nextLabel}`. `wonderPlatformWorkspace` accepts `finishAgent(item)`. `wonderPlatform` exposes `finishAgent(item) -> Promise<void>`.
 
-- [ ] **Step 1: Write the failing test**
+#### Step order for `agents`
+
+| # | id | label | content |
+|---|---|---|---|
+| 1 | `identity` | מי הסוכן | Name as the hero field, then the two descriptions under a quiet `פרטים נוספים` divider. `המשך` advances to `capabilities`. |
+| 2 | `capabilities` | יכולות | The centrepiece. See below. `המשך` advances to `instructions`. |
+| 3 | `instructions` | הנחיות | `system_prompt` textarea, unchanged content. `המשך` advances to `try`. |
+| 4 | `try` | נסה | Main column keeps showing the capabilities content; selecting the step opens the side panel on the test tab. |
+| 5 | `evaluate` | בדיקה | Same, opening the panel on the evaluation tab. |
+
+`plugins` and `subagents` keep their existing three steps (`general` / `instructions` / `connections`) with their existing labels, so their tests stay green.
+
+#### The capabilities step
+
+When the agent has no plugins attached, the step leads with a single question and two side-by-side choice panels — restrained bordered surfaces, not tiles:
+
+```
+מה הסוכן צריך לדעת לעשות?
+פלאגין אורז מיומנויות, כלים וידע ליחידה אחת שהסוכן יכול להשתמש בה.
+
+┌──────────────────────────┐  ┌──────────────────────────┐
+│  [icon]                  │  │  [icon]                  │
+│  בניית פלאגין חדש         │  │  חיבור פלאגין קיים        │
+│  הגדירו יכולת חדשה        │  │  בחרו מתוך הקטלוג        │
+└──────────────────────────┘  └──────────────────────────┘
+```
+
+Build opens a nested plugin frame (`createNested`-equivalent through `openPicker`'s create path); connect opens the attach picker on `pluginIds`.
+
+Once at least one plugin is attached, the panels shrink to a single `הוספת פלאגין` row beneath the attached list, and the attached plugins render with their skills/tools/knowledge nested inline — reuse the recursive `buildNode` / `renderNode` shape from `wonder-platform-chat.js:24-43` rather than writing a second tree renderer.
+
+Below the plugin area, a collapsed disclosure labelled `מתקדם · חיבור ישיר` holds the other three relation groups (`skillIds`, `toolIds`, `knowledgeIds`), collapsed by default when empty and expanded when any of them is non-empty. This is D2: direct attach stays available, visually secondary.
+
+#### The progress rail
+
+Rendered by `wonderPlatformWizard` above the step content, replacing the plain tab row for step sets that pass `rail: true`:
+
+- a numbered circle per step, joined by a 1px `--wp-border` line
+- current step: `--wp-ink` ring and text; completed: filled `--wp-ink-3` with a check glyph; pending: `--wp-ink-4`
+- labels beneath at `text-[11px]`, truncating
+- the whole rail is monochrome and uses no colour outside the `--wp-*` neutral ramp
+
+`done` per agent step: `identity` → name, desc and apiDescription all non-empty; `capabilities` → any of the four relation arrays non-empty; `instructions` → instructions non-empty; `try` → at least one run in the panel; `evaluate` → a run exists for this agent.
+
+#### The readiness bar
+
+Modelled on the existing evaluation bar at `wonder-platform-resource-fields.js:305-310` — sticky, bordered, one reason string plus one primary action. Use an explicit class string; do not do string surgery on `classes.panel`.
+
+Reason precedence: no name → `הוסיפו שם לסוכן`; missing either description → `הוסיפו תיאור לסוכן`; no instructions → `הוסיפו הנחיות מערכת`; no capabilities → `אין עדיין יכולות — הסוכן יענה מהמודל בלבד`; otherwise `הסוכן מוכן`.
+
+Per D8 the finish button is **enabled** with zero capabilities. It is disabled only while name, id, apiDescription, desc or instructions are empty.
+
+- [ ] **Step 1: Write the failing tests**
 
 ```js
 Test('wonderPlatform.agentJourneySteps', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformHomeTestApp(),
     and(contains('מי הסוכן'), contains('יכולות'), contains('נסה'), contains('בדיקה'),
-      contains('אין עדיין יכולות')), {
+      contains('מה הסוכן צריך לדעת לעשות?'), contains('בניית פלאגין חדש'), contains('חיבור פלאגין קיים')), {
     userActions: actions(
-      waitForText('מה נעשה היום?'),
-      click('צור סוכן'),
-      waitForText('מי הסוכן'),
-      click('יכולות'),
-      waitForText('אין עדיין יכולות')),
+      waitForText('מה נעשה היום?'), click('צור סוכן'), waitForText('מי הסוכן'),
+      click('יכולות'), waitForText('מה הסוכן צריך לדעת לעשות?')),
+    logger: 'uiLogger'})
+})
+
+Test('wonderPlatform.agentJourneyContinueAdvances', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformHomeTestApp(),
+    contains('מה הסוכן צריך לדעת לעשות?'), {
+    userActions: actions(
+      waitForText('מה נעשה היום?'), click('צור סוכן'), waitForText('מי הסוכן'),
+      wonderPlatformSetControl({selector: '[aria-label="display_name"]', value: 'סוכן המסע'}),
+      click('aria-label="המשך לשלב הבא"'), waitForText('מה הסוכן צריך לדעת לעשות?')),
+    logger: 'uiLogger'})
+})
+
+Test('wonderPlatform.agentJourneyReadinessNote', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformHomeTestApp(),
+    contains('אין עדיין יכולות — הסוכן יענה מהמודל בלבד'), {
+    userActions: actions(
+      waitForText('מה נעשה היום?'), click('צור סוכן'), waitForText('מי הסוכן'),
+      wonderPlatformSetControl({selector: '[aria-label="display_name"]', value: 'סוכן המסע'}),
+      wonderPlatformSetControl({selector: '[aria-label="id"]', value: 'journeyAgent'}),
+      wonderPlatformSetControl({selector: '[aria-label="description"]', value: 'journey agent'}),
+      wonderPlatformSetControl({selector: '[aria-label="hebrew_description"]', value: 'סוכן לבדיקה'}),
+      click('הנחיות'),
+      wonderPlatformSetControl({selector: '[aria-label="system_prompt"]', value: 'ענה על בסיס המקורות'}),
+      waitForText('אין עדיין יכולות — הסוכן יענה מהמודל בלבד')),
+    logger: 'uiLogger'})
+})
+
+Test('wonderPlatform.agentJourneyTestDrawerAlwaysReachable', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformHomeTestApp(),
+    contains('הרצת ניסוי'), {
+    userActions: actions(
+      waitForText('מה נעשה היום?'), click('צור סוכן'), waitForText('מי הסוכן'),
+      click('aria-label="פתיחת פאנל הרצת ניסוי"'), waitForText('הרצת ניסוי')),
     logger: 'uiLogger'})
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+When choosing test fixtures, do not attach a resource the seed has already attached to the same parent — a pre-attached relation row renders an edit button carrying the same text, `click()` matches it first, and the resulting unmocked `loadSkill` fetch hangs the runner so it returns no verdict at all. That cost a full fix round in Task 3.
 
-`runTest({testId: 'wonderPlatform.agentJourneySteps'})`
-Expected: FAIL — the steps are today `כללי` / `הנחיות` / `חיבורים` and there is no readiness bar.
+- [ ] **Step 2: Run the tests to verify they fail**
 
-- [ ] **Step 3: Rename and extend the agent step set**
-
-In `wonder-platform-workspace.js`, the `steps` array (line 162) becomes resource-aware. For `agents`:
-
-```js
-      const agentStepLabels = [['identity', 'מי הסוכן'], ['instructions', 'הנחיות'], ['capabilities', 'יכולות'],
-        ['try', 'נסה'], ['evaluate', 'בדיקה']]
+```
+runTest({testId: 'wonderPlatform.agentJourneySteps'})                   -> FAIL (steps are still כללי/הנחיות/חיבורים)
+runTest({testId: 'wonderPlatform.agentJourneyContinueAdvances'})        -> FAIL (no המשך action exists)
+runTest({testId: 'wonderPlatform.agentJourneyReadinessNote'})           -> FAIL (no readiness bar)
+runTest({testId: 'wonderPlatform.agentJourneyTestDrawerAlwaysReachable'}) -> may already pass; the panel toggle exists today
 ```
 
-`identity` renders today's `general` body, `instructions` renders today's `instructions` body, `capabilities` renders today's `connections` body. `try` and `evaluate` both render the **capabilities** body (D11) — they exist to drive the panel. Wire that in the step handler passed to the wizard:
+Confirm each failure message names the missing thing rather than an unrelated error.
+
+- [ ] **Step 3: Add the progress rail to the wizard**
+
+In `wonder-platform-wizard.js`, keep the existing plain tab row for step sets without `rail`, and add the rail branch. Monochrome, `--wp-*` tokens only, no colour, per D19. Each rail entry is clickable — D4's free navigation is preserved. Add the completion dot/check driven by `step.done`.
+
+- [ ] **Step 4: Restructure the agent step set and build the capabilities hero**
+
+In `wonder-platform-workspace.js`, define the five agent steps in the order in the table above, with `identity` rendering the name hero plus the `פרטים נוספים` block, and `capabilities` rendering the two choice panels, the attached-plugin tree, and the collapsed `מתקדם · חיבור ישיר` disclosure. Keep `plugins` and `subagents` on their existing three steps.
+
+Wire the step handler so `try` and `evaluate` open the panel:
 
 ```js
       const onStep = id => {
@@ -741,81 +843,45 @@ In `wonder-platform-workspace.js`, the `steps` array (line 162) becomes resource
       }
 ```
 
-For `plugins` and `subagents`, keep the existing three labels unchanged so their tests stay green.
+The header panel toggle stays exactly as it is today — per D20 it must remain usable on every step, including `identity`.
 
-- [ ] **Step 4: Add the completion dot and the readiness bar**
+- [ ] **Step 5: Add the readiness bar and `המשך`**
 
-Give each agent step a `done` flag and render it in `wonderPlatformWizard`. In `wonder-platform-wizard.js`, add to the nav button, after `step.label`:
+Give each non-final step a primary `המשך` button with `aria-label="המשך לשלב הבא"` that advances through `onStep`. On the final step the readiness bar's `סיום · שוחח עם הסוכן` (with `aria-label="סיום ומעבר לשיחה"`) takes its place. Reason strings and the disabled rule are specified above.
 
-```js
-          step.done && h('span:ms-1.5 inline-block h-1.5 w-1.5 rounded-full bg-[var(--wp-ink-3)]')
-```
+- [ ] **Step 6: Implement `finishAgent`**
 
-`done` for each agent step: `identity` → `draft.name?.trim() && draft.desc?.trim() && draft.apiDescription?.trim()`; `instructions` → `draft.instructions?.trim()`; `capabilities` → any of `pluginIds`/`skillIds`/`toolIds`/`knowledgeIds` non-empty; `try` → `runs.length > 0`; `evaluate` → `!!lastRun`.
-
-Below the wizard in the main column, for `agents` only, add the readiness bar modelled on `resource-fields.js:305-310`:
-
-```js
-      const capabilityCount = ['pluginIds', 'skillIds', 'toolIds', 'knowledgeIds']
-        .reduce((total, field) => total + (draft[field] || []).length, 0)
-      const readyNote = !draft.name?.trim() ? 'הוסיפו שם לסוכן'
-        : !draft.apiDescription?.trim() || !draft.desc?.trim() ? 'הוסיפו תיאור לסוכן'
-        : !draft.instructions?.trim() ? 'הוסיפו הנחיות מערכת'
-        : capabilityCount == 0 ? 'אין עדיין יכולות — הסוכן יענה מהמודל בלבד' : 'הסוכן מוכן'
-      const finishDisabled = !draft.name?.trim() || !draft.id?.trim() || !draft.apiDescription?.trim()
-        || !draft.desc?.trim() || !draft.instructions?.trim()
-      const readinessBar = h('div:sticky bottom-4 z-10 mt-4 flex flex-wrap items-center justify-between gap-3 ' +
-        `rounded-[12px] border border-[var(--wp-border-strong)] ${classes.panel.replace('rounded-[12px] border border-[var(--wp-border)] ', '')} p-4 shadow-[var(--wp-sh-2)]`, {},
-        h('p:text-[12px] text-[var(--wp-ink-3)]', {}, readyNote),
-        h(`button:${classes.primary}`, {disabled: finishDisabled, onClick: () => finishAgent(draft),
-          'aria-label': 'סיום ומעבר לשיחה'}, 'סיום · שוחח עם הסוכן'))
-```
-
-Per D8 the button is enabled with zero capabilities; only the identity and instructions fields gate it.
-
-- [ ] **Step 5: Implement `finishAgent`**
-
-In `wonder-platform.js`, add next to `newConversation`:
-
-```js
-      const finishAgent = async item => {
-        const saved = await saveTop.call(null, item) || await saveItem('agents', item)
-        setStack([]); await newConversation(saved.id)
-      }
-```
-
-Simplify: `saveTop` already reads from the stack, so pass the draft up first. Change `saveTop` to accept an optional item override — `const saveTop = async (override) => { const active = {...stack.at(-1), item: override || stack.at(-1).item}, ... }` — and then:
+In `wonder-platform.js`, next to `newConversation`:
 
 ```js
       const finishAgent = async item => { const saved = await saveTop(item); setStack([]); await newConversation(saved.id) }
 ```
 
-Pass `finishAgent` through `wonderPlatformJourney` into `wonderPlatformWorkspace`.
+`saveTop` already accepts an override (Task 3). Pass `finishAgent` through `wonderPlatformJourney` into `wonderPlatformWorkspace`.
 
-- [ ] **Step 6: Run tests**
+- [ ] **Step 7: Run the tests**
 
+The four new tests must pass. These must stay green: `navTiers`, `homeLauncher`, `skillCatalog`, `toolRules`, `evaluationCatalog`, `navGuardPrompts`, `chatContextPanel`, `workspaceSavesOnlyFromButton`, `marketplaceToolEditor`, `marketplaceAgentCreate`, `stackDeepDirtyGuard`, `workspaceEditSurvivesRelationAttach`.
+
+`marketplaceAgentWorkspace`, `marketplaceAgentCreate` and `marketplaceAgentCreateRelations` reference the label `חיבורים`, which for agents becomes `יכולות`. Update those references. `marketplaceAgentWorkspace` and `marketplaceAgentCreateRelations` are already red for unrelated pre-existing reasons — update their strings for consistency but do not chase their failures.
+
+- [ ] **Step 8: Screenshot check**
+
+```bash
+node take-screenshot.js http://localhost:3000/room/demo/applet/wonderAgents
 ```
-runTest({testId: 'wonderPlatform.agentJourneySteps'})     -> PASS (was failing)
-runTest({testId: 'wonderPlatform.journeyBreadcrumb'})     -> PASS
-runTest({testId: 'wonderPlatform.pluginWorkspace'})       -> PASS
-runTest({testId: 'wonderPlatform.marketplaceAgentWorkspace'}) -> PASS
-runTest({testId: 'wonderPlatform.marketplaceAgentCreate'})    -> PASS
-runTest({testId: 'wonderPlatform.marketplaceAgentCreateRelations'}) -> PASS
-```
 
-`marketplaceAgentWorkspace` and `marketplaceAgentCreateRelations` click `חיבורים`; update both to click `יכולות`. `marketplaceAgentCreate` waits for `חיבורים`; update to `יכולות`. Make those substitutions and rerun.
+Capture the identity step and the capabilities step at **1280x800** and **1920x1080**, save to the scratchpad, and look at them. Verify against D19: no horizontal overflow, the rail reads as a quiet enterprise stepper rather than a consumer onboarding flow, and the two choice panels do not dominate the page like marketing tiles.
 
-- [ ] **Step 7: Validate and commit**
+- [ ] **Step 9: Validate and commit**
 
 ```bash
 node --check solutions/pocito/marketplace-ui/wonder-platform-workspace.js
 node --check solutions/pocito/marketplace-ui/wonder-platform-wizard.js
 node --check solutions/pocito/marketplace-ui/wonder-platform.js
 git add -A solutions/pocito/marketplace-ui
-git commit -m "feat(journey): agent creation steps, readiness bar and finish-to-chat"
+git commit -m "feat(journey): plugin-first agent journey with guided rail and readiness bar"
 ```
-
----
 
 ### Task 6: Pending capability chips and the abandon sweep
 
