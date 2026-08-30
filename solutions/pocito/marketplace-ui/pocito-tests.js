@@ -1075,3 +1075,10 @@ Test('wonderPlatform.chatBoardGroupsExtras', {
     userActions: actions(waitForText('פלאגין חדש'), click('שיחה חדשה'), waitForText('במה נתחיל?')),
     logger: 'uiLogger'})
 })
+
+Test('wonderPlatform.chatBoardGroupsExtras', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(),
+    and(contains('במה נתחיל?'), contains('חיבורים נוספים'), contains('התחלות מהירות')), {
+    userActions: actions(waitForText('פלאגין חדש'), click('שיחה חדשה'), waitForText('במה נתחיל?')),
+    logger: 'uiLogger'})
+})
