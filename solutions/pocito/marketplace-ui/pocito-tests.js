@@ -484,6 +484,12 @@ Test('wonderPlatform.chatContextPanel', {
     userActions: actions(waitForText('פלאגין חדש'), click('שיחה חדשה'), waitForText('הקשר השיחה'))})
 })
 
+Test('wonderPlatform.navTiers', {
+  impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(),
+    and(contains('ניהול נכסים'), contains('סוכן חדש'), contains('בית')), {
+    userActions: actions(waitForText('פלאגין חדש'), waitForText('ניהול נכסים')), logger: 'uiLogger'})
+})
+
 Test('wonderPlatform.marketplacePluginWorkspace', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformMarketplaceTestApp(),
     and(contains('Marketplace API'), contains('2 גרסאות'), contains('config.yaml'), contains('חיבורים')), {
