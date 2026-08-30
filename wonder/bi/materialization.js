@@ -7,6 +7,9 @@ import './bi-dsl.js'   // declares the silver-builder/event-source/field-reducer
 import '@wonder/db/db-drivers.js'
 const { wresolve, wfetch2 } = jb.wonderUtils
 import '@jb6/rx'   // registers jb.rxUtils (subscribe) — the callbag consumer `drain` uses to pull an event source
+// /dev/shm is a LINUX tmpfs — fast, and the right scratch in Cloud Run. It does not exist on macOS, where
+// mkdir fails with EPERM. This file also loads in the browser, so the platform is read off process, never fs/os.
+const scratchRoot = () => globalThis.process?.platform === 'linux' ? '/dev/shm' : '/tmp'
 
 const span = coreUtils.biSpan   // the provenance back-pointer bi-dsl set on coreUtils (Symbol.for('bi-span'))
 
@@ -211,7 +214,7 @@ SilverBuilder('materializeFromEvents', {
     // buildSetup (BUILD: bronze→silver): scratch paths for one period → ctx vars. the eventSource owns its own wUrl/prefix.
     buildSetup(ctx, period) {
       const c = ctx.setVars({ hasGcpIdentity: ctx.vars.hasGcpIdentity ?? !!process.env.K_SERVICE })
-      const localDir = c.vars.localDir || `/dev/shm/daily-logs-${period}`
+      const localDir = c.vars.localDir || `${scratchRoot()}/daily-logs-${period}`
       return c.setVars({ keyField, localDir, tmpPrefix: c.vars.tmpPrefix || `tmp/daily-logs/${period}` })
     },
     name: parquetFiles?.[0]?.name, eventSource, accounts, keyField, periodGranularity, periodPattern, buildLookups, validations, parquetFiles
