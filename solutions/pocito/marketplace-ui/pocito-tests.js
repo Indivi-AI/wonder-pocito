@@ -784,7 +784,7 @@ Test('wonderPlatform.workspaceEditSurvivesRelationAttach', {
       click('חיבורים'),
       wonderPlatformClickInSection('מיומנויות', 'הוספת'),
       waitForText('אישור בחירה'),
-      click('הוכחת קיום — תהליך מלא'),
+      click('בניית מפרט שירות'),
       click('אישור בחירה'),
       wonderPlatformWaitForButtonGone('אישור בחירה'),
       waitForText('פלאגין שם חדש')),
