@@ -5,6 +5,7 @@ import './wonder-platform-marketplace-api.js'
 import './wonder-platform-repository.js'
 import './wonder-platform-views.js'
 import './wonder-platform-resource-page.js'
+import './wonder-platform-home.js'
 import './evaluation-page.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
@@ -287,16 +288,23 @@ ReactComp('wonderPlatform', {
       if (!repo) return h('div:wp-app min-h-screen bg-[var(--wp-canvas)]', {dir: 'rtl', lang: 'he'},
         h('style', {}, dsls.common.data.wonderPlatformCss.$run()),
         h('div:mx-auto flex w-full max-w-[1720px]', {}, hh(ctx, dsls.react['react-comp'].wonderPlatformAppSkeleton, {})))
-      const content = view == 'workspace' && workspace ? hh(ctx, dsls.react['react-comp'].wonderPlatformWorkspace, {workspace, repo,
-        back: () => openView(workspace.resource), saveWorkspace, deleteWorkspace, openPicker: openWorkspacePicker, setDirty: setWorkspaceDirty,
-        openEditor: openWorkspaceEditor, runTarget, runEval}) : view == 'chat' ? hh(ctx, dsls.react['react-comp'].wonderPlatformChat, {
-        repo, conversation, message, setMessage, busy, send, selectAgent, setContext, model, setModel})
-        : view == 'evaluations' ? hh(ctx, dsls.react['react-comp'].EvaluationPage, {embedded: true, roomWUrl: repositoryRoomWUrl,
-          marketplaceBaseUrl: marketplaceUrl, agentOsBaseUrl: agentUrl, agentOsToken: token, targetItems: repo.agents, openView})
-          : editors[0]?.standalone ? hh(ctx, dsls.react['react-comp'].wonderPlatformResourcePage, {active: editors[0], update: updateBase,
-              save: saveBase, deleteItem: deleteBase, back: () => requestLeave(() => setEditors([])), repo, openPicker: openEditorPicker,
-              loadPackage, saveAndRun, runningSet})
-              : hh(ctx, dsls.react['react-comp'].wonderPlatformCatalog, {view, repo, search, setSearch, openItem, createItem, importItem})
+      const content = view == 'home' ? hh(ctx, dsls.react['react-comp'].wonderPlatformHome, {repo,
+        createAgent: () => createItem('agents'), startChat: () => newConversation(),
+        openItem, openConversation: id => (setConversationId(id), openView('chat'))})
+        : view == 'workspace' && workspace ? hh(ctx, dsls.react['react-comp'].wonderPlatformWorkspace, {workspace, repo,
+          back: () => openView(workspace.resource), saveWorkspace, deleteWorkspace,
+          openPicker: openWorkspacePicker, setDirty: setWorkspaceDirty, openEditor: openWorkspaceEditor, runTarget, runEval})
+          : view == 'chat' ? hh(ctx, dsls.react['react-comp'].wonderPlatformChat, {
+            repo, conversation, message, setMessage, busy, send, selectAgent, setContext, model, setModel})
+            : view == 'evaluations' ? hh(ctx, dsls.react['react-comp'].EvaluationPage,
+              {embedded: true, roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl,
+                agentOsBaseUrl: agentUrl, agentOsToken: token, targetItems: repo.agents, openView})
+                : editors[0]?.standalone ? hh(ctx, dsls.react['react-comp'].wonderPlatformResourcePage,
+                  {active: editors[0], update: updateBase, save: saveBase, deleteItem: deleteBase,
+                    back: () => requestLeave(() => setEditors([])), repo, openPicker: openEditorPicker,
+                    loadPackage, saveAndRun, runningSet})
+                    : hh(ctx, dsls.react['react-comp'].wonderPlatformCatalog,
+                      {view, repo, search, setSearch, openItem, createItem, importItem})
       return h('div:wp-app min-h-screen overflow-x-clip bg-[var(--wp-canvas)] text-[var(--wp-ink)]', {dir: 'rtl', lang: 'he'},
       h('style', {}, dsls.common.data.wonderPlatformCss.$run()),
       h('div:mx-auto flex w-full max-w-[1720px]', {}, hh(ctx, dsls.react['react-comp'].wonderPlatformNavigation, {
