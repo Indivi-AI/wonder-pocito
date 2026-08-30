@@ -300,8 +300,8 @@ ReactComp('wonderPlatform', {
       return h('div:wp-app min-h-screen overflow-x-clip bg-[var(--wp-canvas)] text-[var(--wp-ink)]', {dir: 'rtl', lang: 'he'},
       h('style', {}, dsls.common.data.wonderPlatformCss.$run()),
       h('div:mx-auto flex w-full max-w-[1720px]', {}, hh(ctx, dsls.react['react-comp'].wonderPlatformNavigation, {
-        view: view == 'workspace' ? workspace?.resource : view, openView, brand, brandTagline, brandIcon, extraPrimaryNav, extraLibraryNav,
-        conversations: repo.conversations, conversationId, newConversation,
+        view: view == 'workspace' ? workspace?.resource : view, openView, brand, brandTagline, brandIcon, extraLibraryNav,
+        conversations: repo.conversations, conversationId, newConversation, createAgent: () => createItem('agents'),
         openConversation: id => (setConversationId(id), openView('chat'))}), content),
       editors.length > (editors[0]?.standalone ? 1 : 0) && hh(ctx,
         dsls.react['react-comp'].wonderPlatformResourceEditor, {editors, setEditors, repo, saveEditor, deleteEditor,
