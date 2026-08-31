@@ -184,9 +184,10 @@ ReactComp('wonderPlatform', {
           const shouldAttach = index == active.attachTo.frameIndex
           const shouldUpdateRoot = index == 0 && created
           if (!shouldAttach && !shouldUpdateRoot) return entry
-          return {...entry, item: {...entry.item,
-            ...(shouldAttach && {[active.attachTo.field]: [...new Set([...(entry.item[active.attachTo.field] || []), saved.id])]}),
-            ...(shouldUpdateRoot && {createdInJourney: [...(entry.item.createdInJourney || []), created]})}}
+          return {...entry,
+            ...(shouldUpdateRoot && {createdInJourney: [...(entry.createdInJourney || []), created]}),
+            item: {...entry.item,
+              ...(shouldAttach && {[active.attachTo.field]: [...new Set([...(entry.item[active.attachTo.field] || []), saved.id])]})}}
         }))
         return saved
       }
