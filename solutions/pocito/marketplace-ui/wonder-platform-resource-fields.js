@@ -73,12 +73,7 @@ ReactComp('wonderPlatformResourceFields', {
           field('תיאור באנגלית', h(`textarea:${area} min-h-20 resize-y`, {dir: 'ltr', value: item.apiDescription || '',
             onInput: event => update({...item, apiDescription: event.target.value})}), 'description'),
           field('תיאור בעברית', h(`textarea:${area} min-h-20 resize-y`, {value: item.desc || '',
-            onInput: event => update({...item, desc: event.target.value})}), 'hebrew_description')),
-        repo.marketplace && item._marketplace && section(h('div:flex flex-wrap items-center gap-2 px-4 py-3', {},
-          h(`h2:${classes.h3}`, {}, 'Marketplace API'), h(`span:${classes.chip}`, {}, `${item.versions?.length || 0} גרסאות`),
-          h(`span:${classes.chip}`, {}, `${item.audit?.length || 0} אירועי audit`),
-          ...(item.versions || []).map((version, index) => h(`span:${classes.chip}`, {key: index},
-            `V${version.version ?? version.n ?? index + 1}`)))))
+            onInput: event => update({...item, desc: event.target.value})}), 'hebrew_description')))
       const stepsFor = resource => resource == 'agents' ? [
         {id: 'general', label: 'כללי', render: generalStep},
         {id: 'instructions', label: 'הנחיות', render: () => section(block('הנחיות מערכת',
