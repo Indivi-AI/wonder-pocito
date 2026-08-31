@@ -41,7 +41,8 @@ ReactComp('wonderPlatformJourney', {
       const [panelOpen, setPanelOpen] = useState(true)
       const [tab, setTab] = useState('test')
       const bodyRef = useRef(null)
-      const resetScroll = () => bodyRef.current?.scrollTo(0, 0)
+      const resetScroll = () => [...(bodyRef.current?.querySelectorAll('.wp-scroll') || [])]
+        .filter(el => !el.closest('aside') && el.scrollHeight > el.clientHeight).forEach(el => el.scrollTo(0, 0))
       useEffect(() => { resetScroll(); setPanelOpen(true) }, [active.baseline])
       const parentName = parent && (parent.item.name?.trim() || newLabels[parent.resource])
       const isComposite = ['plugins', 'subagents', 'agents'].includes(resource)
