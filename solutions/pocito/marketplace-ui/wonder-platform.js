@@ -298,6 +298,7 @@ ReactComp('wonderPlatform', {
       h('div:mx-auto flex w-full max-w-[1720px]', {}, hh(ctx, dsls.react['react-comp'].wonderPlatformNavigation, {
         view: view == 'journey' ? top?.resource : view, openView, brand, brandTagline, brandIcon, extraLibraryNav,
         conversations: repo.conversations, conversationId, newConversation, createAgent: () => createItem('agents'),
+        createPlugin: () => createItem('plugins'),
         openConversation: id => (setConversationId(id), openView('chat'))}), content),
       picker && hh(ctx, dsls.react['react-comp'].wonderPlatformAttachPicker, {picker, repo, setPicker, attachSelected, createNested}),
       pendingLeave && hh(ctx, dsls.react['react-comp'].wonderPlatformDialog, {title: 'שינויים שלא נשמרו',
