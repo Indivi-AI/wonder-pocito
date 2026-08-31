@@ -194,7 +194,7 @@ ReactComp('wonderPlatformWorkspace', {
             h('button:font-medium text-[var(--wp-ink)]', {onClick: () => (setPanelOpen(true), setTab('evaluation'))},
               'היסטוריית הרצות'))))
       const steps = [
-        {id: 'identity', label: isAgent ? 'מי הסוכן' : 'כללי', render: identityStep,
+        {id: 'identity', label: isAgent ? 'מי הסוכן' : 'מה הפלאגין עושה', render: identityStep,
           done: !!(item.name?.trim() && item.id?.trim() && item.desc?.trim())},
         {id: 'capabilities', label: 'יכולות', done: capDone, render: () => hh(ctx,
           dsls.react['react-comp'].wonderPlatformCapabilityStep, {item, update, repo, openPicker, openEditor, createNested,
