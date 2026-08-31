@@ -67,10 +67,10 @@ const {
 // clickouts = spend/cpc and leads = spend/cpl, so a count that drifts surfaces here even though their
 // dashboard exposes no count tile at all.
 Const('schematicsDashboardCaptures', {
-  // revenue is DERIVED for this day — the tile was behind the open date picker, so it is profit 8,848 + spend.
-  // Cross-checks against the ROI tile (123.1% x 38,250.64 = 47,087, within the rounding of both). Re-capture
-  // 05-15 with the picker closed and replace this with the printed figure.
-  day20260515: { period: '2026-05-15', revenue: 47098.64, spend: 38250.64, roi: 123.1, cpc: 26.29, cpl: 94.45 },
+  // Every figure here is PRINTED, re-captured 2026-08-31 with the date picker closed. An earlier capture had
+  // to derive revenue as profit 8,848 + spend 38,250.64 = 47,098.64; the tile reads $47,098, so the derivation
+  // was sound and the shortfall this test measures is real rather than an artifact of that arithmetic.
+  day20260515: { period: '2026-05-15', revenue: 47098, spend: 38250.64, roi: 123.1, cpc: 26.29, cpl: 94.45 },
   day20260603: { period: '2026-06-03', revenue: 54108, spend: 57973.41, roi: 93.3, cpc: 28.57, cpl: 111.49 },
   week20260511: { period: '2026-05-11..2026-05-16', revenue: 255187, spend: 253787.62, roi: 100.6, cpc: 28.34, cpl: 106.28 }
 })
