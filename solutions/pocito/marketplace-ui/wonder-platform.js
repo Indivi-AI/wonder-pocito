@@ -64,7 +64,8 @@ ReactComp('wonderPlatform', {
       const config = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx), [view, setView] = useState(defaultView)
       const [repo, setRepo] = useState(), [loadError, setLoadError] = useState(), [search, setSearch] = useState('')
       const [stack, setStack] = useState([]), stackRef = useRef([]), repoRef = useRef()
-      const [picker, setPicker] = useState(), [pendingLeave, setPendingLeave] = useState(), [saving, setSaving] = useState(false)
+      const [picker, setPicker] = useState(), [pendingLeave, setPendingLeave] = useState(), [saving, setSaving] = useState(false),
+        [sweep, setSweep] = useState()
       stackRef.current = stack; repoRef.current = repo
       const top = stack.at(-1)
       const frame = (resource, item, extra = {}) => ({resource, item, baseline: JSON.stringify(item), ...extra})
@@ -168,9 +169,15 @@ ReactComp('wonderPlatform', {
           else { setStack([]); setView(active.resource); flash('נשמר בקטלוג המשותף') }
           return saved
         }
-        setStack(rest.map((entry, index) => index == active.attachTo.frameIndex
-          ? {...entry, item: {...entry.item, [active.attachTo.field]:
-            [...new Set([...(entry.item[active.attachTo.field] || []), saved.id])]}} : entry))
+        const created = !active.item.originalId ? {resource: active.resource, id: saved.id, name: saved.name} : null
+        setStack(rest.map((entry, index) => {
+          const shouldAttach = index == active.attachTo.frameIndex
+          const shouldUpdateRoot = index == 0 && created
+          if (!shouldAttach && !shouldUpdateRoot) return entry
+          return {...entry, item: {...entry.item,
+            ...(shouldAttach && {[active.attachTo.field]: [...new Set([...(entry.item[active.attachTo.field] || []), saved.id])]}),
+            ...(shouldUpdateRoot && {createdInJourney: [...(entry.item.createdInJourney || []), created]})}}
+        }))
         return saved
       }
       const deleteTop = async () => {
@@ -267,7 +274,9 @@ ReactComp('wonderPlatform', {
         : view == 'journey' && top ? hh(ctx, dsls.react['react-comp'].wonderPlatformJourney, {stack, repo,
           popFrame, goToDepth: index => requestLeave(() => setStack(stack.slice(0, index + 1))), updateTop, saveTop, deleteTop,
           openPicker, openEditor, createNested, loadPackage, saveAndRun, runningSet, runTarget, runEval, finishAgent,
-          exit: () => openView(stack[0].resource)})
+          exit: () => { const root = stack[0], created = root.createdInJourney || []
+            if (!root.item.originalId && created.length > 0) return setSweep({created, leave: () => openView(root.resource)})
+            openView(root.resource) }})
           : view == 'chat' ? hh(ctx, dsls.react['react-comp'].wonderPlatformChat, {
             repo, conversation, message, setMessage, busy, send, selectAgent, setContext, model, setModel})
             : view == 'evaluations' ? hh(ctx, dsls.react['react-comp'].EvaluationPage,
@@ -285,6 +294,13 @@ ReactComp('wonderPlatform', {
       pendingLeave && hh(ctx, dsls.react['react-comp'].wonderPlatformDialog, {title: 'שינויים שלא נשמרו',
         body: 'ערכתם פריט שעדיין לא נשמר. מה תרצו לעשות?', close: () => setPendingLeave(), busy: saving,
         actions: [['שמירה ועזיבה', saveAndLeave, true], ['עזיבה בלי שמירה', () => (setPendingLeave(), pendingLeave())]]}),
+      sweep && hh(ctx, dsls.react['react-comp'].wonderPlatformDialog, {title: 'נכסים שנוצרו במסע',
+        body: `נוצרו ${sweep.created.length} נכסים חדשים במסע הזה, אבל הסוכן לא נשמר. מה לעשות איתם?`,
+        close: () => setSweep(),
+        actions: [['להשאיר בקטלוג', () => (setSweep(), sweep.leave()), true],
+          ['למחוק', async () => { let next = repo
+            for (const entry of sweep.created) next = {...next, [entry.resource]: next[entry.resource].filter(i => i.id != entry.id)}
+            await persistRepo(next); setSweep(); sweep.leave() }]]}),
       notice && h('div:fixed bottom-5 left-5 z-[100] flex items-center gap-2 rounded-[8px] bg-[var(--wp-ink)] px-3.5 py-2 ' +
         'text-[13px] font-medium text-white shadow-[var(--wp-sh-2)]', {}, h('L:Check', {size: 14}), notice))
     }
