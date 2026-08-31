@@ -4,7 +4,8 @@ import './wonder-platform-domain.js'
 import './wonder-platform-marketplace-api.js'
 import './wonder-platform-repository.js'
 import './wonder-platform-views.js'
-import './wonder-platform-resource-page.js'
+import './wonder-platform-journey.js'
+import './wonder-platform-home.js'
 import './evaluation-page.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
@@ -62,10 +63,18 @@ ReactComp('wonderPlatform', {
       const agentUrl = ctx.vars.agentOsBaseUrl || agentOsBaseUrl, token = ctx.vars.agentOsToken || agentOsToken
       const config = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx), [view, setView] = useState(defaultView)
       const [repo, setRepo] = useState(), [loadError, setLoadError] = useState(), [search, setSearch] = useState('')
-      const [workspace, setWorkspace] = useState(), [workspaceDirty, setWorkspaceDirty] = useState(false)
-      const [editors, setEditors] = useState([]), [picker, setPicker] = useState(), [pendingLeave, setPendingLeave] = useState(), [saving, setSaving] = useState(false)
-      const editorsRef = useRef([]), dirtyRef = useRef(false), viewRef = useRef(view)
-      editorsRef.current = editors; dirtyRef.current = workspaceDirty; viewRef.current = view
+      const [stack, setStack] = useState([]), stackRef = useRef([]), repoRef = useRef()
+      const [picker, setPicker] = useState(), [pendingLeave, setPendingLeave] = useState(), [saving, setSaving] = useState(false),
+        [sweep, setSweep] = useState()
+      const [opening, setOpening] = useState(false), [chatOpening, setChatOpening] = useState(false)
+      stackRef.current = stack; repoRef.current = repo
+      const top = stack.at(-1)
+      const frame = (resource, item, extra = {}) => ({resource, item, baseline: JSON.stringify(item), ...extra})
+      const pushFrame = entry => setStack(current => [...current, entry])
+      const popFrame = () => setStack(current => current.slice(0, -1))
+      const updateTop = value => setStack(current => current.map((entry, index) => index == current.length - 1
+        ? {...entry, item: typeof value == 'function' ? value(entry.item) : value} : entry))
+      const stackDirty = () => stackRef.current.some(entry => JSON.stringify(entry.item) != entry.baseline)
       const [conversationId, setConversationId] = useState('c1'), [message, setMessage] = useState(''), [busy, setBusy] = useState(false)
       const [model, setModel] = useState(globalThis.LLM_MODEL || '')   // '' = the deployment default (wonderPlatformModel chain)
       const [runningSet, setRunningSet] = useState(''), [notice, setNotice] = useState('')
@@ -74,7 +83,7 @@ ReactComp('wonderPlatform', {
       const marketResources = ['plugins', 'skills', 'tools', 'subagents', 'agents', 'knowledge']
       const importItem = (resource, item) => persistRepo({...repo, [resource]: repo[resource].map(value =>
         value.id == item.id ? {...value, owner: 'imported'} : value)})
-      const persistRepo = async next => (setRepo(next), next.marketplace || await saveRepo(
+      const persistRepo = async next => (repoRef.current = next, setRepo(next), next.marketplace || await saveRepo(
         ctx.setVars({repo: next, roomWUrl: repositoryRoomWUrl})), next)
       const blank = resource => ({id: resource == 'evaluations' ? `eval-${Date.now()}` : '', name: '', desc: '', instructions: '', owner: 'me',
         version: resource == 'skills' ? '1.0.0' : 'V0', publishVersion: resource == 'skills' ? '1.0.0' : undefined, content: '',
@@ -112,56 +121,53 @@ ReactComp('wonderPlatform', {
         const loaded = await loadSkill(ctx.setVars({roomWUrl: repositoryRoomWUrl, docletWUrl: `${item.docletUrl}?v=${item.version}`}))
         return {...item, content: loaded?.content || '', publishVersion: dsls.common.data.wonderPlatformNextVersion.$run(item.version)}
       }
-      const navigate = id => (setView(id), setWorkspace(), setSearch(''))
-      const editorEntry = (resource, item, extra = {}) => ({resource, item, baseline: JSON.stringify(item), ...extra})
-      const dirty = entry => JSON.stringify(entry.item) != entry.baseline
-      const requestLeave = action => { const active = editorsRef.current.at(-1)
-        const blocked = (active && dirty(active)) || (viewRef.current == 'workspace' && dirtyRef.current)
-        blocked ? setPendingLeave(() => action) : action() }
-      const openView = id => requestLeave(() => (setEditors([]), navigate(id)))
+      const navigate = id => (setView(id), setSearch(''))
+      const requestLeave = action => stackDirty() ? setPendingLeave(() => action) : action()
+      const openView = id => requestLeave(() => {
+        if (view == 'journey' && stack.length > 0) {
+          const root = stack[0], created = root.createdInJourney || []
+          if (!root.item.originalId && created.length > 0) {
+            setSweep({created, leave: () => { setStack([]); setPendingLeave(); setSweep(); navigate(id); }})
+            return
+          }
+        }
+        setStack([])
+        navigate(id)
+      })
       const openItem = async (resource, item) => {
-        if (repo.marketplace && marketResources.includes(resource)) item = await marketplaceDetail(
-          ctx.setVars({resource, id: item.id, roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))
-        if (['plugins', 'subagents', 'agents'].includes(resource)) return setWorkspace({resource, item: {...item, originalId: item.id}}), setView('workspace')
-        if (resource == 'skills') item = await skillDraft(item)
-        setEditors([editorEntry(resource, {...item, originalId: item.id}, {createLabel: config.resources[resource]?.create, standalone: true})])
+        setOpening(true)
+        try {
+          if (repo.marketplace && marketResources.includes(resource)) item = await marketplaceDetail(
+            ctx.setVars({resource, id: item.id, roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))
+          if (resource == 'skills') item = await skillDraft(item)
+          setStack([frame(resource, {...item, originalId: item.id}, {createLabel: config.resources[resource]?.create})])
+          setView('journey')
+        } finally { setOpening(false) }
       }
-      const createItem = resource => ['plugins', 'subagents', 'agents'].includes(resource)
-        ? (setWorkspace({resource, item: blank(resource)}), setView('workspace'))
-        : setEditors([editorEntry(resource, blank(resource), {createLabel: config.resources[resource]?.create, standalone: true})])
-      const saveWorkspace = async item => {
-        const saved = await saveItem(workspace.resource, item)
-        setWorkspace({...workspace, item: {...saved, originalId: saved.id}}); flash('נשמר'); return saved
-      }
-      const deleteWorkspace = async () => {
-        if (repo.marketplace && marketResources.includes(workspace.resource)) await marketplaceCall(ctx.setVars({
-          operation: 'delete', resource: workspace.resource,
-          id: workspace.item.originalId || workspace.item.id, roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))
-        await persistRepo({...repo, [workspace.resource]: repo[workspace.resource].filter(item => item.id != workspace.item.id)})
-        openView(workspace.resource)
-      }
-      const openWorkspaceEditor = async (resource, item) => {
-        if (!item) return
-        if (repo.marketplace && marketResources.includes(resource)) item = await marketplaceDetail(ctx.setVars({resource, id: item.id, roomWUrl: repositoryRoomWUrl,
-          marketplaceBaseUrl: marketplaceUrl}))
-        const draft = resource == 'skills' ? await skillDraft(item) : item
-        setEditors(current => [...current, editorEntry(resource, {...draft, originalId: item.id},
-          {createLabel: config.resources[resource]?.create, returnToWorkspace: true})])
-      }
-      const openWorkspacePicker = (field, resource, label, selected, attach) => setPicker({source: 'workspace', field, resource, label,
-        single: config.resources[resource].label, selected, attach, query: ''})
-      const openEditorPicker = (field, resource, label) => setPicker({source: 'editor', editorIndex: editors.length - 1,
-        field, resource, label, single: config.resources[resource].label, selected: editors.at(-1).item[field] || [], query: ''})
+      const createItem = resource => (setStack([frame(resource, blank(resource),
+        {createLabel: config.resources[resource]?.create})]), setView('journey'))
+      const openPicker = (field, resource, label) => setPicker({frameIndex: stack.length - 1, field, resource, label,
+        single: config.resources[resource].label, selected: top.item[field] || [], query: ''})
       const attachSelected = async () => {
-        if (picker.source == 'workspace') await picker.attach(picker.selected)
-        else setEditors(editors.map((entry, index) => index == picker.editorIndex
+        setStack(current => current.map((entry, index) => index == picker.frameIndex
           ? {...entry, item: {...entry.item, [picker.field]: picker.selected}} : entry))
         setPicker()
       }
-      const createNested = resource => {
-        const attachTo = picker
-        setPicker(); setEditors([...editors, editorEntry(resource, blank(resource), {attachTo,
-          createLabel: resource == 'tools' ? 'כלי חדש ממארז Flow' : config.resources[resource].create})])
+      const createNested = (resource, field) => {
+        const attachTo = field ? {frameIndex: stack.length - 1, field} : {frameIndex: picker.frameIndex, field: picker.field}
+        setPicker(); pushFrame(frame(resource, blank(resource), {attachTo,
+          createLabel: resource == 'tools' ? 'כלי חדש ממארז Flow' : config.resources[resource].create}))
+      }
+      const openEditor = async (resource, item, field) => {
+        if (!item) return
+        setOpening(true)
+        try {
+          if (repo.marketplace && marketResources.includes(resource)) item = await marketplaceDetail(ctx.setVars({resource, id: item.id,
+            roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))
+          const draft = resource == 'skills' ? await skillDraft(item) : item
+          pushFrame(frame(resource, {...draft, originalId: item.id},
+            {attachTo: {frameIndex: stack.length - 1, field}, createLabel: config.resources[resource]?.create}))
+        } finally { setOpening(false) }
       }
       const publishEditedSkill = async skill => {
         await publishSkill(ctx.setVars({roomWUrl: repositoryRoomWUrl, skill}))
@@ -169,51 +175,41 @@ ReactComp('wonderPlatform', {
         await persistRepo(nextRepo)
         return {repo: nextRepo, saved: skills.find(item => item.id == skill.id)}
       }
-      const saveEditor = async () => {
-        const active = editors.at(-1), rest = editors.slice(0, -1)
-        if (active.attachTo?.source == 'workspace') {
-          const child = active.resource == 'skills' && !repo.marketplace ? (await publishEditedSkill(active.item)).saved
-            : await saveItem(active.resource, active.item)
-          active.attachTo.attach([...new Set([...active.attachTo.selected, child.id])]); setEditors(rest)
-        } else {
-          const skillResult = active.resource == 'skills' && !repo.marketplace && await publishEditedSkill(active.item)
-          const saved = skillResult ? skillResult.saved : await saveItem(active.resource, active.item)
-          if (active.attachTo?.source == 'editor') setEditors(rest.map((entry, index) => index == active.attachTo.editorIndex
-            ? {...entry, item: {...entry.item, [active.attachTo.field]: [...new Set([...(entry.item[active.attachTo.field] || []), saved.id])]}} : entry))
-          else if (active.returnToWorkspace) setEditors([])
-          else if (['plugins', 'subagents', 'agents'].includes(active.resource)) {
-            setEditors([]); setWorkspace({resource: active.resource, item: {...saved, originalId: saved.id}}); setView('workspace')
-          } else {
-            setEditors([]); setView(active.resource); flash('נשמר בקטלוג המשותף')
-          }
+      const saveTop = async override => {
+        const active = {...stack.at(-1), item: override || stack.at(-1).item}, rest = stack.slice(0, -1)
+        const skillResult = active.resource == 'skills' && !repo.marketplace && await publishEditedSkill(active.item)
+        const saved = skillResult ? skillResult.saved : await saveItem(active.resource, active.item)
+        if (!active.attachTo) {
+          const savedFrame = frame(active.resource, {...saved, originalId: saved.id}, {createLabel: active.createLabel})
+          if (['plugins', 'subagents', 'agents'].includes(active.resource)) { setStack([savedFrame]); flash('נשמר') }
+          else if (active.resource == 'evaluations') { setStack([savedFrame]); flash('נשמר בקטלוג המשותף') }
+          else { setStack([]); setView(active.resource); flash('נשמר בקטלוג המשותף') }
+          return saved
         }
+        const created = !active.item.originalId ? {resource: active.resource, id: saved.id, name: saved.name} : null
+        setStack(rest.map((entry, index) => {
+          const shouldAttach = index == active.attachTo.frameIndex
+          const shouldUpdateRoot = index == 0 && created
+          if (!shouldAttach && !shouldUpdateRoot) return entry
+          return {...entry,
+            ...(shouldUpdateRoot && {createdInJourney: [...(entry.createdInJourney || []), created]}),
+            item: {...entry.item,
+              ...(shouldAttach && {[active.attachTo.field]: [...new Set([...(entry.item[active.attachTo.field] || []), saved.id])]})}}
+        }))
+        return saved
       }
-      const updateBase = value => setEditors(editors.map((entry, index) => index == 0
-        ? {...entry, item: typeof value == 'function' ? value(entry.item) : value} : entry))
-      const saveBase = async () => {
-        const {resource, item} = editors[0]
-        const saved = await saveItem(resource, item)
-        setEditors(resource == 'evaluations'
-          ? [{...editors[0], item: {...saved, originalId: saved.id}, baseline: JSON.stringify({...saved, originalId: saved.id})}] : [])
-        flash('נשמר בקטלוג המשותף'); return saved
+      const deleteTop = async () => {
+        const active = stack.at(-1)
+        if (repo.marketplace && marketResources.includes(active.resource)) await marketplaceCall(ctx.setVars({
+          operation: 'delete', resource: active.resource, id: active.item.originalId || active.item.id,
+          roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))
+        await persistRepo({...repo, [active.resource]: repo[active.resource].filter(
+          item => item.id != (active.item.originalId || active.item.id))})
+        stack.length > 1 ? popFrame() : openView(active.resource)
       }
       const saveAndLeave = async () => { const action = pendingLeave; setSaving(true)
-        try { await (editors.length > 1 ? saveEditor() : saveBase()) } catch (error) { setSaving(false); return }
+        try { await saveTop() } catch (error) { setSaving(false); return }
         setSaving(false); setPendingLeave(); action() }
-      const deleteBase = async () => {
-        const {resource, item} = editors[0]
-        if (repo.marketplace && marketResources.includes(resource)) await marketplaceCall(ctx.setVars({operation: 'delete', resource, id: item.originalId,
-          roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))
-        await persistRepo({...repo, [resource]: repo[resource].filter(value => value.id != item.originalId)})
-        setEditors([])
-      }
-      const deleteEditor = async () => {
-        const active = editors.at(-1)
-        if (repo.marketplace && marketResources.includes(active.resource)) await marketplaceCall(ctx.setVars({operation: 'delete', resource: active.resource,
-          id: active.item.originalId, roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))
-        await persistRepo({...repo, [active.resource]: repo[active.resource].filter(item => item.id != active.item.originalId)})
-        setEditors(editors.slice(0, -1))
-      }
       const runTarget = (text, target, sessionId = `${target.id}-${Date.now()}`) => runAgent(ctx.setVars({text, target, sessionId,
         roomWUrl: repositoryRoomWUrl, agentOsBaseUrl: agentUrl, agentOsToken: token, ...(model && {selectedModel: model})}))
       const runEval = async (evaluation, targetResource, target, runRepo = repo) => {
@@ -236,12 +232,19 @@ ReactComp('wonderPlatform', {
       const updateConversation = async updated => persistRepo({...repo,
         conversations: repo.conversations.map(item => item.id == updated.id ? updated : item)})
       const newConversation = async (agentId = '') => {
-        const agent = repo.agents.find(item => item.id == agentId)
-        const title = agent ? `שיחה · ${agent.name}` : 'שיחה חופשית'
-        const created = {id: `c-${Date.now()}`, title, agentId, when: 'עכשיו', messages: [],
-          pluginIds: [], skillIds: [], toolIds: [], knowledgeIds: []}
-        await persistRepo({...repo, conversations: [created, ...repo.conversations]})
-        setConversationId(created.id); setMessage(''); openView('chat')
+        setChatOpening(true)
+        try {
+          const current = repoRef.current, agent = current.agents.find(item => item.id == agentId)
+          const title = agent ? `שיחה · ${agent.name}` : 'שיחה חופשית'
+          const created = {id: `c-${Date.now()}`, title, agentId, when: 'עכשיו', messages: [],
+            pluginIds: [], skillIds: [], toolIds: [], knowledgeIds: []}
+          await persistRepo({...current, conversations: [created, ...current.conversations]})
+          setConversationId(created.id); setMessage(''); openView('chat')
+        } finally { setChatOpening(false) }
+      }
+      const finishAgent = async item => {
+        const saved = await saveTop(item)
+        stackRef.current = []; setStack([]); await newConversation(saved.id)
       }
       const selectAgent = agentId => conversation.messages.length ? newConversation(agentId) : updateConversation({...conversation, agentId})
       const setContext = (field, value) => updateConversation({...conversation, [field]: value})
@@ -270,8 +273,7 @@ ReactComp('wonderPlatform', {
       }
       const saveAndRun = async (evaluation, target) => {
         const result = upsert(ctx.setVars({repo, resource: 'evaluations', item: evaluation})), next = await persistRepo(result.repo)
-        setEditors([{...editors[0], item: {...result.saved, originalId: result.saved.id},
-          baseline: JSON.stringify({...result.saved, originalId: result.saved.id})}]); flash('נשמר')
+        setStack([frame('evaluations', {...result.saved, originalId: result.saved.id}, {createLabel: top.createLabel})]); flash('נשמר')
         setRunningSet(result.saved.id); await runEval(result.saved, 'agents', target, next); setRunningSet('')
       }
       const shell = body => h('div:wp-app grid min-h-screen place-items-center bg-[var(--wp-canvas)] p-6', {dir: 'rtl', lang: 'he'},
@@ -287,29 +289,42 @@ ReactComp('wonderPlatform', {
       if (!repo) return h('div:wp-app min-h-screen bg-[var(--wp-canvas)]', {dir: 'rtl', lang: 'he'},
         h('style', {}, dsls.common.data.wonderPlatformCss.$run()),
         h('div:mx-auto flex w-full max-w-[1720px]', {}, hh(ctx, dsls.react['react-comp'].wonderPlatformAppSkeleton, {})))
-      const content = view == 'workspace' && workspace ? hh(ctx, dsls.react['react-comp'].wonderPlatformWorkspace, {workspace, repo,
-        back: () => openView(workspace.resource), saveWorkspace, deleteWorkspace, openPicker: openWorkspacePicker, setDirty: setWorkspaceDirty,
-        openEditor: openWorkspaceEditor, runTarget, runEval}) : view == 'chat' ? hh(ctx, dsls.react['react-comp'].wonderPlatformChat, {
-        repo, conversation, message, setMessage, busy, send, selectAgent, setContext, model, setModel})
-        : view == 'evaluations' ? hh(ctx, dsls.react['react-comp'].EvaluationPage, {embedded: true, roomWUrl: repositoryRoomWUrl,
-          marketplaceBaseUrl: marketplaceUrl, agentOsBaseUrl: agentUrl, agentOsToken: token, targetItems: repo.agents, openView})
-          : editors[0]?.standalone ? hh(ctx, dsls.react['react-comp'].wonderPlatformResourcePage, {active: editors[0], update: updateBase,
-              save: saveBase, deleteItem: deleteBase, back: () => requestLeave(() => setEditors([])), repo, openPicker: openEditorPicker,
-              loadPackage, saveAndRun, runningSet})
-              : hh(ctx, dsls.react['react-comp'].wonderPlatformCatalog, {view, repo, search, setSearch, openItem, createItem, importItem})
+      const journeyBodyLoading = opening && view == 'journey' && !!top
+      const content = opening && view != 'journey' ? hh(ctx, dsls.react['react-comp'].wonderPlatformJourneySkeleton, {})
+        : chatOpening && view != 'chat' ? hh(ctx, dsls.react['react-comp'].wonderPlatformChatSkeleton, {})
+        : view == 'home' ? hh(ctx, dsls.react['react-comp'].wonderPlatformHome, {repo,
+        createAgent: () => createItem('agents'), startChat: () => newConversation(), createPlugin: () => createItem('plugins'),
+        openItem, openConversation: id => (setConversationId(id), openView('chat'))})
+        : view == 'journey' && top ? h('div:relative flex min-w-0 flex-1', {}, hh(ctx, dsls.react['react-comp'].wonderPlatformJourney,
+          {stack, repo, popFrame, goToDepth: index => requestLeave(() => setStack(stack.slice(0, index + 1))), updateTop, saveTop,
+            deleteTop, openPicker, openEditor, createNested, loadPackage, saveAndRun, runningSet, runTarget, runEval, finishAgent,
+            exit: () => openView(stack[0].resource)}),
+          journeyBodyLoading && hh(ctx, dsls.react['react-comp'].wonderPlatformJourneySkeleton, {bodyOnly: true}))
+          : view == 'chat' ? hh(ctx, dsls.react['react-comp'].wonderPlatformChat, {
+            repo, conversation, message, setMessage, busy, send, selectAgent, setContext, model, setModel})
+            : view == 'evaluations' ? hh(ctx, dsls.react['react-comp'].EvaluationPage,
+              {embedded: true, roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl,
+                agentOsBaseUrl: agentUrl, agentOsToken: token, targetItems: repo.agents, openView})
+                : hh(ctx, dsls.react['react-comp'].wonderPlatformCatalog,
+                  {view, repo, search, setSearch, openItem, createItem, importItem})
       return h('div:wp-app min-h-screen overflow-x-clip bg-[var(--wp-canvas)] text-[var(--wp-ink)]', {dir: 'rtl', lang: 'he'},
       h('style', {}, dsls.common.data.wonderPlatformCss.$run()),
       h('div:mx-auto flex w-full max-w-[1720px]', {}, hh(ctx, dsls.react['react-comp'].wonderPlatformNavigation, {
-        view: view == 'workspace' ? workspace?.resource : view, openView, brand, brandTagline, brandIcon, extraPrimaryNav, extraLibraryNav,
-        conversations: repo.conversations, conversationId, newConversation,
+        view: view == 'journey' ? top?.resource : view, openView, brand, brandTagline, brandIcon, extraLibraryNav,
+        conversations: repo.conversations, conversationId, newConversation, createAgent: () => createItem('agents'),
+        createPlugin: () => createItem('plugins'),
         openConversation: id => (setConversationId(id), openView('chat'))}), content),
-      editors.length > (editors[0]?.standalone ? 1 : 0) && hh(ctx,
-        dsls.react['react-comp'].wonderPlatformResourceEditor, {editors, setEditors, repo, saveEditor, deleteEditor,
-          loadPackage, openPicker: openEditorPicker, requestClose: requestLeave}),
       picker && hh(ctx, dsls.react['react-comp'].wonderPlatformAttachPicker, {picker, repo, setPicker, attachSelected, createNested}),
       pendingLeave && hh(ctx, dsls.react['react-comp'].wonderPlatformDialog, {title: 'שינויים שלא נשמרו',
         body: 'ערכתם פריט שעדיין לא נשמר. מה תרצו לעשות?', close: () => setPendingLeave(), busy: saving,
         actions: [['שמירה ועזיבה', saveAndLeave, true], ['עזיבה בלי שמירה', () => (setPendingLeave(), pendingLeave())]]}),
+      sweep && hh(ctx, dsls.react['react-comp'].wonderPlatformDialog, {title: 'נכסים שנוצרו במסע',
+        body: `נוצרו ${sweep.created.length} נכסים חדשים במסע הזה, אבל הסוכן לא נשמר. מה לעשות איתם?`,
+        close: () => sweep.leave(),
+        actions: [['להשאיר בקטלוג', () => sweep.leave(), true],
+          ['למחוק', async () => { let next = repo
+            for (const entry of sweep.created) next = {...next, [entry.resource]: next[entry.resource].filter(i => i.id != entry.id)}
+            await persistRepo(next); sweep.leave() }]]}),
       notice && h('div:fixed bottom-5 left-5 z-[100] flex items-center gap-2 rounded-[8px] bg-[var(--wp-ink)] px-3.5 py-2 ' +
         'text-[13px] font-medium text-white shadow-[var(--wp-sh-2)]', {}, h('L:Check', {size: 14}), notice))
     }
