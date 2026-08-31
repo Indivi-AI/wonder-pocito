@@ -21,6 +21,12 @@ Let me know you read the rules by writing
 as the first thing you write and do.
 When reading code files always read the whole file, not just a few lines. To let me know you did it write "Master I read the whole file". 
 lines are maximum 180 chars, if you work on some file and it's not the case - refactor as part of the job.
+
+## Pocito file placement
+
+Keep Pocito applets, assets, screenshots, and supporting files under `solutions/pocito/`, never at the repository root.
+Store images in `solutions/pocito/assets/`; keep shared framework code and repository configuration in their existing locations.
+
 ## jb6 and TGP
 
 TGP: TgpType (abstract type), Component (generic def), Profile (concrete JSON instance)
