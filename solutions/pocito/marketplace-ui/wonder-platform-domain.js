@@ -169,6 +169,8 @@ Data('wonderPlatformUi', {
     catalogViews: ['agents', 'plugins', 'skills', 'tools', 'knowledge', 'evaluations'],
     labels: {plugins: 'פלאגין', skills: 'מיומנות', tools: 'כלי', subagents: 'סאב-אייג׳נט', knowledge: 'ידע', agents: 'סוכן',
       evaluations: 'סט אבלואציה'},
+    newLabels: {plugins: 'פלאגין חדש', skills: 'מיומנות חדשה', tools: 'כלי חדש', subagents: 'סאב-אייג׳נט חדש',
+      knowledge: 'מקור ידע חדש', agents: 'סוכן חדש', evaluations: 'סט אבלואציה חדש'},
     ownerTabs: [['mine', 'שלי'], ['global', 'קטלוג גלובלי']],
     classes: {
       page: 'min-h-screen min-w-0 flex-1 bg-[var(--wp-surface)] pb-24 sm:pb-0',
