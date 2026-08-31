@@ -4,6 +4,7 @@ import '@jb6/react/automation.js'
 import '@jb6/react/tests/react-testers.js'
 import './wonder-platform-runtime.js'
 import './wonder-platform.js'
+import './wonder-platform-tests.js'
 
 const {
   common: { boolean: { and, contains, notContains } },
