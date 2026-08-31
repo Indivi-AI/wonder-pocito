@@ -31,22 +31,63 @@ ReactComp('wonderPlatformEmpty', {
 ReactComp('wonderPlatformAppSkeleton', {
   impl: comp({
     hFunc: (ctx, {react: {h}}) => () => {
+      const {classes, catalogNav} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
       const bar = (width, height = 'h-3') => h(`span:wp-skel block ${height} ${width}`)
-      const navRow = index => h('div:flex items-center gap-2.5 px-2.5 py-2', {key: index}, bar('w-4 h-4'), bar('w-24'))
-      const cardBox = index => h('div:flex min-h-[168px] flex-col gap-3 rounded-[12px] border border-[var(--wp-border)] p-4',
-        {key: index}, h('div:flex items-start gap-3', {}, bar('w-9 h-9'),
-          h('div:flex-1', {}, bar('w-32 h-3.5'), h('span:mt-2 block', {}, bar('w-20')))),
-        bar('w-full'), bar('w-4/5'), h('div:mt-auto border-t border-[var(--wp-border)] pt-3', {}, bar('w-24')))
+      const navRow = key => h('div:flex items-center gap-2.5 px-2.5 py-2', {key}, bar('w-4', 'h-4'), bar('w-24'))
+      const navGroup = (key, rows) => h('div', {key}, h('div:pb-1.5 pt-5', {}, bar('w-16')),
+        h('div:space-y-1', {}, Array.from({length: rows}, (value, index) => navRow(`${key}-${index}`))))
+      const actionCard = index => h(`div:${classes.panel} flex flex-1 flex-col items-start gap-2 p-6`, {key: index},
+        bar('w-11', 'h-11'), h('span:mt-2 block', {}, bar('w-24', 'h-4')), bar('w-full'), bar('w-4/5'))
+      const row = index => h('div:flex items-center gap-3 bg-[var(--wp-surface)] px-3.5 py-2.5', {key: index},
+        bar('w-7', 'h-7'), h('span:min-w-0 flex-1', {}, bar('w-32'), h('span:mt-1.5 block', {}, bar('w-20'))))
+      const group = index => h('div:min-w-0 flex-1', {key: index}, h('div:pb-2', {}, bar('w-24')),
+        h('div:grid gap-px overflow-hidden rounded-[8px] border border-[var(--wp-border)] bg-[var(--wp-border)]', {},
+          [0, 1, 2].map(row)))
       return h('div:flex min-h-screen w-full', {},
         h('aside:hidden w-[260px] shrink-0 flex-col border-l border-[var(--wp-border)] px-2.5 py-3.5 sm:flex', {},
-          h('div:flex items-center gap-2.5 px-1.5 pb-4', {}, bar('w-8 h-8'), bar('w-28')),
-          bar('w-full h-9'), h('div:mt-5 space-y-1', {}, [0, 1, 2, 3, 4, 5].map(navRow))),
-        h('main:min-w-0 flex-1 bg-[var(--wp-surface)]', {},
-          h('div:mx-auto w-full max-w-[1180px] px-6 sm:px-8', {},
-            h('div:flex items-start justify-between gap-6 pt-9 pb-6', {},
-              h('div', {}, bar('w-40 h-6'), h('span:mt-3 block', {}, bar('w-80'))), bar('w-28 h-9')),
-            h('div:h-[52px] border-y border-[var(--wp-border)]'),
-            h('div:mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3', {}, [0, 1, 2, 3, 4, 5].map(cardBox)))))
+          h('div:flex items-center gap-2.5 px-1.5 pb-4', {}, bar('w-8', 'h-8'), bar('w-28')),
+          h('div:space-y-1', {}, navRow('home')),
+          h('div:mt-5 space-y-2', {}, bar('w-full', 'h-9'),
+            h('div:grid grid-cols-2 gap-1.5', {}, bar('w-full', 'h-9'), bar('w-full', 'h-9'))),
+          navGroup('recent', 3), navGroup('catalog', catalogNav.length)),
+        h(`main:${classes.page}`, {},
+          h('div:mx-auto w-full max-w-[1180px] px-8 pb-20 pt-20', {},
+            bar('w-56', 'h-6'), h('span:mt-2 block', {}, bar('w-80')),
+            h('div:mt-6 flex gap-3', {}, [0, 1, 2].map(actionCard)),
+            h('div:mt-10 flex gap-6', {}, [0, 1].map(group)))))
+    }
+  })
+})
+
+ReactComp('wonderPlatformJourneySkeleton', {
+  impl: comp({
+    hFunc: (ctx, {react: {h}}) => ({bodyOnly}) => {
+      const bar = (width, height = 'h-3', key) => h(`span:wp-skel block ${height} ${width}`, key == null ? {} : {key})
+      const step = index => h('span:flex items-center gap-2', {key: index}, bar('w-5', 'h-5'), bar('w-16'))
+      const field = index => h('div:space-y-3 rounded-[12px] border border-[var(--wp-border)] p-4', {key: index},
+        bar('w-32', 'h-3.5'), bar('w-full', 'h-9'), bar('w-4/5', 'h-9'))
+      const mainCol = h('div:flex min-w-0 flex-1 flex-col', {},
+        h('nav:flex shrink-0 items-center gap-4 border-b border-[var(--wp-border)] px-5 py-3', {}, [0, 1, 2].map(step)),
+        h('div:min-h-0 flex-1 overflow-hidden', {},
+          h('div:mx-auto w-full max-w-[840px] space-y-4 px-6 py-6', {}, [0, 1, 2].map(field))),
+        h('div:flex shrink-0 items-center justify-between gap-4 border-t border-[var(--wp-border)] px-6 py-3', {},
+          bar('w-40'), bar('w-28', 'h-9')))
+      const drawer = h('aside:flex h-full w-[400px] shrink-0 flex-col border-r border-[var(--wp-border)] 2xl:w-[460px]', {},
+        h('div:flex shrink-0 items-center gap-2 border-b border-[var(--wp-border)] p-3', {}, bar('w-6', 'h-6'),
+          h('div:inline-flex items-center gap-1 rounded-[8px] border border-[var(--wp-border)] p-[3px]', {},
+            bar('w-16', 'h-6'), bar('w-16', 'h-6'))),
+        h('div:min-h-0 flex-1 space-y-3 p-4', {}, ['w-full', 'w-4/5', 'w-2/3', 'w-3/4', 'w-1/2'].map((width, index) =>
+          bar(width, 'h-9', index))))
+      const body = h('div:min-h-0 flex-1 overflow-hidden', {}, h('div:flex h-full min-h-0', {}, mainCol, drawer))
+      if (bodyOnly) return h('div:absolute inset-0 z-10 flex flex-col bg-[var(--wp-surface)]', {},
+        h('div:h-[64px] shrink-0 border-b border-[var(--wp-border)]'),
+        h('div:h-[38px] shrink-0 border-b border-[var(--wp-border)]'), body)
+      return h('main:flex h-screen min-w-0 flex-1 flex-col overflow-hidden bg-[var(--wp-surface)]', {},
+        h('header:z-30 shrink-0 border-b border-[var(--wp-border)] px-5', {},
+          h('div:flex h-[64px] items-center gap-3', {}, bar('w-8', 'h-8'), bar('w-9', 'h-9'),
+            h('div:min-w-0 flex-1', {}, bar('w-40', 'h-4'), h('span:mt-2 block', {}, bar('w-24'))), bar('w-24', 'h-9')),
+          h('div:flex h-[38px] items-center gap-2.5 border-t border-[var(--wp-border)]', {}, bar('w-16'), bar('w-20'))),
+        body)
     }
   })
 })

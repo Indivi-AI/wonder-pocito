@@ -28,3 +28,7 @@ solutions/pocito/marketplace-server/.env
 solutions/idf/marketplace-server/.venv/
 
 solutions/idf/marketplace-server/.env
+
+# Playwright MCP generated artifacts
+.playwright-mcp/
+*.png

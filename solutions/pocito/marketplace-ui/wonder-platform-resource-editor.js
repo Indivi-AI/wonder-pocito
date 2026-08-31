@@ -9,7 +9,7 @@ const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 ReactComp('wonderPlatformAttachPicker', {
   impl: comp({
     hFunc: (ctx, {react: {h, hh}}) => ({picker, repo, setPicker, attachSelected, createNested}) => {
-      const {classes, resources} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
+      const {classes, resources, newLabels} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
       if (!picker) return null
       const items = (repo[picker.resource] || []).filter(item => !picker.query || `${item.name} ${item.desc}`.includes(picker.query))
       const toggle = item => setPicker({...picker, selected: picker.selected.includes(item.id)
@@ -30,14 +30,6 @@ ReactComp('wonderPlatformAttachPicker', {
           h('span:block truncate text-[12px] text-[var(--wp-ink-4)]', {}, item.desc || '')),
         item.managed && h(`span:${classes.chip}`, {}, 'מנוהל'))
       }
-      const createRow = h('button:flex w-full items-center gap-3 border-s-2 border-s-transparent px-4 py-2.5 ' +
-        'text-start transition-colors hover:bg-[var(--wp-surface-2)]', {onClick: () => createNested(picker.resource)},
-      h('span:h-[17px] w-[17px] shrink-0'),
-      h('span:grid h-7 w-7 shrink-0 place-items-center rounded-[8px] border border-dashed ' +
-        'border-[var(--wp-border-strong)] text-[var(--wp-ink-3)]', {}, h('L:Plus', {size: 14})),
-      h('span:min-w-0 flex-1 truncate text-[13px] font-medium text-[var(--wp-ink)]', {},
-        picker.resource == 'tools' ? 'כלי חדש ממארז Flow'
-          : picker.query ? `יצירת "${picker.query}"` : `${picker.single} חדשה`))
       return h(`div:${classes.overlay}`, {onClick: event => event.target == event.currentTarget && setPicker()},
         h(`section:${classes.dialog} flex max-h-[78vh] w-full max-w-xl flex-col overflow-hidden`,
           {role: 'dialog', 'aria-modal': 'true', 'aria-label': `בחירת ${picker.label}`},
@@ -50,42 +42,17 @@ ReactComp('wonderPlatformAttachPicker', {
             h(`button:${classes.icon}`, {onClick: () => setPicker(), 'aria-label': 'סגירה'}, h('L:X', {size: 16}))),
           h('div:wp-scroll min-h-0 flex-1 overflow-y-auto', {},
             items.map(row), items.length == 0 && h('p:px-4 py-8 text-center text-[13px] text-[var(--wp-ink-3)]', {},
-              `לא נמצא ${picker.single} מתאים`), createRow),
+              `לא נמצא ${picker.single} מתאים`)),
           h('div:flex items-center justify-between gap-3 border-t border-[var(--wp-border)] ' +
             'bg-[var(--wp-surface-2)] px-4 py-3', {},
             h(`span:${classes.meta}`, {}, `${picker.selected.length} נבחרו`),
             h('div:flex items-center gap-2', {},
+              h(`button:${classes.button}`, {onClick: () => createNested(picker.resource),
+                'aria-label': `בניית ${newLabels[picker.resource]}`},
+                h('L:Plus', {size: 14}),
+                picker.resource == 'tools' ? 'כלי חדש ממארז Flow' : newLabels[picker.resource]),
               h(`button:${classes.button}`, {onClick: () => setPicker()}, 'ביטול'),
               h(`button:${classes.primary}`, {onClick: attachSelected, 'aria-label': 'אישור בחירה'}, 'אישור')))))
     }
-  })
-})
-
-ReactComp('wonderPlatformResourceEditor', {
-  impl: comp({
-    hFunc: (ctx, {react: {h, hh}}) =>
-      ({editors, setEditors, repo, loadPackage, saveEditor, deleteEditor, openPicker, requestClose}) => {
-        const {classes, labels, resources} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx), active = editors.at(-1)
-        if (!active) return null
-        const {resource, item} = active, update = value => setEditors(editors.map((entry, index) => index == editors.length - 1
-          ? {...entry, item: typeof value == 'function' ? value(entry.item) : value} : entry))
-        const readOnlyTool = resource == 'tools' && item.originalId && item.kind != 'flow'
-        const saveDisabled = !item.name?.trim() || !item.id?.trim() || resource == 'skills' && !repo.marketplace
-          && (!item.content?.trim() || !/^\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/.test(item.publishVersion))
-        const canDelete = !readOnlyTool && item.originalId && (resource != 'skills' || repo.marketplace)
-        return h(`div:${classes.overlay}`, {}, h('section:absolute inset-y-0 left-0 flex w-full max-w-3xl flex-col ' +
-          'bg-[var(--wp-surface)] shadow-[var(--wp-sh-2)]', {dir: 'rtl'},
-        hh(ctx, dsls.react['react-comp'].wonderPlatformDetailHeader, {
-          title: item.name || active.createLabel || `${labels[resource]} חדש`, subtitle: item.id,
-          icon: item.icon || resources[resource]?.icon, backLabel: 'סגירה',
-          back: () => requestClose(() => setEditors(editors.slice(0, -1))),
-          actions: [canDelete && h(`button:${classes.icon} hover:bg-[var(--wp-danger-soft)] hover:text-[var(--wp-danger)]`,
-            {key: 'delete', onClick: deleteEditor, 'aria-label': `מחיקת ${item.name || ''}`}, h('L:Trash2', {size: 16})),
-          !readOnlyTool && h(`button:${classes.primary}`, {key: 'save', disabled: saveDisabled, onClick: saveEditor},
-            'שמירה')]}),
-        h('div:wp-scroll min-h-0 flex-1 overflow-y-auto px-6 pb-16 pt-6', {},
-          hh(ctx, dsls.react['react-comp'].wonderPlatformResourceFields,
-            {resource, item, update, repo, loadPackage, openPicker}))))
-      }
   })
 })
