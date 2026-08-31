@@ -16,10 +16,10 @@ const { wonderPlatformClickInSection } = dsls.react['ui-action']
 
 Test('wonderPlatform.pickerPromotesBuildNew', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(),
-    and(contains('הנחיות בסיס'), notContains('אישור בחירה')), {
+    and(contains('שם להצגה'), notContains('אישור בחירה')), {
     userActions: actions(
-      waitForText('אנליסט הוכחת קיום'), click('אנליסט הוכחת קיום'), waitForText('חיבורים'), click('חיבורים'),
-      wonderPlatformClickInSection('מיומנויות', 'הוספה'), waitForText('אישור בחירה'),
-      click('aria-label="בניית מיומנות חדש"'), waitForText('הנחיות בסיס')),
+      waitForText('אנליסט הוכחת קיום'), click('אנליסט הוכחת קיום'), waitForText('יכולות'), click('יכולות'),
+      wonderPlatformClickInSection('מיומנויות', 'חיבור קיים'), waitForText('אישור בחירה'),
+      click('aria-label="בניית מיומנות חדשה"'), waitForText('שם להצגה')),
     logger: 'uiLogger'})
 })
