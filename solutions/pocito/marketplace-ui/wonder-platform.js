@@ -285,9 +285,7 @@ ReactComp('wonderPlatform', {
         : view == 'journey' && top ? hh(ctx, dsls.react['react-comp'].wonderPlatformJourney, {stack, repo,
           popFrame, goToDepth: index => requestLeave(() => setStack(stack.slice(0, index + 1))), updateTop, saveTop, deleteTop,
           openPicker, openEditor, createNested, loadPackage, saveAndRun, runningSet, runTarget, runEval, finishAgent,
-          exit: () => { const root = stack[0], created = root.createdInJourney || []
-            if (!root.item.originalId && created.length > 0) return setSweep({created, leave: () => openView(root.resource)})
-            openView(root.resource) }})
+          exit: () => openView(stack[0].resource)})
           : view == 'chat' ? hh(ctx, dsls.react['react-comp'].wonderPlatformChat, {
             repo, conversation, message, setMessage, busy, send, selectAgent, setContext, model, setModel})
             : view == 'evaluations' ? hh(ctx, dsls.react['react-comp'].EvaluationPage,
@@ -307,11 +305,11 @@ ReactComp('wonderPlatform', {
         actions: [['שמירה ועזיבה', saveAndLeave, true], ['עזיבה בלי שמירה', () => (setPendingLeave(), pendingLeave())]]}),
       sweep && hh(ctx, dsls.react['react-comp'].wonderPlatformDialog, {title: 'נכסים שנוצרו במסע',
         body: `נוצרו ${sweep.created.length} נכסים חדשים במסע הזה, אבל הסוכן לא נשמר. מה לעשות איתם?`,
-        close: () => (setSweep(), setPendingLeave()),
-        actions: [['להשאיר בקטלוג', () => { setPendingLeave(); setSweep(); sweep.leave(); }, true],
+        close: () => sweep.leave(),
+        actions: [['להשאיר בקטלוג', () => sweep.leave(), true],
           ['למחוק', async () => { let next = repo
             for (const entry of sweep.created) next = {...next, [entry.resource]: next[entry.resource].filter(i => i.id != entry.id)}
-            await persistRepo(next); setPendingLeave(); setSweep(); sweep.leave() }]]}),
+            await persistRepo(next); sweep.leave() }]]}),
       notice && h('div:fixed bottom-5 left-5 z-[100] flex items-center gap-2 rounded-[8px] bg-[var(--wp-ink)] px-3.5 py-2 ' +
         'text-[13px] font-medium text-white shadow-[var(--wp-sh-2)]', {}, h('L:Check', {size: 14}), notice))
     }
