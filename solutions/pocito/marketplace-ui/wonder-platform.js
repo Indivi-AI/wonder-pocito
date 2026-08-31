@@ -280,7 +280,7 @@ ReactComp('wonderPlatform', {
         h('style', {}, dsls.common.data.wonderPlatformCss.$run()),
         h('div:mx-auto flex w-full max-w-[1720px]', {}, hh(ctx, dsls.react['react-comp'].wonderPlatformAppSkeleton, {})))
       const content = view == 'home' ? hh(ctx, dsls.react['react-comp'].wonderPlatformHome, {repo,
-        createAgent: () => createItem('agents'), startChat: () => newConversation(),
+        createAgent: () => createItem('agents'), startChat: () => newConversation(), createPlugin: () => createItem('plugins'),
         openItem, openConversation: id => (setConversationId(id), openView('chat'))})
         : view == 'journey' && top ? hh(ctx, dsls.react['react-comp'].wonderPlatformJourney, {stack, repo,
           popFrame, goToDepth: index => requestLeave(() => setStack(stack.slice(0, index + 1))), updateTop, saveTop, deleteTop,
