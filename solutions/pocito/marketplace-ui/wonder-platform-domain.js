@@ -162,7 +162,7 @@ Data('wonderPlatformUi', {
         relations: [['pluginIds', 'plugins', 'פלאגינים'], ['skillIds', 'skills', 'מיומנויות'], ['toolIds', 'tools', 'כלים'],
           ['knowledgeIds', 'knowledge', 'ידע']]}
     },
-    primaryNav: [['home', 'House', 'בית'], ['chat', 'MessageCircle', 'צ׳אט']],
+    primaryNav: [['home', 'House', 'בית']],
     catalogNav: [['agents', 'Bot', 'סוכנים'], ['plugins', 'PlugZap', 'פלאגינים'],
       ['skills', 'BookOpenText', 'מיומנויות'], ['tools', 'Wrench', 'כלים'], ['knowledge', 'Database', 'ידע'],
       ['evaluations', 'SquareCheckBig', 'אבלואציה']],
