@@ -1,11 +1,11 @@
 # Repo pointers for ETL cost work
 
 ## Already written, use rather than rebuild
-- **`research/bq-bill-autopsy.sql`** — per-shape attribution over
+- **`scripts/bq-bill-autopsy.sql`** (in this skill) — per-shape attribution over
   `INFORMATION_SCHEMA.JOBS`. Metadata-only, $0 to run, hashes query text so nothing identifiable leaves the
   project. Reports **both** currencies and infers the billing model (`billing_model='auto'`). Change
   `region-us` to the client's dataset region before running.
-- **`research/bq-replacement-brief.md`** — the positioning audit. Read before writing
+- **`references/bq-replacement-brief.md`** (in this skill) — the positioning audit. Read before writing
   anything client-facing; it records which claims are measured and which were projections.
 - **`solutions/winner/`** — a complete worked example: `sql-sample.sql` (client model as received,
   do not edit), `sql-sample-duckdb.sql` (runnable port), `sql-sample-perday.sql` (partitioned rewrite),

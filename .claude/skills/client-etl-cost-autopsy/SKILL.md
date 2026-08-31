@@ -7,8 +7,9 @@ description: Work out what a client's BigQuery/dbt ETL model actually does and w
 
 ## Read first
 
-`references/codebase-map.md` — existing artifacts to reuse (`bq-bill-autopsy.sql` already does the per-shape
-attribution), the Winner worked example, and which stored numbers are known stale.
+`references/codebase-map.md` — existing artifacts to reuse (`scripts/bq-bill-autopsy.sql` already does the
+per-shape attribution), the Winner worked example, and which stored numbers are known stale.
+`references/bq-replacement-brief.md` — read before writing anything client-facing.
 
 Goal: given a client's model, be able to say *what it computes*, *what it costs*, and *which lines cost it*.
 Everything below is read-only and most of it is free.
@@ -41,7 +42,7 @@ Under a reservation with idle slots the marginal cash cost of a query is ~zero. 
 costs nothing directly. **Find out which regime the client is on before quoting anything.** Quoting a
 slot-derived figure to an on-demand customer (or vice versa) is the fastest way to lose the room.
 
-`research/bq-bill-autopsy.sql` already does the per-shape attribution and reports both
+`scripts/bq-bill-autopsy.sql` already does the per-shape attribution and reports both
 currencies. It is metadata-only, costs $0, and hashes query text so nothing identifiable leaves the project.
 
 ## 3. Diagnostics that pay, cheapest first
