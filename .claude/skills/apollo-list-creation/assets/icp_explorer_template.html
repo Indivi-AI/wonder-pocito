@@ -1,0 +1,62 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Leads by ICP Fit</title>
+<style>
+:root{--bg:#0f1115;--panel:#181b22;--panel2:#1f2330;--line:#2a2f3a;--txt:#e7eaf0;--mut:#9aa3b2;--acc:#5b8cff;
+--strong:#37c98b;--medium:#f2c14e;--weak:#6b7280;}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--txt)}
+header{padding:18px 22px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+h1{margin:0 0 4px;font-size:18px}.sub{color:var(--mut);font-size:12.5px;max-width:760px}
+.stats{display:flex;gap:16px;margin-top:8px;font-size:12.5px;color:var(--mut)}.stats b{color:var(--txt)}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:12px 22px;border-bottom:1px solid var(--line);background:var(--panel)}
+input[type=search]{flex:1;min-width:220px;background:var(--panel2);border:1px solid var(--line);color:var(--txt);padding:9px 12px;border-radius:8px;font-size:14px}
+.chip{cursor:pointer;user-select:none;border:1px solid var(--line);background:var(--panel2);color:var(--mut);padding:7px 11px;border-radius:20px;font-size:12.5px}
+.chip.on{color:#fff}.chip.strong.on{background:var(--strong);border-color:var(--strong);color:#03251a}
+.chip.medium.on{background:var(--medium);border-color:var(--medium);color:#1a1300}.chip.weak.on{background:var(--weak);border-color:var(--weak);color:#fff}
+main{padding:16px 22px 60px;max-width:1000px;margin:0 auto}
+.row{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--panel)}
+.row.strong{border-left:4px solid var(--strong)}.row.medium{border-left:4px solid var(--medium)}.row.weak{border-left:4px solid var(--weak);opacity:.85}
+.fit{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.fit.strong{background:rgba(55,201,139,.16);color:#7ee5b6}.fit.medium{background:rgba(242,193,78,.16);color:#f2d489}.fit.weak{background:rgba(107,114,128,.18);color:#aab2bf}
+.nm{font-weight:600;min-width:150px}.tc{color:var(--mut);min-width:230px;font-size:13px}.rs{color:#c4cbd6;flex:1;font-size:12.5px;font-style:italic}
+.szq{color:var(--medium);font-size:11px}
+a.li{color:var(--acc);text-decoration:none;font-size:12px;border:1px solid var(--line);padding:4px 9px;border-radius:6px;white-space:nowrap}a.li:hover{border-color:var(--acc)}
+.hint{color:var(--mut);font-size:12px;margin:0 0 12px}.empty{color:var(--mut);text-align:center;padding:40px}
+</style></head><body>
+<header><h1 id="title">Leads by ICP Fit</h1>
+<div class="sub" id="icp"></div>
+<div class="stats" id="stats"></div></header>
+<div class="controls"><input type="search" id="q" placeholder="Search name, company, title…">
+<span class="chip strong on" data-f="strong">Strong</span><span class="chip medium on" data-f="medium">Medium</span><span class="chip weak" data-f="weak">Weak</span></div>
+<main><p class="hint" id="hint"></p><div id="list"></div></main>
+<script>
+const DATA=/*__DATA__*/;
+const ICP=/*__ICP__*/;
+document.getElementById('icp').textContent=ICP;
+const order={strong:0,medium:1,weak:2};
+DATA.sort((a,b)=>(order[a.fit]-order[b.fit])||(a.company||'').localeCompare(b.company||''));
+const show={strong:true,medium:true,weak:false};
+const norm=s=>(s||'').toLowerCase();
+function stats(){const c={strong:0,medium:0,weak:0};DATA.forEach(r=>c[r.fit]=(c[r.fit]||0)+1);
+  document.getElementById('stats').innerHTML=`<span><b>${DATA.length}</b> leads</span>`+
+   `<span><b style="color:var(--strong)">${c.strong}</b> strong</span><span><b style="color:var(--medium)">${c.medium}</b> medium</span><span><b style="color:var(--weak)">${c.weak}</b> weak</span>`}
+function render(){
+  const q=norm(document.getElementById('q').value.trim());const list=document.getElementById('list');list.innerHTML='';let n=0;
+  for(const r of DATA){
+    if(!show[r.fit])continue;
+    if(q&&!(norm(r.name).includes(q)||norm(r.company).includes(q)||norm(r.position).includes(q)))continue;
+    n++;const d=document.createElement('div');d.className='row '+r.fit;
+    const u=r.url&&r.url.startsWith('http')?r.url:'https://'+(r.url||'');
+    d.innerHTML=`<span class="fit ${r.fit}">${r.fit}</span><span class="nm"></span><span class="tc"></span><span class="rs"></span>`+
+      `${r.sizeGuess==='unknown'?'<span class="szq">⚠ size?</span>':''}<a class="li" target="_blank" rel="noopener">in ↗</a>`;
+    d.querySelector('.nm').textContent=r.name;
+    d.querySelector('.tc').textContent=(r.position||'')+' @ '+(r.company||'');
+    d.querySelector('.rs').textContent=r.reason||'';
+    d.querySelector('a.li').href=u;list.appendChild(d);
+  }
+  if(!n)list.innerHTML='<div class="empty">No matches.</div>';
+  document.getElementById('hint').textContent=n+' shown';
+}
+document.getElementById('q').addEventListener('input',render);
+document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{const f=c.dataset.f;show[f]=!show[f];c.classList.toggle('on',show[f]);render();}));
+stats();render();
+</script></body></html>

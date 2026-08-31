@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prospect List — Market Map</title>
+<style>
+:root{
+  --bg:#0f1115; --panel:#181b22; --panel2:#1f2330; --line:#2a2f3a;
+  --txt:#e7eaf0; --mut:#9aa3b2; --acc:#5b8cff; --gold:#f2c14e; --grn:#37c98b; --red:#ff6b6b;
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--txt)}
+header{padding:18px 22px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+h1{margin:0 0 4px;font-size:18px}
+.sub{color:var(--mut);font-size:12.5px}
+.stats{display:flex;gap:18px;flex-wrap:wrap;margin-top:8px;font-size:12.5px;color:var(--mut)}
+.stats b{color:var(--txt)}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:12px 22px;border-bottom:1px solid var(--line);background:var(--panel)}
+input[type=search]{flex:1;min-width:220px;background:var(--panel2);border:1px solid var(--line);color:var(--txt);padding:9px 12px;border-radius:8px;font-size:14px}
+input[type=search]::placeholder{color:var(--mut)}
+.chip{user-select:none;cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--mut);padding:7px 11px;border-radius:20px;font-size:12.5px;white-space:nowrap}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.chip.gold.on{background:var(--gold);border-color:var(--gold);color:#1a1300}
+main{padding:16px 22px 60px;max-width:1100px;margin:0 auto}
+.co{border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden;background:var(--panel)}
+.co.known{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+.cohead{display:flex;align-items:center;gap:12px;padding:13px 16px;cursor:pointer}
+.cohead:hover{background:var(--panel2)}
+.coname{font-weight:600;font-size:15px}
+.cnt{font-size:12px;color:var(--mut);background:var(--panel2);border:1px solid var(--line);padding:2px 9px;border-radius:20px}
+.cnt.multi{color:var(--acc);border-color:var(--acc)}
+.spacer{flex:1}
+.star{font-size:17px;color:var(--mut);cursor:pointer;line-height:1}
+.star.on{color:var(--gold)}
+.chev{color:var(--mut);transition:transform .15s}
+.co.open .chev{transform:rotate(90deg)}
+.people{display:none;border-top:1px solid var(--line)}
+.co.open .people{display:block}
+.person{display:flex;align-items:center;gap:12px;padding:10px 16px;border-top:1px solid var(--line)}
+.person:first-child{border-top:none}
+.pname{font-weight:500;min-width:160px}
+.ptitle{color:var(--mut);flex:1}
+.badges{display:flex;gap:6px;flex-wrap:wrap}
+.b{font-size:11px;padding:2px 8px;border-radius:6px;border:1px solid var(--line);white-space:nowrap}
+.b.conn{background:rgba(91,140,255,.15);border-color:var(--acc);color:#a9c2ff}
+.b.mil{background:rgba(242,193,78,.13);border-color:var(--gold);color:#f2d489}
+.b.mil8200{background:rgba(255,107,107,.13);border-color:var(--red);color:#ff9d9d}
+a.li{color:var(--acc);text-decoration:none;font-size:12px;border:1px solid var(--line);padding:4px 9px;border-radius:6px}
+a.li:hover{border-color:var(--acc)}
+.empty{color:var(--mut);text-align:center;padding:40px}
+.hint{color:var(--mut);font-size:12px;margin:0 0 12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Prospect List — Market Map</h1>
+  <div class="sub">Grouped by company · ★ mark companies you know (saved in this browser)</div>
+  <div class="stats" id="stats"></div>
+</header>
+<div class="controls">
+  <input type="search" id="q" placeholder="Search name, company, or job title…" autofocus>
+  <span class="chip" data-f="multi">Multi-person companies</span>
+  <span class="chip" data-f="conn">Known connections</span>
+  <span class="chip gold" data-f="mil">8200 / Military</span>
+  <span class="chip gold" data-f="known">Companies I know ★</span>
+</div>
+<main>
+  <p class="hint" id="hint"></p>
+  <div id="list"></div>
+</main>
+<script>
+const DATA = /*__DATA__*/;
+const LS='prospect_known_companies';
+let known=new Set(JSON.parse(localStorage.getItem(LS)||'[]'));
+const filters={multi:false,conn:false,mil:false,known:false};
+const norm=s=>(s||'').toLowerCase();
+
+function groups(){
+  const m={};
+  for(const p of DATA){(m[p.org]=m[p.org]||[]).push(p)}
+  return Object.entries(m).map(([org,people])=>({org,people}))
+    .sort((a,b)=> (known.has(b.org)-known.has(a.org)) || (b.people.length-a.people.length) || a.org.localeCompare(b.org));
+}
+function milClass(c){return /8200|Intelligence/i.test(c||'')?'mil8200':'mil'}
+function matchPerson(p,q){return !q || norm(p.name).includes(q)||norm(p.org).includes(q)||norm(p.title).includes(q)}
+
+function render(){
+  const q=norm(document.getElementById('q').value.trim());
+  const list=document.getElementById('list'); list.innerHTML='';
+  let shownCo=0, shownPpl=0;
+  for(const g of groups()){
+    if(filters.multi && g.people.length<2) continue;
+    if(filters.known && !known.has(g.org)) continue;
+    let ppl=g.people.filter(p=>matchPerson(p,q));
+    if(filters.conn) ppl=ppl.filter(p=>(p.connectionOf||[]).length);
+    if(filters.mil)  ppl=ppl.filter(p=>p.military);
+    if(q && !ppl.length && norm(g.org).includes(q)) ppl=g.people.slice();
+    if(!ppl.length) continue;
+    shownCo++; shownPpl+=ppl.length;
+    const co=document.createElement('div');
+    co.className='co'+(known.has(g.org)?' known':'')+((q||filters.conn||filters.mil)?' open':'');
+    co.innerHTML=`<div class="cohead">
+        <span class="star ${known.has(g.org)?'on':''}" title="I know this company">★</span>
+        <span class="coname"></span>
+        <span class="cnt ${g.people.length>1?'multi':''}">${ppl.length}${ppl.length<g.people.length?'/'+g.people.length:''} ${g.people.length>1?'people':'person'}</span>
+        <span class="spacer"></span><span class="chev">▶</span></div>
+      <div class="people"></div>`;
+    co.querySelector('.coname').textContent=g.org;
+    const pe=co.querySelector('.people');
+    for(const p of ppl){
+      const conn=(p.connectionOf||[]);
+      const badges=[...conn.map(w=>`<span class="b conn">★ ${w}'s connection</span>`),
+        p.military?`<span class="b ${milClass(p.military)}">🛡 ${p.military}</span>`:'',
+        (p.militaryKnown===false?'<span class="b" title="enriched earlier; no service history pulled">mil: n/a</span>':'')].filter(Boolean).join('');
+      const row=document.createElement('div'); row.className='person';
+      row.innerHTML=`<span class="pname"></span><span class="ptitle"></span>
+        <span class="badges">${badges}</span>
+        <a class="li" target="_blank" rel="noopener">in ↗</a>`;
+      row.querySelector('.pname').textContent=p.name;
+      row.querySelector('.ptitle').textContent=p.title;
+      const u=p.linkedin_url||''; row.querySelector('a.li').href=u.startsWith('http')?u:'https://'+u;
+      pe.appendChild(row);
+    }
+    co.querySelector('.cohead').addEventListener('click',e=>{ if(e.target.classList.contains('star'))return; co.classList.toggle('open')});
+    co.querySelector('.star').addEventListener('click',()=>{ known.has(g.org)?known.delete(g.org):known.add(g.org); localStorage.setItem(LS,JSON.stringify([...known])); render()});
+    list.appendChild(co);
+  }
+  if(!shownCo) list.innerHTML='<div class="empty">No matches.</div>';
+  document.getElementById('hint').textContent=`${shownCo} companies · ${shownPpl} people shown`;
+}
+function stats(){
+  const co=new Set(DATA.map(p=>p.org)).size;
+  const multi=Object.values(DATA.reduce((m,p)=>((m[p.org]=(m[p.org]||0)+1),m),{})).filter(n=>n>1).length;
+  const conn=DATA.filter(p=>(p.connectionOf||[]).length).length, mil=DATA.filter(p=>p.military).length;
+  document.getElementById('stats').innerHTML=
+    `<span><b>${DATA.length}</b> people</span><span><b>${co}</b> companies</span><span><b>${multi}</b> multi-person</span><span><b>${conn}</b> your connections</span><span><b>${mil}</b> ex-8200/IDF</span>`;
+}
+document.getElementById('q').addEventListener('input',render);
+document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{const f=c.dataset.f;filters[f]=!filters[f];c.classList.toggle('on',filters[f]);render()}));
+stats(); render();
+</script>
+</body>
+</html>
