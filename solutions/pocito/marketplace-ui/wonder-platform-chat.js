@@ -129,6 +129,30 @@ ReactComp('wonderPlatformChatComposer', {
   })
 })
 
+ReactComp('wonderPlatformChatSkeleton', {
+  impl: comp({
+    hFunc: (ctx, {react: {h}}) => () => {
+      const bar = (width, height = 'h-3') => h(`span:wp-skel block ${height} ${width}`)
+      const tile = index => h('div:flex-1', {key: index}, bar('w-full', 'h-9'))
+      const prompt = index => h('div:bg-[var(--wp-surface)] px-3.5 py-2.5', {key: index}, bar('w-2/3'))
+      return h('main:flex h-screen min-w-0 flex-1 bg-[var(--wp-surface)] pb-16 sm:pb-0', {},
+        h('section:flex min-w-0 flex-1 flex-col', {},
+          h('header:flex h-[64px] shrink-0 items-center gap-3 border-b border-[var(--wp-border)] px-5', {},
+            bar('w-8', 'h-8'), bar('w-9', 'h-9'), h('div:min-w-0 flex-1', {}, bar('w-40', 'h-4'))),
+          h('div:min-h-0 flex-1 overflow-hidden', {},
+            h('div:mx-auto flex h-full w-full max-w-[760px] flex-col justify-center px-5', {},
+              bar('w-40', 'h-4'), h('span:mt-2 block', {}, bar('w-72')),
+              h('div:mt-5', {}, bar('w-full', 'h-9')),
+              h('div:mt-5 flex gap-2', {}, [0, 1, 2, 3].map(tile)),
+              h('div:mt-6 grid gap-px overflow-hidden rounded-[8px] border border-[var(--wp-border)] bg-[var(--wp-border)]', {},
+                [0, 1, 2].map(prompt)))),
+          h('div:px-5 pb-5 pt-2', {}, h('div:mx-auto w-full max-w-[760px]', {}, bar('w-full', 'h-24')))),
+        h('aside:hidden w-[280px] shrink-0 flex-col border-e border-[var(--wp-border)] bg-[var(--wp-surface)] lg:flex', {},
+          h('div:h-[64px] shrink-0 border-b border-[var(--wp-border)]'), h('div:px-4 py-4', {}, bar('w-32'))))
+    }
+  })
+})
+
 const wonderPlatformRunStatusLabel = {running: 'בהרצה…', completed: 'הושלם', failed: 'נכשל'}
 
 ReactComp('wonderPlatformChat', {

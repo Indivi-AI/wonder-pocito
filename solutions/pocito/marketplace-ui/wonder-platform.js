@@ -66,6 +66,7 @@ ReactComp('wonderPlatform', {
       const [stack, setStack] = useState([]), stackRef = useRef([]), repoRef = useRef()
       const [picker, setPicker] = useState(), [pendingLeave, setPendingLeave] = useState(), [saving, setSaving] = useState(false),
         [sweep, setSweep] = useState()
+      const [opening, setOpening] = useState(false), [chatOpening, setChatOpening] = useState(false)
       stackRef.current = stack; repoRef.current = repo
       const top = stack.at(-1)
       const frame = (resource, item, extra = {}) => ({resource, item, baseline: JSON.stringify(item), ...extra})
@@ -134,11 +135,14 @@ ReactComp('wonderPlatform', {
         navigate(id)
       })
       const openItem = async (resource, item) => {
-        if (repo.marketplace && marketResources.includes(resource)) item = await marketplaceDetail(
-          ctx.setVars({resource, id: item.id, roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))
-        if (resource == 'skills') item = await skillDraft(item)
-        setStack([frame(resource, {...item, originalId: item.id}, {createLabel: config.resources[resource]?.create})])
-        setView('journey')
+        setOpening(true)
+        try {
+          if (repo.marketplace && marketResources.includes(resource)) item = await marketplaceDetail(
+            ctx.setVars({resource, id: item.id, roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))
+          if (resource == 'skills') item = await skillDraft(item)
+          setStack([frame(resource, {...item, originalId: item.id}, {createLabel: config.resources[resource]?.create})])
+          setView('journey')
+        } finally { setOpening(false) }
       }
       const createItem = resource => (setStack([frame(resource, blank(resource),
         {createLabel: config.resources[resource]?.create})]), setView('journey'))
@@ -156,11 +160,14 @@ ReactComp('wonderPlatform', {
       }
       const openEditor = async (resource, item, field) => {
         if (!item) return
-        if (repo.marketplace && marketResources.includes(resource)) item = await marketplaceDetail(ctx.setVars({resource, id: item.id, roomWUrl: repositoryRoomWUrl,
-          marketplaceBaseUrl: marketplaceUrl}))
-        const draft = resource == 'skills' ? await skillDraft(item) : item
-        pushFrame(frame(resource, {...draft, originalId: item.id},
-          {attachTo: {frameIndex: stack.length - 1, field}, createLabel: config.resources[resource]?.create}))
+        setOpening(true)
+        try {
+          if (repo.marketplace && marketResources.includes(resource)) item = await marketplaceDetail(ctx.setVars({resource, id: item.id,
+            roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))
+          const draft = resource == 'skills' ? await skillDraft(item) : item
+          pushFrame(frame(resource, {...draft, originalId: item.id},
+            {attachTo: {frameIndex: stack.length - 1, field}, createLabel: config.resources[resource]?.create}))
+        } finally { setOpening(false) }
       }
       const publishEditedSkill = async skill => {
         await publishSkill(ctx.setVars({roomWUrl: repositoryRoomWUrl, skill}))
@@ -225,12 +232,15 @@ ReactComp('wonderPlatform', {
       const updateConversation = async updated => persistRepo({...repo,
         conversations: repo.conversations.map(item => item.id == updated.id ? updated : item)})
       const newConversation = async (agentId = '') => {
-        const current = repoRef.current, agent = current.agents.find(item => item.id == agentId)
-        const title = agent ? `שיחה · ${agent.name}` : 'שיחה חופשית'
-        const created = {id: `c-${Date.now()}`, title, agentId, when: 'עכשיו', messages: [],
-          pluginIds: [], skillIds: [], toolIds: [], knowledgeIds: []}
-        await persistRepo({...current, conversations: [created, ...current.conversations]})
-        setConversationId(created.id); setMessage(''); openView('chat')
+        setChatOpening(true)
+        try {
+          const current = repoRef.current, agent = current.agents.find(item => item.id == agentId)
+          const title = agent ? `שיחה · ${agent.name}` : 'שיחה חופשית'
+          const created = {id: `c-${Date.now()}`, title, agentId, when: 'עכשיו', messages: [],
+            pluginIds: [], skillIds: [], toolIds: [], knowledgeIds: []}
+          await persistRepo({...current, conversations: [created, ...current.conversations]})
+          setConversationId(created.id); setMessage(''); openView('chat')
+        } finally { setChatOpening(false) }
       }
       const finishAgent = async item => {
         const saved = await saveTop(item)
@@ -279,13 +289,17 @@ ReactComp('wonderPlatform', {
       if (!repo) return h('div:wp-app min-h-screen bg-[var(--wp-canvas)]', {dir: 'rtl', lang: 'he'},
         h('style', {}, dsls.common.data.wonderPlatformCss.$run()),
         h('div:mx-auto flex w-full max-w-[1720px]', {}, hh(ctx, dsls.react['react-comp'].wonderPlatformAppSkeleton, {})))
-      const content = view == 'home' ? hh(ctx, dsls.react['react-comp'].wonderPlatformHome, {repo,
+      const journeyBodyLoading = opening && view == 'journey' && !!top
+      const content = opening && view != 'journey' ? hh(ctx, dsls.react['react-comp'].wonderPlatformJourneySkeleton, {})
+        : chatOpening && view != 'chat' ? hh(ctx, dsls.react['react-comp'].wonderPlatformChatSkeleton, {})
+        : view == 'home' ? hh(ctx, dsls.react['react-comp'].wonderPlatformHome, {repo,
         createAgent: () => createItem('agents'), startChat: () => newConversation(), createPlugin: () => createItem('plugins'),
         openItem, openConversation: id => (setConversationId(id), openView('chat'))})
-        : view == 'journey' && top ? hh(ctx, dsls.react['react-comp'].wonderPlatformJourney, {stack, repo,
-          popFrame, goToDepth: index => requestLeave(() => setStack(stack.slice(0, index + 1))), updateTop, saveTop, deleteTop,
-          openPicker, openEditor, createNested, loadPackage, saveAndRun, runningSet, runTarget, runEval, finishAgent,
-          exit: () => openView(stack[0].resource)})
+        : view == 'journey' && top ? h('div:relative flex min-w-0 flex-1', {}, hh(ctx, dsls.react['react-comp'].wonderPlatformJourney,
+          {stack, repo, popFrame, goToDepth: index => requestLeave(() => setStack(stack.slice(0, index + 1))), updateTop, saveTop,
+            deleteTop, openPicker, openEditor, createNested, loadPackage, saveAndRun, runningSet, runTarget, runEval, finishAgent,
+            exit: () => openView(stack[0].resource)}),
+          journeyBodyLoading && hh(ctx, dsls.react['react-comp'].wonderPlatformJourneySkeleton, {bodyOnly: true}))
           : view == 'chat' ? hh(ctx, dsls.react['react-comp'].wonderPlatformChat, {
             repo, conversation, message, setMessage, busy, send, selectAgent, setContext, model, setModel})
             : view == 'evaluations' ? hh(ctx, dsls.react['react-comp'].EvaluationPage,
