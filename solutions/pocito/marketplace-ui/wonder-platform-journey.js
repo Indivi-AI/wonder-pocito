@@ -38,10 +38,10 @@ ReactComp('wonderPlatformJourney', {
       const {classes, newLabels, resources} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
       const [confirmDelete, setConfirmDelete] = useState(false)
       const active = stack.at(-1), {resource, item} = active, parent = stack.at(-2)
-      const [panelOpen, setPanelOpen] = useState(false)
+      const [panelOpen, setPanelOpen] = useState(true)
       const [tab, setTab] = useState('test')
       const bodyRef = useRef(null)
-      useEffect(() => { bodyRef.current?.scrollTo(0, 0) }, [active.baseline])
+      useEffect(() => { bodyRef.current?.scrollTo(0, 0); setPanelOpen(true) }, [active.baseline])
       const parentName = parent && (parent.item.name?.trim() || newLabels[parent.resource])
       const isComposite = ['plugins', 'subagents', 'agents'].includes(resource)
       const readOnlyTool = resource == 'tools' && item.originalId && item.kind != 'flow'
