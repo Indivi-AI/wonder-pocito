@@ -968,115 +968,33 @@ git add -A solutions/pocito/marketplace-ui
 git commit -m "feat(journey): plugin-first agent journey with guided rail and readiness bar"
 ```
 
-### Task 6: Pending capability chips and the abandon sweep
+### Task 6: Abandoned-asset sweep and copy alignment
+
+**Rewritten after the Task 5 redesign.** The original version of this task specified a "pending capability chip" derived from the stack. That is now redundant: the redesigned journey already carries the continuity cue in two stronger places — the breadcrumb (`סוכנים ‹ סוכן חדש ‹ פלאגין חדש`) and the child frame's save button, which reads `שמירה וחזרה ל<parent>`. Adding a third indicator would be noise. The pending-chip work is **dropped**.
+
+What remains is the one piece of D7 never built, plus a copy inconsistency the user asked to fix.
 
 **Files:**
-- Modify: `solutions/pocito/marketplace-ui/wonder-platform-workspace.js` (`relationGroup`)
-- Modify: `solutions/pocito/marketplace-ui/wonder-platform.js` (`createdInJourney`, sweep dialog)
-- Test: `solutions/pocito/marketplace-ui/wonder-platform-tests.js`
+- Modify: `solutions/pocito/marketplace-ui/wonder-platform.js` — `createdInJourney`, the sweep dialog
+- Modify: `solutions/pocito/marketplace-ui/wonder-platform-workspace.js` — plugin step-1 label
 
 **Interfaces:**
-- Consumes: `stack` and `frame.attachTo` from Task 3, `wonderPlatformJourney` from Task 4.
-- Produces: `wonderPlatformWorkspace` accepts prop `stack` and derives pending rows from it — no new state. Root frame carries `createdInJourney: string[]`.
+- Consumes: `stack`, `frame()`, `saveTop(override)`, `popFrame`, `persistRepo`, `openView` from Task 3; `wonderPlatformJourney`'s `exit` prop from Task 4.
+- Produces: the root frame carries `createdInJourney: [{resource, id, name}]`.
 
-- [ ] **Step 1: Write the failing test**
+#### Part A — the abandoned-asset sweep (D7)
 
-```js
-Test('wonderPlatform.pendingCapabilityChip', {
-  impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(),
-    contains('בבנייה'), {
-    userActions: actions(
-      waitForText('אנליסט הוכחת קיום'),
-      click('אנליסט הוכחת קיום'),
-      waitForText('חיבורים'),
-      click('חיבורים'),
-      wonderPlatformClickInSection('מיומנויות', 'הוספה'),
-      waitForText('אישור בחירה'),
-      click('מיומנות חדשה'),
-      waitForText('שמירה וחזרה לאנליסט הוכחת קיום'),
-      click('aria-label="חזרה לאנליסט הוכחת קיום"'),
-      waitForText('חיבורים')),
-    logger: 'uiLogger'})
-})
-```
+Immediate-write (D1) means a Skill or Tool built three frames deep is written to the shared catalog the moment the user saves and returns. If they then abandon the agent without ever saving it, those assets are left orphaned in the catalog with nothing pointing at them, and the user is never told.
 
-Note this test asserts the chip is **gone** after backing out (D10 + Q4 round 2: silent removal). Invert it: the assertion is `notContains('בבנייה')` at the end. Write it as two tests — one asserting the chip appears while deep, one asserting it vanishes on abandon:
+D7: the sweep fires **only** when the journey is left without the root agent ever having been saved. Not on a later delete of a saved agent — that would surprise someone removing an old agent whose plugin is shared.
 
-```js
-Test('wonderPlatform.pendingCapabilityChip', {
-  impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(), contains('בבנייה'), {
-    userActions: actions(
-      waitForText('אנליסט הוכחת קיום'), click('אנליסט הוכחת קיום'), waitForText('חיבורים'), click('חיבורים'),
-      wonderPlatformClickInSection('מיומנויות', 'הוספה'), waitForText('אישור בחירה'), click('מיומנות חדשה'),
-      waitForText('שמירה וחזרה לאנליסט הוכחת קיום'), click('aria-label="שלבים נוספים"')),
-    logger: 'uiLogger'})
-})
+- [ ] **Step 1: Record what the journey creates**
 
-Test('wonderPlatform.pendingChipClearsOnAbandon', {
-  impl: reactTest(dsls.react['react-comp'].wonderPlatformTestApp(), notContains('בבנייה'), {
-    userActions: actions(
-      waitForText('אנליסט הוכחת קיום'), click('אנליסט הוכחת קיום'), waitForText('חיבורים'), click('חיבורים'),
-      wonderPlatformClickInSection('מיומנויות', 'הוספה'), waitForText('אישור בחירה'), click('מיומנות חדשה'),
-      waitForText('שמירה וחזרה לאנליסט הוכחת קיום'),
-      click('aria-label="חזרה לאנליסט הוכחת קיום"'), waitForText('חיבורים')),
-    logger: 'uiLogger'})
-})
-```
+In `saveTop`, when `active.attachTo` exists and the child is newly created (no `originalId`), append `{resource, id, name}` to the root frame's `createdInJourney`. Merge it into the same `setStack` call that performs the attach — do not add a second state write.
 
-The first test's final action needs the chip visible on a screen that is *below* the current frame, which it is not. Correct approach: the chip is visible on the parent frame, so assert it by going deeper and then using `goToDepth` via the breadcrumb to return **without** abandoning. Replace the first test's last two actions with `click('אנליסט הוכחת קיום')` (the breadcrumb crumb) — but that pops the frame too. Since the chip is only ever visible while a descendant frame exists and the parent is not rendered, **the chip must instead be rendered on the child's context ribbon**, not the parent's row list. Adjust the design accordingly in Step 3.
+- [ ] **Step 2: Fire the sweep on exit**
 
-- [ ] **Step 2: Run tests to verify they fail**
-
-`runTest({testId: 'wonderPlatform.pendingChipClearsOnAbandon'})` — expected PASS trivially (nothing renders `בבנייה` yet); this is the guard against regression, not the driver.
-`runTest({testId: 'wonderPlatform.pendingCapabilityChip'})` — expected FAIL.
-
-- [ ] **Step 3: Render the pending relation inline on the parent's rows**
-
-`relationGroup` in `wonder-platform-workspace.js` gains a pending row derived from `stack`. Add above `relationGroup`:
-
-```js
-      const myIndex = (stack || []).indexOf(workspace)
-      const pendingFor = field => (stack || []).filter(entry => entry.attachTo?.frameIndex == myIndex
-        && entry.attachTo?.field == field)
-```
-
-and inside `relationGroup`, before `addRow`:
-
-```js
-        const pendingRows = pendingFor(field).map((entry, index) => h(
-          'div:flex items-center gap-3 px-4 py-2.5 opacity-70', {key: `pending-${index}`},
-          h('span:grid h-9 w-9 shrink-0 place-items-center rounded-[8px] border border-dashed ' +
-            'border-[var(--wp-border-strong)]', {}, h('L:Loader2', {size: 14})),
-          h('div:min-w-0 flex-1', {}, h('b:block truncate text-[13px] text-[var(--wp-ink)]', {},
-            entry.item.name?.trim() || entry.createLabel),
-            h(`span:${classes.chip} mt-0.5`, {}, 'בבנייה'))))
-```
-
-and include `pendingRows` in the group body between the item rows and `addRow`. Because `pendingFor` reads the live stack, abandoning a child removes its frame and the chip disappears with no cleanup code (D10).
-
-The parent frame is not rendered while a child frame is on top — so the chip is visible when you navigate back up via the breadcrumb `goToDepth` **without** popping, which the journey bar does not currently support. Change `goToDepth` in `wonder-platform.js` to preserve deeper frames only if the target is the last frame; otherwise it truncates. Given that, the chip's real purpose is the moment **after** you return from a save — at which point the child is real, not pending. Therefore render the pending row for the frame that is one level *below* the top, and show it in the journey's context ribbon instead: in `wonderPlatformJourney`, next to the breadcrumb, add
-
-```js
-            h('span:shrink-0 text-[11px] text-[var(--wp-ink-4)]', {},
-              `${labels[resource]} זה יתחבר ל${parentName} · בבנייה`)
-```
-
-when `parent` exists. That is the continuity cue at the depth where it is actually visible.
-
-- [ ] **Step 4: Track and sweep journey-created assets**
-
-In `wonder-platform.js`, in `saveTop`, when `active.attachTo` exists, record the id on the root frame:
-
-```js
-        setStack(current => current.map((entry, index) => index == 0
-          ? {...entry, createdInJourney: [...(entry.createdInJourney || []),
-            ...(active.item.originalId ? [] : [{resource: active.resource, id: saved.id, name: saved.name}])]}
-          : entry))
-```
-
-merged into the same `setStack` call that performs the attach.
-
-Add the sweep to `exit`. Replace the journey `exit` prop with:
+The journey's `exit` currently calls `openView(stack[0].resource)`. Wrap it:
 
 ```js
         exit: () => { const root = stack[0], created = root.createdInJourney || []
@@ -1084,56 +1002,52 @@ Add the sweep to `exit`. Replace the journey `exit` prop with:
           openView(root.resource) }
 ```
 
-with `const [sweep, setSweep] = useState()` and a dialog rendered next to `pendingLeave`:
+with `const [sweep, setSweep] = useState()`.
+
+- [ ] **Step 3: Render the dialog**
+
+Next to the existing `pendingLeave` dialog, using `wonderPlatformDialog`:
 
 ```js
       sweep && hh(ctx, dsls.react['react-comp'].wonderPlatformDialog, {title: 'נכסים שנוצרו במסע',
         body: `נוצרו ${sweep.created.length} נכסים חדשים במסע הזה, אבל הסוכן לא נשמר. מה לעשות איתם?`,
         close: () => setSweep(),
         actions: [['להשאיר בקטלוג', () => (setSweep(), sweep.leave()), true],
-          ['למחוק', async () => { for (const entry of sweep.created)
-            await persistRepo({...repo, [entry.resource]: repo[entry.resource].filter(item => item.id != entry.id)})
-            setSweep(); sweep.leave() }]]})
+          ['למחוק', async () => { let next = repo
+            for (const entry of sweep.created) next = {...next, [entry.resource]: next[entry.resource].filter(i => i.id != entry.id)}
+            await persistRepo(next); setSweep(); sweep.leave() }]]})
 ```
 
-Per D7 this fires only when the root was never saved.
+Note the delete branch accumulates into one `persistRepo` call rather than persisting per entry — persisting inside the loop would race, since each call spreads the same stale `repo`. That exact stale-closure bug already bit `newConversation` in this plan.
 
-- [ ] **Step 5: Run tests**
+#### Part B — plugin step-1 label
 
-```
-runTest({testId: 'wonderPlatform.pendingCapabilityChip'})       -> PASS
-runTest({testId: 'wonderPlatform.pendingChipClearsOnAbandon'})  -> PASS
-runTest({testId: 'wonderPlatform.journeyBreadcrumb'})           -> PASS
-runTest({testId: 'wonderPlatform.agentJourneySteps'})           -> PASS
-runTest({testId: 'wonderPlatform.stackDeepDirtyGuard'})         -> PASS
-```
+The agent journey's first step is labelled `מי הסוכן`; the plugin's is still `כללי`, left over from the old CRUD wording. Change the plugin's first step label to **`מה הפלאגין עושה`**, matching the guided phrasing of the agent's. Chrome was already unified by D25; this is the remaining copy inconsistency.
 
-Add one test for the sweep:
+Do not rename `subagents` steps — subagents are hidden (D6) and out of scope.
 
-```js
-Test('wonderPlatform.abandonSweepPrompts', {
-  impl: reactTest(dsls.react['react-comp'].wonderPlatformHomeTestApp(), contains('נכסים שנוצרו במסע'), {
-    userActions: actions(
-      waitForText('מה נעשה היום?'), click('צור סוכן'), waitForText('מי הסוכן'), click('יכולות'),
-      wonderPlatformClickInSection('ידע', 'הוספה'), waitForText('אישור בחירה'), click('ידע חדש'),
-      wonderPlatformSetControl({selector: '[aria-label="display_name"]', value: 'ידע מהמסע'}),
-      wonderPlatformSetControl({selector: '[dir="ltr"]', value: 'journeyKnowledge'}),
-      click('aria-label="שמירת המסע"'), waitForText('יכולות'),
-      click('aria-label="חזרה לסוכנים"'), waitForText('נכסים שנוצרו במסע')),
-    logger: 'uiLogger'})
-})
-```
+- [ ] **Step 4: Verify in the browser**
 
-- [ ] **Step 6: Validate and commit**
+The node test runner is down (server-side crawl index). Verify at `http://ittays-macbook-air.local:58045/room/demo/applet/wonderAgents`, at **1280x800**:
+
+1. Home → `צור סוכן` → `יכולות` → build a new plugin → inside it build a new skill → save back to the plugin → save back to the agent. Then leave via the breadcrumb or the back arrow **without saving the agent**. The sweep dialog must appear naming the created assets.
+2. Choose `למחוק` and confirm the created skill is gone from the Skills catalog.
+3. Repeat, choose `להשאיר בקטלוג`, and confirm it remains.
+4. Save the agent first, then leave — the dialog must **not** appear.
+5. Open a plugin and confirm its first step reads `מה הפלאגין עושה`.
+
+Confirm at each screen that horizontal overflow and page-level vertical scroll are both 0 and the header stays 103px (D23).
+
+- [ ] **Step 5: Validate and commit**
 
 ```bash
-node --check solutions/pocito/marketplace-ui/wonder-platform-workspace.js
 node --check solutions/pocito/marketplace-ui/wonder-platform.js
-git add -A solutions/pocito/marketplace-ui
-git commit -m "feat(journey): pending capability cue and abandoned-asset sweep"
+node --check solutions/pocito/marketplace-ui/wonder-platform-workspace.js
+git add solutions/pocito/marketplace-ui/wonder-platform.js solutions/pocito/marketplace-ui/wonder-platform-workspace.js
+git commit -m "feat(journey): abandoned-asset sweep, align plugin step label"
 ```
 
----
+Note `node --check file 2>&1 | head` masks the exit status — check the status directly.
 
 ### Task 7: Promote "build new" in the attach picker
 
