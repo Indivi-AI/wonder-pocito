@@ -37,7 +37,6 @@ ReactComp('wonderPlatformWorkspace', {
         : repo.marketplace ? ['plugins', 'skills', 'tools'] : ['skills', 'tools']
       const secondary = isAgent ? ['skills', 'tools', 'knowledge'] : []
       const semanticTrace = dsls.common.data.wonderPlatformTrace.$runWithCtx(ctx, {repo, target: item})
-      const lastRun = repo.evalRuns.filter(run => run.targetId == item.id).sort((a, b) => b.startedAt - a.startedAt)[0]
       const sendTest = async input => {
         const text = input.trim()
         if (!text || runs.some(run => run.status == 'מריץ…')) return
@@ -109,12 +108,7 @@ ReactComp('wonderPlatformWorkspace', {
           disabled: !evaluationId || shownRun?.status == 'מריץ…', onClick: executeEval}, shownRun?.status == 'מריץ…' ? 'מריץ…' : 'הרצת הסט')),
       shownRun && h('div:mt-4', {}, h('div:flex items-center gap-2', {}, h(`span:${classes.chip}`, {}, shownRun.status),
         h('span:text-[12px] text-[var(--wp-ink-3)]', {}, shownRun.started || 'עכשיו')), h('div:mt-4 space-y-2', {}, (shownRun.rows || []).map(evalRow))))
-      const setStepId = id => setStepIds(current => ({...current, [resource]: id}))
-      const onStep = id => {
-        setStepId(id)
-        if (id == 'try') { setPanelOpen(true); setTab('test') }
-        if (id == 'evaluate') { setPanelOpen(true); setTab('evaluation') }
-      }
+      const onStep = id => setStepIds(current => ({...current, [resource]: id}))
       const docField = isPlugin ? 'readme' : 'instructions'
       const capDone = (item.pluginIds?.length || item.skillIds?.length || item.toolIds?.length || item.knowledgeIds?.length) > 0
       const identityStep = () => h('div:space-y-4', {},
@@ -165,34 +159,6 @@ ReactComp('wonderPlatformWorkspace', {
         !isPlugin && !item.originalId && h(`section:${classes.card}`, {}, h('b:text-[13px]', {}, 'README (creation only)'),
           h(`textarea:${classes.area} min-h-32`, {value: item.readme || '',
             onInput: event => update({...item, readme: event.target.value})})))
-      const summaryRow = ([title, value]) => h('div:flex items-center justify-between gap-3 px-4 py-2.5', {key: title},
-        h('span:text-[12px] text-[var(--wp-ink-3)]', {}, title),
-        h('span:min-w-0 truncate text-[13px] text-[var(--wp-ink)]', {}, value))
-      const attachedCount = ['pluginIds', 'skillIds', 'toolIds', 'knowledgeIds']
-        .reduce((total, field) => total + (item[field]?.length || 0), 0)
-      const tryStep = () => h('div:space-y-4', {},
-        h('div', {}, h('h2:text-[15px] font-semibold text-[var(--wp-ink)]', {}, `נסו את ${targetLabel}`),
-          h(`p:mt-1.5 ${classes.body} text-[13px]`, {},
-            'ההרצה נעשית בפאנל שבצד, מול התצורה השמורה האחרונה. אפשר לחזור לכל שלב ולהריץ שוב.')),
-        h(`section:${classes.panel} divide-y divide-[var(--wp-border)]`, {},
-          [['שם', item.name || '—'], ['יכולות מחוברות', `${attachedCount}`],
-            [isPlugin ? 'תיעוד' : 'הנחיות מערכת', item[docField]?.trim() ? 'הוגדר' : 'חסר'],
-            ['הרצות בפאנל', `${runs.length}`]].map(summaryRow)),
-        !panelOpen && h(`button:${classes.button}`, {onClick: () => (setPanelOpen(true), setTab('test'))},
-          h('L:MessageCircle', {size: 14}), 'פתיחת פאנל ההרצה'))
-      const evaluateStep = () => h('div:space-y-4', {},
-        h('div', {}, h('h2:text-[15px] font-semibold text-[var(--wp-ink)]', {}, 'בדיקה מול סט אבלואציה'),
-          h(`p:mt-1.5 ${classes.body} text-[13px]`, {},
-            'סט אבלואציה הוא אוסף שאלות ותשובות מצופות. חיברו סט כדי להריץ את כולן יחד ולראות מה יצא.')),
-        h(`section:${classes.panel} divide-y divide-[var(--wp-border)]`, {},
-          h('div:px-4 py-2.5', {}, h('span:text-[12px] font-semibold text-[var(--wp-ink-2)]', {}, 'סט מקושר')),
-          hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {items: repo.evaluations,
-            value: item.evaluationId || '', bare: true, onChange: id => update({...item, evaluationId: id}),
-            placeholder: 'ללא סט מקושר', empty: 'ללא סט מקושר'}),
-          lastRun && h('div:flex items-center justify-between gap-3 px-4 py-2.5 text-[12px] text-[var(--wp-ink-3)]', {},
-            `הרצה אחרונה · ${lastRun.started} · ${lastRun.status}`,
-            h('button:font-medium text-[var(--wp-ink)]', {onClick: () => (setPanelOpen(true), setTab('evaluation'))},
-              'היסטוריית הרצות'))))
       const steps = [
         {id: 'identity', label: isAgent ? 'מי הסוכן' : 'מה הפלאגין עושה', render: identityStep,
           done: !!(item.name?.trim() && item.id?.trim() && item.desc?.trim())},
@@ -202,9 +168,7 @@ ReactComp('wonderPlatformWorkspace', {
             intro: isAgent ? 'פלאגין אורז מיומנויות, כלים וידע ליחידה אחת — זו הדרך המומלצת להוסיף יכולת לסוכן.'
               : 'הרכיבו את היכולת ממיומנויות, כלים ומקורות ידע. כל סוכן שיחובר יקבל את כולם.'})},
         {id: 'instructions', label: isPlugin ? 'תיעוד' : 'הנחיות', render: instructionsStep,
-          done: !!(item[docField]?.trim() && item.apiDescription?.trim())},
-        {id: 'try', label: 'נסה', done: runs.length > 0, render: tryStep},
-        {id: 'evaluate', label: 'בדיקה', done: !!lastRun, render: evaluateStep}]
+          done: !!(item[docField]?.trim() && item.apiDescription?.trim())}]
       const missing = !item.name?.trim() ? `הוסיפו שם ל${kind}` : !item.id?.trim() ? `הוסיפו מזהה ל${kind}`
         : !item.desc?.trim() || !item.apiDescription?.trim() ? `הוסיפו תיאור ל${kind}`
           : !item[docField]?.trim() ? (isPlugin ? 'הוסיפו תיעוד לפלאגין' : 'הוסיפו הנחיות מערכת') : ''
