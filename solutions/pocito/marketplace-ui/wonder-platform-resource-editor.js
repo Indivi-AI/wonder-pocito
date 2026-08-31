@@ -9,7 +9,7 @@ const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 ReactComp('wonderPlatformAttachPicker', {
   impl: comp({
     hFunc: (ctx, {react: {h, hh}}) => ({picker, repo, setPicker, attachSelected, createNested}) => {
-      const {classes, resources} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
+      const {classes, resources, newLabels} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
       if (!picker) return null
       const items = (repo[picker.resource] || []).filter(item => !picker.query || `${item.name} ${item.desc}`.includes(picker.query))
       const toggle = item => setPicker({...picker, selected: picker.selected.includes(item.id)
@@ -48,9 +48,9 @@ ReactComp('wonderPlatformAttachPicker', {
             h(`span:${classes.meta}`, {}, `${picker.selected.length} נבחרו`),
             h('div:flex items-center gap-2', {},
               h(`button:${classes.button}`, {onClick: () => createNested(picker.resource),
-                'aria-label': `בניית ${picker.single} חדש`},
+                'aria-label': `בניית ${newLabels[picker.resource]}`},
                 h('L:Plus', {size: 14}),
-                picker.resource == 'tools' ? 'כלי חדש ממארז Flow' : `${picker.single} חדש`),
+                picker.resource == 'tools' ? 'כלי חדש ממארז Flow' : newLabels[picker.resource]),
               h(`button:${classes.button}`, {onClick: () => setPicker()}, 'ביטול'),
               h(`button:${classes.primary}`, {onClick: attachSelected, 'aria-label': 'אישור בחירה'}, 'אישור')))))
     }
