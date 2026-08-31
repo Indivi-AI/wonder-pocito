@@ -613,7 +613,9 @@ CubeTool('cubeQuery', {
     const modifiers = [...(ctx.vars.sqlModifiers || []), ...(ctx.vars.explainScanLogger ? [SqlModifier.explainScan.$run()] : [])]
     const opts = { brushMode, extra: { time: biUtils.timeColumnSql(cube, timeSlice) }, defaultFrom: froms[cube.parquetFiles?.[0]?.name], modifiers, manifest: froms.$manifest }
     const prelude = (ctx.vars.sqlPreludes || []).join(';\n')   // map-macro DDL from query-lookups; compile folds the strategy's LOAD in front of it
-    const { out: compiled, duckFlags, prefetchPlan, error: compileError } = await editor.compile(sql, { ...opts, prelude })
+    // prefetchPlan is produced only by the colsCache modifier chain; under noCache/fullFileCache compile omits it.
+    // Defaulting to [] keeps both the log below and the setVars downstream safe instead of leaking undefined.
+    const { out: compiled, duckFlags, prefetchPlan = [], error: compileError } = await editor.compile(sql, { ...opts, prelude })
     if (compileError) { 
       ctx.vars.errorLogger?.error?.({ t: 'cubeQuery ambiguous metric', reason: compileError, sql }, {}, { ctx }); 
       return [] 
@@ -737,10 +739,16 @@ function fmtPeriod(d, pattern) { return pattern.includes('-HH') ? `${d.toISOStri
 
 function expandPeriods(spec, pattern, allMax = 60) {
   const stepMs = pattern.includes('-HH') ? 3600000 : 86400000
+  const parsePeriod = p => Date.parse(pattern.includes('-HH') ? p.replace(/-(\d\d)$/, 'T$1:00Z') : p)
   const back = n => Array.from({ length: n }, (_, i) => fmtPeriod(new Date(Date.now() - i * stepMs), pattern))
+  // `from..to`, inclusive: the only spec anchored to the DATA rather than to now, which is what a dashboard date
+  // range needs — `last:N` walks back from Date.now() and names periods a historical dataset never built.
+  const range = (from, to) => Array.from({ length: (parsePeriod(to) - parsePeriod(from)) / stepMs + 1 },
+    (_, i) => fmtPeriod(new Date(parsePeriod(from) + i * stepMs), pattern))
   return spec === 'today' ? [fmtPeriod(new Date(), pattern)]
     : spec === 'all' ? back(allMax)
     : spec.startsWith('last:') ? back(+spec.slice(5) || 1)
+    : spec.includes('..') ? range(...spec.split('..'))
     : [spec]
 }
 

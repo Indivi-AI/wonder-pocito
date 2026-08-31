@@ -4,6 +4,9 @@ import { dsls, jb } from '@jb6/core'
 import './bi-dsl.js'   // registers the event-source<bi> TgpType (+ the cube backbone) this file implements against
 import './duckdb-utils.js'
 import '@wonder/db/db-drivers.js'
+// /dev/shm is a LINUX tmpfs — fast, and the right scratch in Cloud Run. It does not exist on macOS, where
+// mkdir fails with EPERM. This file also loads in the browser, so the platform is read off process, never fs/os.
+const scratchRoot = () => globalThis.process?.platform === 'linux' ? '/dev/shm' : '/tmp'
 const { getAccessToken, wresolve, wfetch2 } = jb.wonderUtils
 
 const { tgp: { TgpType } } = dsls
@@ -128,7 +131,7 @@ EventSource('bucketUrlSourceJsonEvents', {
   impl: (_, {}, { wUrlEventPattern }) => ({
     async read(ctx, period, keyField) {
       const log = ctx?.vars?.biLogger, t0 = Date.now()
-      const localDir = ctx.vars.localDir || `/dev/shm/daily-logs-${period}`
+      const localDir = ctx.vars.localDir || `${scratchRoot()}/daily-logs-${period}`
       const wUrlPrefix = wUrlEventPattern.replace('${period}', period).replace(/\$\{[^}]*\}.*$/, '')
       const c = ctx.setVars({ wUrlPrefix, wUrlEventPattern, keyField, localDir, tmpPrefix: ctx.vars.tmpPrefix || `tmp/daily-logs/${period}`, outFile: `${localDir}/all.jsonl` })
       const jsonl = await compose1024AndDownload(c)

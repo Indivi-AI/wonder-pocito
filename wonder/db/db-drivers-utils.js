@@ -24,7 +24,12 @@ async function wresolve(url, _ctx, method = 'GET') {
   const ext = (url.endsWith('/') || fileName?.includes('.')) ? '' : '.json'
   const path = await calcPath(ctx, extracted) + ext
   const driver = await jb.wonderUtils.getDBDriver(url, ctx)
-  return driver?.filePathUrl(ctx.setVars({ ...extracted, path }))
+  // No driver is unrecoverable, and returning undefined here is worse than throwing: the undefined travels
+  // into read_parquet('undefined') and surfaces as an IO error many layers away with no mention of drivers.
+  // Most common cause by far: a `:fs//` url when db-drivers-live-repo.js (which registers FS.*) was never imported.
+  if (!driver) throw new Error(`wresolve: no db-driver for '${url}' (db=${db}, host=${coreUtils.isNode ? 'node' : 'browser'}). `
+    + `If this is a fs/local url, import '@wonder/db/db-drivers-live-repo.js' — db-drivers.js does not load it.`)
+  return driver.filePathUrl(ctx.setVars({ ...extracted, path }))
 }
 
 async function wresolveInfo(url, _ctx, method = 'GET') {
