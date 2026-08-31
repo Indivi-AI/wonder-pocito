@@ -21,8 +21,6 @@ ReactComp('wonderPlatformWorkspace', {
       const [evaluationRun, setEvaluationRun] = useState(), [detail, setDetail] = useState(-1)
       const [stepIds, setStepIds] = useState({}), stepId = stepIds[resource] || 'identity'
       const runtimeConfig = value => JSON.stringify(value)
-      const refKinds = {plugin: 'פלאגין', skill: 'מיומנות', tool: 'כלי', subagent: 'סאב-אייג׳נט', knowledge: 'ידע', agent: 'סוכן'}
-      const refRows = value => Array.isArray(value.references) ? value.references : value.references?.references || []
       const fieldLabel = (title, key) => [title, h(`span:mr-2 ${classes.mono}`, {key}, key)]
       const savedConfig = workspace.baseline, [chatSessionId, setChatSessionId] = useState(`${item.id}-${Date.now()}`)
       const [sessionConfig, setSessionConfig] = useState(savedConfig)
@@ -125,20 +123,11 @@ ReactComp('wonderPlatformWorkspace', {
           h(`label:${classes.label} block`, {}, 'תיאור בעברית',
             h(`textarea:${classes.area}`, {value: item.desc || '', 'aria-label': 'hebrew_description',
               placeholder: `במשפט אחד — מה ${targetLabel} עושה`,
-              onInput: event => update({...item, desc: event.target.value})}))),
-        item._marketplace && h(`section:${classes.card}`, {}, h('div:flex flex-wrap items-center gap-2', {}, h('b:text-[13px]', {},
-          'Marketplace API'), h(`span:${classes.chip}`, {}, `${item.versions?.length || 0} גרסאות`), h(`span:${classes.chip}`, {},
-            `${item.audit?.length || 0} אירועי ביקורת`)), item.references && h('div:mt-3 space-y-1.5', {},
-            refRows(item).map(ref => h('div:flex items-center gap-2 text-[12px]', {key: `${ref.resource_type}-${ref.name}`},
-              h(`L:${ref.exists === false ? 'CircleAlert' : 'Check'}`, {size: 14,
-                className: ref.exists === false ? 'text-[var(--wp-danger)]' : 'text-[var(--wp-ink-3)]'}),
-              h('span:font-medium text-[var(--wp-ink)]', {}, ref.name),
-              h('span:text-[var(--wp-ink-3)]', {}, refKinds[ref.resource_type] || ref.resource_type))),
-            refRows(item).length == 0 && h('span:text-[12px] text-[var(--wp-ink-3)]', {}, 'אין קישורים לפריטים אחרים')),
-          item.references && h('details:mt-3', {}, h('summary:cursor-pointer text-[12px] font-semibold text-[var(--wp-ink)]', {},
-            'פרטים טכניים'),
-            h('pre:mt-2 overflow-x-auto rounded-[12px] bg-[var(--wp-surface-2)] p-3 text-[12px]', {dir: 'ltr'},
-              JSON.stringify(item.references, null, 2)))),
+              onInput: event => update({...item, desc: event.target.value})})),
+          h(`label:${classes.label} block`, {}, ...fieldLabel('תיאור באנגלית', 'description')),
+          h(`textarea:${classes.area}`, {dir: 'ltr', value: item.apiDescription || '', 'aria-label': 'description',
+            onInput: event => update({...item, apiDescription: event.target.value})}),
+          h(`p:${classes.help}`, {}, `תיאור טכני באנגלית, משמש את ה-API ואת המודל לבחירת ${targetLabel} המתאים.`)),
         item.configYaml && h(`section:${classes.card}`, {}, h('b:text-[13px]', {}, 'config.yaml'),
           h('pre:mt-2 max-w-full overflow-x-auto rounded-[12px] bg-[var(--wp-surface-2)] p-3 text-[12px]', {dir: 'ltr'}, item.configYaml)))
       const instructionsStep = () => h('div:space-y-4', {},
@@ -152,10 +141,6 @@ ReactComp('wonderPlatformWorkspace', {
           onInput: event => update({...item, [docField]: event.target.value})}),
         h(`p:${classes.help}`, {}, isPlugin ? 'התיעוד מלווה את הפלאגין בכל סוכן שמחובר אליו.'
           : 'ההנחיות נשלחות למודל בכל שיחה, לפני הודעת המשתמש.')),
-        h(`section:${classes.card}`, {}, h('b:text-[13px]', {}, ...fieldLabel('תיאור באנגלית', 'description')),
-          h(`textarea:${classes.area}`, {dir: 'ltr', value: item.apiDescription || '', 'aria-label': 'description',
-            onInput: event => update({...item, apiDescription: event.target.value})}),
-          h(`p:${classes.help}`, {}, `תיאור טכני באנגלית, משמש את ה-API ואת המודל לבחירת ${targetLabel} המתאים.`)),
         !isPlugin && !item.originalId && h(`section:${classes.card}`, {}, h('b:text-[13px]', {}, 'README (creation only)'),
           h(`textarea:${classes.area} min-h-32`, {value: item.readme || '',
             onInput: event => update({...item, readme: event.target.value})})))
