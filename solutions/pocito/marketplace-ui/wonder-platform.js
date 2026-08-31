@@ -122,7 +122,17 @@ ReactComp('wonderPlatform', {
       }
       const navigate = id => (setView(id), setSearch(''))
       const requestLeave = action => stackDirty() ? setPendingLeave(() => action) : action()
-      const openView = id => requestLeave(() => (setStack([]), navigate(id)))
+      const openView = id => requestLeave(() => {
+        if (view == 'journey' && stack.length > 0) {
+          const root = stack[0], created = root.createdInJourney || []
+          if (!root.item.originalId && created.length > 0) {
+            setSweep({created, leave: () => (setStack([]), navigate(id))})
+            return
+          }
+        }
+        setStack([])
+        navigate(id)
+      })
       const openItem = async (resource, item) => {
         if (repo.marketplace && marketResources.includes(resource)) item = await marketplaceDetail(
           ctx.setVars({resource, id: item.id, roomWUrl: repositoryRoomWUrl, marketplaceBaseUrl: marketplaceUrl}))
