@@ -7,10 +7,9 @@ const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
 ReactComp('wonderPlatformNavigation', {
   impl: comp({
-    hFunc: (ctx, {react: {h, useState}}) => ({view, openView, brand, brandTagline, brandIcon, extraLibraryNav,
-      conversations, conversationId, openConversation, newConversation, createAgent}) => {
-      const {primaryNav, catalogNav, catalogViews, classes} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
-      const [catalogOpen, setCatalogOpen] = useState(catalogViews.includes(view))
+    hFunc: (ctx, {react: {h}}) => ({view, openView, brand, brandTagline, brandIcon, extraLibraryNav,
+      conversations, conversationId, openConversation, newConversation, createAgent, createPlugin}) => {
+      const {primaryNav, catalogNav, classes} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
       const fullCatalogNav = [...catalogNav, ...(extraLibraryNav || [])]
       const groupLabel = text => h('div:px-2.5 pb-1.5 pt-5 text-[11px] font-medium text-[var(--wp-ink-4)]', {}, text)
       const item = ([id, icon, title]) => h(`button:flex h-8 w-full items-center gap-2.5 rounded-[8px] px-2.5 text-[13px] ` +
@@ -38,14 +37,13 @@ ReactComp('wonderPlatformNavigation', {
             {onClick: () => newConversation()}, h('L:Plus', {size: 15}), 'שיחה חדשה'),
           createAgent && h(`button:${classes.button} mt-1.5 w-full`,
             {onClick: () => createAgent()}, h('L:Plus', {size: 15}), 'סוכן חדש'),
+          createPlugin && h(`button:${classes.button} mt-1.5 w-full`,
+            {onClick: () => createPlugin()}, h('L:Plus', {size: 15}), 'פלאגין חדש'),
           h('div:mt-4 space-y-px', {}, primaryNav.map(item)),
           recent.length > 0 && h('div', {}, groupLabel('שיחות אחרונות'),
             h('div:space-y-px', {}, recent.map(conversationRow))),
-          h('button:flex w-full items-center justify-between px-2.5 pb-1.5 pt-5 text-[11px] font-medium ' +
-            'text-[var(--wp-ink-4)] transition-colors hover:text-[var(--wp-ink-2)]',
-          {onClick: () => setCatalogOpen(!catalogOpen), 'aria-expanded': catalogOpen}, 'ניהול נכסים',
-          h(`L:${catalogOpen ? 'ChevronUp' : 'ChevronDown'}`, {size: 13})),
-          catalogOpen && h('div:space-y-px', {}, fullCatalogNav.map(item)))))
+          groupLabel('קטלוג'),
+          h('div:space-y-px', {}, fullCatalogNav.map(item)))))
     }
   })
 })
