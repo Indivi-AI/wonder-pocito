@@ -13,7 +13,7 @@ ReactComp('wonderPlatformWorkspace', {
   impl: comp({
     hFunc: (ctx, {react: {h, hh, useEffect, useState}}) => props => {
       const {workspace, repo, openPicker, openEditor, createNested, runTarget, runEval, update, panelOpen, setPanelOpen,
-        tab, setTab, finish, finishLabel, finishAria} = props
+        tab, setTab, resetScroll, finish, finishLabel, finishAria} = props
       const item = workspace.item, resource = workspace.resource
       const {classes} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
       const [testInput, setTestInput] = useState('')
@@ -106,7 +106,7 @@ ReactComp('wonderPlatformWorkspace', {
           disabled: !evaluationId || shownRun?.status == 'מריץ…', onClick: executeEval}, shownRun?.status == 'מריץ…' ? 'מריץ…' : 'הרצת הסט')),
       shownRun && h('div:mt-4', {}, h('div:flex items-center gap-2', {}, h(`span:${classes.chip}`, {}, shownRun.status),
         h('span:text-[12px] text-[var(--wp-ink-3)]', {}, shownRun.started || 'עכשיו')), h('div:mt-4 space-y-2', {}, (shownRun.rows || []).map(evalRow))))
-      const onStep = id => setStepIds(current => ({...current, [resource]: id}))
+      const onStep = id => {setStepIds(current => ({...current, [resource]: id})); resetScroll?.()}
       const docField = isPlugin ? 'readme' : 'instructions'
       const capDone = (item.pluginIds?.length || item.skillIds?.length || item.toolIds?.length || item.knowledgeIds?.length) > 0
       const identityStep = () => h('div:space-y-4', {},

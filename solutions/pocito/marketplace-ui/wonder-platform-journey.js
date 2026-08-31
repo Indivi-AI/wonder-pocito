@@ -41,7 +41,8 @@ ReactComp('wonderPlatformJourney', {
       const [panelOpen, setPanelOpen] = useState(true)
       const [tab, setTab] = useState('test')
       const bodyRef = useRef(null)
-      useEffect(() => { bodyRef.current?.scrollTo(0, 0); setPanelOpen(true) }, [active.baseline])
+      const resetScroll = () => bodyRef.current?.scrollTo(0, 0)
+      useEffect(() => { resetScroll(); setPanelOpen(true) }, [active.baseline])
       const parentName = parent && (parent.item.name?.trim() || newLabels[parent.resource])
       const isComposite = ['plugins', 'subagents', 'agents'].includes(resource)
       const readOnlyTool = resource == 'tools' && item.originalId && item.kind != 'flow'
@@ -71,7 +72,7 @@ ReactComp('wonderPlatformJourney', {
             h('div:min-w-0 flex-1', {dir: 'rtl'},
               h('h1:truncate text-[15px] font-semibold text-[var(--wp-ink)]',
                 {title: item.name || ''}, item.name || active.createLabel || newLabels[resource]),
-              h('p:truncate text-[12px] text-[var(--wp-ink-4)]', {dir: 'ltr'}, item.id || '')),
+              h('p:truncate text-right text-[12px] text-[var(--wp-ink-4)]', {dir: 'ltr'}, item.id || '')),
             readOnlyTool && h(`span:${classes.chip}`, {}, 'לקריאה בלבד'),
             isComposite && h(`button:${classes.icon} ${panelOpen ? 'bg-[var(--wp-surface-3)]' : ''}`,
               {onClick: () => setPanelOpen(!panelOpen), 'aria-expanded': panelOpen, title: 'הרצת ניסוי',
@@ -85,7 +86,7 @@ ReactComp('wonderPlatformJourney', {
             hh(ctx, dsls.react['react-comp'].wonderPlatformJourneyBar, {stack, goToDepth, exit}))),
         h('div:min-h-0 flex-1 overflow-hidden', {ref: bodyRef}, isComposite
           ? hh(ctx, dsls.react['react-comp'].wonderPlatformWorkspace, {workspace: active, repo, openPicker, openEditor,
-            createNested, runTarget, runEval, update: updateTop, panelOpen, setPanelOpen, tab, setTab,
+            createNested, runTarget, runEval, update: updateTop, panelOpen, setPanelOpen, tab, setTab, resetScroll,
             finish: isAgent ? finishAgent : saveTop, finishLabel: isAgent ? 'סיום · שוחח עם הסוכן' : saveLabel,
             finishAria: isAgent ? 'סיום ומעבר לשיחה' : 'שמירת המסע'})
           : hh(ctx, dsls.react['react-comp'].wonderPlatformResourceFields,
