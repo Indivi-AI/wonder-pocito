@@ -135,7 +135,13 @@ DbDriver('bucket.minio', {
   impl: dbDriver({
     whenAndWhyToUse: 'Optional S3-compatible storage for an air-gapped environment.',
     authToken: authToken.anonymous(),
-    authMethod: authMethod.none(),
+    authMethod: () => ({ enrichRequest: request => {
+      const storageClass = globalThis.process?.env?.MINIO_STORAGE_CLASS
+      if (request.method !== 'PUT' || !storageClass) return request
+      const headers = new Headers(request.headers)
+      headers.set('x-amz-storage-class', storageClass)
+      return new Request(request, { headers })
+    } }),
     get: wget.viaBucketApi(),
     put: wput.viaBucketApi(),
     append: wappend.bucketSingleWriterGetPut(),

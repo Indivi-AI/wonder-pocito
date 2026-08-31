@@ -23,3 +23,9 @@ solutions/pocito/marketplace-server/.env
 solutions/idf/marketplace-server/.venv/
 
 solutions/idf/marketplace-server/.env
+
+solutions/pocito/.env.onprem
+solutions/pocito/.local-data/
+solutions/pocito/on-prem/litellm/config.local.yaml
+
+solutions/pocito/flapi-mock/node_modules/

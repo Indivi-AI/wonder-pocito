@@ -118,9 +118,12 @@ export async function serveAppletPage(spec, res, localImports) {
   const { og = [], ...clientSpec } = spec   // og = raw branding sources (room, applet), server-only — not shipped to the client
   const branding = mergeBranding(ogDefaults(runtimeBase), ...og)
   const html = APPLET_HOST_HTML
-    .replace('_CLIENT_ENV_', JSON.stringify({ WONDER_STORAGE_PROVIDER: storageProvider(), WONDER_STORAGE_URL: browserStorageUrl(),
+    .replace('_CLIENT_ENV_', JSON.stringify({
+      WONDER_STORAGE_PROVIDER: storageProvider(), WONDER_STORAGE_URL: browserStorageUrl(),
       MARKETPLACE_API_URL: process.env.MARKETPLACE_API_URL, AGNO_API_URL: process.env.AGNO_API_URL,
-      LLM_PROXY_URL: process.env.LLM_PROXY_URL, LLM_MODEL: process.env.LLM_MODEL }))   // undefined keys are dropped by JSON.stringify
+      FLAPI_BASE_URL: process.env.FLAPI_BASE_URL,
+      LLM_PROXY_URL: process.env.LLM_PROXY_URL, LLM_MODEL: process.env.LLM_MODEL
+    }))   // undefined keys are dropped by JSON.stringify
     .replace('_IMPORT_MAP_', JSON.stringify({ imports }))
     .replace('_APPLET_SPEC_', JSON.stringify({ ...clientSpec, liveRepo: !!localImports }))
     .replace('_FAVICON_', branding.favicon)

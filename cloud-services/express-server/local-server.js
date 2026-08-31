@@ -14,7 +14,7 @@ import { setupLiveRepoRoomApplet } from './lib/room-lambda-and-applet-live-repo.
 import { setupLlmProxyRoute } from './lib/llm-proxy.js'
 
 const dir = path.dirname(fileURLToPath(import.meta.url))
-dotenv.config({ path: path.join(dir, `.env.${process.env.WONDER_ENV || 'dev'}`), override: true })   // WONDER_ENV switches the env file: dev (default) | onprem
+if (process.env.ENV_PATH) dotenv.config({ path: process.env.ENV_PATH })
 jb.coreRegistry.repoRoot = path.resolve(dir, '../..')
 export async function createLocalApp() {
 const root = await coreUtils.calcRepoRoot(), { importMap, staticMappings } = await coreUtils.getStaticServeConfig(root)

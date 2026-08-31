@@ -98,9 +98,10 @@ box-shadow:0 30px 70px rgba(23,23,23,.10);overflow:hidden;transition:.25s}
 .a-card:hover{transform:translateY(-8px);box-shadow:0 40px 90px rgba(255,72,0,.16)}
 .a-card h3{margin:0;color:#171717;font-size:37px;line-height:1.16;letter-spacing:-.02em;text-transform:none}
 .a-card .usd{color:#171717;font-size:46px;font-weight:800;letter-spacing:-.03em}
-.a-card .usd .old{color:#b0b0b6;font-size:32px;font-weight:700;text-decoration:line-through;text-decoration-thickness:3px}
+.a-card .usd .old{color:#8a8a92;font-size:58px;font-weight:800;text-decoration:line-through;text-decoration-thickness:4px}
 .a-card .usd .arr{color:#c9ccd2;font-size:36px}
-.a-card .usd .new{color:#ff4800;font-size:54px}.a-card .usd .new.dark{color:#171717}
+.a-card .usd .new{color:#ff4800;font-size:36px}.a-card .usd .new.dark{color:#171717;font-size:50px}
+.a-card .usd .for{color:#8a8a92;font-size:27px;font-weight:700}
 .a-card p{margin:0;color:#555;font-size:27px;line-height:1.45}
 .a-card .how{margin-top:auto;padding-top:18px;border-top:1px solid #f0f0f2;color:#555;font-size:18.5px;font-weight:600}
 .a-card .how:before{content:'◆';color:#ff4800;font-size:12px;margin-right:10px}
@@ -136,21 +137,19 @@ text-align:left;font:15.5px/1.62 ui-monospace,SFMono-Regular,Menlo,monospace}
 .ai-bars{display:grid;gap:8px;margin-top:16px}
 .ai-bar{display:grid;grid-template-columns:52px 1fr 84px;align-items:center;gap:12px;font-size:15px;color:#555;font-weight:600}
 .ai-bar i{height:16px;border-radius:8px;background:#ff4800}.ai-bar em{font-style:normal;text-align:right;font-weight:700;color:#171717}
-.aif-node{border:1px solid #e6e6ea;border-radius:18px;background:#fff;box-shadow:0 14px 40px rgba(23,23,23,.07);padding:22px 30px}
-.aif-node h4{margin:0;color:#171717;font-size:23px;text-transform:none}
-.aif-node h4 small{display:block;margin-top:6px;color:#8a8a92;font-size:14.5px;font-weight:600}
-.aif-cube{border-radius:18px;background:#131417;color:#fff;padding:22px 44px;text-align:center;box-shadow:0 18px 50px rgba(23,23,23,.3)}
-.aif-cube b{font-size:25px}.aif-cube span{display:block;margin-top:5px;color:#8f939e;font-size:15.5px}
+.ai-sql{align-self:flex-start;border:1px solid #e6e6ea;border-radius:12px;background:#fff;color:#444;padding:12px 18px;
+font:600 15.5px ui-monospace,Menlo,monospace}.ai-sql b{color:#ff4800;font-weight:600}
+.vocab-chips{display:flex;flex-wrap:wrap;gap:9px;align-content:flex-start}
+.vocab-chips span{border:1px solid #e3e3e8;border-radius:999px;background:#fafafa;color:#666;padding:8px 15px;font:600 15px ui-monospace,Menlo,monospace}
+.vocab-chips span.used{border-color:#ff4800;background:#fff3ee;color:#b93200;box-shadow:0 6px 18px rgba(255,72,0,.18)}
 .aif-step{color:#ff4800;font-weight:800}
 .aif-store{border:1px solid #e6e6ea;border-radius:999px;background:#fafafa;color:#666;padding:9px 22px;font:600 15px ui-monospace,Menlo,monospace}
-.aifA{flex:1;min-width:0;padding:26px 46px;display:flex;flex-direction:column;justify-content:space-evenly;align-items:center}
-.aifA .flow-row{display:flex;align-items:center;gap:20px;width:100%}
-.aifA .flow-row .ai-q{align-self:center;max-width:330px;flex:none}.aifA .flow-row .ai-a{max-width:400px;flex:none}
-.arrow-h{flex:1;display:grid;justify-items:center;gap:2px;color:#8a8a92;font-size:14.5px;font-weight:700;text-align:center}
-.arrow-h i{font-style:normal;font-size:38px;line-height:1;color:#9aa0a6}
-.v-arrows{display:flex;gap:85px;margin:6px 0}
-.v-arrow{display:grid;justify-items:center;gap:2px;color:#8a8a92;font-size:14.5px;font-weight:700}
-.v-arrow i{font-style:normal;font-size:28px;line-height:1;color:#ff4800}
+.aifC{flex:1;min-width:0;padding:24px 30px;display:grid;grid-template-columns:1fr 250px 330px;gap:18px 0;align-content:center;align-items:center}
+.aifC .lane{grid-column:3;grid-row:1/5;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px;border-radius:18px;
+background:#131417;color:#fff;padding:34px;align-self:stretch}
+.aifC .lane b{font-size:27px}.aifC .lane span{color:#8f939e;font-size:16px}
+.arrow-c{display:grid;justify-items:center;align-content:center;gap:2px;color:#8a8a92;font-size:14px;font-weight:700;text-align:center;padding:0 12px}
+.arrow-c i{font-style:normal;font-size:30px;line-height:1;color:#ff4800}
 .builder{flex:1;display:grid;grid-template-columns:440px 1fr}
 .b-panel{display:flex;flex-direction:column;padding:26px 30px;border-right:1px solid #e6e6ea;background:#fff}
 .b-panel h4{margin:0 0 18px;font-size:21px;color:#171717}
@@ -361,6 +360,9 @@ const DASH_DATA = {
 const PQ_COLS = [['source_row', 6243229], ['transaction_id', 5000408], ['date', 13146, 1], ['source_date_quality', 131690],
   ['customer_id', 1111192], ['product', 287696, 1], ['quantity', 763926], ['price', 1274336], ['payment_method', 151498],
   ['status', 273247, 1], ['missing_transaction_id', 33883], ['invalid_date', 68356], ['transaction_value', 1054106, 1], ['has_quality_issue', 55053]]
+const AI_VOCAB = ['gross_value', 'completed_value', 'payment_fees', 'completion_rate', 'gross_margin', 'customer_country',
+  'customer_type', 'loyalty_tier', 'product_category']
+const AI_USED = ['completed_value', 'customer_country']
 const AI_BARS = [['US', 100, '$4.1M'], ['UK', 71, '$2.9M'], ['DE', 41, '$1.7M']]
 const AI_Q = 'Which countries drove completed volume in Q2?'
 const AI_ANSWER = 'US and UK drove 58% of completed volume in Q2, led by marketplace sellers.'
@@ -426,9 +428,12 @@ ReactComp('approachSlide.bi2', {
   impl: comp({
     hFunc: ({}, { react: { h } }) => ({ slide }) => {
     const statement = slide.title.split('byte-optimized')
-    const usd = str => str.includes('→')
-      ? h('div:usd', {}, h('span:old', {}, str.split('→')[0].trim()), h('span:arr', {}, '  →  '), h('b:new', {}, str.split('→')[1].trim()))
-      : h('div:usd', {}, h('b:new dark', {}, str))
+    const usd = str => {
+      const [main, forPart] = str.split(' for ')
+      return str.includes('→')
+        ? h('div:usd', {}, h('span:old', {}, str.split('→')[0].trim()), h('span:arr', {}, '  →  '), h('b:new', {}, str.split('→')[1].trim()))
+        : h('div:usd', {}, h('b:new dark', {}, main), forPart && h('span:for', {}, ` for ${forPart}`))
+    }
     return h('div:p-slide ap2', {},
       h('div:ap2-top', {},
         h('div:ap2-eyebrow', {}, slide.eyebrow),
@@ -447,25 +452,25 @@ const CubeCodeViz = ReactComp('cubeCodeViz.bi2', {
   impl: comp({ hFunc: ({}, { react: { h } }) => () => win(h,
     { label: 'admin/finance/v3/finance3-cube.js', hint: 'every business definition lives here, once' }, codePane(h, CUBE_CODE)) })
 })
-const aiAnswerCard = h => h('div:ai-a', {}, h('div:vhead', {}, 'Answer', h('span:vbadge', {}, h('i', {}, '✓'), 'Verified')),
+const aiSqlChip = h => h('div:ai-sql', {}, h('b', {}, 'select'), ' customer_country, completed_value ', h('b', {}, 'where'), " quarter = '2025-Q2'")
+const aiAnswerCard = (h, props) => h('div:ai-a', props, h('div:vhead', {}, 'Answer', h('span:vbadge', {}, h('i', {}, '✓'), 'Verified')),
   h('p', {}, AI_ANSWER), h('div:ai-bars', {}, ...AI_BARS.map(([label, width, value]) => h('div:ai-bar', { key: label }, label,
     h('i', { style: { width: `${width}%` } }), h('em', {}, value)))))
-const AiPipelineViz = ReactComp('aiPipelineViz.bi2', {
-  impl: comp({ hFunc: ({}, { react: { h } }) => () => win(h, { label: 'Ask AI — grounded in the cube', hint: 'the cube teaches, runs and verifies' },
-    h('div:viz-body', {}, h('div:aifA', {},
-      h('div:flow-row', {},
-        h('div:ai-q', {}, AI_Q),
-        h('div:arrow-h', {}, h('i', {}, '⟶')),
-        h('div:aif-node', {}, h('h4', {}, 'LLM', h('small', {}, 'speaks cube vocabulary only'))),
-        h('div:arrow-h', {}, h('i', {}, '⟶'), h('span', {}, h('b:aif-step', {}, '④ '), 'verified answer + evidence')),
-        aiAnswerCard(h)),
-      h('div:v-arrows', {},
-        h('div:v-arrow', {}, h('i', {}, '↑'), h('span', {}, h('b:aif-step', {}, '① '), 'injects the data model')),
-        h('div:v-arrow', {}, h('i', {}, '↓'), h('span', {}, h('b:aif-step', {}, '② '), 'SQL in cube vocabulary')),
-        h('div:v-arrow', {}, h('i', {}, '↑'), h('span', {}, h('b:aif-step', {}, '③ '), 'verified rows'))),
-      h('div:aif-cube', {}, h('b', {}, 'Wonder Cube'), h('span', {}, 'data model · query engine · verifier')),
-      h('div:v-arrow', {}, h('i', { style: { color: '#9aa0a6' } }, '↕'), 'optimized reads'),
-      h('div:aif-store', {}, 'transactions.parquet — 0.41 MB read')))) })
+const aiVocabChips = (h, words) => h('div:vocab-chips', {}, ...words.map(word => h(`span${AI_USED.includes(word) ? ':used' : ''}`, { key: word }, word)))
+const AiSequenceViz = ReactComp('aiSequenceViz.bi2', {
+  impl: comp({
+    hFunc: ({}, { react: { h } }) => () => {
+    const arrow = (glyph, num, text) => h('div:arrow-c', {}, h('i', {}, glyph), h('span', {}, h('b:aif-step', {}, `${num} `), text))
+    return win(h, { label: 'Ask AI — grounded in the cube', hint: 'every exchange passes through the cube' },
+      h('div:viz-body', {}, h('div:aifC', {},
+        h('div:lane', {}, h('b', {}, 'Wonder Cube'), h('span', {}, 'data model · query engine · verifier'),
+          h('div:aif-store', { style: { marginTop: 16 } }, 'transactions.parquet')),
+        h('div:ai-q', { style: { alignSelf: 'flex-start', borderRadius: '18px 18px 18px 4px' } }, AI_Q), h('div'),
+        aiVocabChips(h, AI_VOCAB.slice(0, 6)), arrow('⟵', '①', 'injects the data model'),
+        aiSqlChip(h), arrow('⟶', '②', 'SQL in cube vocabulary — compiled + run'),
+        aiAnswerCard(h, { style: { maxWidth: 640 } }), arrow('⟵', '③', 'verified rows + evidence'))))
+  }
+  })
 })
 const DashboardViz = ReactComp('dashboardViz.bi2', {
   impl: comp({ hFunc: ({}, { react: { h, useState } }) => () => {
@@ -625,7 +630,7 @@ const TrinoViz = ReactComp('trinoViz.bi2', {
   })
 })
 
-const SHOWCASE_VIEWS = { semantic: CubeCodeViz, ai: AiPipelineViz, dashboards: DashboardViz }
+const SHOWCASE_VIEWS = { semantic: CubeCodeViz, ai: AiSequenceViz, dashboards: DashboardViz }
 ReactComp('showcaseSlide.bi2', {
   impl: comp({ hFunc: (ctx, { react: { h, hh, useState } }) => ({ slide }) => {
     const [selected, setSelected] = useState(0), item = slide.items[selected]
@@ -805,7 +810,7 @@ ReactComp('deServiceDeck', {
             how: 'Using Incremental ETLs and our Client Engine',
             chips: ['Gaming']
           }),
-          approachCard('Delivering serverless BI for 1M users', '$2,000/m', {
+          approachCard('Delivering serverless BI', '$2,000/m for 1M users', {
             how: 'Using Parquet optimization and our Client Engine',
             chips: ['Finance','POC']
           }),

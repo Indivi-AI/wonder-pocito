@@ -1,3 +1,5 @@
+import express from 'express'
+
 export function setupFlapiProxyRoute(app) {
   const baseUrl = process.env.FLAPI_BASE_URL?.replace(/\/$/, ''), token = process.env.FLAPI_BEARER_TOKEN
   app.get('/flapi/package/:packageId', async (req, res) => {
@@ -13,4 +15,11 @@ export function setupFlapiProxyRoute(app) {
       res.json({quick, metadata})
     } catch (error) { res.status(error.status || 502).json({error: error.message}) }
   })
+}
+
+export async function createFlapiApp() {
+  const app = express()
+  setupFlapiProxyRoute(app)
+  app.get('/health', (_, res) => res.json({status: 'ok', service: 'flapi-proxy'}))
+  return app
 }

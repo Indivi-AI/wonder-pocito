@@ -13,7 +13,7 @@ const {
     wonderPlatformNormalize, wonderPlatformPublishSkill, wonderPlatformSeed, wonderPlatformUpsert, wonderPlatformAgentOsRun },
     boolean: { and, contains, equals, notContains } },
   react: { ReactComp, UiAction, 'react-comp': { comp, wonderPlatform },
-    'ui-action': { actions, click, waitForText } },
+    'ui-action': { actions, click, waitForText, waitForSelector, waitForMutations } },
   test: { Test, test: { dataTest, reactTest } },
   ai: { Workflow }
 } = dsls
@@ -179,8 +179,8 @@ Data('wonderPlatformFlapiRoundTrip', {
     const previous = {FLAPI_BASE_URL: process.env.FLAPI_BASE_URL, FLAPI_BEARER_TOKEN: process.env.FLAPI_BEARER_TOKEN}
     process.env.FLAPI_BASE_URL = `http://127.0.0.1:${upstream.address().port}`; process.env.FLAPI_BEARER_TOKEN = 'test-token'
     try {
-      const {createPocitoApp} = await import(`${await coreUtils.calcRepoRoot()}/solutions/pocito/on-prem/pocito-app.js`)
-      const app = await createPocitoApp(), server = await new Promise(resolve => {
+      const {createFlapiApp} = await import(`${await coreUtils.calcRepoRoot()}/solutions/pocito/on-prem/dev/flapi-server.js`)
+      const app = await createFlapiApp(), server = await new Promise(resolve => {
         const instance = app.listen(0, '127.0.0.1', () => resolve(instance))
       })
       try {
@@ -633,7 +633,8 @@ UiAction('wonderPlatformClickInSection', {
   ],
   impl: ({}, {}, {section, button}) => ({
     async exec({vars: {win}}) {
-      const candidates = [...win.document.querySelectorAll('section')].filter(element => element.textContent.includes(section))
+      const candidates = [...win.document.querySelectorAll('section, div')].filter(element => element.textContent.includes(section)
+        && [...element.querySelectorAll('button')].some(target => target.outerHTML.includes(button)))
         .sort((left, right) => left.textContent.length - right.textContent.length)
       const target = [...(candidates[0]?.querySelectorAll('button') || [])].find(element => element.outerHTML.includes(button))
       if (!target) throw new Error(`Button not found: ${section} / ${button}`)
@@ -778,103 +779,125 @@ Test('wonderPlatform.chatRunsSelectedAgent', {
 })
 
 ReactComp('wonderPlatformMarketplaceE2eApp', {
-  impl: comp({hFunc: ctx => {
-    const App = wonderPlatform.$runWithCtx(ctx, {roomWUrl: 'room://marketplace'})
-    return () => ctx.vars.react.h(App)
-  }})
+  impl: wonderPlatform('room://marketplace-e2e', { extraPrimaryNav: [
+    ['agents','Bot','סוכנים']
+  ] })
+})
+
+UiAction('wonderPlatformCheckAgentReply', {
+  impl: ({}, {}, {}) => ({
+    async exec(ctx) {
+      const reply = ctx.vars.win.document.querySelector('[data-message-role="agent"]')?.textContent || ''
+      const success = ['E2E_SKILL_FACT_731', 'E2E_CODE_RESULT_937'].every(text => reply.includes(text))
+      ctx.vars.uiLogger?.info?.({t: 'marketplaceE2eReply', success, reply}, {}, {ctx})
+      if ([...ctx.vars.win.document.querySelectorAll('button')].some(button => button.textContent == 'עזיבה בלי שמירה'))
+        throw new Error('Unexpected unsaved-changes dialog during E2E navigation')
+      if (!success) throw new Error('Agent did not return the skill fact and code result: ' + reply)
+    }
+  })
 })
 
 const { wonderPlatformMarketplaceE2eApp } = dsls.react['react-comp']
+const { wonderPlatformCheckAgentReply } = dsls.react['ui-action']
+
+CtxEnricher('wonderPlatformMarketplaceE2eSetup', {
+  impl: async ctx => {
+    const marketplace = globalThis.MARKETPLACE_API_URL || globalThis.process?.env?.MARKETPLACE_API_URL || 'http://localhost:7777'
+    const agno = globalThis.AGNO_API_URL || globalThis.process?.env?.AGNO_API_URL || 'http://localhost:7778'
+    for (const base of [marketplace, agno]) {
+      const response = await fetch(base + '/healthz'), health = await response.json()
+      ctx.vars.marketplaceLogger?.info?.({t: 'marketplaceE2eHealth', base, health}, {}, {ctx})
+      if (!response.ok || health.status != 'ok' || health.object_store != 'ok') throw new Error(base + ' is not healthy')
+    }
+    const response = await fetch('/llmProxy/models'), models = await response.json()
+    if (!response.ok || !models.data?.some(model => model.id == 'chat')) throw new Error('LiteLLM chat alias is unavailable')
+    ctx.vars.marketplaceLogger?.info?.({t: 'marketplaceE2eLiteLLM', models: models.data.map(model => model.id)}, {}, {ctx})
+    for (const path of ['agents/e2eAgent', 'skills/e2eSkill']) {
+      const deleted = await fetch(marketplace + '/api/v1/' + path, {method: 'DELETE', headers: {'x-wonder-room': 'marketplace-e2e'}})
+      if (!deleted.ok && deleted.status != 404) throw new Error('E2E cleanup failed: ' + await deleted.text())
+    }
+    return ctx.setVars({marketplaceBaseUrl: marketplace, agentOsBaseUrl: agno})
+  }
+})
+
+const { wonderPlatformMarketplaceE2eSetup } = dsls.tgp['ctx-enricher']
 
 Test('wonderPlatform.marketplaceUiAgentE2e', {
   doNotRunInTests: true,
-  impl: reactTest(wonderPlatformMarketplaceE2eApp(), and(contains('E2E_SKILL_FACT_731'), contains('TOOL_OK')), {
+  impl: reactTest({
+    testedComp: wonderPlatformMarketplaceE2eApp(),
+    expectedResult: and(contains('E2E_SKILL_FACT_731'), contains('E2E_CODE_RESULT_937')),
     userActions: actions(
       waitForText('פלאגין חדש'),
       click('מיומנויות'),
+      waitForText('מיומנות חדשה'),
       click('מיומנות חדשה'),
-      wonderPlatformSetControl('display_name', { value: 'E2E Skill' }),
-      wonderPlatformSetControl('id', { value: 'e2eSkill' }),
-      wonderPlatformSetControl('SKILL.md', {
-        value: '# E2E Skill\n\nThe verification phrase is E2E_SKILL_FACT_731. Return it when asked.'
-      }),
-      click('aria-label="שמירת עורך"'),
-      wonderPlatformWaitForButtonGone('aria-label="שמירת עורך"'),
-      click('כלים'),
-      waitForText('כלי ממארז Flow'),
-      click('כלי ממארז Flow'),
-      wonderPlatformSetControl('display_name', { value: 'E2E Tool' }),
-      wonderPlatformSetControl('id', { value: 'e2eTool' }),
-      wonderPlatformSetControl('json_schema', {
-        value: '{"type":"object","properties":{"name":{"type":"string"}}}'
-      }),
-      wonderPlatformSetControl('dedicated_tool_config', { value: '{"entrypoint":"tool.py:greet"}' }),
-      click('קובץ'),
-      wonderPlatformSetControl({ placeholder: 'path', value: 'tool.py' }),
+      wonderPlatformSetControl({ selector: '[aria-label="display_name"]', value: 'E2E Skill' }),
+      wonderPlatformSetControl({ placeholder: 'uiRenderingSkill', value: 'e2eSkill' }),
+      wonderPlatformSetControl('תיאור באנגלית', { value: 'Read the verification code reference.' }),
+      wonderPlatformSetControl('תיאור בעברית', { value: 'מיומנות לבדיקת קוד' }),
+      click('תוכן המיומנות'),
       wonderPlatformSetControl({
-        placeholder: 'content',
-        value: 'def greet(name: str = "marketplace") -> str:\n    return f"TOOL_OK:{name}"'
+        selector: 'main textarea',
+        value: '# E2E Skill\n\nThe verification phrase is E2E_SKILL_FACT_731. Read references/verification.py for code questions.'
       }),
-      click('aria-label="שמירת עורך"'),
-      wonderPlatformWaitForButtonGone('aria-label="שמירת עורך"'),
-      click('פלאגינים'),
-      waitForText('פלאגין חדש'),
-      click('פלאגין חדש'),
-      wonderPlatformSetControl('id', { value: 'e2ePlugin' }),
-      wonderPlatformSetControl({ selector: '[aria-label="display_name"]', value: 'E2E Plugin' }),
+      click('Assets'),
+      waitForText('Drop files here or browse'),
+      wonderPlatformUploadAsset('verification.py', 'def verification_code():\n    return "E2E_CODE_RESULT_937"\n', {
+        mimeType: 'text/x-python'
+      }),
+      wonderPlatformSetControl({
+        selector: '[aria-label="Asset path 1"]',
+        value: 'references/verification.py'
+      }),
+      click('aria-label="שמירת עמוד"'),
+      wonderPlatformWaitForButtonGone('aria-label="שמירת עמוד"'),
+      click('סוכנים'),
+      waitForText('סוכן חדש'),
+      click('סוכן חדש'),
+      wonderPlatformSetControl({ selector: '[aria-label="display_name"]', value: 'E2E Agent' }),
+      wonderPlatformSetControl({ placeholder: 'uiRenderingSkill', value: 'e2eAgent' }),
+      wonderPlatformSetControl('תיאור באנגלית', {
+        value: 'Answer questions using the attached skill and its reference files.'
+      }),
+      wonderPlatformSetControl('תיאור בעברית', { value: 'סוכן לבדיקת מיומנות וקוד' }),
+      click('הנחיות'),
+      wonderPlatformSetControl({
+        selector: 'main section textarea',
+        value: 'Use the attached e2eSkill. Read its instructions and reference files before answering. Return exact values, never guess.'
+      }),
       click('חיבורים'),
       wonderPlatformClickInSection('מיומנויות', 'הוספה'),
-      waitForText('E2E Skill'),
+      waitForText('אישור בחירה'),
       click('E2E Skill'),
       click('אישור בחירה'),
       wonderPlatformWaitForButtonGone('אישור בחירה'),
-      wonderPlatformClickInSection('כלים', 'הוספה'),
-      waitForText('E2E Tool'),
-      click('E2E Tool'),
-      click('אישור בחירה'),
-      wonderPlatformWaitForButtonGone('אישור בחירה'),
       click('aria-label="שמירת סביבת עבודה"'),
-      waitForText('נשמר'),
-      click('סאב-אייג׳נטים'),
-      waitForText('סאב-אייג׳נט חדש'),
-      click('סאב-אייג׳נט חדש'),
-      click('הנחיות'),
-      waitForText('README (creation only)'),
-      wonderPlatformSetControl({ selector: '[aria-label="display_name"]', value: 'E2E Agent' }),
-      click('כללי'),
-      wonderPlatformSetControl('id', { value: 'e2eAgent' }),
-      click('הנחיות'),
-      wonderPlatformSetControl('system_prompt', {
-        value: 'Use the attached plugin. Return its skill fact and exact tool result.'
-      }),
-      click('aria-label="שמירת סביבת עבודה"'),
-      click('כללי'),
+      waitForSelector('main input[placeholder="uiRenderingSkill"]:disabled', 5000),
+      waitForMutations(100),
+      click('aria-label="חזרה לסוכנים"'),
+      waitForMutations(100),
+      waitForText('E2E Agent'),
+      click('E2E Agent'),
       waitForText('Marketplace API'),
+      waitForMutations(100),
       click('חיבורים'),
-      wonderPlatformClickInSection('פלאגינים', 'הוספה'),
-      waitForText('E2E Plugin'),
-      click('E2E Plugin'),
-      click('אישור בחירה'),
-      wonderPlatformWaitForButtonGone('אישור בחירה'),
-      click('aria-label="שמירת סביבת עבודה"'),
-      waitForText('נשמר'),
+      waitForText('E2E Skill'),
+      click('שיחה חדשה'),
+      waitForText('הקשר השיחה'),
+      click('data-testid="agent-selector-board"'),
+      click('E2E Agent'),
       wonderPlatformSetControl({
-        placeholder: 'נסה את הסאב-אייג׳נט',
-        value: 'What is the verification phrase? Call the plugin tool with name browser.'
+        selector: '[data-testid="chat-input"]',
+        value: 'Read the attached skill and references/verification.py. What is the verification phrase and what does verification_code() return?'
       }),
-      click('aria-label="הרצה"'),
-      waitForText('E2E_SKILL_FACT_731', 20000),
-      waitForText('TOOL_OK', 20000)
+      click('aria-label="שליחה"'),
+      waitForSelector('[data-message-role="agent"]', 60000),
+      wonderPlatformCheckAgentReply()
     ),
-    logger: 'uiLogger,marketplaceLogger,agentOsLogger',
-    setup: {$: 'ctx-enricher<tgp>wonderPlatformMarketplaceE2eSetup'},
-    timeout: 60000
+    logger: 'uiLogger,marketplaceLogger,agentLogger,agentOsLogger',
+    setup: wonderPlatformMarketplaceE2eSetup(),
+    timeout: 120000
   })
 })
-CtxEnricher('wonderPlatformMarketplaceE2eSetup', {
-  impl: async ctx => {
-    await Promise.all(['agents/e2eAgent', 'plugins/e2ePlugin', 'skills/e2eSkill', 'tools/e2eTool'].map(path =>
-      fetch(`http://localhost:7777/api/v1/${path}`, {method: 'DELETE'})))
-    return ctx
-  }
-})
+
