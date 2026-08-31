@@ -7,14 +7,13 @@ const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
 ReactComp('wonderPlatformHome', {
   impl: comp({
-    hFunc: (ctx, {react: {h, hh}}) => ({repo, createAgent, startChat, openItem, openConversation}) => {
+    hFunc: (ctx, {react: {h, hh}}) => ({repo, createAgent, startChat, createPlugin, openItem, openConversation}) => {
       const {classes, resources} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
       const mine = (repo.agents || []).filter(item => (item.owner || 'me') != 'global').slice(0, 4)
       const talks = (repo.conversations || []).filter(item => item.messages?.length).slice(0, 4)
-      const action = (icon, title, body, onClick, primary) => h(
+      const action = (icon, title, body, onClick) => h(
         `button:${classes.panel} flex flex-1 flex-col items-start gap-2 p-6 text-start transition-colors ` +
-        `hover:border-[var(--wp-border-strong)] hover:shadow-[var(--wp-sh-1)] ` +
-        (primary ? 'border-[var(--wp-border-strong)]' : ''), {key: title, onClick},
+        `hover:border-[var(--wp-border-strong)] hover:shadow-[var(--wp-sh-1)]`, {key: title, onClick},
         h('span:grid h-11 w-11 place-items-center rounded-[10px] bg-[var(--wp-ink)] text-white', {},
           h(`L:${icon}`, {size: 20})),
         h(`h2:${classes.h2} mt-2`, {}, title),
@@ -32,12 +31,14 @@ ReactComp('wonderPlatformHome', {
         h('div:grid gap-px overflow-hidden rounded-[8px] border border-[var(--wp-border)] bg-[var(--wp-border)]',
           {}, rows))
       return h(`main:${classes.page} wp-scroll`, {},
-        h('div:mx-auto w-full max-w-[880px] px-8 pb-20 pt-20', {},
+        h('div:mx-auto w-full max-w-[1180px] px-8 pb-20 pt-20', {},
           h(`h1:${classes.h1}`, {}, 'מה נעשה היום?'),
-          h(`p:mt-1.5 ${classes.body}`, {}, 'בנו סוכן חדש, או פתחו שיחה עם סוכן קיים.'),
+          h(`p:mt-1.5 ${classes.body}`, {}, 'בנו סוכן חדש, פתחו שיחה עם סוכן קיים, או ארזו פלאגין חדש.'),
           h('div:mt-6 flex gap-3', {},
             action('Bot', 'צור סוכן',
-              'הגדירו מה הסוכן עושה ובנו לו את היכולות שהוא צריך.', createAgent, true),
+              'הגדירו מה הסוכן עושה ובנו לו את היכולות שהוא צריך.', createAgent),
+            action(resources.plugins.icon, 'בנה פלאגין',
+              'אריזה של מיומנויות, כלים וידע, כדי לתת לכל סוכן', createPlugin),
             action('MessageCircle', 'התחל שיחה', 'דברו עם סוכן קיים, או פשוט שאלו שאלה.', startChat)),
           h('div:mt-10 flex gap-6', {},
             group('הסוכנים שלי', mine.map(item => row(item.icon || resources.agents.icon, item.name,
