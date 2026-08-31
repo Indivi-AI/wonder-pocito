@@ -138,8 +138,8 @@ ReactComp('wonderPlatform', {
           ? {...entry, item: {...entry.item, [picker.field]: picker.selected}} : entry))
         setPicker()
       }
-      const createNested = resource => {
-        const attachTo = {frameIndex: picker.frameIndex, field: picker.field}
+      const createNested = (resource, field) => {
+        const attachTo = field ? {frameIndex: stack.length - 1, field} : {frameIndex: picker.frameIndex, field: picker.field}
         setPicker(); pushFrame(frame(resource, blank(resource), {attachTo,
           createLabel: resource == 'tools' ? 'כלי חדש ממארז Flow' : config.resources[resource].create}))
       }
@@ -214,7 +214,10 @@ ReactComp('wonderPlatform', {
         await persistRepo({...repo, conversations: [created, ...repo.conversations]})
         setConversationId(created.id); setMessage(''); openView('chat')
       }
-      const finishAgent = async item => { const saved = await saveTop(item); setStack([]); await newConversation(saved.id) }
+      const finishAgent = async item => {
+        const saved = await saveTop(item)
+        stackRef.current = []; setStack([]); await newConversation(saved.id)
+      }
       const selectAgent = agentId => conversation.messages.length ? newConversation(agentId) : updateConversation({...conversation, agentId})
       const setContext = (field, value) => updateConversation({...conversation, [field]: value})
       const send = async () => {
@@ -263,7 +266,7 @@ ReactComp('wonderPlatform', {
         openItem, openConversation: id => (setConversationId(id), openView('chat'))})
         : view == 'journey' && top ? hh(ctx, dsls.react['react-comp'].wonderPlatformJourney, {stack, repo,
           popFrame, goToDepth: index => requestLeave(() => setStack(stack.slice(0, index + 1))), updateTop, saveTop, deleteTop,
-          openPicker, openEditor, loadPackage, saveAndRun, runningSet, runTarget, runEval, finishAgent,
+          openPicker, openEditor, createNested, loadPackage, saveAndRun, runningSet, runTarget, runEval, finishAgent,
           exit: () => openView(stack[0].resource)})
           : view == 'chat' ? hh(ctx, dsls.react['react-comp'].wonderPlatformChat, {
             repo, conversation, message, setMessage, busy, send, selectAgent, setContext, model, setModel})

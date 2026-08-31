@@ -9,8 +9,11 @@ const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
 ReactComp('wonderPlatformResourceFields', {
   impl: comp({
-    hFunc: (ctx, {react: {h, hh, useState, useEffect}}) => ({resource, item, update, repo, loadPackage, openPicker, saveAndRun, runningSet}) => {
+    hFunc: (ctx, {react: {h, hh, useState, useEffect}}) => ({resource, item, update, repo, loadPackage, openPicker,
+      saveAndRun, runningSet, reason, finish}) => {
       const {classes} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
+      const stepped = (steps, bar) => hh(ctx, dsls.react['react-comp'].wonderPlatformWizard,
+        {steps, activeId, onStep: setActiveId, rail: true, reason: bar?.reason ?? reason, finish: bar?.finish || finish})
       const [historyDetail, setHistoryDetail] = useState(-1)
       const [pkg, setPkg] = useState()
       const [packageState, setPackageState] = useState({loading: false, error: ''})
@@ -267,9 +270,9 @@ ReactComp('wonderPlatformResourceFields', {
           ...(item.inputSchema || []).map(quickParamRow))},
         {id: 'cubes', label: 'קוביות פלט', disabled: !loaded, render: outputCubesSection}
       ]
-      const toolFields = () => item.originalId && item.kind != 'flow' ? legacyTool() : hh(ctx,
-        dsls.react['react-comp'].wonderPlatformWizard, {steps: toolSteps, activeId, onStep: setActiveId})
-      if (resource == 'tools') return toolFields()
+      if (resource == 'tools') return item.originalId && item.kind != 'flow'
+        ? h('div:wp-scroll h-full overflow-y-auto', {}, h('div:mx-auto w-full max-w-[840px] px-6 py-6', {}, legacyTool()))
+        : stepped(toolSteps)
       if (resource == 'evaluations') {
         const target = repo.agents.find(agent => agent.id == item.targetId), running = runningSet == item.id
         const ready = item.name?.trim() && target && item.rows?.some(row => row.input?.trim())
@@ -300,18 +303,12 @@ ReactComp('wonderPlatformResourceFields', {
                 onInput: event => update({...item, rubric: event.target.value})}))},
           {id: 'history', label: 'היסטוריית הרצות', render: historySection}
         ]
-        return h('div:space-y-5', {},
-          hh(ctx, dsls.react['react-comp'].wonderPlatformWizard, {steps: evalSteps, activeId, onStep: setActiveId}),
-          h(`div:sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border ` +
-            `border-[var(--wp-border-strong)] bg-[var(--wp-surface)] p-4 shadow-[var(--wp-sh-2)]`, {}, h(
-            'p:text-[12px] text-[var(--wp-ink-3)]', {}, !item.name?.trim() ? 'הוסיפו שם לבדיקה' : !target ? 'בחרו סוכן כדי להריץ'
-              : !item.rows?.some(row => row.input?.trim()) ? 'הוסיפו לפחות תרחיש אחד עם קלט' : 'מוכן להרצה'), h(
-            `button:${classes.primary}`, {disabled: !ready || running, onClick: () => saveAndRun(item, target)},
-            running ? 'מריץ…' : 'שמירה והרצה')))
+        return stepped(evalSteps, {reason: !item.name?.trim() ? 'הוסיפו שם לבדיקה' : !target ? 'בחרו סוכן כדי להריץ'
+          : !item.rows?.some(row => row.input?.trim()) ? 'הוסיפו לפחות תרחיש אחד עם קלט' : 'מוכן להרצה',
+        finish: {label: running ? 'מריץ…' : 'שמירה והרצה', aria: 'שמירה והרצת הסט', disabled: !ready || running,
+          onClick: () => saveAndRun(item, target)}})
       }
-      const steps = stepsFor(resource).filter(step => step.id != 'assets' || repo.marketplace)
-      const active = steps.find(step => step.id == activeId) || steps[0]
-      return hh(ctx, dsls.react['react-comp'].wonderPlatformWizard, {steps, activeId: active.id, onStep: setActiveId})
+      return stepped(stepsFor(resource).filter(step => step.id != 'assets' || repo.marketplace))
     }
   })
 })

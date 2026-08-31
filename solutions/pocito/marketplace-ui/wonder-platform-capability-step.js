@@ -4,85 +4,76 @@ import './wonder-platform-domain.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
+const fields = {plugins: 'pluginIds', skills: 'skillIds', tools: 'toolIds', knowledge: 'knowledgeIds'}
+const emptyLines = {
+  plugins: 'עדיין אין פלאגין. בנו פלאגין חדש, או חברו פלאגין קיים מהקטלוג.',
+  skills: 'עדיין אין מיומנות — תהליך עבודה מוגדר שהסוכן יודע לבצע.',
+  tools: 'עדיין אין כלי — פעולה במערכת חיצונית, כמו חיפוש או שליחה.',
+  knowledge: 'עדיין אין מקור ידע — מסמכים שהתשובות מסתמכות עליהם.'
+}
+
 ReactComp('wonderPlatformCapabilityStep', {
   impl: comp({
-    hFunc: (ctx, {react: {h, hh, useState}}) => props => {
-      const {item, update, repo, openPicker, openEditor, classes, secondary} = props
-      const [advancedOpen, setAdvancedOpen] = useState(false), pluginIds = item.pluginIds || []
-      const attach = field => openPicker(field, field == 'pluginIds' ? 'plugins' : field == 'skillIds' ? 'skills' :
-        field == 'toolIds' ? 'tools' : 'knowledge', {skillIds: 'מיומנויות', toolIds: 'כלים', knowledgeIds: 'ידע'}[field])
-      const remove = (field, id) => update({...item, [field]: (item[field] || []).filter(x => x != id)})
-      const buildNode = (resource, id) => {
-        const r = {skills: 'skillIds', tools: 'toolIds'}[resource], found = repo[resource]?.find(x => x.id == id)
-        if (!found) return null
-        const children = r ? (found[r] || []).map(cId => buildNode(resource == 'skills' ? 'tools' : 'skills', cId)).filter(x => x) : []
-        return {id, item: found, children, resource}
+    hFunc: (ctx, {react: {h, hh}}) => props => {
+      const {item, update, repo, openPicker, openEditor, createNested, primary, secondary = [], headline, intro} = props
+      const {classes, resources} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
+      const ids = resource => item[fields[resource]] || []
+      const remove = (resource, id) => update({...item, [fields[resource]]: ids(resource).filter(value => value != id)})
+      const contents = plugin => ['skills', 'tools', 'knowledge'].flatMap(resource =>
+        (plugin[fields[resource]] || []).map(id => [resource, repo[resource]?.find(value => value.id == id)])
+          .filter(([, found]) => found).map(([kind, found]) => h(`span:${classes.chip}`, {key: `${kind}-${found.id}`},
+            h(`L:${found.icon || resources[kind].icon}`, {size: 11}), found.name)))
+      const row = (resource, id) => {
+        const found = repo[resource]?.find(value => value.id == id)
+        if (!found) return h('div:px-4 py-3 text-[12px] text-[var(--wp-danger)]', {key: id},
+          `${id} — המשאב אינו קיים עוד בקטלוג`)
+        const inner = resource == 'plugins' ? contents(found) : []
+        return h('div:group px-4 py-3 transition-colors hover:bg-[var(--wp-surface-2)]', {key: id},
+          h('div:flex items-center gap-3', {},
+            hh(ctx, dsls.react['react-comp'].wonderPlatformMark,
+              {icon: found.icon || resources[resource].icon, text: found.mark, size: 'md'}),
+            h('div:min-w-0 flex-1', {}, h('b:block truncate text-[13px] text-[var(--wp-ink)]', {}, found.name),
+              h('p:truncate text-[12px] text-[var(--wp-ink-3)]', {}, found.desc || '')),
+            found.managed && h(`span:${classes.chip}`, {}, 'מנוהל'),
+            !found.managed && h(`button:${classes.icon} opacity-0 group-hover:opacity-100`,
+              {onClick: () => openEditor(resource, found, fields[resource]), 'aria-label': `עריכת ${found.name}`,
+                title: `עריכת ${found.name}`}, h('L:Pencil', {size: 14})),
+            h(`button:${classes.icon} opacity-0 hover:bg-[var(--wp-danger-soft)] hover:text-[var(--wp-danger)] ` +
+              'group-hover:opacity-100', {onClick: () => remove(resource, id), 'aria-label': `הסרת ${found.name}`,
+              title: `הסרת ${found.name}`}, h('L:X', {size: 14}))),
+          inner.length > 0 && h('div:mt-2 flex flex-wrap gap-1.5 ps-12', {}, inner))
       }
-      const renderNode = (node, depth) => {
-        if (!node) return null
-        return h('div:space-y-1', {key: `${node.resource}-${node.id}`},
-          h('div:flex items-center gap-2 py-1.5', {},
-            hh(ctx, dsls.react['react-comp'].wonderPlatformMark, {icon: node.item.icon, text: node.item.mark, size: 'sm'}),
-            h('span:text-[12px] text-[var(--wp-ink-3)]', {}, node.item.name)),
-          node.children?.map(child => renderNode(child, depth + 1)))
+      const group = (resource, quiet) => {
+        const list = ids(resource), meta = resources[resource]
+        const action = (label, icon, onClick, aria) => h(`button:${quiet
+          ? 'text-[12px] font-medium text-[var(--wp-ink-3)] transition-colors hover:text-[var(--wp-ink)]'
+          : `${classes.button} h-8`}`, {onClick, 'aria-label': aria},
+        !quiet && h(`L:${icon}`, {size: 14}), label)
+        return h(`section:${classes.panel} overflow-hidden`, {key: resource},
+          h(`div:flex items-center justify-between gap-3 px-4 py-2.5 ${quiet
+            ? '' : 'border-b border-[var(--wp-border)] bg-[var(--wp-surface-2)]'}`, {},
+          h(`span:flex min-w-0 items-center gap-2 text-[12px] font-semibold ${quiet
+            ? 'text-[var(--wp-ink-3)]' : 'text-[var(--wp-ink-2)]'}`, {},
+          h(`L:${meta.icon}`, {size: 14}), meta.title,
+          h('span:wp-num text-[var(--wp-ink-4)]', {}, list.length)),
+          h('div:flex shrink-0 items-center gap-3', {},
+            action(meta.create, 'Plus', () => createNested(resource, fields[resource]), meta.create),
+            action('חיבור קיים', 'Link', () => openPicker(fields[resource], resource, meta.title),
+              `חיבור ${meta.title} קיימים`))),
+          list.length > 0 && h(`div:divide-y divide-[var(--wp-border)] ${quiet
+            ? 'border-t border-[var(--wp-border)]' : ''}`, {}, list.map(id => row(resource, id))),
+          !list.length && !quiet && h('p:px-4 py-6 text-center text-[12px] leading-6 text-[var(--wp-ink-3)]', {},
+            emptyLines[resource]))
       }
-      if (pluginIds.length == 0) {
-        return h('div:space-y-4', {},
-          h('p:text-[13px] text-[var(--wp-ink)]', {}, 'מה הסוכן צריך לדעת לעשות?'),
-          h('p:text-[12px] leading-6 text-[var(--wp-ink-3)]', {},
-            'פלאגין אורז מיומנויות, כלים וידע ליחידה אחת שהסוכן יכול להשתמש בה.'),
-          h('div:grid gap-3 grid-cols-2', {},
-            h('button:' + classes.card + ' flex flex-col items-center gap-3 p-4 text-center transition-colors ' +
-              'hover:bg-[var(--wp-surface-2)]', {onClick: () => openPicker('pluginIds', 'plugins', 'פלאגינים')},
-              h('div:grid h-10 w-10 place-items-center rounded-[8px] border border-[var(--wp-border)]', {},
-                h('L:Plus', {size: 16, className: 'text-[var(--wp-ink-3)]'})),
-              h('b:text-[13px] text-[var(--wp-ink)]', {}, 'בניית פלאגין חדש'),
-              h('p:text-[11px] text-[var(--wp-ink-3)]', {}, 'הגדירו יכולת חדשה')),
-            h('button:' + classes.card + ' flex flex-col items-center gap-3 p-4 text-center transition-colors ' +
-              'hover:bg-[var(--wp-surface-2)]', {onClick: () => attach('pluginIds')},
-              h('div:grid h-10 w-10 place-items-center rounded-[8px] border border-[var(--wp-border)]', {},
-                h('L:Zap', {size: 16, className: 'text-[var(--wp-ink-3)]'})),
-              h('b:text-[13px] text-[var(--wp-ink)]', {}, 'חיבור פלאגין קיים'),
-              h('p:text-[11px] text-[var(--wp-ink-3)]', {}, 'בחרו מתוך הקטלוג'))))
-      }
-      const hasSecondary = secondary && (item.skillIds?.length || item.toolIds?.length || item.knowledgeIds?.length)
-      return h('div:space-y-4', {}, h('div:' + classes.panel + ' divide-y divide-[var(--wp-border)]', {},
-        h('div:px-4 py-2.5 flex items-center justify-between', {},
-          h('span:text-[12px] font-semibold text-[var(--wp-ink-2)]', {}, `${pluginIds.length} פלאגינים`),
-          h('button:text-[12px] text-[var(--wp-ink-3)] hover:text-[var(--wp-ink)]', {onClick: () => attach('pluginIds')},
-            'הוספה')),
-        pluginIds.map(id => {
-          const plugin = repo.plugins?.find(x => x.id == id), skills = (plugin?.skillIds || []).map(sId =>
-            buildNode('skills', sId)).filter(x => x)
-          return h('div:px-4 py-2.5', {key: id},
-            hh(ctx, dsls.react['react-comp'].wonderPlatformMark, {icon: plugin?.icon, text: plugin?.mark, size: 'md'}),
-            h('b:block text-[13px] text-[var(--wp-ink)]', {}, plugin?.name),
-            h('p:mt-1 text-[12px] text-[var(--wp-ink-3)]', {}, plugin?.desc),
-            skills.length > 0 && h('div:mt-3 space-y-1 ps-4', {}, skills.map(s => renderNode(s, 0))))
-        })),
-      hasSecondary && h('details:' + classes.panel, {open: advancedOpen, onToggle: e => setAdvancedOpen(e.target.open)},
-        h('summary:flex cursor-pointer items-center justify-between px-4 py-2.5 text-[12px] font-semibold ' +
-          'text-[var(--wp-ink-2)] hover:text-[var(--wp-ink)]', {}, 'מתקדם · חיבור ישיר'),
-        secondary.map(([field, resource, title]) => {
-          const ids = item[field] || []
-          return h('div:divide-y divide-[var(--wp-border)] border-t border-[var(--wp-border)]', {key: field},
-            h('div:px-4 py-2.5 flex items-center justify-between bg-[var(--wp-surface-2)]', {},
-              h('span:text-[12px] font-semibold text-[var(--wp-ink-2)]', {}, `${ids.length} ${title}`),
-              h('button:text-[12px] text-[var(--wp-ink-3)] hover:text-[var(--wp-ink)]', {onClick: () => attach(field)},
-                'הוספה')),
-            ids.map(id => {
-              const res = repo[resource]?.find(x => x.id == id), managed = resource == 'tools' && res?.managed
-              return h('div:flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--wp-surface-2)]', {key: id},
-                hh(ctx, dsls.react['react-comp'].wonderPlatformMark, {icon: res?.icon, text: res?.mark, size: 'sm'}),
-                h('div:min-w-0 flex-1', {},
-                  h('b:block text-[12px] text-[var(--wp-ink)]', {}, res?.name),
-                  h('p:text-[11px] text-[var(--wp-ink-3)]', {}, res?.desc)),
-                managed && h('span:text-[11px] text-[var(--wp-ink-4)]', {}, 'מנוהל'),
-                h('button:text-[var(--wp-ink-3)] hover:text-[var(--wp-danger)] transition-colors',
-                  {onClick: () => remove(field, id), 'aria-label': `הסרת ${res?.name}`},
-                  h('L:X', {size: 14})))
-            }))
-        })))
+      return h('div:space-y-5', {},
+        h('div', {}, h('h2:text-[15px] font-semibold text-[var(--wp-ink)]', {}, headline),
+          h(`p:mt-1.5 ${classes.body} text-[13px]`, {}, intro)),
+        h('div:space-y-3', {}, primary.map(resource => group(resource))),
+        secondary.length > 0 && h('section:pt-1', {},
+          h('h3:text-[13px] font-semibold text-[var(--wp-ink-2)]', {}, 'חיבור ישיר'),
+          h(`p:mb-3 ${classes.help}`, {},
+            'אפשר גם לחבר מיומנות, כלי או מקור ידע ישירות, בלי לעטוף אותם בפלאגין.'),
+          h('div:space-y-2', {}, secondary.map(resource => group(resource, true)))))
     }
   })
 })
