@@ -634,7 +634,8 @@ UiAction('wonderPlatformSetControl', {
   impl: ({}, {}, {label, placeholder, selector, value}) => ({
     async exec({vars: {win}}) {
       const controls = [...win.document.querySelectorAll(selector || 'input, textarea')]
-      const control = selector ? controls[0] : controls.find(element => label ? element.parentElement?.textContent.trim().startsWith(label)
+      const control = selector ? controls[0] : controls.find(element => label
+        ? [element.parentElement, element.parentElement?.parentElement].some(container => container?.textContent.trim().startsWith(label))
         : element.placeholder?.includes(placeholder))
       if (!control || control.disabled) throw new Error(`Control unavailable: ${label || placeholder || selector}`)
       Object.getOwnPropertyDescriptor(Object.getPrototypeOf(control), 'value').set.call(control, value)
@@ -942,9 +943,7 @@ Test('wonderPlatform.chatRunsSelectedAgent', {
 })
 
 ReactComp('wonderPlatformMarketplaceE2eApp', {
-  impl: wonderPlatform('room://marketplace-e2e', { extraPrimaryNav: [
-    ['agents','Bot','סוכנים']
-  ] })
+  impl: wonderPlatform('room://marketplace-e2e')
 })
 
 UiAction('wonderPlatformCheckAgentReply', {
@@ -972,7 +971,8 @@ CtxEnricher('wonderPlatformMarketplaceE2eSetup', {
       ctx.vars.marketplaceLogger?.info?.({t: 'marketplaceE2eHealth', base, health}, {}, {ctx})
       if (!response.ok || health.status != 'ok' || health.object_store != 'ok') throw new Error(base + ' is not healthy')
     }
-    const response = await fetch('/llmProxy/models'), models = await response.json()
+    const llmProxy = globalThis.LLM_PROXY_URL || globalThis.process?.env?.LLM_PROXY_URL || 'http://localhost:3000/llmProxy'
+    const response = await fetch(llmProxy + '/models'), models = await response.json()
     if (!response.ok || !models.data?.some(model => model.id == 'chat')) throw new Error('LiteLLM chat alias is unavailable')
     ctx.vars.marketplaceLogger?.info?.({t: 'marketplaceE2eLiteLLM', models: models.data.map(model => model.id)}, {}, {ctx})
     for (const path of ['agents/e2eAgent', 'skills/e2eSkill']) {
@@ -1013,38 +1013,43 @@ Test('wonderPlatform.marketplaceUiAgentE2e', {
         selector: '[aria-label="Asset path 1"]',
         value: 'references/verification.py'
       }),
-      click('aria-label="שמירת עמוד"'),
-      wonderPlatformWaitForButtonGone('aria-label="שמירת עמוד"'),
+      click('aria-label="שמירת המסע"'),
+      wonderPlatformWaitForButtonGone('aria-label="שמירת המסע"'),
       click('סוכנים'),
       waitForText('סוכן חדש'),
       click('סוכן חדש'),
+      waitForText('מי הסוכן'),
       wonderPlatformSetControl({ selector: '[aria-label="display_name"]', value: 'E2E Agent' }),
-      wonderPlatformSetControl({ placeholder: 'uiRenderingSkill', value: 'e2eAgent' }),
-      wonderPlatformSetControl('תיאור באנגלית', {
+      wonderPlatformSetControl({ selector: '[aria-label="id"]', value: 'e2eAgent' }),
+      wonderPlatformSetControl({
+        selector: '[aria-label="description"]',
         value: 'Answer questions using the attached skill and its reference files.'
       }),
-      wonderPlatformSetControl('תיאור בעברית', { value: 'סוכן לבדיקת מיומנות וקוד' }),
+      wonderPlatformSetControl({
+        selector: '[aria-label="hebrew_description"]',
+        value: 'סוכן לבדיקת מיומנות וקוד'
+      }),
       click('הנחיות'),
       wonderPlatformSetControl({
-        selector: 'main section textarea',
+        selector: '[aria-label="system_prompt"]',
         value: 'Use the attached e2eSkill. Read its instructions and reference files before answering. Return exact values, never guess.'
       }),
-      click('חיבורים'),
-      wonderPlatformClickInSection('מיומנויות', 'הוספה'),
+      click('יכולות'),
+      wonderPlatformClickInSection('מיומנויות', 'חיבור קיים'),
       waitForText('אישור בחירה'),
       click('E2E Skill'),
       click('אישור בחירה'),
       wonderPlatformWaitForButtonGone('אישור בחירה'),
-      click('aria-label="שמירת סביבת עבודה"'),
-      waitForSelector('main input[placeholder="uiRenderingSkill"]:disabled', 5000),
+      click('aria-label="שמירת המסע"'),
+      waitForSelector('main input[aria-label="id"]:disabled', 5000),
       waitForMutations(100),
       click('aria-label="חזרה לסוכנים"'),
       waitForMutations(100),
       waitForText('E2E Agent'),
       click('E2E Agent'),
-      waitForText('Marketplace API'),
+      waitForText('מי הסוכן'),
       waitForMutations(100),
-      click('חיבורים'),
+      click('יכולות'),
       waitForText('E2E Skill'),
       click('שיחה חדשה'),
       waitForText('הקשר השיחה'),
