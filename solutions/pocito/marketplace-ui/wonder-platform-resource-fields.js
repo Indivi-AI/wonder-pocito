@@ -18,6 +18,8 @@ ReactComp('wonderPlatformResourceFields', {
       const [pkg, setPkg] = useState()
       const [packageState, setPackageState] = useState({loading: false, error: ''})
       const [activeId, setActiveId] = useState('general')
+      const [loadedFile, setLoadedFile] = useState('')
+      const [dialogFile, setDialogFile] = useState(null)
       useEffect(() => {
         setActiveId('general'); setPkg(); setPackageState({loading: false, error: ''})
         if (resource == 'tools' && item.toolType == 'flow_package' && item.packageId) {
@@ -87,9 +89,24 @@ ReactComp('wonderPlatformResourceFields', {
           relation('knowledgeIds', 'knowledge', 'ידע'))}
       ] : resource == 'skills' ? [
         {id: 'general', label: 'כללי', render: generalStep},
-        {id: 'content', label: 'תוכן המיומנות', render: () => section(block('תוכן המיומנות',
-          h(`textarea:${area} min-h-40 resize-y`, {value: item.content || '',
-            onInput: event => update({...item, content: event.target.value})}, ), repo.marketplace && 'SKILL.md'))},
+        {id: 'content', label: 'תוכן המיומנות', render: () => section(
+          h('div:px-4 py-3.5', {},
+            h('div:mb-2 flex items-baseline justify-between gap-2', {},
+              h('div:flex items-baseline gap-2', {},
+                h('span:text-[13px] font-medium text-[var(--wp-ink)]', {}, 'תוכן המיומנות'),
+                loadedFile && h('span:text-[12px] text-[var(--wp-ink-4)]', {}, loadedFile),
+                repo.marketplace && h(`span:${classes.mono}`, {dir: 'ltr'}, 'SKILL.md')),
+              h(`label:${classes.button} cursor-pointer shrink-0`, {},
+                h('input:hidden', {type: 'file', accept: '.md,.txt,text/markdown,text/plain',
+                  onChange: async e => {
+                    if (!e.target.files?.[0]) return
+                    const content = await e.target.files[0].text()
+                    item.content?.trim() ? setDialogFile({file: e.target.files[0], content})
+                      : (update({...item, content}), setLoadedFile(e.target.files[0].name))
+                  }}),
+                'טעינה מקובץ')),
+            h(`textarea:${area} min-h-[22rem] resize-y`, {value: item.content || '',
+              onInput: event => update({...item, content: event.target.value})})))},
         {id: 'assets', label: 'Assets', render: () => repo.marketplace && section(
           groupHead('Assets', (item.assets || []).length),
           h('div:px-4 py-3', {}, h('label:flex cursor-pointer flex-col items-center rounded-[8px] border border-dashed ' +
@@ -270,9 +287,20 @@ ReactComp('wonderPlatformResourceFields', {
           ...(item.inputSchema || []).map(quickParamRow))},
         {id: 'cubes', label: 'קוביות פלט', disabled: !loaded, render: outputCubesSection}
       ]
-      if (resource == 'tools') return item.originalId && item.kind != 'flow'
-        ? h('div:wp-scroll h-full overflow-y-auto', {}, h('div:mx-auto w-full max-w-[840px] px-6 py-6', {}, legacyTool()))
-        : stepped(toolSteps)
+      if (resource == 'tools') return h('div', {},
+        (item.originalId && item.kind != 'flow'
+          ? h('div:wp-scroll h-full overflow-y-auto', {}, h('div:mx-auto w-full max-w-[840px] px-6 py-6', {}, legacyTool()))
+          : stepped(toolSteps)),
+        dialogFile && hh(ctx, dsls.react['react-comp'].wonderPlatformDialog, {
+          title: 'החלפת תוכן המיומנות',
+          body: `טעינה מקובץ ${dialogFile.file.name}. תוכן המיומנות הנוכחי יוחלף.`,
+          close: () => setDialogFile(null),
+          actions: [['ביטול', () => setDialogFile(null)],
+            ['החלפה', () => {
+              update({...item, content: dialogFile.content})
+              setLoadedFile(dialogFile.file.name)
+              setDialogFile(null)
+            }, true]]}))
       if (resource == 'evaluations') {
         const target = repo.agents.find(agent => agent.id == item.targetId), running = runningSet == item.id
         const ready = item.name?.trim() && target && item.rows?.some(row => row.input?.trim())
@@ -303,12 +331,34 @@ ReactComp('wonderPlatformResourceFields', {
                 onInput: event => update({...item, rubric: event.target.value})}))},
           {id: 'history', label: 'היסטוריית הרצות', render: historySection}
         ]
-        return stepped(evalSteps, {reason: !item.name?.trim() ? 'הוסיפו שם לבדיקה' : !target ? 'בחרו סוכן כדי להריץ'
-          : !item.rows?.some(row => row.input?.trim()) ? 'הוסיפו לפחות תרחיש אחד עם קלט' : 'מוכן להרצה',
-        finish: {label: running ? 'מריץ…' : 'שמירה והרצה', aria: 'שמירה והרצת הסט', disabled: !ready || running,
-          onClick: () => saveAndRun(item, target)}})
+        return h('div', {},
+          stepped(evalSteps, {reason: !item.name?.trim() ? 'הוסיפו שם לבדיקה' : !target ? 'בחרו סוכן כדי להריץ'
+            : !item.rows?.some(row => row.input?.trim()) ? 'הוסיפו לפחות תרחיש אחד עם קלט' : 'מוכן להרצה',
+            finish: {label: running ? 'מריץ…' : 'שמירה והרצה', aria: 'שמירה והרצת הסט', disabled: !ready || running,
+              onClick: () => saveAndRun(item, target)}}),
+          dialogFile && hh(ctx, dsls.react['react-comp'].wonderPlatformDialog, {
+            title: 'החלפת תוכן המיומנות',
+            body: `טעינה מקובץ ${dialogFile.file.name}. תוכן המיומנות הנוכחי יוחלף.`,
+            close: () => setDialogFile(null),
+            actions: [['ביטול', () => setDialogFile(null)],
+              ['החלפה', () => {
+                update({...item, content: dialogFile.content})
+                setLoadedFile(dialogFile.file.name)
+                setDialogFile(null)
+              }, true]]}))
       }
-      return stepped(stepsFor(resource).filter(step => step.id != 'assets' || repo.marketplace))
+      return h('div', {},
+        stepped(stepsFor(resource).filter(step => step.id != 'assets' || repo.marketplace)),
+        dialogFile && hh(ctx, dsls.react['react-comp'].wonderPlatformDialog, {
+          title: 'החלפת תוכן המיומנות',
+          body: `טעינה מקובץ ${dialogFile.file.name}. תוכן המיומנות הנוכחי יוחלף.`,
+          close: () => setDialogFile(null),
+          actions: [['ביטול', () => setDialogFile(null)],
+            ['החלפה', () => {
+              update({...item, content: dialogFile.content})
+              setLoadedFile(dialogFile.file.name)
+              setDialogFile(null)
+            }, true]]}))
     }
   })
 })
