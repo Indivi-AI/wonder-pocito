@@ -63,9 +63,9 @@ ReactComp('wonderPlatform', {
       const agentUrl = ctx.vars.agentOsBaseUrl || agentOsBaseUrl, token = ctx.vars.agentOsToken || agentOsToken
       const config = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx), [view, setView] = useState(defaultView)
       const [repo, setRepo] = useState(), [loadError, setLoadError] = useState(), [search, setSearch] = useState('')
-      const [stack, setStack] = useState([]), stackRef = useRef([])
+      const [stack, setStack] = useState([]), stackRef = useRef([]), repoRef = useRef()
       const [picker, setPicker] = useState(), [pendingLeave, setPendingLeave] = useState(), [saving, setSaving] = useState(false)
-      stackRef.current = stack
+      stackRef.current = stack; repoRef.current = repo
       const top = stack.at(-1)
       const frame = (resource, item, extra = {}) => ({resource, item, baseline: JSON.stringify(item), ...extra})
       const pushFrame = entry => setStack(current => [...current, entry])
@@ -81,7 +81,7 @@ ReactComp('wonderPlatform', {
       const marketResources = ['plugins', 'skills', 'tools', 'subagents', 'agents', 'knowledge']
       const importItem = (resource, item) => persistRepo({...repo, [resource]: repo[resource].map(value =>
         value.id == item.id ? {...value, owner: 'imported'} : value)})
-      const persistRepo = async next => (setRepo(next), next.marketplace || await saveRepo(
+      const persistRepo = async next => (repoRef.current = next, setRepo(next), next.marketplace || await saveRepo(
         ctx.setVars({repo: next, roomWUrl: repositoryRoomWUrl})), next)
       const blank = resource => ({id: resource == 'evaluations' ? `eval-${Date.now()}` : '', name: '', desc: '', instructions: '', owner: 'me',
         version: resource == 'skills' ? '1.0.0' : 'V0', publishVersion: resource == 'skills' ? '1.0.0' : undefined, content: '',
@@ -207,11 +207,11 @@ ReactComp('wonderPlatform', {
       const updateConversation = async updated => persistRepo({...repo,
         conversations: repo.conversations.map(item => item.id == updated.id ? updated : item)})
       const newConversation = async (agentId = '') => {
-        const agent = repo.agents.find(item => item.id == agentId)
+        const current = repoRef.current, agent = current.agents.find(item => item.id == agentId)
         const title = agent ? `שיחה · ${agent.name}` : 'שיחה חופשית'
         const created = {id: `c-${Date.now()}`, title, agentId, when: 'עכשיו', messages: [],
           pluginIds: [], skillIds: [], toolIds: [], knowledgeIds: []}
-        await persistRepo({...repo, conversations: [created, ...repo.conversations]})
+        await persistRepo({...current, conversations: [created, ...current.conversations]})
         setConversationId(created.id); setMessage(''); openView('chat')
       }
       const finishAgent = async item => {
