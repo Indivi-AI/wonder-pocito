@@ -64,7 +64,8 @@ const runAutomation = async mCtx => {
 }
 // extendCtxWithUrl seeds ctx-* query params (e.g. ?ctx-reportUrl=…) + loggers from the URL; then add react + the applet's roomWUrl.
 const ctx = reactUtils.extendCtxWithUrl().setVars({ react: reactUtils, db: globalThis.WONDER_STORAGE_PROVIDER,
-  bucketEndpoint: globalThis.WONDER_STORAGE_URL, ...(roomWUrl && { roomWUrl }), ...(noAuth && { noAuth: true }) })
+  bucketEndpoint: globalThis.WONDER_STORAGE_URL, ...appletSpec.runtimeVars,
+  ...(roomWUrl && { roomWUrl }), ...(noAuth && { noAuth: true }) })
 const uiSource = appletSpec.liveRepo
   ? 'live-repo (localhost /jb6_packages, /wonder, /solution, /indiviai)'
   : 'appletV snapshot ' + appletSpec.appletV + ' (bucket share, NOT live-repo) - edit-to-live needs uploadRoomApplet'
@@ -117,9 +118,12 @@ export async function serveAppletPage(spec, res, localImports) {
   const { og = [], ...clientSpec } = spec   // og = raw branding sources (room, applet), server-only — not shipped to the client
   const branding = mergeBranding(ogDefaults(runtimeBase), ...og)
   const html = APPLET_HOST_HTML
-    .replace('_CLIENT_ENV_', JSON.stringify({ WONDER_STORAGE_PROVIDER: storageProvider(), WONDER_STORAGE_URL: browserStorageUrl(),
+    .replace('_CLIENT_ENV_', JSON.stringify({
+      WONDER_STORAGE_PROVIDER: storageProvider(), WONDER_STORAGE_URL: browserStorageUrl(),
       MARKETPLACE_API_URL: process.env.MARKETPLACE_API_URL, AGNO_API_URL: process.env.AGNO_API_URL,
-      LLM_PROXY_URL: process.env.LLM_PROXY_URL, LLM_MODEL: process.env.LLM_MODEL }))   // undefined keys are dropped by JSON.stringify
+      FLAPI_BASE_URL: process.env.FLAPI_BASE_URL,
+      LLM_PROXY_URL: process.env.LLM_PROXY_URL, LLM_MODEL: process.env.LLM_MODEL
+    }))   // undefined keys are dropped by JSON.stringify
     .replace('_IMPORT_MAP_', JSON.stringify({ imports }))
     .replace('_APPLET_SPEC_', JSON.stringify({ ...clientSpec, liveRepo: !!localImports }))
     .replace('_FAVICON_', branding.favicon)
@@ -134,7 +138,7 @@ export async function readDef(roomWUrl, path) {
   const def = roomWUrl.startsWith('signedRoom://')
     ? await (await import('./signed-url.js')).readJson(`${roomWUrl.split('://')[1]}/${path}`)
     : await jb.wonderUtils.wfetch2(`${roomWUrl}/${path}`, { method: 'GET' }, new coreUtils.Ctx().setVars(storageEnvVars())).then(r => r.ok ? r.json() : null, () => null)
-  return def?.content ?? def
+  return def
 }
 
 // authorize a caller against a room: authenticate → load policy (null ⇒ public) → role. Returns { who, policy, role }.

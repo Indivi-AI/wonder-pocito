@@ -28,7 +28,7 @@
 
 **Files:**
 - Create: `solutions/pocito/marketplace-ui/wonder-platform-wizard.js`
-- Modify: `solutions/pocito/marketplace-ui/wonder-platform-tests.js` (add test + module contract entry)
+- Modify: `solutions/pocito/marketplace-ui/pocito-tests.js` (add test + module contract entry)
 
 **Interfaces:**
 - Produces: registered `react-comp<react>wonderPlatformWizard`, props `{steps, activeId, onStep}` where `steps` is `[{id, label, disabled?, render}]` — `render` returns an h-node; the wizard renders `steps.find(step => step.id == activeId) || steps[0]` content plus the rail. Later tasks call it via `hh(ctx, dsls.react['react-comp'].wonderPlatformWizard, {steps, activeId, onStep})`.
@@ -71,7 +71,7 @@ import './wonder-platform-wizard.js'
 
 - [ ] **Step 3: Add the shell test + contract entry**
 
-In `wonder-platform-tests.js`, add after the `wonderPlatformVerificationHost` ReactComp (line ~492):
+In `pocito-tests.js`, add after the `wonderPlatformVerificationHost` ReactComp (line ~492):
 
 ```js
 ReactComp('wonderPlatformWizardTestHost', {
@@ -102,13 +102,13 @@ Expected: both PASS, no logger errors.
 
 - [ ] **Step 5: Syntax check**
 
-Run: `node --check solutions/pocito/marketplace-ui/wonder-platform-wizard.js solutions/pocito/marketplace-ui/wonder-platform-resource-fields.js solutions/pocito/marketplace-ui/wonder-platform-tests.js`
+Run `node --check` on `wonder-platform-wizard.js`, `wonder-platform-resource-fields.js`, and `pocito-tests.js`.
 Expected: no output (exit 0).
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add solutions/pocito/marketplace-ui/wonder-platform-wizard.js solutions/pocito/marketplace-ui/wonder-platform-resource-fields.js solutions/pocito/marketplace-ui/wonder-platform-tests.js
+git add solutions/pocito/marketplace-ui/wonder-platform-wizard.js solutions/pocito/marketplace-ui/wonder-platform-resource-fields.js solutions/pocito/marketplace-ui/pocito-tests.js
 git commit -m "feat: wizard shell component with step rail"
 ```
 
@@ -118,7 +118,7 @@ git commit -m "feat: wizard shell component with step rail"
 
 **Files:**
 - Modify: `solutions/pocito/marketplace-ui/wonder-platform-resource-fields.js` (shared return → per-resource step lists)
-- Modify: `solutions/pocito/marketplace-ui/wonder-platform-tests.js` (skills editor tests gain step clicks)
+- Modify: `solutions/pocito/marketplace-ui/pocito-tests.js` (skills editor tests gain step clicks)
 
 **Interfaces:**
 - Consumes: `react-comp<react>wonderPlatformWizard` (Task 1).
@@ -257,7 +257,7 @@ In the old evaluations branch (lines 130-173): delete lines 131-132 (`const targ
 
 - [ ] **Step 4: Update the two skills tests for wizard steps**
 
-In `wonder-platform-tests.js`, replace `wonderPlatform.marketplaceSkillEditor` (lines 442-447) with:
+In `pocito-tests.js`, replace `wonderPlatform.marketplaceSkillEditor` (lines 442-447) with:
 
 ```js
 Test('wonderPlatform.marketplaceSkillEditor', {
@@ -296,13 +296,13 @@ Expected: all PASS, no logger errors. (`marketplaceAgentCreateRelations` and `wo
 
 - [ ] **Step 6: Syntax + leftovers check**
 
-Run: `node --check solutions/pocito/marketplace-ui/wonder-platform-resource-fields.js solutions/pocito/marketplace-ui/wonder-platform-tests.js`
+Run: `node --check solutions/pocito/marketplace-ui/wonder-platform-resource-fields.js solutions/pocito/marketplace-ui/pocito-tests.js`
 Expected: no output (exit 0).
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add solutions/pocito/marketplace-ui/wonder-platform-resource-fields.js solutions/pocito/marketplace-ui/wonder-platform-tests.js
+git add solutions/pocito/marketplace-ui/wonder-platform-resource-fields.js solutions/pocito/marketplace-ui/pocito-tests.js
 git commit -m "feat: wizard steps for agents, skills, knowledge, plugins, subagents, evaluations"
 ```
 
@@ -312,7 +312,7 @@ git commit -m "feat: wizard steps for agents, skills, knowledge, plugins, subage
 
 **Files:**
 - Modify: `solutions/pocito/marketplace-ui/wonder-platform-resource-fields.js`
-- Modify: `solutions/pocito/marketplace-ui/wonder-platform-tests.js` (new flow tool wizard test)
+- Modify: `solutions/pocito/marketplace-ui/pocito-tests.js` (new flow tool wizard test)
 
 **Interfaces:**
 - Consumes: `repo.flowPackages` (array of `{Id, Name, Description, Quick: {default: [...]}, Queries: [{id, Name, ResultsLimit, ...}]}`); `inputSchemaSection`, `outputCubesSection`, `currentPackage`, `setPkg` (in-scope).
@@ -360,7 +360,7 @@ Replace the current `toolFields` definition (lines 179-190) with:
 
 - [ ] **Step 3: Add the flow tool wizard test**
 
-In `wonder-platform-tests.js`, add after `wonderPlatform.marketplaceToolEditor` (line ~454):
+In `pocito-tests.js`, add after `wonderPlatform.marketplaceToolEditor` (line ~454):
 
 ```js
 Test('wonderPlatform.flowToolWizard', {
@@ -380,14 +380,14 @@ Expected: all PASS, no logger errors. `marketplaceToolEditor` exercises the lega
 
 - [ ] **Step 5: Syntax + leftovers check**
 
-Run: `node --check solutions/pocito/marketplace-ui/wonder-platform-resource-fields.js solutions/pocito/marketplace-ui/wonder-platform-tests.js`
+Run: `node --check solutions/pocito/marketplace-ui/wonder-platform-resource-fields.js solutions/pocito/marketplace-ui/pocito-tests.js`
 Then grep `wonder-platform-resource-fields.js` for `packageQuery|packageResults|searchPackages|pickPackage|packageStep|flapiBaseUrl|flapiCall` — expected: no matches (except none at all; `currentPackage`, `setPkg`, `pkg` must remain).
 Also: `awk 'length > 180 {print FILENAME":"FNR": "length}' solutions/pocito/marketplace-ui/wonder-platform-resource-fields.js` — expected: no output.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add solutions/pocito/marketplace-ui/wonder-platform-resource-fields.js solutions/pocito/marketplace-ui/wonder-platform-tests.js
+git add solutions/pocito/marketplace-ui/wonder-platform-resource-fields.js solutions/pocito/marketplace-ui/pocito-tests.js
 git commit -m "feat: tools wizard with mock package load, drop search flow"
 ```
 
@@ -404,7 +404,7 @@ Expected: all PASS with no logger errors. (`marketplaceUiAgentE2e` is `doNotRunI
 
 - [ ] **Step 2: Manual browser check**
 
-Use `playwrightHarvest` (or the Playwright MCP browser tools) against `http://localhost:3000/room/wonder-platform/applet/wonderAgents`. Verify:
+Use `roomAppletHarvest` against `http://localhost:3000/room/wonder-platform/applet/wonderAgents`. Verify:
 1. Open an existing connector tool (e.g. "חיפוש Jira"): read-only view, "לא ניתן לעריכה", no Save, no Delete.
 2. Open "כלים" → "כלי חדש ממארז Flow": wizard with rail (כללי active); id input + טעינת מארז button; type a 6-8 digit id, click load; "נבחר:" line appears; פרמטרים + קוביות פלט steps unlock; each step shows its content.
 3. Open an agent editor: 6 steps render; clicking הנחיות/פלאגינים/מיומנויות/כלים/ידע switches content; פלאגינים step shows "צירוף מהקטלוג".

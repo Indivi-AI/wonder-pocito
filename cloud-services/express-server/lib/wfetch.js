@@ -1,7 +1,7 @@
 import { jb, coreUtils } from '@jb6/core'
 import '@wonder/ai/doclet-storage.js'
 
-const methods = {GET: 'r', HEAD: 'r', PUT: 'w', POST: 'w', PATCH: 'w'}
+const methods = {GET: 'r', HEAD: 'r', PUT: 'w', POST: 'w'}
 const headerNames = ['content-type', 'content-length', 'content-location', 'etag', 'last-modified', 'generation']
 
 export const setupWfetch = app => app.post('/wfetch', async (req, res) => {

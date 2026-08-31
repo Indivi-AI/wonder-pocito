@@ -1,8 +1,0 @@
-# Build context: solutions/pocito/marketplace-server. COPY-only app layer over the whitened base.
-ARG BASE_IMAGE=marketplace-server-base:latest
-FROM ${BASE_IMAGE}
-COPY *.py marketplace-openapi.json marketplace-api-examples.json ./
-RUN mkdir -p /data && chown 1001 /data   # volume init inherits this ownership so the non-root server can materialize runtime files
-ENV HOME=/tmp
-USER 1001
-CMD ["python", "marketplace_server.py"]

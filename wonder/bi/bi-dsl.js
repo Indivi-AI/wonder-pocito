@@ -1,7 +1,7 @@
 import { dsls, coreUtils, jb } from '@jb6/core'
 import '@jb6/common/essentials.js'
 import '@wonder/db/db-drivers.js'
-const { getAccessToken, wresolve, wresolveInfo, wcachePopulate, wfetch2 } = jb.wonderUtils
+const { getAccessToken, wresolve, wresolveInfo, fullFileCachePopulate, wfetch2 } = jb.wonderUtils
 import './duckdb-utils.js'
 
 const {
@@ -154,7 +154,8 @@ const cube = Cube('cube', {
     {id: 'queryLookups', type: 'query-lookup<bi>[]', description: 'QUERY-phase lookups'},
     {id: 'sqlModifiers', type: 'sql-modifier<bi>[]', description: 'QUERY-phase AST transforms'},
     {id: 'setup', type: 'ctx-enricher<tgp>', dynamic: true, description: 'cube-default ctx enrichment (e.g. window args) applied once by querySetup/cubeQuery before silvers resolve; a downstream Var still overrides'},
-    {id: 'cacheStrategy', as: 'string', options: 'colsCache,fullFileCache,noCache', defaultValue: 'colsCache', description: 'colsCache = local native read_parquet / remote byte-range extension; fullFileCache = wcache whole-file mirror; noCache = read source as-is (fs disk / gcs httpfs), nothing persisted'},
+    {id: 'cacheStrategy', as: 'string', options: 'colsCache,fullFileCache,noCache', defaultValue: 'colsCache',
+      description: 'colsCache = local/range reads; fullFileCache = whole-file local mirror; noCache = source as-is'},
     {id: 'limits', as: 'array', description: 'epistemic guardrails: what this cube CANNOT answer + column caveats, rendered verbatim into the LLM vocabulary'}
   ],
   impl: (_, {}, { source: mat, wUrlBase, dimensions, metrics, queryLookups, sqlModifiers, setup, cacheStrategy, limits }) => ({
@@ -325,12 +326,12 @@ CacheStrategy('colsCache', {
       preludeModifier(async ctx => `${coreUtils.isNode ? `LOAD '${await biUtils.colsCacheExt(ctx)}';\n` : ''}SET cols_cache_loggers='${coreUtils.activeLoggers(ctx)}';\nSET cols_cache_prefetch_cols='${ctx.vars.preFetchCols || ''}';\n`, '-unsigned ')]   // wasm: cols_cache statically linked, no LOAD/FS; SET still wires loggers
   })
 })
-// whole-file wcache mirror, then native read_parquet over the local paths; signed cache_httpfs.
+// whole-file fullFileCache mirror, then native read_parquet over the local paths; signed cache_httpfs.
 CacheStrategy('fullFileCache', {
   impl: () => ({
-    buildSourceReader: async (wUrls, ctx) => ({ via: 'fullFileCache wcache (whole file mirrored)', sql: readSourceFiles(await Promise.all(wUrls.map(async u => {
-      const { resolved, needsWcache } = await wresolveInfo(u, ctx)
-      return needsWcache ? await wcachePopulate(u, ctx, { validate: true }) : resolved
+    buildSourceReader: async (wUrls, ctx) => ({ via: 'fullFileCache (whole file mirrored)', sql: readSourceFiles(await Promise.all(wUrls.map(async u => {
+      const { resolved, needsFullFileCache } = await wresolveInfo(u, ctx)
+      return needsFullFileCache ? await fullFileCachePopulate(u, ctx, { validate: true }) : resolved
     }))) }),
     modifiers: () => [preludeModifier(() => 'LOAD cache_httpfs;\n')]
   })
@@ -534,11 +535,12 @@ Component('materializedView', {
     const lastModified = head?.ok && head.headers?.get?.('last-modified')
     const state = !lastModified ? 'missing' : maxAgeMs === 0 || Date.now() - new Date(lastModified).getTime() > maxAgeMs ? 'stale' : 'fresh'
     log?.info?.({ event: 'materializedView freshness', name, wUrl, state }, {}, { ctx })
-    let path = state === 'fresh' && await wcachePopulate(wUrl, ctx, { validate: true })
+    let path = state === 'fresh' && await fullFileCachePopulate(wUrl, ctx, { validate: true })
     if (!path) {
       const stamp = Date.now()
       const local = await rowsToParquet(await rows(ctx), `/tmp/${name}-${stamp}.parquet`, `/tmp/${name}-${stamp}.json`, ctx)
-      await wfetch2(wUrl, { method: 'PUT', body: local, headers: { 'x-wonder-body': 'localFile' } }, ctx)
+      await wfetch2(wUrl, { method: 'PUT', body: local, headers: {
+        'x-wonder-body': 'localFile', 'content-type': 'application/vnd.apache.parquet'} }, ctx)
       path = local
       log?.info?.({ event: 'materializedView built', name, wUrl, path }, {}, { ctx })
     }
@@ -611,7 +613,9 @@ CubeTool('cubeQuery', {
     const modifiers = [...(ctx.vars.sqlModifiers || []), ...(ctx.vars.explainScanLogger ? [SqlModifier.explainScan.$run()] : [])]
     const opts = { brushMode, extra: { time: biUtils.timeColumnSql(cube, timeSlice) }, defaultFrom: froms[cube.parquetFiles?.[0]?.name], modifiers, manifest: froms.$manifest }
     const prelude = (ctx.vars.sqlPreludes || []).join(';\n')   // map-macro DDL from query-lookups; compile folds the strategy's LOAD in front of it
-    const { out: compiled, duckFlags, prefetchPlan, error: compileError } = await editor.compile(sql, { ...opts, prelude })
+    // prefetchPlan is produced only by the colsCache modifier chain; under noCache/fullFileCache compile omits it.
+    // Defaulting to [] keeps both the log below and the setVars downstream safe instead of leaking undefined.
+    const { out: compiled, duckFlags, prefetchPlan = [], error: compileError } = await editor.compile(sql, { ...opts, prelude })
     if (compileError) { 
       ctx.vars.errorLogger?.error?.({ t: 'cubeQuery ambiguous metric', reason: compileError, sql }, {}, { ctx }); 
       return [] 
@@ -735,10 +739,16 @@ function fmtPeriod(d, pattern) { return pattern.includes('-HH') ? `${d.toISOStri
 
 function expandPeriods(spec, pattern, allMax = 60) {
   const stepMs = pattern.includes('-HH') ? 3600000 : 86400000
+  const parsePeriod = p => Date.parse(pattern.includes('-HH') ? p.replace(/-(\d\d)$/, 'T$1:00Z') : p)
   const back = n => Array.from({ length: n }, (_, i) => fmtPeriod(new Date(Date.now() - i * stepMs), pattern))
+  // `from..to`, inclusive: the only spec anchored to the DATA rather than to now, which is what a dashboard date
+  // range needs — `last:N` walks back from Date.now() and names periods a historical dataset never built.
+  const range = (from, to) => Array.from({ length: (parsePeriod(to) - parsePeriod(from)) / stepMs + 1 },
+    (_, i) => fmtPeriod(new Date(parsePeriod(from) + i * stepMs), pattern))
   return spec === 'today' ? [fmtPeriod(new Date(), pattern)]
     : spec === 'all' ? back(allMax)
     : spec.startsWith('last:') ? back(+spec.slice(5) || 1)
+    : spec.includes('..') ? range(...spec.split('..'))
     : [spec]
 }
 
@@ -748,8 +758,8 @@ const perPeriodWUrls = (wUrlPattern, periods) =>
 async function cachePeriodParquets(wUrlPattern, periods, ctx) {
   const out = []
   for (const url of perPeriodWUrls(wUrlPattern, periods)) {
-    const { resolved, needsWcache } = await wresolveInfo(url, ctx)
-    out.push(needsWcache ? await wcachePopulate(url, ctx, { validate: true }) : resolved)
+    const { resolved, needsFullFileCache } = await wresolveInfo(url, ctx)
+    out.push(needsFullFileCache ? await fullFileCachePopulate(url, ctx, { validate: true }) : resolved)
   }
   return out
 }

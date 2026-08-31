@@ -90,8 +90,8 @@ Test('dbDriverTests.airgap.publishStorageCtx', {
         return await withAirgapEnv(minio.endpoint, async () => {
           const roomId = `airgapTest-${ctx.vars.testSessionId}`
           const manifestCtx = ctx.setVars(storageEnvVars ? storageEnvVars() : {})
-          await wfetch2(`room://${roomId}/applets/helloApplet.json`, { method: 'PUT', body: { cmpId: 'helloApplet' },
-            headers: { 'x-wonder-json': 'as-is' } }, manifestCtx)
+          await wfetch2(`room://${roomId}/applets/helloApplet.json`, { method: 'PUT', body: '{"cmpId":"helloApplet"}',
+            headers: {'content-type': 'application/json'} }, manifestCtx)
           const callerEndpointHonored = await wresolve('clientCode:minio//applets/v1/index.js',
             ctx.setVars({ bucketEndpoint: PUBLIC_MINIO }), 'GET')
           return { result: {

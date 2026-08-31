@@ -40,7 +40,7 @@ const candidatePoints = (el) => {
   return local().map(toGlobal)
 }
 
-TgpType('ui-action', 'test')('clickVizShape', {
+TgpType('ui-action', 'react')('clickVizShape', {
   params: [
     { id: 'index', as: 'number', defaultValue: 0 },
     { id: 'shapeType', as: 'string' },

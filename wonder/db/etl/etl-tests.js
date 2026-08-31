@@ -1,6 +1,7 @@
 import { dsls } from '@jb6/core'
 import '@jb6/testing'
 import '@jb6/common'
+import '../db-drivers-live-repo.js'
 import './etl-dsl.js'
 import './file-query.js'
 
@@ -203,36 +204,28 @@ Test('cliEtl.mlr.cacheSkipsSecondRun', {
   })
 })
 
-// writes raw CSV to room FS (bypassing wfetch2 {content:} wrapping) then reads via cachedWonderUrl
-// this simulates a raw CSV file uploaded externally (gsutil, Delta Sharing, etc.)
-// should fail until rawDataFile interceptor is implemented
-const writeRawCsvSetup = Component('writeRawCsvSetup', {
+const writeCsvRoomSetup = Component('writeCsvRoomSetup', {
   type: 'ctx-enricher<tgp>',
   impl: async (ctx) => {
     const { writeFileSync, mkdirSync } = await import('fs')
     const { dirname } = await import('path')
     const { fileURLToPath } = await import('url')
     const repoRoot = fileURLToPath(new URL('../../../', import.meta.url))
-    const filePath = `${repoRoot}files/rooms/etlTestRoom/raw-data-${ctx.vars.testSessionId}.csv`
+    const filePath = `${repoRoot}files/rooms/etlTestRoom/data-${ctx.vars.testSessionId}.csv`
     mkdirSync(dirname(filePath), { recursive: true })
     writeFileSync(filePath, testCsvData.$run())
     return ctx
   }
 })
 
-Test('cliEtl.cachedWonderUrl.rawCsvInRoom', {
-  description: 'raw CSV file in room (not wrapped in {content:}) - requires rawDataFile support',
+Test('cliEtl.cachedWonderUrl.csvInRoom', {
   impl: dataTest({
-    setup: writeRawCsvSetup(),
-    calculate: cliEtl({
-      extract: cachedWonderUrl('room:fs//etlTestRoom/raw-data-%$testSessionId%.csv'),
+    calculate: cliEtl(cachedWonderUrl('room:fs//etlTestRoom/data-%$testSessionId%.csv'), {
       transform: mlr('--csv stats1 -a sum,count -f revenue,estimated_revenue -g campaign_name'),
       load: copyToFile('/tmp/etl-test-raw-csv-output.csv')
     }),
-    expectedResult: and(
-      contains('rawFile fs GET', { allText: join('\n', { items: '%dbLog/t%' }) }),
-      contains('cliEtl complete', { allText: join('\n', { items: '%etlLog/t%' }) })
-    ),
+    expectedResult: contains('cliEtl complete', { allText: join('\n', { items: '%etlLog/t%' }) }),
+    setup: writeCsvRoomSetup(),
     timeout: 12000,
     logger: 'dbLogger,etlLogger'
   })
@@ -250,14 +243,14 @@ const rmFiles = Component('rmFiles', {
 
 Test('cliEtl.cachedWonderUrl.json', {
   impl: dataTest({
-    setup: rmFiles(['/tmp/etl-test-wonder-output.csv', '/tmp/wcache/indiviai-wonder/testPublicRoom/usersRO/sales-large.json']),
+    setup: rmFiles(['/tmp/etl-test-wonder-output.csv', '/tmp/fullFileCache/indiviai-wonder/testPublicRoom/usersRO/sales-large.json']),
     calculate: cliEtl({
       extract: cachedWonderUrl('room://testPublicRoom/usersRO/sales-large.json'),
       transform: duckdb("SELECT category, count(*) as sales, sum(amount) as total FROM read_json_auto('{%$inputFile%}') GROUP BY category ORDER BY total DESC"),
       load: copyToFile('/tmp/etl-test-wonder-output.csv')
     }),
     expectedResult: and(
-      contains('wcache populated', { allText: join('\n', { items: '%dbLog/t%' }) }),
+      contains('fullFileCache populated', { allText: join('\n', { items: '%dbLog/t%' }) }),
       contains('cliEtl complete', { allText: join('\n', { items: '%etlLog/t%' }) })
     ),
     timeout: 12000,

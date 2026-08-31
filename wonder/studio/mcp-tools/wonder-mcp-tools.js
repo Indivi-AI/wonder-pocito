@@ -5,6 +5,7 @@ import '@wonder/db/tests/gmail-test-users.js'
 const { wfetch2, wresolveInfo, wputMany, storageEnvVars } = jb.wonderUtils
 import '@jb6/common'
 import '@jb6/mcp'
+import '@jb6/mcp/mcp-jb-tools.js'
 import '@jb6/react'
 import '@jb6/mcp/mcp-utils.js'
 import '@wonder/ai/llm-flow-main-workflow.js'
@@ -14,7 +15,7 @@ const { extendWithWorkflowVars } = jb.workflowUtils
 const {
   tgp: { Component, 'ctx-enricher': { testAdminUser } },
   common: { 
-    data: { mcpTool, pipe, squeezeText, wFetch: wFetchData }
+    data: { mcpTool, pipe, playwrightHarvest, squeezeText, wFetch: wFetchData }
   },
   mcp: { Tool },
   react: { ReactComp,
@@ -23,15 +24,15 @@ const {
   }
 } = dsls
 
-export const exportedTools = ['runWorkflow', 'biglogContent', 'listBiglogs', 'BiglogViewerInRoom', 'wFetch', 'updateLambdasAndApplets']
+export const exportedTools = ['runWorkflow', 'biglogContent', 'listBiglogs', 'BiglogViewerInRoom', 'wFetch', 'roomAppletHarvest', 'updateLambdasAndApplets']
 
 Tool('wFetch', {
   description: 'Read a room wUrl through db-drivers; room:// is public and signedRoom:// uses the Gmail admin test user.',
   params: [
     {id: 'url', as: 'string', asIs: true, mandatory: true, description: 'room wUrl; trailing slash lists, and ?jq=<encoded-expression> slices JSON'},
-    {id: 'method', as: 'string', defaultValue: 'GET', options: 'GET,PUT,POST,PATCH,HEAD'},
-    {id: 'body', asIs: true, description: 'JSON body; PUT replaces, POST appends, PATCH merges. x-wonder-body:localFile makes it a file path.'},
-    {id: 'headers', asIs: true, description: 'JSON object of extra headers. {"x-wonder-body":"localFile"} streams the file at `body` path (for binary: parquet/jpg/mp4).'},
+    {id: 'method', as: 'string', defaultValue: 'GET', options: 'GET,PUT,POST,HEAD'},
+    {id: 'body', asIs: true, description: 'PUT replaces; POST appends JSONL text; localFile header makes this a Node-local path.'},
+    {id: 'headers', asIs: true, description: 'standard HTTP headers; x-wonder-body=localFile streams the body path'},
     {id: 'logger', as: 'string', defaultValue: 'dbLogger', description: 'comma-separated loggers to harvest; result returns {result, ...logs}'}
   ],
   impl: mcpTool({
@@ -48,7 +49,9 @@ Tool('wFetch', {
           catch { throw new Error(`wFetch '${name}' is not valid JSON: ${v.slice(0,80)}`) }
         }
         const hdrs = asObj(headers, 'headers')
-        const rawBody = hdrs?.['x-wonder-body'] === 'localFile' ? body : asObj(body, 'body')
+        const type = hdrs?.['content-type'] || hdrs?.['Content-Type']
+        const rawBody = hdrs?.['x-wonder-body'] === 'localFile' ? body
+          : /json(?:;|$)/i.test(type || '') || !type && /\.json(?:[?#]|$)/i.test(url) ? asObj(body, 'body') : body
         const res = await dsls.common.data.wFetch.$runWithCtx(ctx, {
           url, method, logger, ...(hdrs && { headers: hdrs }), ...(body != null && { body: rawBody })
         })
@@ -57,6 +60,39 @@ Tool('wFetch', {
         coreUtils.logException(e, 'wFetch', { url, method })
         return `Error wFetch: ${e.stack || e}`
       }
+    }
+  })
+})
+
+Tool('roomAppletHarvest', {
+  description: 'Harvest a Wonder room applet after an observable completion condition; injects browser loggers and prevents premature async log capture.',
+  params: [
+    {id: 'url', as: 'string', asIs: true, mandatory: true, description: 'http(s) /room/:roomId/applet/:name or /signed-room/:roomId/applet/:name URL'},
+    {id: 'logger', as: 'string', defaultValue: 'dbLogger', description: 'comma-separated browser loggers; injected into the URL'},
+    {id: 'waitForText', as: 'string', asIs: true, description: 'text proving asynchronous applet work completed'},
+    {id: 'waitForSelector', as: 'string', asIs: true, description: 'CSS selector proving asynchronous applet work completed'},
+    {id: 'automation', as: 'string', asIs: true, description: 'advanced ui-action<react> profile as JSON; exclusive with waitForText/waitForSelector'},
+    {id: 'noAuth', as: 'boolean', description: 'inject noAuth for public /room/ applets; invalid for /signed-room/', type: 'boolean<common>'},
+    {id: 'timeout', as: 'number', defaultValue: 10000},
+    {id: 'domSelector', as: 'string', defaultValue: '#root'},
+    {id: 'seedLocalStorage', as: 'string', asIs: true}
+  ],
+  impl: mcpTool(async (ctx, {}, {url, logger, waitForText, waitForSelector, automation, noAuth, timeout, domSelector, seedLocalStorage}) => {
+    try {
+      const target = new URL(url), route = target.pathname.match(/^\/(signed-room|room)\/[^/]+\/applet\/[^/]+\/?$/)?.[1]
+      if (!route) throw new Error('roomAppletHarvest requires /room/:roomId/applet/:name or /signed-room/:roomId/applet/:name')
+      if (noAuth && route === 'signed-room') throw new Error('noAuth is valid only for public /room/ applets; use seedLocalStorage for signed rooms')
+      const waits = [automation, waitForText, waitForSelector].filter(Boolean)
+      if (waits.length !== 1) throw new Error('provide exactly one of waitForText, waitForSelector, or automation')
+      if (logger) target.searchParams.set('logger', logger)
+      if (noAuth) target.searchParams.set('noAuth', '')
+      const action = automation ? JSON.parse(automation) : waitForText
+        ? {$: 'ui-action<react>waitForText', text: waitForText, timeout}
+        : {$: 'ui-action<react>waitForSelector', selector: waitForSelector, timeout}
+      const result = await playwrightHarvest.$runWithCtx(ctx, {url: target.href, automation: action, timeout, domSelector, seedLocalStorage})
+      return JSON.stringify({...result, harvest: {url: target.href, logger, completion: automation ? 'automation' : waitForText ? 'waitForText' : 'waitForSelector'}}, null, 2)
+    } catch (error) {
+      return JSON.stringify({error: error.message || String(error)}, null, 2)
     }
   })
 })
@@ -412,7 +448,7 @@ await coreUtils.writeServiceResult({ ...packageInfo, dir })
         const def = {lambdaV: result.lambdaV, lambdaCodeWUrl: result.lambdaCodeWUrl,
           entryPath: compPath, entryCompFullId: compFullId, dir: result.dir, roomWUrl}
         const defPath = `${roomWUrl}/lambdas/${lambdaId}.json`
-        await wfetch2(defPath, {method: 'PUT', body: def, headers: { 'x-wonder-json': 'as-is' }}, ctx.setVars(storageEnvVars()))
+        await wfetch2(defPath, {method: 'PUT', body: JSON.stringify(def), headers: {'content-type': 'application/json'}}, ctx.setVars(storageEnvVars()))
         timer.phase('writeManifest')
         ctx.vars.mcpLogger?.info?.({t: 'upload room lambda done', compFullId, entryPath, compPath,
           lambdaCodeWUrl: result.lambdaCodeWUrl, userEmail: ctx.vars.userEmail,
@@ -438,8 +474,8 @@ Tool('uploadRoomApplet', {
     {id: 'entryCompFullId', as: 'string', description: 'full comp id, e.g. react-comp<react>cubeApplet. name + cmpId derived from the comp.'},
     {id: 'ogTitle', as: 'string', description: 'optional link-preview title for this applet (og:title). Else falls back to room admin/branding.json then wonder default.'},
     {id: 'ogDescription', as: 'string', description: 'optional link-preview description (og:description).'},
-    {id: 'ogImage', as: 'string', description: 'optional link-preview image url, ideally 1200x630 (og:image).'},
-    {id: 'ogImageLocalPath', as: 'string', description: 'optional local image to upload under the public room applet dir; overrides ogImage.'}
+    {id: 'ogImage', as: 'string', description: 'optional public URL returning 200 image/*; for WhatsApp keep under 600KB, width >=300px and aspect ratio <=4:1.'},
+    {id: 'ogImageLocalPath', as: 'string', description: 'optional local image with the same WhatsApp limits, uploaded publicly; overrides ogImage.'}
   ],
   impl: mcpTool({
     vars: [testAdminUser()],
@@ -462,22 +498,25 @@ try {
     const { result, error } = await coreUtils.runCliInContext(script, { ctx: cliCtx, importMapsInCli: jb.coreRegistry.importMapsInCli })
     if (error || result?.error) return JSON.stringify({ ...result, error: result?.error || error,
       cliLog: coreUtils.harvestLogs(cliCtx, ['cliLineLogger']).cliLineLogger })
-    const {appletV, clientCodeWUrl, cmpId} = result, imageName = ogImageLocalPath?.split('/').pop()
-    const imageUrl = imageName && `${roomWUrl}/applets/${cmpId}/${imageName}`
-    const og = Object.fromEntries(Object.entries({ogTitle, ogDescription, ogImage: imageUrl || ogImage}).filter(([, v]) => v))
     const dbCtx = ctx.setVars(storageEnvVars())
-    const [, defRes] = await Promise.all([
-      imageName && wfetch2(imageUrl, {method: 'PUT', body: ogImageLocalPath, headers: {'x-wonder-body': 'localFile'}}, dbCtx),
-      wfetch2(`${roomWUrl}/applets/${cmpId}.json`, {method: 'PUT', headers: {'x-wonder-json': 'as-is'},
-        body: {cmpId, urlsToLoad: entryPath, appletV, clientCodeWUrl, roomWUrl,
-          entryCompFullId, ...(Object.keys(og).length && {og})}}, dbCtx)
+    const {appletV, clientCodeWUrl, cmpId} = result, imageName = ogImageLocalPath?.split('/').pop()
+    const imageWUrl = imageName && `${roomWUrl}/applets/${cmpId}/${imageName}`
+    const imageUrl = imageWUrl && (await wresolveInfo(imageWUrl, dbCtx, 'PUT')).fullyResolvedWUrl
+    const og = Object.fromEntries(Object.entries({ogTitle, ogDescription, ogImage: imageUrl || ogImage}).filter(([, v]) => v))
+    const [imageRes, defRes] = await Promise.all([
+      imageName && wfetch2(imageWUrl, {method: 'PUT', body: ogImageLocalPath, headers: {'x-wonder-body': 'localFile'}}, dbCtx),
+      wfetch2(`${roomWUrl}/applets/${cmpId}.json`, {method: 'PUT', headers: {'content-type': 'application/json'},
+        body: JSON.stringify({cmpId, urlsToLoad: entryPath, appletV, clientCodeWUrl, roomWUrl,
+          entryCompFullId, ...(Object.keys(og).length && {og})})}, dbCtx)
     ])
+    if (imageRes?.ok === false) return JSON.stringify({error: `applet image PUT failed: ${imageRes.status}`, imageWUrl})
     if (defRes?.ok === false) return JSON.stringify({error: `applet def PUT failed: ${defRes.status}`, defPath: `${roomWUrl}/applets/${cmpId}.json`})
     ctx.vars.mcpLogger?.info?.({t: 'upload room applet done', roomWUrl, cmpId, appletV, clientCodeWUrl,
       fileCount: result.fileCount, totalBytes: result.totalBytes, uploadMs: result.uploadMs, timeline: result.timeline}, {}, {ctx})
     return JSON.stringify({...result, imageUrl, defPath: `${roomWUrl}/applets/${cmpId}.json`,
       entryUrl: `https://w-staging.indivi.ai/${route}/${resolvedRoomId}/applet/${cmpId}`})
-  }})
+  }
+  })
 })
 
 Tool('updateLambdasAndApplets', {
@@ -502,7 +541,8 @@ const defsIn = async dir => {
     return { name, url, def: await (await jb.wonderUtils.wfetch2(url, { method: 'GET' }, dbCtx)).json() }
   }))
 }
-const save = (url, obj) => jb.wonderUtils.wfetch2(url, { method: 'PUT', body: obj, headers: { 'x-wonder-json': 'as-is' } }, dbCtx)
+const save = (url, obj) => jb.wonderUtils.wfetch2(url, {
+  method: 'PUT', body: JSON.stringify(obj), headers: {'content-type': 'application/json'}}, dbCtx)
 
 const lambdas = await defsIn('lambdas')
 const lambdaResults = await Promise.all(lambdas.map(async ({ name, url, def }) => {

@@ -34,7 +34,7 @@ Run a tgp snippet **on the remote, gated AS THE USER, within tgp context**, via 
 Signed-room MCP work requires a logged-in developer; outside the sandbox run `gcloud auth list --filter=status:ACTIVE "--format=value(account)"`.
 If no account is returned, ask the developer to run `gcloud auth login`; never continue signed-room work anonymously.
 That email must be listed in the room's `admin/users.json` with permission for the requested directory (`usersRO`, `usersRW`, or `admin`).
-For `playwrightHarvest`, pass `seedLocalStorage: 'mintWonderAuth2'`; manual applet use signs in through the Google login screen.
+Use `roomAppletHarvest` for signed applet URLs and pass `seedLocalStorage: 'mintWonderAuth2'`; manual use signs in through the Google login screen.
 
 ## Room applets
 
@@ -67,7 +67,7 @@ Test rooms (in the db-driver test suite, `public/core/db-drivers-tests.js`):
 
 | roomId | scheme | used by |
 |---|---|---|
-| `testSignedRoom` | `signedRoom://` | wcache/media/permissions over signed bucket (`usersRO/`,`usersRW/`) |
+| `testSignedRoom` | `signedRoom://` | fullFileCache, media, and permission tests over the signed bucket (`usersRO/`, `usersRW/`) |
 | `testPublicRoom` | `room://` | same data as testSignedRoom over the public path |
 | `buyPhone` | `room:gcs`/`room:fs` | put/get/append/patch driver tests (`items`) |
 

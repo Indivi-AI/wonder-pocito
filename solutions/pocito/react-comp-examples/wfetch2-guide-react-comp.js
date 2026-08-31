@@ -17,14 +17,16 @@ ReactComp('wfetch2Guide', {
         useEffect(() => { void (async () => {
           const response = await jb.wonderUtils.wfetch2(url, { method: 'GET' }, ctx)
           const value = response.ok ? await response.json() : []
-          if (!response.ok) await jb.wonderUtils.wfetch2(url, { method: 'PUT', body: value }, ctx)
+          if (!response.ok) await jb.wonderUtils.wfetch2(url, {
+            method: 'PUT', body: JSON.stringify(value), headers: {'content-type': 'application/json'} }, ctx)
           setItems(value)
         })() }, [])
         if (!items) return h('div:p-4', {}, 'טוען…')
         const add = async () => {
           const next = [...items, { id: 'i' + Date.now().toString(36), name: 'פריט ' + (items.length + 1) }]
           setItems(next)
-          await jb.wonderUtils.wfetch2(url, { method: 'PUT', body: next }, ctx)
+          await jb.wonderUtils.wfetch2(url, {
+            method: 'PUT', body: JSON.stringify(next), headers: {'content-type': 'application/json'} }, ctx)
         }
         return h('main:max-w-xl mx-auto mt-16 p-4 space-y-3', { dir: 'rtl' }, h('h1:font-bold', {}, 'wfetch2 · GET + PUT'),
           h('button:border rounded-lg px-3 py-2', { onClick: add }, 'הוספה'),

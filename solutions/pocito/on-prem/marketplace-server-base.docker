@@ -1,7 +1,0 @@
-# Build context: solutions/pocito/marketplace-server. Whitened once; app layers rebuild offline from it.
-FROM python:3.12-slim
-WORKDIR /app
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt \
-  || { sed -i 's/^\(agno[^=]*\)==.*/\1/' requirements.txt && pip install --no-cache-dir -r requirements.txt; }
-# the agno pin is preferred; when the index cannot satisfy it, any agno release that resolves is accepted

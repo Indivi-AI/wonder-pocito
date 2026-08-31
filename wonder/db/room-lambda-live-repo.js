@@ -1,6 +1,7 @@
 import { jb, coreUtils } from '@jb6/core'
 import '@jb6/core/misc/jb-remote-via-cli.js'
 import '@jb6/lang-service/src/tgp-snippet.js'
+import './db-drivers-live-repo.js'
 
 const asJbComp = c => typeof c == 'string' ? coreUtils.compByFullId(c) : c?.[Symbol.for('asJbComp')] || (c?.$location ? c : null)
 
@@ -41,7 +42,7 @@ coreUtils.runUnPackagedInLiveRepo = async (ctx, compToRun) => {
     strategy: 'unPackagedInLiveRepo', files: imp?.topLevelImports?.length, compsWalked: fast?.compsWalked }, { imp }, { ctx })
   if (!imp || imp.error) { log?.error?.({ event: 'discover failed → skip', strategy: 'unPackagedInLiveRepo', error: imp?.error }, { imp }, { ctx }); return null }
   const packedCtx = coreUtils.stripCtx({ profileJson: profile, ctx: compToRun.lexicalCtx })
-  packedCtx.vars.db = 'gcs'
+  packedCtx.vars.db = 'fs'
   const loggers = coreUtils.activeLoggers(ctx)
   log?.info?.({ event: 'spawning child CLI to run packed profile', strategy: 'unPackagedInLiveRepo', loggers,
     ctxVars: Object.keys(packedCtx.vars || {}) }, {}, { ctx })

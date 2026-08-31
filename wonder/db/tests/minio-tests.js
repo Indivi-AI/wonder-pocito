@@ -20,7 +20,7 @@ Test('dbDriverTests.minio.putGet', {
   impl: dataTest({
     calculate: async (ctx, { testSessionId }) => {
       const url = `room:minio//testRoom/tests/${testSessionId}/put-get.json`, content = { value: 42 }
-      await wfetch2(url, { method: 'PUT', body: content }, ctx)
+      await wfetch2(url, { method: 'PUT', body: JSON.stringify(content), headers: {'content-type': 'application/json'} }, ctx)
       return { result: await (await wfetch2(url, { method: 'GET' }, ctx)).json(), ...coreUtils.harvestLogs(ctx) }
     },
     expectedResult: equals('%result%', asIs({ value: 42 })),
@@ -34,7 +34,7 @@ Test('dbDriverTests.minio.head', {
   impl: dataTest({
     calculate: async (ctx, { testSessionId }) => {
       const url = `room:minio//testRoom/tests/${testSessionId}/head.json`
-      await wfetch2(url, { method: 'PUT', body: { value: 42 } }, ctx)
+      await wfetch2(url, { method: 'PUT', body: '{"value":42}', headers: {'content-type': 'application/json'} }, ctx)
       const res = await wfetch2(url, { method: 'HEAD' }, ctx)
       return { result: { status: res.status, size: Number(res.headers.get('content-length')) > 0 }, ...coreUtils.harvestLogs(ctx) }
     },
@@ -48,7 +48,8 @@ Test('dbDriverTests.minio.list', {
   impl: dataTest({
     calculate: async (ctx, { testSessionId }) => {
       const dir = `room:minio//testRoom/tests/${testSessionId}/list/`
-      await Promise.all(['a', 'b'].map(name => wfetch2(`${dir}${name}.json`, { method: 'PUT', body: { name } }, ctx)))
+      await Promise.all(['a', 'b'].map(name => wfetch2(`${dir}${name}.json`, {
+        method: 'PUT', body: JSON.stringify({name}), headers: {'content-type': 'application/json'} }, ctx)))
       const items = await (await wfetch2(dir, { method: 'GET' }, ctx)).json()
       return { result: items.map(item => item.name.split('/').at(-1)).sort(), ...coreUtils.harvestLogs(ctx) }
     },

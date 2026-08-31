@@ -41,8 +41,8 @@ Data('fileQuery', {
         const srcPath = pathOf(from)
         const hash = s => { let h = 0; for (let i=0; i<s.length; i++) h = ((h<<5)-h+s.charCodeAt(i))|0; return (h>>>0).toString(36) }
         const queryHash = hash(JSON.stringify(ctx.jbCtx?.profile?.query || query || ''))
-        // output cache mirrors the source's canonical wcache path (+queryHash); falls back to local source path
-        const srcCache = /:\/\//.test(srcPath) ? await wresolve(srcPath, ctx.setVars({ db: 'wcache' })) : srcPath
+        // output cache mirrors the source's canonical fullFileCache path (+queryHash); falls back to local source path
+        const srcCache = /:\/\//.test(srcPath) ? await wresolve(srcPath, ctx.setVars({ db: 'fullFileCache' })) : srcPath
         const cachePath = `${srcCache}.q-${queryHash}`
         ctx.vars.etlLogger?.info?.({ t: 'cache key', cachePath, queryHash }, {}, {ctx})
         if (clearCache) await coreUtils.runBashScript(`rm -f '${cachePath}'`)

@@ -16,10 +16,10 @@ Data('pocitoRoomJsonStore', {
       load: async seed => {
         const response = await jb.wonderUtils.wfetch2(url, { method: 'GET' }, ctx)
         if (response.ok) return response.json()
-        await jb.wonderUtils.wfetch2(url, { method: 'PUT', body: seed }, ctx)
+        await jb.wonderUtils.wfetch2(url, { method: 'PUT', body: JSON.stringify(seed), headers: {'content-type': 'application/json'} }, ctx)
         return seed
       },
-      save: value => jb.wonderUtils.wfetch2(url, { method: 'PUT', body: value }, ctx)
+      save: value => jb.wonderUtils.wfetch2(url, { method: 'PUT', body: JSON.stringify(value), headers: {'content-type': 'application/json'} }, ctx)
     }
   }
 })

@@ -1,4 +1,4 @@
-import { dsls, coreUtils } from '@jb6/core'
+import { dsls, coreUtils, ns } from '@jb6/core'
 import '@jb6/testing'
 import '@jb6/llm-guide/essentials.js'
 import '@wonder/db/room-lambda-client.js'         // permissionByPath comp-field + roomLambda interceptor + lambdaLogger/roomLogger
@@ -6,17 +6,20 @@ import './minimal-ping-lambda.js'
 import './bi-lambdas-for-tests.js'
 import './room-test-lambdas.js'
 import '@wonder/db/tests/gmail-test-users.js'
+import '@wonder/studio/mcp-tools/wonder-mcp-tools.js'
 
 const {
-  tgp: { Component, 'ctx-enricher': { setVars, Var, enrichCtx, testAdminUser, testUser } },
+  tgp: { Component, any: { typeAdapter }, 'ctx-enricher': { setVars, Var, enrichCtx, testAdminUser, testUser } },
   common: { Data, Lambda,
     boolean: { equals, notEmpty, contains, and },
-    data: { asIs, count, join, pipe, wFetch, invokeSnippetInContext, ping, storeCount, salesByCategory }
+    data: { asIs, count, first, join, pipe, wFetch, invokeSnippetInContext, ping, storeCount, salesByCategory }
   },
   lambda: { 'lambda-packaging': { roomLambda } },
+  mcp: { tool: { uploadRoomLambda } },
   test: { Test, test: { dataTest } },
   'llm-guide': { Doclet }
 } = dsls
+const { json } = ns
 
 const whoAmI = Lambda('whoAmI', { permissionByPath: 'usersRO', impl: '%$userEmail%' })
 
@@ -37,6 +40,58 @@ const accountSummary = Lambda('accountSummary', {
 // permission probes: same trivial body, different declared dir → drive the gate's accessLevels[dir][role] decision per room.
 const pingRW = Lambda('pingRW', { permissionByPath: 'usersRW', impl: asIs({ pong: true }) })
 const pingAdmin = Lambda('pingAdmin', { permissionByPath: 'admin', impl: asIs({ pong: true }) })
+
+Test('dbDriverTests.signedRoomLambdaUploadAndRun', {
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: ctx => {
+      const logs = name => ctx.vars[name]?.[name.replace('Logger', 'Log')] || []
+      const mcpLog = logs('mcpLogger'), roomLog = logs('roomLogger'), dbLog = logs('dbLogger'), authLog = logs('authLogger')
+      const expectedAdmin = process.env.ADMIN_WONDER_EMAIL?.split(':', 1)[0], expectedUser = ctx.vars.userEmail
+      const adminAccess = authLog.find(e => e.t === 'access granted' && e.email === expectedAdmin && e.role === 'admin'
+        && e.action === 'write' && e.accessLevel === 'lambdas')
+      const userAccess = authLog.find(e => e.t === 'access granted' && e.email === expectedUser && e.role === 'user'
+        && e.action === 'read' && e.accessLevel === 'usersRO')
+      const signed = access => ['forwarder user verified', 'service token ready', 'forwarder calling signed signer',
+        'signer received', 'user token verified', 'access granted', 'signed signer response', 'remote signed-url response']
+        .every(t => authLog.some(e => e.callId === access?.callId && e.t === t))
+        && authLog.filter(e => e.callId === access?.callId && /response$/.test(e.t)).every(e => e.status === 200)
+      const errors = ['mcpLogger', 'roomLogger', 'dbLogger', 'authLogger', 'etlLogger']
+        .flatMap(name => ctx.vars[name]?.[name.replace('Logger', 'Errors')] || [])
+      const accepted = (path, method) => authLog.some(e => e.t === 'signed-url accepted' && e.path === path
+        && e.method === method && e.status === 200)
+      const gate = roomLog.find(e => e.event === 'gate'), done = roomLog.find(e => e.event === 'server run done')
+      const remoteDone = roomLog.find(e => e.event === 'roomLambda done')
+      const versions = [ctx.vars.uploadedLambda?.lambdaV, roomLog.find(e => e.event === 'run version')?.lambdaV,
+        roomLog.find(e => e.event === 'extract tar')?.lambdaV, done?.lambdaV]
+      return {
+        uploadProof: signed(adminAccess) && accepted('testSignedRoom/lambdas/salesByCategory.json', 'PUT')
+          && mcpLog.some(e => e.t === 'upload room lambda done' && e.userEmail === expectedAdmin),
+        executionProof: gate?.email === expectedUser && gate?.role === 'user' && gate?.dir === 'usersRO'
+          && !gate.denied && !gate.anon && done?.$lambda === 'salesByCategory' && remoteDone?.ok === true,
+        artifactProof: versions.every(Boolean) && versions.every(v => v === versions[0]),
+        dataProof: signed(userAccess) && accepted('testSignedRoom/usersRO/sales-large.json', 'HEAD')
+          && dbLog.some(e => e.driverId === 'signedRoom' && e.url?.endsWith('/usersRO/sales-large.json'))
+          && ctx.vars.run?.[0]?.category === 'sports',
+        cleanRun: errors.length === 0
+      }
+    },
+    expectedResult: and('%uploadProof%','%executionProof%','%artifactProof%','%dataProof%','%cleanRun%'),
+    setup: enrichCtx(
+      setVars(asIs({lambdaHost: 'https://w-staging.indivi.ai', roomWUrl: 'signedRoom://testSignedRoom'})),
+      testUser(),
+      Var('uploadedLambda', pipe(
+        typeAdapter('tool<mcp>', uploadRoomLambda('data<common>salesByCategory', '%$roomWUrl%')),
+        '%content/0/text%',
+        json.parse(),
+        first()
+      )),
+      Var('run', invokeSnippetInContext(salesByCategory('sports')))
+    ),
+    timeout: 20000,
+    logger: 'mcpLogger,roomLogger,authLogger,dbLogger,etlLogger'
+  })
+})
 
 Test('roomLambdaTest.liveDevelopment.onLiveRepo', {
   impl: dataTest({

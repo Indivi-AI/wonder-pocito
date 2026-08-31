@@ -11,10 +11,10 @@ const {
   },
   test: {
     Test,
-    'ui-action': { delay, click },
     test: { reactTest },
   },
   react: {
+    'ui-action': { delay, click },
     ReactComp,
     'react-comp': { comp },
   },

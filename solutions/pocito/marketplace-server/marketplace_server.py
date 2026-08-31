@@ -1,13 +1,19 @@
 import base64
 import json
 import os
+import sys
 from enum import Enum
+from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+SCHEMA_DIR = Path(__file__).resolve().parent.parent / 'marketplace-schema'
+if str(SCHEMA_DIR) not in sys.path:
+    sys.path.insert(0, str(SCHEMA_DIR))
 
 from marketplace_storage import DEFAULT_ROOM, ROOM_CONTEXT, ROOT, MarketplaceRepository, S3ObjectStore, safe_name, safe_path
 

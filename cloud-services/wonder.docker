@@ -12,6 +12,12 @@ RUN if [ "$INCLUDE_DUCKDB" = true ]; then \
  && unzip -d /usr/local/bin /tmp/d.zip && rm /tmp/d.zip \
  && duckdb -c "INSTALL httpfs; INSTALL cache_httpfs FROM community;"; fi
 
+# ---- python3 + fastavro: the CDC avro readers. duckdb has no avro reader on every arch we build for, so
+# avroCdcSource and buildCdcReference shell out to fastavro. Without this the schematics ETLs cannot run here. ----
+RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-pip \
+ && pip3 install --no-cache-dir --break-system-packages fastavro google-cloud-storage \
+ && rm -rf /var/lib/apt/lists/*
+
 # ---- cols_cache: our prebuilt unsigned duckdb extension + its node colsCacheService. ----
 COPY wonder/bi/cols-cache/cols_cache.duckdb_extension \
      wonder/bi/cols-cache/colsCacheService.js \
@@ -25,8 +31,9 @@ COPY nodejs-importmap.js nodejs-importmap-loader.js ./
 COPY jb6 ./jb6
 COPY wonder ./wonder
 COPY cloud-services ./cloud-services
+COPY solutions ./solutions
 RUN if [ "$BUILD_TARGET" != runtime ]; then cp "cloud-services/express-server/.env.${BUILD_TARGET}" .env \
  && grep -q WHAPI_TOKEN_WONDER_DEMO .env; fi
 
 EXPOSE 8080
-CMD [ "node", "--experimental-vm-modules", "--expose-gc", "--import", "./nodejs-importmap.js", "cloud-services/express-server/server.js" ]
+CMD [ "node", "--experimental-vm-modules", "--expose-gc", "--import", "./nodejs-importmap.js", "cloud-services/express-server/wonder-cloud-server.js" ]
