@@ -809,7 +809,8 @@ CtxEnricher('wonderPlatformMarketplaceE2eSetup', {
       ctx.vars.marketplaceLogger?.info?.({t: 'marketplaceE2eHealth', base, health}, {}, {ctx})
       if (!response.ok || health.status != 'ok' || health.object_store != 'ok') throw new Error(base + ' is not healthy')
     }
-    const response = await fetch('/llmProxy/models'), models = await response.json()
+    const llmProxy = globalThis.LLM_PROXY_URL || globalThis.process?.env?.LLM_PROXY_URL || 'http://localhost:3000/llmProxy'
+    const response = await fetch(llmProxy + '/models'), models = await response.json()
     if (!response.ok || !models.data?.some(model => model.id == 'chat')) throw new Error('LiteLLM chat alias is unavailable')
     ctx.vars.marketplaceLogger?.info?.({t: 'marketplaceE2eLiteLLM', models: models.data.map(model => model.id)}, {}, {ctx})
     for (const path of ['agents/e2eAgent', 'skills/e2eSkill']) {

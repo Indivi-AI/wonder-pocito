@@ -29,8 +29,11 @@ class MarketplaceE2EModel(Model):
         skill = re.search(r'<skill>.*?<name>(.*?)</name>', system, re.S)
         if not results and skill:
             return self.call('get_skill_instructions', {'skill_name': skill.group(1)}, 'skill')
+        reference = skill and 'get_skill_reference' in functions and re.search(r'"available_references":\s*\["([^"]+)"', '\n'.join(results))
+        if reference and len(results) == 1:
+            return self.call('get_skill_reference', {'skill_name': skill.group(1), 'reference_path': reference.group(1)}, 'reference')
         saved = next((item for name, item in functions.items() if not name.startswith('get_skill_')), None)
-        if saved and len(results) == bool(skill):
+        if saved and len(results) == bool(skill) + bool(reference):
             schema = saved.get('parameters') or {}
             args = {name: example(spec) for name, spec in schema.get('properties', {}).items() if name in schema.get('required', [])}
             return self.call(saved['name'], args, 'tool')
