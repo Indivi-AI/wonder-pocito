@@ -1,6 +1,6 @@
 import { spawn, execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, readFileSync, mkdirSync, writeFileSync, copyFileSync, constants } from 'node:fs'
+import { existsSync, readFileSync, mkdirSync, writeFileSync, copyFileSync, rmSync, constants } from 'node:fs'
 import { createServer } from 'node:net'
 import { dirname, resolve, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -8,12 +8,27 @@ import { parseEnv } from 'node:util'
 import { setTimeout as delay } from 'node:timers/promises'
 
 const pocito = resolve(dirname(fileURLToPath(import.meta.url)), '../..'), root = resolve(pocito, '../..')
+const envFile = join(pocito, '.env.onprem')
+const loadPocitoEnv = () => ({...(existsSync(envFile) ? parseEnv(readFileSync(envFile, 'utf8')) : {}), ...process.env})
+const pocitoStateDir = env => resolve(pocito, env.POCITO_DATA_DIR || '.local-data')
+const isProcessAlive = pid => {
+  if (!(pid > 0)) return false
+  try { process.kill(pid, 0); return true } catch { return false }
+}
+
+export async function shutdownPocito() {
+  const pidFile = join(pocitoStateDir(loadPocitoEnv()), 'pocito-dev.pid'), pid = Number(existsSync(pidFile) && readFileSync(pidFile, 'utf8'))
+  if (!isProcessAlive(pid)) { rmSync(pidFile, {force: true}); return console.log('Pocito is not running') }
+  process.kill(pid, 'SIGTERM')
+  for (let attempt = 0; attempt < 100 && isProcessAlive(pid); attempt++) await delay(100)
+  if (isProcessAlive(pid)) throw new Error(`Pocito ${pid} did not stop within 10 seconds`)
+  rmSync(pidFile, {force: true})
+  console.log('Pocito stopped')
+}
 
 export async function startPocito() {
-  const envFile = join(pocito, '.env.onprem')
   if (!existsSync(envFile)) copyFileSync(`${envFile}.example`, envFile, constants.COPYFILE_EXCL)
-  const env = { ...parseEnv(readFileSync(envFile, 'utf8')), ...process.env }
-  const state = resolve(pocito, env.POCITO_DATA_DIR || '.local-data'), host = env.POCITO_BIND_HOST || '127.0.0.1'
+  const env = loadPocitoEnv(), state = pocitoStateDir(env), host = env.POCITO_BIND_HOST || '127.0.0.1'
   const ports = { pocito: env.POCITO_PORT || '3000', marketplace: env.MARKETPLACE_PORT || '7777',
     agno: env.AGENT_OS_PORT || '7778', litellm: env.LITELLM_PORT || '4000', flapi: env.FLAPI_PORT || '6001' }
   const url = name => `http://localhost:${ports[name]}`
@@ -37,6 +52,9 @@ export async function startPocito() {
     LITELLM_LOCAL_MODEL_COST_MAP: 'True', LITELLM_LOCAL_POLICY_TEMPLATES: 'true', LITELLM_LOCAL_BLOG_POSTS: 'True'
   })
   mkdirSync(state, { recursive: true })
+  const pidFile = join(state, 'pocito-dev.pid'), previousPid = Number(existsSync(pidFile) && readFileSync(pidFile, 'utf8'))
+  if (isProcessAlive(previousPid)) throw new Error(`Pocito is already running (${previousPid})`)
+  writeFileSync(pidFile, String(process.pid))
   const children = new Set()
   let stopping = false
   const signal = (child, value) => { try { process.kill(-child.pid, value) } catch {} }
@@ -48,6 +66,7 @@ export async function startPocito() {
     const timer = setTimeout(() => active.forEach(child => signal(child, 'SIGKILL')), 5000)
     await Promise.allSettled(active.map(child => child.done))
     clearTimeout(timer)
+    rmSync(pidFile, {force: true})
     process.exit(code)
   }
   process.once('SIGINT', () => void stop(0))
@@ -149,4 +168,5 @@ export async function startPocito() {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) await startPocito()
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href)
+  await (process.argv.includes('--shutdown') ? shutdownPocito() : startPocito())

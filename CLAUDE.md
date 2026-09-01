@@ -116,8 +116,14 @@ jb6/react/react-utils.js - dsl and utils
 wonder/ui/room-applet-tests.js for examples
 
 - Public defaults to `/room/:roomId/applet/:appletName`; signed must explicitly use `/signed-room/:roomId/applet/:appletName`.
+- Stop Pocito and every service started by `npm run pocito-dev` with `npm run pocito-dev:shutdown` before restarting it.
 
-to setup applet for localhost just use fetch mcp like this example
+When iterating on a UI at localhost, open `localhost:3000/applet/:cmpId` - it serves any registered react-comp with a spec derived
+from the comp itself: no def file, no upload. Make sure the comp is imported from your `.jb6/entry-points-*.js`; persistence uses the fs room `room://dev`.
+This also scopes Marketplace requests to the `dev` room, so seed Marketplace assets there.
+Alternative harness: `localhost:3000/jb6_packages/react/react-comp-view.html?cmpId=<id>&urlsToLoad=@wonder/<path>.js` (bare viewer, needs `ctx-roomWUrl` for room comps).
+
+To bind an applet to a specific localhost room, PUT its def json via fetch mcp like this example
 wFetch:{
     "url": "room:fs//testPublicRoom/applets/myApplet.json",
     "method": "PUT",
@@ -165,4 +171,3 @@ Profile keys use `{$: 'type<dsl>componentId'}` syntax. All `$` values must match
 - Use `clearCache: true` param to force re-run
 
 - On Linux dev machine, always prepend `SET memory_limit='4GB';` before any DuckDB parquet COPY/compression.
-

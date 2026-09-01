@@ -1,4 +1,4 @@
-import { dsls, ns } from '@jb6/core'
+import { dsls, ns, coreUtils } from '@jb6/core'
 import '@jb6/react/tests/react-testers.js'
 import '@jb6/mcp/mcp-jb-tools.js'
 import '@wonder/db/oauth2.js'
@@ -15,7 +15,7 @@ import './room-test-applets.js'
 
 const {
   tgp: { any: { typeAdapter }, 'ctx-enricher': { Var, testUser } },
-  common: { Data, boolean: { and, contains }, data: { first, join, pipe } },
+  common: { Data, boolean: { and, contains, equals }, data: { asIs, first, join, pipe } },
   mcp: { tool: { roomAppletHarvest, uploadRoomApplet } },
   test: { Test, test: { dataTest, reactTest } },
   react: { 'react-comp': { storeCountApplet }, 'ui-action': { click, waitForText } }
@@ -34,6 +34,31 @@ Test('roomAppletTest.cubeQuery.wasm', {
     userActions: waitForText('storeCount'),
     logger: 'roomLogger,biLogger,colsCacheLogger',
     timeout: 12000
+  })
+})
+
+Test('roomAppletTest.liveRepo.devAppletRoute', {
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: async ctx => {
+      const { serveAppletPage } = await import('../../../cloud-services/express-server/lib/room-lambda-and-applet.js')
+      const { setupLiveRepoDevApplet } = await import('../../../cloud-services/express-server/lib/room-lambda-and-applet-live-repo.js')
+      const routes = {}
+      setupLiveRepoDevApplet({ get: (path, handler) => routes[path] = handler }, { serveAppletPage, imports: {} })
+      const serve = name => new Promise(resolve => routes['/applet/:name']({ params: { name } }, {
+        code: 200, set() { return this }, status(code) { this.code = code; return this },
+        json(body) { resolve({ status: this.code, ...body }) }, send(html) { resolve({ status: this.code, html }) }
+      }))
+      const derived = await serve('summaryApplet'), missing = await serve('noSuchComp')
+      return { result: {
+        derivedServes: ['"cmpId":"summaryApplet"', '"urlsToLoad":"@wonder/db/tests/room-test-applets.js"', '"roomWUrl":"room://dev"', '"liveRepo":true']
+          .every(part => derived.html?.includes(part)),
+        missingStatus: missing.status
+      }, ...coreUtils.harvestLogs(ctx) }
+    },
+    expectedResult: equals('%result%', asIs({derivedServes: true, missingStatus: 404})),
+    timeout: 20000,
+    logger: 'dbLogger'
   })
 })
 

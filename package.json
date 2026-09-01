@@ -20,7 +20,8 @@
     "server-secrets:push:prod": "node scripts/secrets.js push prod",
     "update-jb6": "bash ./scripts/update-jb6.sh",
     "pocito-update": "bash scripts/sync-pocito.sh",
-    "pocito-dev": "POCITO_PYTHON=3.10 POCITO_NPM_INSTALL='install --omit=optional' node solutions/pocito/on-prem/dev/pocito-dev.js"
+    "pocito-dev": "POCITO_PYTHON=3.10 POCITO_NPM_INSTALL='install --omit=optional' node solutions/pocito/on-prem/dev/pocito-dev.js",
+    "pocito-dev:shutdown": "node solutions/pocito/on-prem/dev/pocito-dev.js --shutdown"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.13.2",
