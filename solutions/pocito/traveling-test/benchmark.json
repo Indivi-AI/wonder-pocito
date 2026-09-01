@@ -1,0 +1,32 @@
+{
+  "id": "northstar-loom-tel-aviv-v1",
+  "title": "Northstar Loom Tel Aviv traveling-agent arena",
+  "scenario_date": "2026-10-22",
+  "questions": [
+    {
+      "id": "restaurant-for-tom",
+      "prompt": "Find a restaurant that Tom loves.",
+      "required_package_ids": [101, 103],
+      "supporting_package_ids": [102],
+      "expected_answer": "Opa, 8 Ha-Halutzim Street, Tel Aviv-Yafo.",
+      "reasoning": "Tom avoids meat and fish, accepts dairy and eggs, requests VGML, and likes aubergine with fermented chili. Opa is the matching plant-centered restaurant.",
+      "evidence": ["mail-014", "mail-023", "mail-030", "mail-040", "benchmark-opa", "post-006"],
+      "required_facts": [
+        "Tom's dietary restriction",
+        "Tom's flavor preference",
+        "Opa's plant-centered menu",
+        "Opa's address"
+      ]
+    },
+    {
+      "id": "john-lost-phone",
+      "prompt": "John lost his phone. Help him find it.",
+      "required_package_ids": [102, 104],
+      "supporting_package_ids": [101],
+      "expected_answer": "Check The Norman Library Bar's window-side green banquette, partly under the blue pilot folder.",
+      "reasoning": "The itinerary places John at that banquette until he leaves first at 16:20. Priya's 16:11 post notes his yellow phone under the blue folder there.",
+      "evidence": ["event-013", "event-014", "post-008", "mail-059", "mail-081", "mail-082"],
+      "required_facts": ["John attended the debrief", "John left first", "phone appearance", "phone's position in the post"]
+    }
+  ]
+}

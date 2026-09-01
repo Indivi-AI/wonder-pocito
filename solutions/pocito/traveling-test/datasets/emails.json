@@ -1,0 +1,1949 @@
+[
+  {
+    "id": "mail-001",
+    "thread_id": "thread-001",
+    "sent_at": "2026-08-03T08:15:00+01:00",
+    "from": "hannah.cole@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "tom.becker@northstarloom.example",
+      "john.okafor@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Tel Aviv trip: holding the week",
+    "body": "I have held Monday 19 October through Thursday 22 October for the Cedar Mobility, BlueHarbor, and investor conversations. Please keep customer calls movable.",
+    "labels": [
+      "inbox",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-002",
+    "thread_id": "thread-019",
+    "sent_at": "2026-08-03T10:42:00+01:00",
+    "from": "marcus.reed@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example"
+    ],
+    "cc": [
+      "hannah.cole@northstarloom.example"
+    ],
+    "subject": "Q3 close: board pack inputs",
+    "body": "Could you send the updated pipeline split and October hiring assumptions by Friday? I am locking the board pack after the close.",
+    "labels": [
+      "inbox",
+      "finance"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-003",
+    "thread_id": "thread-021",
+    "sent_at": "2026-08-04T09:05:00+01:00",
+    "from": "lea.novak@northstarloom.example",
+    "to": [
+      "tom.becker@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "LoomRoute: exception queue review",
+    "body": "The new exception queue keeps the reason trace visible while an operator edits the plan. I would like product eyes on the override wording.",
+    "labels": [
+      "inbox",
+      "product"
+    ],
+    "attachments": [
+      "exception-queue-notes.pdf"
+    ]
+  },
+  {
+    "id": "mail-004",
+    "thread_id": "thread-023",
+    "sent_at": "2026-08-04T14:20:00+01:00",
+    "from": "nina.rossi@northstarloom.example",
+    "to": [
+      "john.okafor@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Customer reference: Vela Foods",
+    "body": "Vela is comfortable describing the late-delivery reduction work, provided we call them a design customer rather than naming the carrier.",
+    "labels": [
+      "inbox",
+      "customer"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-005",
+    "thread_id": "thread-020",
+    "sent_at": "2026-08-05T11:30:00+01:00",
+    "from": "arun.mehta@northstarloom.example",
+    "to": [
+      "priya.shah@northstarloom.example",
+      "lea.novak@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Security review checklist",
+    "body": "For the next pilot pack, please cover SSO, audit events, retention controls, and the explicit statement that no production credentials enter the demo.",
+    "labels": [
+      "inbox",
+      "security"
+    ],
+    "attachments": [
+      "security-review-checklist.xlsx"
+    ]
+  },
+  {
+    "id": "mail-006",
+    "thread_id": "thread-001",
+    "sent_at": "2026-08-06T16:05:00+01:00",
+    "from": "tom.becker@northstarloom.example",
+    "to": [
+      "hannah.cole@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Re: travel dates",
+    "body": "Those dates work. I can take the product narrative and the operator workflow; Priya and I will make the synthetic shipment story feel real.",
+    "labels": [
+      "sent",
+      "travel",
+      "product"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-007",
+    "thread_id": "thread-010",
+    "sent_at": "2026-08-07T08:50:00+01:00",
+    "from": "elena.marin@northstarloom.example",
+    "to": [
+      "john.okafor@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Cedar Mobility context",
+    "body": "Cedar wants explainability and manual override, not another opaque score. Please frame the pilot around fewer late-delivery decisions and a measurable baseline.",
+    "labels": [
+      "sent",
+      "travel",
+      "customer"
+    ],
+    "attachments": [
+      "cedar-discovery-brief.docx"
+    ]
+  },
+  {
+    "id": "mail-008",
+    "thread_id": "thread-024",
+    "sent_at": "2026-08-07T13:10:00+01:00",
+    "from": "hannah.cole@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example"
+    ],
+    "cc": [
+      "marcus.reed@northstarloom.example"
+    ],
+    "subject": "Recruiting: solutions engineer shortlist",
+    "body": "The shortlist now has three candidates with warehouse integrations experience. I have put first interviews on your calendar for next week.",
+    "labels": [
+      "inbox",
+      "customer"
+    ],
+    "attachments": [
+      "solutions-engineer-shortlist.pdf"
+    ]
+  },
+  {
+    "id": "mail-009",
+    "thread_id": "thread-013",
+    "sent_at": "2026-08-10T09:25:00+01:00",
+    "from": "priya.shah@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "tom.becker@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "BlueHarbor integration questions",
+    "body": "I have a first pass on API rate limits, webhook retries, and EU-Israel data residency. Their sandbox shape will determine how much we can prove in October.",
+    "labels": [
+      "sent",
+      "travel",
+      "security"
+    ],
+    "attachments": [
+      "blueharbor-integration-questions.md"
+    ]
+  },
+  {
+    "id": "mail-010",
+    "thread_id": "thread-010",
+    "sent_at": "2026-08-10T15:40:00+01:00",
+    "from": "dana.shalev@cedarmobility.example",
+    "to": [
+      "elena.marin@northstarloom.example"
+    ],
+    "cc": [
+      "amir.katz@cedarmobility.example"
+    ],
+    "subject": "Cedar Mobility introduction",
+    "body": "We would like to understand how LoomRoute explains a recommendation to a dispatch manager. A short working session in Tel Aviv would be useful.",
+    "labels": [
+      "inbox",
+      "customer"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-011",
+    "thread_id": "thread-010",
+    "sent_at": "2026-08-11T08:05:00+01:00",
+    "from": "elena.marin@northstarloom.example",
+    "to": [
+      "dana.shalev@cedarmobility.example"
+    ],
+    "cc": [
+      "amir.katz@cedarmobility.example"
+    ],
+    "subject": "Re: Cedar Mobility introduction",
+    "body": "That is exactly the conversation we want. We will bring a synthetic shipment set and leave room for your operators to challenge each decision.",
+    "labels": [
+      "sent",
+      "customer",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-012",
+    "thread_id": "thread-017",
+    "sent_at": "2026-08-11T16:30:00+01:00",
+    "from": "marcus.reed@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "john.okafor@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Dune Ventures information request",
+    "body": "Dune asked for runway, pipeline concentration, and the conversion assumptions behind the next two quarters. Keep customer names redacted in the first pass.",
+    "labels": [
+      "inbox",
+      "finance",
+      "travel"
+    ],
+    "attachments": [
+      "dune-redacted-metrics.xlsx"
+    ]
+  },
+  {
+    "id": "mail-013",
+    "thread_id": "thread-017",
+    "sent_at": "2026-08-12T10:15:00+01:00",
+    "from": "john.okafor@northstarloom.example",
+    "to": [
+      "lior.navon@duneventures.example"
+    ],
+    "cc": [
+      "elena.marin@northstarloom.example"
+    ],
+    "subject": "Re: Tel Aviv introduction",
+    "body": "Happy to share the redacted operating metrics before we meet. Elena will cover the Series A story and I will walk through partner conversion.",
+    "labels": [
+      "sent",
+      "travel",
+      "finance"
+    ],
+    "attachments": [
+      "northstarloom-company-overview.pdf"
+    ]
+  },
+  {
+    "id": "mail-014",
+    "thread_id": "thread-005",
+    "sent_at": "2026-08-13T07:45:00+01:00",
+    "from": "tom.becker@northstarloom.example",
+    "to": [
+      "hannah.cole@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Flight meal preference",
+    "body": "Could you mark my outbound and return flights for the VGML meal? It is easy to miss on short routes, so please confirm it appears on both reservations.",
+    "labels": [
+      "sent",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-015",
+    "thread_id": "thread-005",
+    "sent_at": "2026-08-13T12:05:00+01:00",
+    "from": "hannah.cole@northstarloom.example",
+    "to": [
+      "tom.becker@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Re: Flight meal preference",
+    "body": "Done for both sectors and noted against your passenger record. The confirmation is in the travel folder.",
+    "labels": [
+      "inbox",
+      "travel",
+      "automated"
+    ],
+    "attachments": [
+      "flight-meal-confirmation.pdf"
+    ]
+  },
+  {
+    "id": "mail-016",
+    "thread_id": "thread-023",
+    "sent_at": "2026-08-14T09:00:00+01:00",
+    "from": "nina.rossi@northstarloom.example",
+    "to": [
+      "john.okafor@northstarloom.example",
+      "elena.marin@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Vela Foods renewal notes",
+    "body": "Their renewal is on track, but the warehouse team wants a CSV export of reason codes. John, can you find fifteen minutes with them next week?",
+    "labels": [
+      "inbox",
+      "customer"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-017",
+    "thread_id": "thread-021",
+    "sent_at": "2026-08-14T15:25:00+01:00",
+    "from": "lea.novak@northstarloom.example",
+    "to": [
+      "tom.becker@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Roadmap trade-off",
+    "body": "I recommend delaying the carrier score redesign until after the explainability instrumentation ships. The latter is the story Cedar will actually test.",
+    "labels": [
+      "inbox",
+      "product"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-018",
+    "thread_id": "thread-004",
+    "sent_at": "2026-08-17T08:35:00+01:00",
+    "from": "hannah.cole@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "tom.becker@northstarloom.example",
+      "john.okafor@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Tel Aviv hotel hold",
+    "body": "The Norman Tel Aviv is holding four rooms at 23-25 Nachmani Street from 19 to 22 October. Please send passport-name spellings by Wednesday.",
+    "labels": [
+      "inbox",
+      "travel"
+    ],
+    "attachments": [
+      "norman-room-hold.pdf"
+    ]
+  },
+  {
+    "id": "mail-019",
+    "thread_id": "thread-020",
+    "sent_at": "2026-08-17T11:45:00+01:00",
+    "from": "arun.mehta@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Synthetic data boundary",
+    "body": "The demo bundle can include fabricated consignments and generated carrier names. Please do not paste a customer export into the workshop laptop.",
+    "labels": [
+      "inbox",
+      "security",
+      "travel"
+    ],
+    "attachments": [
+      "synthetic-data-boundary.pdf"
+    ]
+  },
+  {
+    "id": "mail-020",
+    "thread_id": "thread-013",
+    "sent_at": "2026-08-18T09:10:00+01:00",
+    "from": "yael.ben-david@blueharbor.example",
+    "to": [
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [
+      "eitan.mor@blueharbor.example"
+    ],
+    "subject": "BlueHarbor sandbox agenda",
+    "body": "We can show the port-event feed and discuss retries. Our main concerns are rate limits, webhook replay, and where tenant data is processed.",
+    "labels": [
+      "inbox",
+      "customer",
+      "travel"
+    ],
+    "attachments": [
+      "blueharbor-sandbox-agenda.pdf"
+    ]
+  },
+  {
+    "id": "mail-021",
+    "thread_id": "thread-013",
+    "sent_at": "2026-08-18T14:35:00+01:00",
+    "from": "priya.shah@northstarloom.example",
+    "to": [
+      "yael.ben-david@blueharbor.example"
+    ],
+    "cc": [
+      "eitan.mor@blueharbor.example"
+    ],
+    "subject": "Re: BlueHarbor sandbox agenda",
+    "body": "Great. I will bring a sequence diagram with a bounded retry policy and a clear answer on tenant-region routing.",
+    "labels": [
+      "sent",
+      "customer",
+      "travel"
+    ],
+    "attachments": [
+      "loomroute-event-sequence.png"
+    ]
+  },
+  {
+    "id": "mail-022",
+    "thread_id": "thread-002",
+    "sent_at": "2026-08-19T08:20:00+01:00",
+    "from": "hannah.cole@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "tom.becker@northstarloom.example",
+      "john.okafor@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Draft Tel Aviv run sheet",
+    "body": "I am building the run sheet around Cedar, Dune, BlueHarbor, and the Vector Labs reception. Please flag immovable customer commitments today.",
+    "labels": [
+      "inbox",
+      "travel"
+    ],
+    "attachments": [
+      "tel-aviv-run-sheet-v1.xlsx"
+    ]
+  },
+  {
+    "id": "mail-023",
+    "thread_id": "thread-027",
+    "sent_at": "2026-08-19T13:40:00+01:00",
+    "from": "tom.becker@northstarloom.example",
+    "to": [
+      "priya.shah@northstarloom.example",
+      "hannah.cole@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Workshop lunch constraints",
+    "body": "For the workshop soup, can we remove chicken stock? Dairy and eggs are fine for me, but no fish or meat. I would rather avoid a last-minute scramble.",
+    "labels": [
+      "sent",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-024",
+    "thread_id": "thread-027",
+    "sent_at": "2026-08-20T10:05:00+01:00",
+    "from": "hannah.cole@northstarloom.example",
+    "to": [
+      "tom.becker@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Re: Workshop lunch constraints",
+    "body": "Noted. I asked the caterer for a vegetable stock and separate dairy garnish. John requested the chicken option, so they will label both clearly.",
+    "labels": [
+      "inbox",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-025",
+    "thread_id": "thread-017",
+    "sent_at": "2026-08-20T15:15:00+01:00",
+    "from": "lior.navon@duneventures.example",
+    "to": [
+      "john.okafor@northstarloom.example"
+    ],
+    "cc": [
+      "noa.barak@duneventures.example"
+    ],
+    "subject": "Dune questions before October",
+    "body": "Could you cover defensibility beyond the model, customer concentration, and what converts a design partner into a paid rollout? Noa will join from our growth team.",
+    "labels": [
+      "inbox",
+      "finance",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-026",
+    "thread_id": "thread-018",
+    "sent_at": "2026-08-21T08:40:00+01:00",
+    "from": "elena.marin@northstarloom.example",
+    "to": [
+      "marcus.reed@northstarloom.example",
+      "john.okafor@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Series A narrative draft",
+    "body": "The through-line is explainable operational decisions, not generic AI. I will connect the Cedar outcome to a repeatable path across fleet and warehouse teams.",
+    "labels": [
+      "sent",
+      "finance",
+      "travel"
+    ],
+    "attachments": [
+      "series-a-narrative-v2.docx"
+    ]
+  },
+  {
+    "id": "mail-027",
+    "thread_id": "thread-019",
+    "sent_at": "2026-08-21T16:05:00+01:00",
+    "from": "marcus.reed@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Budget outlook",
+    "body": "August spend is within plan. If the pilot converts on schedule, the onboarding work fits the current hiring model without pulling forward the fundraise.",
+    "labels": [
+      "inbox",
+      "finance"
+    ],
+    "attachments": [
+      "august-budget-outlook.xlsx"
+    ]
+  },
+  {
+    "id": "mail-028",
+    "thread_id": "thread-004",
+    "sent_at": "2026-08-24T09:30:00+01:00",
+    "from": "hannah.cole@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "tom.becker@northstarloom.example",
+      "john.okafor@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Passport names received",
+    "body": "All four passport spellings are now with the travel desk. I will distribute ticket numbers when the agency finishes ticketing.",
+    "labels": [
+      "inbox",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-029",
+    "thread_id": "thread-028",
+    "sent_at": "2026-08-24T13:55:00+01:00",
+    "from": "michal.tal@vectorlabs.example",
+    "to": [
+      "elena.marin@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Vector Labs reception",
+    "body": "We would be delighted to have the Northstar Loom team at our 21 October reception at the Tel Aviv Museum of Art. Michal Tal, events lead.",
+    "labels": [
+      "inbox",
+      "travel"
+    ],
+    "attachments": [
+      "vector-reception-invitation.ics"
+    ]
+  },
+  {
+    "id": "mail-030",
+    "thread_id": "thread-025",
+    "sent_at": "2026-08-25T08:15:00+01:00",
+    "from": "tom.becker@northstarloom.example",
+    "to": [
+      "john.okafor@northstarloom.example",
+      "elena.marin@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Tuesday dinner idea",
+    "body": "I keep thinking about smoked aubergine and fermented chili as the ideal dinner after a day of demos. Something bold but not heavy would be perfect.",
+    "labels": [
+      "sent",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-031",
+    "thread_id": "thread-025",
+    "sent_at": "2026-08-25T11:20:00+01:00",
+    "from": "john.okafor@northstarloom.example",
+    "to": [
+      "tom.becker@northstarloom.example"
+    ],
+    "cc": [
+      "hannah.cole@northstarloom.example"
+    ],
+    "subject": "Re: Dinner idea",
+    "body": "I will ask for options near Rothschild and the hotel. Elena is keen on one team dinner and one partner dinner, so we can make both nights distinct.",
+    "labels": [
+      "inbox",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-032",
+    "thread_id": "thread-016",
+    "sent_at": "2026-08-26T09:05:00+01:00",
+    "from": "roni.eshed@sosa.example",
+    "to": [
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [
+      "eitan.mor@blueharbor.example"
+    ],
+    "subject": "SOSA room confirmation",
+    "body": "SOSA can host the BlueHarbor integration session and the afternoon architecture workshop on 20 October. We will have a screen and whiteboard ready.",
+    "labels": [
+      "inbox",
+      "travel"
+    ],
+    "attachments": [
+      "sosa-room-confirmation.pdf"
+    ]
+  },
+  {
+    "id": "mail-033",
+    "thread_id": "thread-016",
+    "sent_at": "2026-08-26T14:25:00+01:00",
+    "from": "lea.novak@northstarloom.example",
+    "to": [
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Architecture workshop ownership",
+    "body": "You own the event contract and regional routing. I will join remotely for the retry discussion, then review the written decisions next morning.",
+    "labels": [
+      "inbox",
+      "product",
+      "security"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-034",
+    "thread_id": "thread-005",
+    "sent_at": "2026-08-27T10:45:00+01:00",
+    "from": "hannah.cole@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "tom.becker@northstarloom.example",
+      "john.okafor@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Flight confirmations",
+    "body": "Ticketing is complete for London to Tel Aviv on 18 October and the return on 22 October. The working meetings remain 19-22 October.",
+    "labels": [
+      "inbox",
+      "travel",
+      "automated"
+    ],
+    "attachments": [
+      "northstarloom-flight-confirmations.pdf"
+    ]
+  },
+  {
+    "id": "mail-035",
+    "thread_id": "thread-018",
+    "sent_at": "2026-08-27T16:10:00+01:00",
+    "from": "nina.rossi@northstarloom.example",
+    "to": [
+      "john.okafor@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Partner follow-up template",
+    "body": "I made a short follow-up template for the pilot decision, technical risks, and named next step. It should keep the October notes actionable.",
+    "labels": [
+      "inbox",
+      "customer"
+    ],
+    "attachments": [
+      "partner-follow-up-template.docx"
+    ]
+  },
+  {
+    "id": "mail-036",
+    "thread_id": "thread-020",
+    "sent_at": "2026-08-28T08:55:00+01:00",
+    "from": "arun.mehta@northstarloom.example",
+    "to": [
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "DPA review points",
+    "body": "Please make the DPA owner and retention period explicit in the Cedar closeout. Security can turn comments around within two business days.",
+    "labels": [
+      "inbox",
+      "security",
+      "customer"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-037",
+    "thread_id": "thread-019",
+    "sent_at": "2026-08-28T12:30:00+01:00",
+    "from": "marcus.reed@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "john.okafor@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Pipeline concentration snapshot",
+    "body": "The top three accounts represent 41 percent of qualified pipeline, down from 48 percent last month. The story improves if we show the active mid-market funnel.",
+    "labels": [
+      "inbox",
+      "finance"
+    ],
+    "attachments": [
+      "pipeline-concentration-august.csv"
+    ]
+  },
+  {
+    "id": "mail-038",
+    "thread_id": "thread-010",
+    "sent_at": "2026-08-31T09:15:00+01:00",
+    "from": "elena.marin@northstarloom.example",
+    "to": [
+      "dana.shalev@cedarmobility.example",
+      "amir.katz@cedarmobility.example"
+    ],
+    "cc": [],
+    "subject": "Cedar session shape",
+    "body": "We suggest a 90-minute discovery using three synthetic dispatch cases, followed by a definition of success. We will leave manual overrides visible throughout.",
+    "labels": [
+      "sent",
+      "customer",
+      "travel"
+    ],
+    "attachments": [
+      "cedar-session-outline.pdf"
+    ]
+  },
+  {
+    "id": "mail-039",
+    "thread_id": "thread-010",
+    "sent_at": "2026-08-31T15:40:00+01:00",
+    "from": "amir.katz@cedarmobility.example",
+    "to": [
+      "elena.marin@northstarloom.example"
+    ],
+    "cc": [
+      "dana.shalev@cedarmobility.example"
+    ],
+    "subject": "Re: Cedar session shape",
+    "body": "The outline works. We would also like a view of the baseline late-delivery decisions so the pilot can be judged against something operational.",
+    "labels": [
+      "inbox",
+      "customer",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-040",
+    "thread_id": "thread-025",
+    "sent_at": "2026-09-01T08:10:00+01:00",
+    "from": "tom.becker@northstarloom.example",
+    "to": [
+      "hannah.cole@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Tuesday dinner brief",
+    "body": "The plant-centered tasting option sounds right. I like a menu that puts vegetables first, and it should make a memorable close to the customer day.",
+    "labels": [
+      "sent",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-041",
+    "thread_id": "thread-026",
+    "sent_at": "2026-09-01T11:50:00+01:00",
+    "from": "hannah.cole@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "tom.becker@northstarloom.example",
+      "john.okafor@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Provisional dinner holds",
+    "body": "I have a provisional hold at Claro on 19 October and Opa on 20 October. I will release the second option if the partner schedule changes.",
+    "labels": [
+      "inbox",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-042",
+    "thread_id": "thread-014",
+    "sent_at": "2026-09-02T09:35:00+01:00",
+    "from": "priya.shah@northstarloom.example",
+    "to": [
+      "eitan.mor@blueharbor.example"
+    ],
+    "cc": [
+      "yael.ben-david@blueharbor.example"
+    ],
+    "subject": "Webhook replay example",
+    "body": "Attached is a redacted event sequence. Could you confirm whether replay tokens expire independently of the original webhook window?",
+    "labels": [
+      "sent",
+      "customer",
+      "security"
+    ],
+    "attachments": [
+      "webhook-replay-sequence.pdf"
+    ]
+  },
+  {
+    "id": "mail-043",
+    "thread_id": "thread-014",
+    "sent_at": "2026-09-02T14:10:00+01:00",
+    "from": "eitan.mor@blueharbor.example",
+    "to": [
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Re: Webhook replay example",
+    "body": "They do expire independently. I will bring the exact interval and our sandbox quota to the technical session.",
+    "labels": [
+      "inbox",
+      "customer",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-044",
+    "thread_id": "thread-017",
+    "sent_at": "2026-09-03T08:45:00+01:00",
+    "from": "john.okafor@northstarloom.example",
+    "to": [
+      "noa.barak@duneventures.example"
+    ],
+    "cc": [
+      "lior.navon@duneventures.example"
+    ],
+    "subject": "Dune metrics preview",
+    "body": "Attached is the redacted view of pipeline, runway, and pilot conversion. We can unpack the moat question around workflow data and operator trust.",
+    "labels": [
+      "sent",
+      "finance",
+      "travel"
+    ],
+    "attachments": [
+      "dune-metrics-preview.pdf"
+    ]
+  },
+  {
+    "id": "mail-045",
+    "thread_id": "thread-017",
+    "sent_at": "2026-09-03T16:30:00+01:00",
+    "from": "noa.barak@duneventures.example",
+    "to": [
+      "john.okafor@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Re: Dune metrics preview",
+    "body": "Thanks. The operating lens is useful. We would like to understand how much of the product remains defensible when customers change carriers.",
+    "labels": [
+      "inbox",
+      "finance",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-046",
+    "thread_id": "thread-007",
+    "sent_at": "2026-09-04T10:20:00+01:00",
+    "from": "elena.marin@northstarloom.example",
+    "to": [
+      "hannah.cole@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Ground transport",
+    "body": "Please keep airport transfers flexible. We may need a quiet buffer before the Cedar session rather than a tightly scheduled city tour.",
+    "labels": [
+      "sent",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-047",
+    "thread_id": "thread-007",
+    "sent_at": "2026-09-04T15:05:00+01:00",
+    "from": "hannah.cole@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Re: Ground transport",
+    "body": "Understood. I put flexible transfer requests against the hotel and left the afternoons open where the run sheet allows.",
+    "labels": [
+      "inbox",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-048",
+    "thread_id": "thread-021",
+    "sent_at": "2026-09-07T09:00:00+01:00",
+    "from": "lea.novak@northstarloom.example",
+    "to": [
+      "tom.becker@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Demo build freeze",
+    "body": "I will freeze the synthetic demo build on 9 October. Please log copy changes in the product board before then so QA can test the same story.",
+    "labels": [
+      "inbox",
+      "product"
+    ],
+    "attachments": [
+      "synthetic-demo-checklist.xlsx"
+    ]
+  },
+  {
+    "id": "mail-049",
+    "thread_id": "thread-021",
+    "sent_at": "2026-09-07T13:25:00+01:00",
+    "from": "tom.becker@northstarloom.example",
+    "to": [
+      "lea.novak@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Re: Demo build freeze",
+    "body": "I will keep the operator language stable. One request: make the reason trace readable without opening a second panel.",
+    "labels": [
+      "sent",
+      "product"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-050",
+    "thread_id": "thread-025",
+    "sent_at": "2026-09-08T08:30:00+01:00",
+    "from": "hannah.cole@northstarloom.example",
+    "to": [
+      "tom.becker@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Restaurant preference check",
+    "body": "The two dinner holds are confirmed as vegetarian-friendly. Let me know if you need any other dietary notes passed to the kitchens.",
+    "labels": [
+      "inbox",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-051",
+    "thread_id": "thread-023",
+    "sent_at": "2026-09-08T14:45:00+01:00",
+    "from": "nina.rossi@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Customer success dashboard",
+    "body": "The new dashboard separates adoption from alert volume. I am testing whether the account team can spot a stalled rollout without asking analytics.",
+    "labels": [
+      "inbox",
+      "customer"
+    ],
+    "attachments": [
+      "customer-success-dashboard.png"
+    ]
+  },
+  {
+    "id": "mail-052",
+    "thread_id": "thread-019",
+    "sent_at": "2026-09-09T10:10:00+01:00",
+    "from": "marcus.reed@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Insurance renewal",
+    "body": "The cyber policy renewal needs the latest security questionnaire. Arun has the technical answers; I only need the signed officer declaration.",
+    "labels": [
+      "inbox",
+      "finance",
+      "security"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-053",
+    "thread_id": "thread-019",
+    "sent_at": "2026-09-09T15:55:00+01:00",
+    "from": "arun.mehta@northstarloom.example",
+    "to": [
+      "marcus.reed@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Re: Insurance renewal",
+    "body": "I sent the questionnaire answers and confirmed that customer payloads are encrypted in transit and at rest. The officer declaration can follow.",
+    "labels": [
+      "sent",
+      "security"
+    ],
+    "attachments": [
+      "cyber-questionnaire-answers.pdf"
+    ]
+  },
+  {
+    "id": "mail-054",
+    "thread_id": "thread-002",
+    "sent_at": "2026-09-10T08:05:00+01:00",
+    "from": "hannah.cole@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "tom.becker@northstarloom.example",
+      "john.okafor@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "October run sheet v2",
+    "body": "The current plan has Cedar on Monday, BlueHarbor on Tuesday, the investor lunch on Wednesday, and the final review Thursday morning.",
+    "labels": [
+      "inbox",
+      "travel"
+    ],
+    "attachments": [
+      "tel-aviv-run-sheet-v2.xlsx"
+    ]
+  },
+  {
+    "id": "mail-055",
+    "thread_id": "thread-018",
+    "sent_at": "2026-09-10T13:15:00+01:00",
+    "from": "elena.marin@northstarloom.example",
+    "to": [
+      "john.okafor@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Partner meeting roles",
+    "body": "You open the Dune conversation and close with the pilot-to-revenue path. I will handle company direction; keep the discussion concrete and short.",
+    "labels": [
+      "sent",
+      "travel",
+      "finance"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-056",
+    "thread_id": "thread-008",
+    "sent_at": "2026-09-11T09:40:00+01:00",
+    "from": "tom.becker@northstarloom.example",
+    "to": [
+      "hannah.cole@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Presentation equipment",
+    "body": "Can you confirm the rooms have HDMI and reliable guest Wi-Fi? I will carry the backup deck locally in case the venue network is unhelpful.",
+    "labels": [
+      "sent",
+      "travel",
+      "product"
+    ],
+    "attachments": [
+      "tel-aviv-equipment-list.txt"
+    ]
+  },
+  {
+    "id": "mail-057",
+    "thread_id": "thread-008",
+    "sent_at": "2026-09-11T16:20:00+01:00",
+    "from": "roni.eshed@sosa.example",
+    "to": [
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Re: Presentation equipment",
+    "body": "Both SOSA rooms have HDMI, guest Wi-Fi, and a whiteboard. I will be there at 08:30 on Tuesday to let the group in.",
+    "labels": [
+      "inbox",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-058",
+    "thread_id": "thread-022",
+    "sent_at": "2026-09-14T08:25:00+01:00",
+    "from": "lea.novak@northstarloom.example",
+    "to": [
+      "tom.becker@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Operator research synthesis",
+    "body": "The strongest pattern is that dispatchers trust a visible reason and a reversible action. I have folded both into the demo script.",
+    "labels": [
+      "inbox",
+      "product"
+    ],
+    "attachments": [
+      "operator-research-synthesis.pdf"
+    ]
+  },
+  {
+    "id": "mail-059",
+    "thread_id": "thread-009",
+    "sent_at": "2026-09-14T14:50:00+01:00",
+    "from": "john.okafor@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "hannah.cole@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Phone case for demo day",
+    "body": "I found a bright sunflower-yellow case for my black Pixel. Is it too loud for the Cedar demo? I can swap it if we want a more subdued table.",
+    "labels": [
+      "sent",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-060",
+    "thread_id": "thread-009",
+    "sent_at": "2026-09-15T09:35:00+01:00",
+    "from": "hannah.cole@northstarloom.example",
+    "to": [
+      "john.okafor@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Re: Phone case for demo day",
+    "body": "Keep it. It will be easy to spot among chargers, and it is more cheerful than another black accessory.",
+    "labels": [
+      "inbox",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-061",
+    "thread_id": "thread-015",
+    "sent_at": "2026-09-15T16:00:00+01:00",
+    "from": "priya.shah@northstarloom.example",
+    "to": [
+      "arun.mehta@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Residency wording",
+    "body": "For BlueHarbor, I will say tenant records remain in the selected region and that the sandbox contains no production identifiers. Please sanity-check the wording.",
+    "labels": [
+      "sent",
+      "security",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-062",
+    "thread_id": "thread-015",
+    "sent_at": "2026-09-16T10:20:00+01:00",
+    "from": "arun.mehta@northstarloom.example",
+    "to": [
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Re: Residency wording",
+    "body": "That wording is accurate. Add that audit events are retained separately from operational payloads, with the period agreed in the DPA.",
+    "labels": [
+      "inbox",
+      "security"
+    ],
+    "attachments": [
+      "residency-wording-review.docx"
+    ]
+  },
+  {
+    "id": "mail-063",
+    "thread_id": "thread-002",
+    "sent_at": "2026-09-16T15:05:00+01:00",
+    "from": "hannah.cole@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "tom.becker@northstarloom.example",
+      "john.okafor@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Calendar blocks published",
+    "body": "The detailed calendar blocks are published with travel buffers. Please treat the Tuesday SOSA workshop as a single customer day even though it has two sessions.",
+    "labels": [
+      "inbox",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-064",
+    "thread_id": "thread-011",
+    "sent_at": "2026-09-17T08:45:00+01:00",
+    "from": "elena.marin@northstarloom.example",
+    "to": [
+      "tom.becker@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Cedar success metrics",
+    "body": "Propose three measures: decision latency, late-delivery decisions avoided, and override acceptance. We can refine the thresholds with Dana and Amir.",
+    "labels": [
+      "sent",
+      "travel",
+      "customer"
+    ],
+    "attachments": [
+      "cedar-success-metrics.xlsx"
+    ]
+  },
+  {
+    "id": "mail-065",
+    "thread_id": "thread-011",
+    "sent_at": "2026-09-17T13:30:00+01:00",
+    "from": "dana.shalev@cedarmobility.example",
+    "to": [
+      "elena.marin@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Re: Cedar success metrics",
+    "body": "Those measures match our operators' concerns. We would like the first week to establish the baseline before any target is declared.",
+    "labels": [
+      "inbox",
+      "customer",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-066",
+    "thread_id": "thread-026",
+    "sent_at": "2026-09-18T09:15:00+01:00",
+    "from": "hannah.cole@northstarloom.example",
+    "to": [
+      "tom.becker@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Re: Dinner holds",
+    "body": "Claro confirmed 19:45 on Monday for four. Opa confirmed 19:30 on Tuesday for the partner group; both have the notes you gave me.",
+    "labels": [
+      "inbox",
+      "travel"
+    ],
+    "attachments": [
+      "dinner-confirmations.pdf"
+    ]
+  },
+  {
+    "id": "mail-067",
+    "thread_id": "thread-026",
+    "sent_at": "2026-09-18T14:40:00+01:00",
+    "from": "john.okafor@northstarloom.example",
+    "to": [
+      "hannah.cole@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Re: Dinner holds",
+    "body": "Perfect. For Claro, add Yael and Eitan to the headcount. I will confirm the remaining partner names after BlueHarbor replies.",
+    "labels": [
+      "sent",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-068",
+    "thread_id": "thread-018",
+    "sent_at": "2026-09-21T08:35:00+01:00",
+    "from": "marcus.reed@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "john.okafor@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Data room index",
+    "body": "The investor data room index is clean: cap table, runway, pipeline, security overview, and customer references are separated into review folders.",
+    "labels": [
+      "inbox",
+      "finance"
+    ],
+    "attachments": [
+      "data-room-index.xlsx"
+    ]
+  },
+  {
+    "id": "mail-069",
+    "thread_id": "thread-023",
+    "sent_at": "2026-09-21T15:20:00+01:00",
+    "from": "nina.rossi@northstarloom.example",
+    "to": [
+      "john.okafor@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Reference permission update",
+    "body": "Vela approved a reference call but not a public logo. Use the anonymous case note in the investor pack and keep their name out of slides.",
+    "labels": [
+      "inbox",
+      "customer"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-070",
+    "thread_id": "thread-027",
+    "sent_at": "2026-09-22T09:05:00+01:00",
+    "from": "tom.becker@northstarloom.example",
+    "to": [
+      "hannah.cole@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Demo snack question",
+    "body": "Could the meeting snacks include fruit and something savory without meat? I am happy with cheese or eggs, just trying to keep the table simple for everyone.",
+    "labels": [
+      "sent",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-071",
+    "thread_id": "thread-027",
+    "sent_at": "2026-09-22T16:45:00+01:00",
+    "from": "hannah.cole@northstarloom.example",
+    "to": [
+      "tom.becker@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Re: Demo snack question",
+    "body": "Added fruit, labneh, and roasted vegetables to the request. John asked for sesame pastries as well, so the spread will have variety.",
+    "labels": [
+      "inbox",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-072",
+    "thread_id": "thread-014",
+    "sent_at": "2026-09-23T08:20:00+01:00",
+    "from": "eitan.mor@blueharbor.example",
+    "to": [
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [
+      "yael.ben-david@blueharbor.example"
+    ],
+    "subject": "Sandbox credentials process",
+    "body": "We issue short-lived sandbox tokens at the start of the session. No credentials need to be emailed, and the quota resets overnight.",
+    "labels": [
+      "inbox",
+      "security",
+      "customer"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-073",
+    "thread_id": "thread-014",
+    "sent_at": "2026-09-23T14:05:00+01:00",
+    "from": "priya.shah@northstarloom.example",
+    "to": [
+      "eitan.mor@blueharbor.example"
+    ],
+    "cc": [],
+    "subject": "Re: Sandbox credentials process",
+    "body": "Excellent. I will bring a local fixture for the opening walkthrough and use the live sandbox only for the retry and rate-limit checks.",
+    "labels": [
+      "sent",
+      "security",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-074",
+    "thread_id": "thread-022",
+    "sent_at": "2026-09-24T10:10:00+01:00",
+    "from": "lea.novak@northstarloom.example",
+    "to": [
+      "tom.becker@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Release candidate ready",
+    "body": "The redacted demo release candidate is ready for review. It includes manual override, reason trace, and the three Cedar cases.",
+    "labels": [
+      "inbox",
+      "product",
+      "travel"
+    ],
+    "attachments": [
+      "loomroute-demo-rc1.zip"
+    ]
+  },
+  {
+    "id": "mail-075",
+    "thread_id": "thread-022",
+    "sent_at": "2026-09-24T16:30:00+01:00",
+    "from": "tom.becker@northstarloom.example",
+    "to": [
+      "lea.novak@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Re: Release candidate ready",
+    "body": "I ran through it on a clean laptop. The story lands well; I only changed two labels so the operator sees why an action is reversible.",
+    "labels": [
+      "sent",
+      "product"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-076",
+    "thread_id": "thread-006",
+    "sent_at": "2026-09-25T08:55:00+01:00",
+    "from": "hannah.cole@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "tom.becker@northstarloom.example",
+      "john.okafor@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Travel pack v3",
+    "body": "The travel pack now includes hotel, venue addresses, meeting owners, and local contact numbers. I will print one copy for each traveler.",
+    "labels": [
+      "inbox",
+      "travel"
+    ],
+    "attachments": [
+      "tel-aviv-travel-pack-v3.pdf"
+    ]
+  },
+  {
+    "id": "mail-077",
+    "thread_id": "thread-006",
+    "sent_at": "2026-09-25T13:40:00+01:00",
+    "from": "elena.marin@northstarloom.example",
+    "to": [
+      "hannah.cole@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Re: Travel pack v3",
+    "body": "Thank you. Add the final-review room detail once the Norman confirms it, and keep the departure block visible on the first page.",
+    "labels": [
+      "sent",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-078",
+    "thread_id": "thread-003",
+    "sent_at": "2026-09-28T09:25:00+01:00",
+    "from": "hannah.cole@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "tom.becker@northstarloom.example",
+      "john.okafor@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Travel desk reminders",
+    "body": "Online check-in opens tomorrow. The hotel has the four names, and the venue hosts have the current arrival list.",
+    "labels": [
+      "inbox",
+      "travel",
+      "automated"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-079",
+    "thread_id": "thread-012",
+    "sent_at": "2026-09-29T11:00:00+01:00",
+    "from": "elena.marin@northstarloom.example",
+    "to": [
+      "dana.shalev@cedarmobility.example",
+      "amir.katz@cedarmobility.example"
+    ],
+    "cc": [],
+    "subject": "Looking forward to 19 October",
+    "body": "We are looking forward to meeting at Mindspace Rothschild. We will arrive with a concise product story and spend most of the time on your operational questions.",
+    "labels": [
+      "sent",
+      "customer",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-080",
+    "thread_id": "thread-028",
+    "sent_at": "2026-09-30T08:15:00+01:00",
+    "from": "michal.tal@vectorlabs.example",
+    "to": [
+      "elena.marin@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Reception access details",
+    "body": "Your names are on the guest list for the 21 October reception at 27 Shaul HaMelech. Doors open at 18:30; please bring photo ID.",
+    "labels": [
+      "inbox",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-081",
+    "thread_id": "thread-009",
+    "sent_at": "2026-10-01T09:35:00+01:00",
+    "from": "hannah.cole@northstarloom.example",
+    "to": [
+      "john.okafor@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Re: Phone case for demo day",
+    "body": "Did you decide about the star sticker? A small white Northstar mark should still be visible against the yellow case if you use it.",
+    "labels": [
+      "inbox",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-082",
+    "thread_id": "thread-009",
+    "sent_at": "2026-10-01T16:10:00+01:00",
+    "from": "john.okafor@northstarloom.example",
+    "to": [
+      "hannah.cole@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Re: Phone case for demo day",
+    "body": "Yes, I added the small white Northstar star sticker. It is distinctive enough to find quickly without covering the camera.",
+    "labels": [
+      "sent",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-083",
+    "thread_id": "thread-019",
+    "sent_at": "2026-10-02T10:25:00+01:00",
+    "from": "marcus.reed@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "October payroll cut-off",
+    "body": "October payroll closes on the 9th. If the trip produces any reimbursable changes, please send receipts to Hannah before month end.",
+    "labels": [
+      "inbox",
+      "finance"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-084",
+    "thread_id": "thread-020",
+    "sent_at": "2026-10-05T08:30:00+01:00",
+    "from": "arun.mehta@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Final security sign-off",
+    "body": "The demo scope is approved: synthetic data only, local backup, SSO explanation, audit-log view, and no production credentials. Good to go.",
+    "labels": [
+      "inbox",
+      "security",
+      "travel"
+    ],
+    "attachments": [
+      "demo-security-signoff.pdf"
+    ]
+  },
+  {
+    "id": "mail-085",
+    "thread_id": "thread-006",
+    "sent_at": "2026-10-06T14:15:00+01:00",
+    "from": "hannah.cole@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "tom.becker@northstarloom.example",
+      "john.okafor@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Norman final review room",
+    "body": "The Norman confirms the final review for Thursday 22 October at 09:30 in the conservatory. The library bar remains held for Wednesday's internal debrief.",
+    "labels": [
+      "inbox",
+      "travel"
+    ],
+    "attachments": [
+      "norman-room-details.pdf"
+    ]
+  },
+  {
+    "id": "mail-086",
+    "thread_id": "thread-022",
+    "sent_at": "2026-10-07T09:00:00+01:00",
+    "from": "tom.becker@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Demo narrative final",
+    "body": "The narrative now starts with a late-delivery decision, shows the evidence, then lets the operator override it. It should invite Cedar to disagree productively.",
+    "labels": [
+      "sent",
+      "product",
+      "travel"
+    ],
+    "attachments": [
+      "demo-narrative-final.pdf"
+    ]
+  },
+  {
+    "id": "mail-087",
+    "thread_id": "thread-008",
+    "sent_at": "2026-10-08T15:45:00+01:00",
+    "from": "john.okafor@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "tom.becker@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Packing and contact sheet",
+    "body": "I have printed the contact sheet and partner one-pagers. I will carry the paper copies and keep the meeting notes in the shared offline folder.",
+    "labels": [
+      "sent",
+      "travel"
+    ],
+    "attachments": [
+      "partner-contact-sheet.pdf"
+    ]
+  },
+  {
+    "id": "mail-088",
+    "thread_id": "thread-002",
+    "sent_at": "2026-10-09T08:20:00+01:00",
+    "from": "hannah.cole@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "tom.becker@northstarloom.example",
+      "john.okafor@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Final itinerary distributed",
+    "body": "The final itinerary is distributed: meetings, dinners, hotel, reception, internal debrief, and Thursday departures are all in local Tel Aviv time.",
+    "labels": [
+      "inbox",
+      "travel"
+    ],
+    "attachments": [
+      "tel-aviv-itinerary-final.pdf"
+    ]
+  },
+  {
+    "id": "mail-089",
+    "thread_id": "thread-012",
+    "sent_at": "2026-10-12T11:10:00+01:00",
+    "from": "dana.shalev@cedarmobility.example",
+    "to": [
+      "elena.marin@northstarloom.example"
+    ],
+    "cc": [
+      "amir.katz@cedarmobility.example"
+    ],
+    "subject": "Cedar attendee list",
+    "body": "Dana and Amir will attend the discovery on Monday. We will bring an operations manager to test the manual override cases.",
+    "labels": [
+      "inbox",
+      "customer",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-090",
+    "thread_id": "thread-013",
+    "sent_at": "2026-10-13T09:50:00+01:00",
+    "from": "yael.ben-david@blueharbor.example",
+    "to": [
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [
+      "eitan.mor@blueharbor.example"
+    ],
+    "subject": "BlueHarbor attendee list",
+    "body": "Eitan and I will join both Tuesday sessions. We can decide on the sandbox scope after the architecture workshop rather than guessing beforehand.",
+    "labels": [
+      "inbox",
+      "customer",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-091",
+    "thread_id": "thread-003",
+    "sent_at": "2026-10-16T08:30:00+01:00",
+    "from": "hannah.cole@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "tom.becker@northstarloom.example",
+      "john.okafor@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Last call before departure",
+    "body": "Please download the offline pack and check your travel documents. Monday's first customer session is at 13:30, with no planned meeting before then.",
+    "labels": [
+      "inbox",
+      "travel"
+    ],
+    "attachments": [
+      "offline-pack-manifest.txt"
+    ]
+  },
+  {
+    "id": "mail-092",
+    "thread_id": "thread-012",
+    "sent_at": "2026-10-19T11:05:00+03:00",
+    "from": "elena.marin@northstarloom.example",
+    "to": [
+      "dana.shalev@cedarmobility.example",
+      "amir.katz@cedarmobility.example"
+    ],
+    "cc": [],
+    "subject": "Arrived in Tel Aviv",
+    "body": "We have arrived and are set for 13:30 at Mindspace Rothschild. Looking forward to testing the cases together.",
+    "labels": [
+      "sent",
+      "customer",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-093",
+    "thread_id": "thread-012",
+    "sent_at": "2026-10-19T18:05:00+03:00",
+    "from": "john.okafor@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "tom.becker@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Cedar notes before dinner",
+    "body": "Cedar responded well to the visible reason trace and asked us to quantify late-delivery decisions avoided. I captured the wording for Thursday's review.",
+    "labels": [
+      "sent",
+      "customer",
+      "travel"
+    ],
+    "attachments": [
+      "cedar-discovery-notes.md"
+    ]
+  },
+  {
+    "id": "mail-094",
+    "thread_id": "thread-015",
+    "sent_at": "2026-10-20T12:05:00+03:00",
+    "from": "priya.shah@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "tom.becker@northstarloom.example",
+      "john.okafor@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "BlueHarbor technical checkpoint",
+    "body": "The sandbox quota is workable, and we have a retry design to test this afternoon. Residency remains a DPA item rather than a blocker for the fixture.",
+    "labels": [
+      "sent",
+      "customer",
+      "security",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-095",
+    "thread_id": "thread-015",
+    "sent_at": "2026-10-20T18:10:00+03:00",
+    "from": "eitan.mor@blueharbor.example",
+    "to": [
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [
+      "yael.ben-david@blueharbor.example"
+    ],
+    "subject": "Technical sandbox next step",
+    "body": "The architecture workshop was productive. We agree in principle to a bounded technical sandbox; I will send the endpoint list after our dinner.",
+    "labels": [
+      "inbox",
+      "customer",
+      "travel"
+    ],
+    "attachments": [
+      "blueharbor-sandbox-scope.pdf"
+    ]
+  },
+  {
+    "id": "mail-096",
+    "thread_id": "thread-011",
+    "sent_at": "2026-10-21T14:05:00+03:00",
+    "from": "elena.marin@northstarloom.example",
+    "to": [
+      "dana.shalev@cedarmobility.example",
+      "amir.katz@cedarmobility.example"
+    ],
+    "cc": [],
+    "subject": "Cedar pilot shape",
+    "body": "Thank you for the candid negotiation this morning. We have a shared outline for a 90-day pilot, pending the DPA and agreed success metrics.",
+    "labels": [
+      "sent",
+      "customer",
+      "travel"
+    ],
+    "attachments": [
+      "cedar-pilot-outline.pdf"
+    ]
+  },
+  {
+    "id": "mail-097",
+    "thread_id": "thread-018",
+    "sent_at": "2026-10-21T17:10:00+03:00",
+    "from": "noa.barak@duneventures.example",
+    "to": [
+      "john.okafor@northstarloom.example",
+      "elena.marin@northstarloom.example"
+    ],
+    "cc": [
+      "lior.navon@duneventures.example"
+    ],
+    "subject": "Follow-up data room session",
+    "body": "The conversation was useful. Please schedule a follow-up data room session so we can go deeper on conversion evidence and workflow defensibility.",
+    "labels": [
+      "inbox",
+      "finance",
+      "travel"
+    ],
+    "attachments": []
+  },
+  {
+    "id": "mail-098",
+    "thread_id": "thread-028",
+    "sent_at": "2026-10-21T22:05:00+03:00",
+    "from": "john.okafor@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "tom.becker@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Reception and debrief wrap",
+    "body": "Vector was a helpful technical bridge, and the internal debrief captured owners for Cedar, BlueHarbor, and Dune. I will turn notes into follow-ups tomorrow.",
+    "labels": [
+      "sent",
+      "travel"
+    ],
+    "attachments": [
+      "tel-aviv-action-register.xlsx"
+    ]
+  },
+  {
+    "id": "mail-099",
+    "thread_id": "thread-012",
+    "sent_at": "2026-10-22T11:05:00+03:00",
+    "from": "elena.marin@northstarloom.example",
+    "to": [
+      "hannah.cole@northstarloom.example",
+      "marcus.reed@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Tel Aviv outcomes",
+    "body": "Cedar agrees in principle to the 90-day pilot pending DPA and metrics, BlueHarbor will enter a technical sandbox, and Dune wants the data room follow-up.",
+    "labels": [
+      "sent",
+      "travel",
+      "customer",
+      "finance"
+    ],
+    "attachments": [
+      "tel-aviv-outcomes-summary.pdf"
+    ]
+  },
+  {
+    "id": "mail-100",
+    "thread_id": "thread-003",
+    "sent_at": "2026-10-22T12:00:00+03:00",
+    "from": "hannah.cole@northstarloom.example",
+    "to": [
+      "elena.marin@northstarloom.example",
+      "tom.becker@northstarloom.example",
+      "john.okafor@northstarloom.example",
+      "priya.shah@northstarloom.example"
+    ],
+    "cc": [],
+    "subject": "Departures and receipts",
+    "body": "The final review is complete and departures are scheduled from noon. Please upload receipts and action owners when you are back online.",
+    "labels": [
+      "inbox",
+      "travel"
+    ],
+    "attachments": []
+  }
+]

@@ -1,0 +1,92 @@
+[
+  {
+    "id": "photo-001",
+    "file": "solutions/pocito/assets/traveling-test/rothschild-boulevard.jpg",
+    "title": "Rothschild Boulevard, Tel Aviv-Yafo",
+    "author": "Rakoon",
+    "license": "CC0 1.0",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Rothschild_Boulevard,_Tel_Aviv-Yafo.jpg"
+  },
+  {
+    "id": "photo-002",
+    "file": "solutions/pocito/assets/traveling-test/jaffa-port.jpg",
+    "title": "DSCF1550-Jaffa Port Hangars",
+    "author": "Sasha1506",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "source_page": "https://commons.wikimedia.org/wiki/File:DSCF1550-Jaffa_Port_Hangars.jpg"
+  },
+  {
+    "id": "photo-003",
+    "file": "solutions/pocito/assets/traveling-test/tel-aviv-promenade.jpg",
+    "title": "Tel Aviv Promenade",
+    "author": "Simon Cobb",
+    "license": "CC0 1.0",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Tel_Aviv_Promenade.jpg"
+  },
+  {
+    "id": "photo-004",
+    "file": "solutions/pocito/assets/traveling-test/sarona-market.jpg",
+    "title": "Sarona Market, Tel Aviv",
+    "author": "Ted Eytan",
+    "license": "CC BY-SA 2.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Sarona-market-tel-aviv-israel-july-2016-001.jpg"
+  },
+  {
+    "id": "photo-005",
+    "file": "solutions/pocito/assets/traveling-test/tel-aviv-museum.jpg",
+    "title": "Tel Aviv Museum of Art (exterior, general view)",
+    "author": "JRodSilva",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Tel_Aviv_Museum_of_Art_(exterior,_general_view).jpg"
+  },
+  {
+    "id": "photo-006",
+    "file": "solutions/pocito/assets/traveling-test/neve-tzedek.jpg",
+    "title": "Building in Neve Tzedek",
+    "author": "Artem.G",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Building_in_Neve_Tzedek.jpg"
+  },
+  {
+    "id": "photo-007",
+    "file": "solutions/pocito/assets/traveling-test/carmel-market.jpg",
+    "title": "Carmel Market Thai food",
+    "author": "Rakoon",
+    "license": "CC0 1.0",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "source_page": "https://commons.wikimedia.org/wiki/File:20171129-130948-tel-aviv-carmel-market-thai-food.jpg"
+  },
+  {
+    "id": "photo-008",
+    "file": "solutions/pocito/assets/traveling-test/tel-aviv-skyline.jpg",
+    "title": "Skyline of Tel Aviv",
+    "author": "Eduard Marmet",
+    "license": "CC BY-SA 2.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Skyline_of_Tel_Aviv_(34324506705).jpg"
+  },
+  {
+    "id": "photo-009",
+    "file": "solutions/pocito/assets/traveling-test/habima-square.jpg",
+    "title": "Tree Island in Habima Square",
+    "author": "Beko",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Tree_Island_in_Habima_Square.jpg"
+  },
+  {
+    "id": "photo-010",
+    "file": "solutions/pocito/assets/traveling-test/bauhaus-museum.jpg",
+    "title": "Bauhaus Tel-Aviv museum",
+    "author": "Talmoryair",
+    "license": "CC BY 3.0",
+    "license_url": "https://creativecommons.org/licenses/by/3.0/",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Bauhaus_Tel-Aviv_museum.jpg"
+  }
+]

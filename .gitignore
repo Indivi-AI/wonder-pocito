@@ -33,3 +33,4 @@ solutions/pocito/flapi-mock/node_modules/
 # Playwright MCP generated artifacts
 .playwright-mcp/
 *.png
+/solutions/pocito/assets/traveling-test/
