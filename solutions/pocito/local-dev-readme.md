@@ -71,7 +71,7 @@ No Wonder env file is loaded. Model credentials belong only in LiteLLM YAML, not
 | `MINIO_STORAGE_CLASS` | `STANDARD`; stock MinIO does not support `STANDARD_IA` |
 | `POCITO_DATA_DIR` | `.local-data` relative to this directory; Python environments and marketplace data, not applet files |
 | `OPENAI_EMBEDDING_DIMENSIONS` | `1536` |
-| `FLAPI_BASE_URL`, `FLAPI_TOKEN` | External FLAPI endpoint and body token; empty URL starts the local mock |
+| `FLAPI_BASE_URL`, `FLAPI_TOKEN`, `FLAPI_USERNAME` | FLAPI endpoint and credentials; the local mock requires username `625navehp` |
 | `LITELLM_HOST` | External LiteLLM origin; empty starts bundled LiteLLM at `http://localhost:${LITELLM_PORT}` |
 
 All storage endpoints are external to the launcher, even `localhost`. Agno chat sessions are currently in memory.

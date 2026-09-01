@@ -1,12 +1,12 @@
 import express from 'express'
 
 export function setupFlapiProxyRoute(app) {
-  const baseUrl = process.env.FLAPI_BASE_URL?.replace(/\/$/, ''), token = process.env.FLAPI_TOKEN
+  const baseUrl = process.env.FLAPI_BASE_URL?.replace(/\/$/, ''), headers = {'Content-Type': 'application/json', accept: 'application/json',
+    Authorization: process.env.FLAPI_TOKEN || '', Username: process.env.FLAPI_USERNAME || ''}
   app.get('/flapi/package/:packageId', async (req, res) => {
     if (!baseUrl) return res.status(503).json({error: 'FLAPI_BASE_URL is not configured'})
     const postJson = async path => {
-      const response = await fetch(`${baseUrl}${path}`, {method: 'POST', headers: {'content-type': 'application/json'},
-        body: JSON.stringify(token ? {token} : {})})
+      const response = await fetch(`${baseUrl}${path}`, {method: 'POST', headers, body: '{}'})
       if (!response.ok) throw Object.assign(new Error(`FLAPI ${response.status}: ${await response.text()}`), {status: response.status})
       return response.json()
     }

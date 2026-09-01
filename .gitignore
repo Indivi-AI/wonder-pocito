@@ -29,3 +29,4 @@ solutions/pocito/.local-data/
 solutions/pocito/on-prem/litellm/config.local.yaml
 
 solutions/pocito/flapi-mock/node_modules/
+/solutions/pocito/assets/traveling-test/

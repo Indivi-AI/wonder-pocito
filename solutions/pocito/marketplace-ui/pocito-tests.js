@@ -10,7 +10,8 @@ const {
   tgp: { CtxEnricher },
   common: { Data, data: { asIs, wFetch, wonderPlatformAnswer, wonderPlatformListSkills, wonderPlatformLoadSkill,
     wonderPlatformLoadTargetSkills, wonderPlatformMarketplaceCall, wonderPlatformMarketplaceItem, wonderPlatformMarketplaceManifest,
-    wonderPlatformNormalize, wonderPlatformPublishSkill, wonderPlatformSeed, wonderPlatformUpsert, wonderPlatformAgentOsRun },
+    wonderPlatformNormalize, wonderPlatformPublishSkill, wonderPlatformSeed, wonderPlatformUpsert, wonderPlatformAgentOsRun,
+    wonderPlatformFlapiPackage },
     boolean: { and, contains, equals, notContains } },
   react: { ReactComp, UiAction, 'react-comp': { comp, wonderPlatform },
     'ui-action': { actions, click, waitForText, waitForSelector, waitForMutations } },
@@ -171,14 +172,17 @@ Data('wonderPlatformFlapiRoundTrip', {
     const {createServer} = await import('node:http'), requests = []
     const upstream = createServer(async (req, res) => {
       const chunks = []; for await (const chunk of req) chunks.push(chunk)
-      requests.push({url: req.url, method: req.method, body: JSON.parse(Buffer.concat(chunks).toString())})
+      requests.push({url: req.url, method: req.method, headers: req.headers,
+        body: JSON.parse(Buffer.concat(chunks).toString() || 'null')})
       res.setHeader('content-type', 'application/json')
       res.end(JSON.stringify(req.url.includes('/quick/') ? {'ecom-query-1': [{Name: 'category'}]}
         : {Id: 7, Name: 'E-commerce Analytics', Queries: [{Name: 'Orders Cube'}]}))
     })
     await new Promise(resolve => upstream.listen(0, '127.0.0.1', resolve))
-    const previous = {FLAPI_BASE_URL: process.env.FLAPI_BASE_URL, FLAPI_TOKEN: process.env.FLAPI_TOKEN}
-    process.env.FLAPI_BASE_URL = `http://127.0.0.1:${upstream.address().port}`; process.env.FLAPI_TOKEN = 'test-token'
+    const previous = {FLAPI_BASE_URL: process.env.FLAPI_BASE_URL, FLAPI_TOKEN: process.env.FLAPI_TOKEN,
+      FLAPI_USERNAME: process.env.FLAPI_USERNAME}
+    process.env.FLAPI_BASE_URL = `http://127.0.0.1:${upstream.address().port}`
+    process.env.FLAPI_TOKEN = 'test-token'; process.env.FLAPI_USERNAME = 'test-user'
     try {
       const {createFlapiApp} = await import(`${await coreUtils.calcRepoRoot()}/solutions/pocito/on-prem/dev/flapi-server.js`)
       const app = await createFlapiApp(), server = await new Promise(resolve => {
@@ -192,6 +196,20 @@ Data('wonderPlatformFlapiRoundTrip', {
       await new Promise(resolve => upstream.close(resolve))
       for (const [key, value] of Object.entries(previous)) value == null ? delete process.env[key] : process.env[key] = value
     }
+  }
+})
+
+Data('wonderPlatformFlapiUiRoundTrip', {
+  impl: async () => {
+    const {createServer} = await import('node:http'); let path
+    const upstream = createServer((req, res) => {
+      path = req.url; res.setHeader('content-type', 'application/json'); res.end('{"quick":{},"metadata":{"Id":7}}')
+    })
+    await new Promise(resolve => upstream.listen(0, '127.0.0.1', resolve))
+    try {
+      const result = await wonderPlatformFlapiPackage.$run({packageId: 'a/b', baseUrl: `http://127.0.0.1:${upstream.address().port}`})
+      return {path, result}
+    } finally { await new Promise(resolve => upstream.close(resolve)) }
   }
 })
 
@@ -257,10 +275,21 @@ Test('wonderPlatform.flapiRoundTrip', {
     calculate: dsls.common.data.wonderPlatformFlapiRoundTrip(),
     expectedResult: and(equals('%status%', 200), equals('%body/quick/ecom-query-1/0/Name%', 'category'),
       equals('%body/metadata/Queries/0/Name%', 'Orders Cube'), equals('%requests/length%', 2),
-      equals('%requests/0/method%', 'POST'), equals('%requests/0/body/token%', 'test-token'),
-      equals('%requests/1/method%', 'POST'), equals('%requests/1/body/token%', 'test-token'))
+      equals('%requests/0/method%', 'POST'), equals('%requests/0/body%', asIs({})),
+      equals('%requests/0/headers/content-type%', 'application/json'), equals('%requests/0/headers/accept%', 'application/json'),
+      equals('%requests/0/headers/authorization%', 'test-token'), equals('%requests/0/headers/username%', 'test-user'),
+      equals('%requests/1/headers/authorization%', 'test-token'), equals('%requests/1/headers/username%', 'test-user'))
   }),
   timeout: 5000,
+  logger: 'marketplaceLogger'
+})
+
+Test('wonderPlatform.flapiUiRoundTrip', {
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: dsls.common.data.wonderPlatformFlapiUiRoundTrip(),
+    expectedResult: and(equals('%path%', '/api/v1/flapi/package/a%2Fb'), equals('%result/metadata/Id%', 7))
+  }),
   logger: 'marketplaceLogger'
 })
 

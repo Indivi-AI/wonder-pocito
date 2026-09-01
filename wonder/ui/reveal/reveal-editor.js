@@ -204,7 +204,7 @@ const liveEditor = LiveEditor('liveEditor', {
         if (adding) input.current?.focus()
       }, [adding])
       const comments = coreUtils.asArray(slides.profile).flatMap((_, index) => {
-        const slide = ctx.runInnerArg(slides, index)
+        const slide = ctx.runInnerArg(slides, index)(ctx).slideViewCtx.vars.slideArgs
         const slidePath = `${slides.lexicalCtx.jbCtx.path}~${index}`
         return coreUtils.asArray(slide.comments)
           .map((comment, commentIndex) => ({ ...comment, source: comment, slideTitle: slide.title, slidePath, commentIndex }))

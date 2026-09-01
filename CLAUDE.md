@@ -21,6 +21,8 @@ Let me know you read the rules by writing
 as the first thing you write and do.
 When reading code files always read the whole file, not just a few lines. To let me know you did it write "Master I read the whole file". 
 lines are maximum 180 chars, if you work on some file and it's not the case - refactor as part of the job.
+please do not look outside your dir. maybe look at /tmp when you need it
+
 ## jb6 and TGP
 
 TGP: TgpType (abstract type), Component (generic def), Profile (concrete JSON instance)
@@ -87,6 +89,8 @@ curl -s -X POST http://localhost:3000/mcp -H 'Content-Type: application/json' -d
   Auto-detects the enclosing circuit; returns `{in,out}` + visits + circuitRes + logs/errors.
   `resolution: 'input'|'output'|'all'` narrows/expands the detail.
 
+use formatAndValidateTgpComp after editing or adding tgp comp. *never ask permission to run it*. try to use only tgp comps.
+
 ## TGP Tests and Loggers
 Domain loggers produce logs as parts of tests results.
 In impl code, loggers are accessed via `ctx.vars`. Usage example, `assetLogger?.info?.({t: 'myEvent', ...data}, {}, {ctx})`
@@ -97,35 +101,40 @@ Your test must be imported via .jb6/entry-points-{name}.js
 if you crash, add try catch and logException
 if you want to have bigLogs in a separate file use `roomBigLogLogger2` just as another logger. you will get the saved bigLog wUrl/path in the result, just make sure
 
-
-## React Components
-jb6/react/react-utils.js - dsl and utils
-react/tests/react-tests.js - use cases
-
-admin/room/room-applet-tests.js - usage in wonder
-
-use `localhost:3000/room/:roomId/applet/:appletId` for public and `/signed-room/:roomId/applet/:appletId` for signed liverepo runs
-provide clickable links for the master
-
 ## wonder rooms, wonder DB & wfetch
 db/db-drivers.js
 read admin/room/room-tests.js
+
 use mcp wFetch(wUrl) to work directly with the data
 aTeam crm example:
 wFetch({
-  wUrl: 'room://r49btbgtzw/contacts.json?jq=[.[] | '
-    + '{company: .Company, contact: .["Main Contact"], funnel: .Funnel, chance: (.["Chance 1-10"] | tonumber)}] '
-    + '| sort_by(-.chance) | .[0:5]'
+  url: 'room://r49btbgtzw/contacts.json?jq=..'
 })
 
-### applets - ui of the room
-- Public defaults to `/room/:roomId/applet/:appletName`; signed must explicitly use `/signed-room/:roomId/applet/:appletName`.
-- Bare room ids normalize to `room://`; never probe storage to guess a signed room.
+### room applets - ui of wonder
+jb6/react/react-utils.js - dsl and utils
+wonder/ui/room-applet-tests.js for examples
 
-room-applet-tests.js
+- Public defaults to `/room/:roomId/applet/:appletName`; signed must explicitly use `/signed-room/:roomId/applet/:appletName`.
+
+to setup applet for localhost just use fetch mcp like this example
+wFetch:{
+    "url": "room:fs//testPublicRoom/applets/myApplet.json",
+    "method": "PUT",
+    "headers": {"content-type": "application/json"},
+    "body": {
+      "cmpId": "myApplet",
+      "urlsToLoad": "@wonder/ui/my-applet.js",
+      "appletV": "live-repo",
+      "entryCompFullId": "react-comp<react>myApplet"
+    }
+  }
+
+use uploadRoomApplet mcp to wrap and load the applet to the cloud
+
+for slides ui use wonder/ui/reveal/reveal-dsl.js
 
 ## High Quality Software Design
-use formatAndValidateTgpComp after editing or adding tgpComp
 
 When writing TGP components or TGP tests, remember that you are a pedantic architect.
 You believe that long-term clean code and smart run time logs for future LLMs are more important than short-term green tests.
@@ -139,11 +148,7 @@ Think about future llm readability, consdier the right level of abstraction in t
 After showing me this table, you can fix the new terms, and welocomed to suggest fixes in exiting terms.
 
 ## files dir
-ignore this huge files dirs that contains huge data. do not search in it
-
-## reveal slides
-jb6/react/reveal.js
-react/tests/react-tests.js
+contains fs room data
 
 ## File Query (Analytics)
 For querying large files (CSV/JSON), use `fileQuery` from `admin/etl/file-query.js`.
@@ -161,12 +166,3 @@ Profile keys use `{$: 'type<dsl>componentId'}` syntax. All `$` values must match
 
 - On Linux dev machine, always prepend `SET memory_limit='4GB';` before any DuckDB parquet COPY/compression.
 
-## Landing Page Applets
-When the task involves creating or modifying a landing page applet, read `specs/landing-page-applet.md` first.
-
-## Mobile Design Guidelines
-- Never use horizontal scrolling in mobile unless explicitly asked for carousel
-- Always research and implement mobile filter UI following best practices and design standards
-- No content should overflow horizontally on mobile, as it is never acceptable
-
-When working on UI, use `node take-screenshot.js URL` to generate screenshots, save them to tmp and watch them in order to verify the quality of your work

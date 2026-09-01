@@ -11,13 +11,34 @@ from fastapi.testclient import TestClient
 
 from agno_server import create_app as create_agent_os_app, knowledge_reader
 from marketplace_e2e_model import MarketplaceE2EEmbedder, model_factory
-from marketplace_server import create_app
+from marketplace_server import create_app, flapi_package
 
 
 class KnowledgeChunkingTest(unittest.TestCase):
     def test_configuration(self):
         strategy = knowledge_reader(Path('knowledge.txt')).chunking_strategy
         self.assertEqual((strategy.chunk_size, strategy.overlap), (3000, 300))
+
+
+class FlapiProxyTest(unittest.TestCase):
+    def test_credentials_stay_in_marketplace_server(self):
+        with patch.dict(os.environ, {'FLAPI_BASE_URL': 'http://flapi.test', 'FLAPI_TOKEN': 'test-token',
+          'FLAPI_USERNAME': '625navehp'}), \
+          patch('urllib.request.urlopen') as urlopen:
+            urlopen.return_value.__enter__.return_value.read.side_effect = [b'{"quick": true}', b'{"metadata": true}']
+            self.assertEqual(flapi_package('a/b'), {'quick': {'quick': True}, 'metadata': {'metadata': True}})
+            requests = [call.args[0] for call in urlopen.call_args_list]
+            self.assertEqual([request.full_url for request in requests],
+              ['http://flapi.test/package/v1/quick/a%2Fb', 'http://flapi.test/package/v2/a%2Fb'])
+            for request in requests:
+                self.assertEqual(json.loads(request.data), {})
+                self.assertEqual({name: request.get_header(name) for name in ['Content-type', 'Accept', 'Authorization', 'Username']},
+                  {'Content-type': 'application/json', 'Accept': 'application/json', 'Authorization': 'test-token',
+                    'Username': '625navehp'})
+
+    def test_route_is_registered(self):
+        with patch('marketplace_server.S3ObjectStore'), patch('marketplace_server.MarketplaceRepository'):
+            self.assertIn('/api/v1/flapi/package/{package_id}', [route.path for route in create_app().routes])
 
 
 class MarketplaceServerTest(unittest.TestCase):
@@ -283,15 +304,18 @@ class MarketplaceServerTest(unittest.TestCase):
         self.assertIn('category', agno_tool.parameters['required'])
         
         # 5. Execute the tool entrypoint
-        with patch.dict(os.environ, {'FLAPI_BASE_URL': 'http://localhost:6001', 'FLAPI_TOKEN': 'mock-test-token'}), \
+        with patch.dict(os.environ, {'FLAPI_BASE_URL': 'http://localhost:6001', 'FLAPI_TOKEN': 'mock-test-token',
+          'FLAPI_USERNAME': 'mock-test-user'}), \
           patch('urllib.request.urlopen') as urlopen:
             urlopen.return_value.__enter__.return_value.read.return_value = json.dumps({'results': ['Orders Cube']}).encode()
             result = agno_tool.entrypoint(category='Audio')
             self.assertIn('results', result)
             self.assertIn('Orders Cube', result['results'])
             request = urlopen.call_args.args[0]
-            self.assertEqual(json.loads(request.data), {'params': {'category': 'Audio'}, 'token': 'mock-test-token'})
-            self.assertNotIn('Authorization', request.headers)
+            self.assertEqual(json.loads(request.data), {'params': {'category': 'Audio'}})
+            self.assertEqual({name: request.get_header(name) for name in ['Content-type', 'Accept', 'Authorization', 'Username']},
+              {'Content-type': 'application/json', 'Accept': 'application/json', 'Authorization': 'mock-test-token',
+                'Username': 'mock-test-user'})
 
     def test_adhoc_run_with_no_assets_uses_default_conversation(self):
         run = self.agno.post('/adhoc/runs', json={'message': 'Hello there'})

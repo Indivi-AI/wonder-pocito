@@ -132,6 +132,7 @@ export async function startPocito() {
       const health = await (await fetch(`${url('marketplace')}/healthz`, { signal: AbortSignal.timeout(2000) })).json()
       return health.status === 'ok' && health.object_store === 'ok'
     })
+    await run(process.execPath, [join(pocito, 'traveling-test/scripts/seed-marketplace-assets.mjs')], {stdio: 'inherit'})
     service('Agno', python('agno-server'), [join(pocito, 'agno-server/agno_server.py')])
     await waitFor('Agno', async () => {
       const health = await (await fetch(`${url('agno')}/healthz`, { signal: AbortSignal.timeout(2000) })).json()

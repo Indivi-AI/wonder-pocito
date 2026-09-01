@@ -108,17 +108,12 @@ def make_flow_package_executor(package_id):
         import urllib.error
         import json
         flapi_base_url = os.getenv('FLAPI_BASE_URL', 'http://localhost:6001')
-        flapi_token = os.getenv('FLAPI_TOKEN', '')
-        
         url = f"{flapi_base_url.rstrip('/')}/package/v3/{package_id}"
-        headers = {
-            'Content-Type': 'application/json'
-        }
-        payload = {"params": flat_args, **({"token": flapi_token} if flapi_token else {})}
         req = urllib.request.Request(
             url,
-            data=json.dumps(payload).encode('utf-8'),
-            headers=headers,
+            data=json.dumps({'params': flat_args}).encode('utf-8'),
+            headers={'Content-Type': 'application/json', 'accept': 'application/json',
+              'Authorization': os.getenv('FLAPI_TOKEN', ''), 'Username': os.getenv('FLAPI_USERNAME', '')},
             method='POST'
         )
         try:

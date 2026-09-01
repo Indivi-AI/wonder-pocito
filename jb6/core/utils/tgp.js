@@ -97,7 +97,7 @@ function TgpType(type, dsl, extraCompProps, tgpModel = jb) {
     return dsls[dsl][capitalLetterId]
 
   const dslType = `${type}<${dsl}>`
-  const { demoProfile, isCircuit, probeExec, typescript, ...compProps } = extraCompProps || {}   // type props (on tgpType), never spread onto comps
+  const { demoProfile, isCircuit, probeExec, typescript, defaultImpl, ...compProps } = extraCompProps || {}
   const tgpType = (arg0,arg1) => {
     let [id,comp] = ['',null]
     if (typeof arg0 == 'string')
@@ -105,7 +105,7 @@ function TgpType(type, dsl, extraCompProps, tgpModel = jb) {
     else
       comp = arg0
 
-    tgpType[id] = Component({...comp, id, dsl, type, ...compProps})
+    tgpType[id] = Component({...comp, id, dsl, type, ...compProps, impl: comp.impl ?? defaultImpl})
     ;[type, ...(comp.moreTypes||'').split(',')].filter(x=>x).forEach(typeInStr=> {
       let [_type,_dsl] = [typeInStr,dsl]
       if (typeInStr.indexOf('<') != -1)

@@ -4,30 +4,64 @@ import '@jb6/testing'
 import '@jb6/react/tests/react-testers.js'
 import '@wonder/ui/applet.js'
 import './reveal-dsl.js'
+import './reveal-impl.js'
 import './reveal-themes.js'
 import './reveal-editor.js'
 
 const { json } = ns
 const {
-  tgp: { Const },
+  tgp: { Const, 'ctx-enricher': { setVars } },
   reveal: {
     Deck, Slide,
     deck: { deck },
     comment: { comment },
-    slide: { coverSlide, titleSlide, columnsSlide }, column: { column }, 'column-item': { item },
-    theme: { wonderForPayoneer }, controls: { controls },
+    slide: { coverSlide, columnsSlide, entityDiagramSlide }, column: { column }, 'column-item': { item },
+    'diagram-entity': { diagramEntity, diagramGroup }, 'diagram-relation': { diagramRelation },
+    'diagram-anchor': { diagramAnchor }, 'diagram-route': { bezierRoute, orthogonalRoute }, 'diagram-point': { diagramPoint },
+    controls: { controls },
     'live-editor': { liveEditor }
   },
+  theme: { theme: { wonder } },
   react: { ReactComp, UiAction, 'react-comp': { comp, deckViewer }, 'react-metadata': { applet },
     'ui-action': { actions, click, waitForText } },
-  common: { boolean: { and, contains } },
-  test: { Test, test: { reactTest } }
+  common: { Data, data: { asIs }, boolean: { and, contains, notContains } },
+  test: { Test, test: { dataTest, reactTest } }
 } = dsls
 
 Const('revealSampleTitlePath', 'deck<reveal>revealSample.deck~impl~slides~0~title')
 Const('revealCommentTargetPath', 'deck<reveal>revealSample.deck~impl~slides~0~subtitle')
 Const('revealEditedTitle', 'Edited title')
 Const('revealCommentText', 'Clarify this title')
+
+const resolveSlideViewTest = Data('resolveSlideViewTest', {
+  params: [
+    {id: 'slide', type: 'slide<reveal>', dynamic: true},
+    {id: 'categories', as: 'object', byName: true}
+  ],
+  impl: (ctx, {}, { slide, categories }) => {
+    const { slideViewCtx, view } = slide(ctx)(ctx, categories)
+    const { slideArgs, slideTgpPath, revealCategories } = slideViewCtx.vars
+    return `${view[coreUtils.asJbComp].id}|${slideArgs.title}|${revealCategories.reveal}|${slideTgpPath}`
+  }
+})
+
+const diagramBoxTest = Data('diagramBoxTest', {
+  params: [
+    {id: 'entity', type: 'diagram-entity<reveal>'}
+  ],
+  impl: ({}, {}, { entity }) => `${entity.x},${entity.y},${entity.width},${entity.height}`
+})
+
+Test('revealTest.boxCoerce', {
+  impl: dataTest(diagramBoxTest(diagramEntity('auto-box', 'Auto box', { box: '5,5' })), contains('5,5,auto,auto'))
+})
+
+Test('revealTest.resolveSlideView', {
+  impl: dataTest({
+    calculate: resolveSlideViewTest(coverSlide('Simple slide'), { categories: {revealSample: true} }),
+    expectedResult: contains('coverSlide.reveal.revealSample|Simple slide|true','revealTest.resolveSlideView~impl~calculate~slide')
+  })
+})
 
 Slide('slideSample.columns', {
   description: 'Reusable two-column Reveal comparison slide',
@@ -36,6 +70,14 @@ Slide('slideSample.columns', {
     column('Second', item('Second point'))
   ], {
     comments: []
+  })
+})
+
+const { slideSample } = ns
+Test('revealTest.resolveWrappedSlideView', {
+  impl: dataTest({
+    calculate: resolveSlideViewTest(slideSample.columns(), { categories: {revealSample: true} }),
+    expectedResult: contains('columnsSlide.reveal.revealSample|New comparison|true|slide<reveal>slideSample.columns~impl')
   })
 })
 
@@ -56,8 +98,6 @@ const inPlaceEdit = UiAction('inPlaceEdit', {
     {id: 'restore', as: 'boolean', defaultValue: true, type: 'boolean<common>'}
   ],
   impl: ({}, {}, { tgpPath, text, restore }) => ({ exec: async ({ vars: { win, revealLogger } }) => {
-    const filePath = coreUtils.compByFullId(tgpPath.split('~')[0]).$location.path
-    const beforeSource = restore && await fetch(filePath).then(res => res.text())
     const find = () => [...win.document.querySelectorAll('[data-reveal-tgp-path]')].find(el => el.dataset.revealTgpPath == tgpPath)
     const edit = async value => {
       const el = find()
@@ -74,14 +114,8 @@ const inPlaceEdit = UiAction('inPlaceEdit', {
     const original = find().textContent
     const before = revealLogger.revealLog.length
     await edit(text)
-    if (restore) {
-      const afterSource = await fetch(filePath).then(res => res.text())
-      const { range, newText } = (await import('@jb6/lang-service/src/lang-service-parsing-utils.js')).langServiceUtils
-        .deltaFileContent(afterSource, beforeSource, { line: 0, col: 0 })
-      await fetch('/editSource', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filePath, range, newText }) })
-    }
-    if (revealLogger.revealLog.slice(before).filter(event => event.t == 'reveal.textSaved').length != 1)
+    if (restore) await edit(original)
+    if (revealLogger.revealLog.slice(before).filter(event => event.t == 'reveal.textSaved').length != (restore ? 2 : 1))
       throw new Error(`inPlaceEdit did not save ${tgpPath}`)
   } })
 })
@@ -93,7 +127,8 @@ const addRevealComment = UiAction('addRevealComment', {
   ],
   impl: ({}, {}, { tgpPath, text }) => ({ exec: async ({ vars: { win, revealLogger } }) => {
     const el = [...win.document.querySelectorAll('[data-reveal-tgp-path]')].find(el => el.dataset.revealTgpPath == tgpPath)
-    const filePath = '/wonder/ui/reveal/reveal-tests.js', before = await fetch(filePath).then(res => res.text())
+    const compId = tgpPath.split('~')[0], filePath = new URL(coreUtils.compByFullId(compId).$location.path, win.location.href).href
+    const before = await fetch(filePath).then(res => res.text())
     el.dispatchEvent(new win.MouseEvent('click', { bubbles: true, cancelable: true }))
     win.document.querySelector('button[data-action="add-comment"]').click()
     for (let i = 0; i < 20 && !win.document.querySelector('.new-comment p'); i++) await coreUtils.delay(20)
@@ -121,7 +156,7 @@ const dragRevealSourceDialog = UiAction('dragRevealSourceDialog', {
   } })
 })
 
-ReactComp('deckShell.revealSample', {
+ReactComp('deckShell.reveal.revealSample', {
   impl: comp({
     hFunc: ({}, { react: { h } }) => ({ children }) => h('main:reveal-sample', {},
       h('style', {}, `.reveal-sample{height:100vh;background:#f8fafc}.reveal-sample>.reveal{height:100%}
@@ -130,7 +165,7 @@ ReactComp('deckShell.revealSample', {
   })
 })
 
-ReactComp('coverSlide.revealSample', {
+ReactComp('coverSlide.reveal.revealSample', {
   impl: comp({
     hFunc: ({}, { react: { h } }) => ({ slide, tgpPath, visitVdom }) => h('div:slideContent', {},
       h('div:logo', {}, 'W  |  Wonder'),
@@ -139,14 +174,14 @@ ReactComp('coverSlide.revealSample', {
   })
 })
 
-ReactComp('titleSlide.revealSample', {
+ReactComp('titleSlide.reveal.revealSample', {
   impl: comp({
     hFunc: ({}, { react: { h } }) => ({ slide, tgpPath, visitVdom }) => h('div:sample-slide', {},
     visitVdom({ vdom: h('h2', {}, slide.title), revealType: 'editable-text<reveal>', tgpPath: `${tgpPath}~title` }))
   })
 })
 
-ReactComp('columnsSlide.revealSample', {
+ReactComp('columnsSlide.reveal.revealSample', {
   impl: comp({
     hFunc: ({}, { react: { h } }) => ({ slide, tgpPath, visitVdom }) => h('div:slideContent', {},
       h('div:logo', {}, 'W  |  Wonder'),
@@ -164,7 +199,7 @@ ReactComp('columnsSlide.revealSample', {
 const revealSampleDeck = Deck('revealSample.deck', {
   impl: deck({
     slides: [
-      coverSlide('Reveal DSL sample', 'In edit mode, click text to edit or comment', {
+      coverSlide('Edited title', 'In edit mode, click text to edit or comment', {
         comments: [
           comment('title', 'Review this title', { author: 'shaiby', timestamp: '2026-08-15T12:00:00.000Z' })
         ]
@@ -178,7 +213,7 @@ const revealSampleDeck = Deck('revealSample.deck', {
         comments: []
       })
     ],
-    theme: wonderForPayoneer(),
+    theme: wonder(),
     controls: controls(),
     features: [
       liveEditor({ author: 'shaiby' })
@@ -186,9 +221,125 @@ const revealSampleDeck = Deck('revealSample.deck', {
     metadata: applet({ title: 'Reveal DSL Playground', icon: 'Presentation', showMessageInput: false })
   })
 })
+const revealSampleDeckSourcePath = coreUtils.compByFullId('deck<reveal>revealSample.deck').$location.path
 
 const revealSampleApplet = ReactComp('revealSampleApplet', {
-  impl: deckViewer(revealSampleDeck())
+  impl: deckViewer(revealSampleDeck(), setVars(asIs({ revealCategories: { revealSample: true } })))
+})
+
+const revealArchitectureDeck = Deck('revealArchitecture.deck', {
+  impl: deck({
+    slides: [
+      entityDiagramSlide('Data Engineering Service', 'SYSTEM ARCHITECTURE', {
+        subtitle: 'Entities and the relations between them',
+        entities: [
+          diagramGroup('customer', 'CUSTOMER DATA', { box: '20,120,350,540' }),
+          diagramGroup('backend', 'WONDER BACKEND ENGINE', { box: '390,120,940,540', accented: true }),
+          diagramGroup('client', 'WONDER CLIENT ENGINE', { box: '1350,120,390,540' }),
+          diagramEntity('requirements', 'Business / Data Analyst Requirements', {
+            box: '390,10,940,90',
+            subtitle: 'metrics and dimensions'
+          }),
+          diagramEntity('event', 'Event Source', { box: '70,340,250,100', subtitle: 'operational events' }),
+          diagramEntity('master', 'Master Data', {
+            box: '70,500,250,120',
+            summary: ['users','products','accounts']
+          }),
+          diagramEntity('parquets', 'Optimized Parquets', { box: '450,190,230,105' }),
+          diagramEntity('projections', 'Optimized Projections', { box: '450,390,230,105' }),
+          diagramEntity('trino', 'Athena / Trino', { box: '760,190,220,105' }),
+          diagramEntity('cube', 'Wonder Cube', {
+            box: '1040,320,230,130',
+            subtitle: 'optimizer and router',
+            dark: true,
+            detail: columnsSlide('Wonder Cube', [
+              column('Business logic', item('Semantic model and policy enforcement')),
+              column('Query routing', item('Chooses Athena, Trino, or an optimized projection'))
+            ])
+          }),
+          diagramEntity('dashboards', 'Dashboards', { box: '1420,220,250,110' }),
+          diagramEntity('ai', 'AI', { box: '1420,480,250,110', subtitle: 'verified answers' })
+        ],
+        relations: [
+          diagramRelation('requirements-cube', diagramAnchor('requirements', 'bottom', { ratio: 0.8 }), {
+            to: diagramAnchor('cube', 'top'),
+            route: bezierRoute(),
+            label: 'semantic model'
+          }),
+          diagramRelation('requirements-client', diagramAnchor('requirements', 'right'), {
+            to: diagramAnchor('client', 'left', { ratio: 0.1 }),
+            route: bezierRoute(),
+            label: 'requirements'
+          }),
+          diagramRelation('event-parquets', diagramAnchor('event'), {
+            to: diagramAnchor('parquets', 'left'),
+            route: orthogonalRoute(diagramPoint(380, 242.5))
+          }),
+          diagramRelation('master-backend', diagramAnchor('master'), {
+            to: diagramAnchor('backend', 'left', { ratio: 0.77 }),
+            route: orthogonalRoute(diagramPoint(380, 535.8))
+          }),
+          diagramRelation('parquets-trino', diagramAnchor('parquets'), {
+            to: diagramAnchor('trino', 'left')
+          }),
+          diagramRelation('trino-cube', diagramAnchor('trino'), {
+            to: diagramAnchor('cube', 'top', { ratio: 0.35 }),
+            route: bezierRoute()
+          }),
+          diagramRelation('backend-cube', diagramAnchor('backend'), {
+            to: diagramAnchor('cube', 'left'),
+            direction: 'both'
+          }),
+          diagramRelation('dashboards-cube', diagramAnchor('dashboards', 'left'), {
+            to: diagramAnchor('cube', 'right', { ratio: 0.32 }),
+            route: bezierRoute()
+          }),
+          diagramRelation('ai-cube', diagramAnchor('ai', 'left'), {
+            to: diagramAnchor('cube', 'right', { ratio: 0.71 }),
+            route: bezierRoute()
+          })
+        ],
+        lookAndFeel: 'systemArchitecture'
+      })
+    ],
+    theme: wonder(),
+    controls: controls({ hash: false }),
+    features: [
+      liveEditor({ author: 'shaiby' })
+    ],
+    metadata: applet({ title: 'Reveal Architecture Test', icon: 'Presentation', showMessageInput: false })
+  })
+})
+
+const revealArchitectureApplet = ReactComp('revealArchitectureApplet', {
+  impl: deckViewer(revealArchitectureDeck())
+})
+
+Test('revealTest.entityDiagramRelations', {
+  impl: reactTest({
+    testedComp: revealArchitectureApplet(),
+    expectedResult: and(
+      contains('Data Engineering Service','data-relation-id="requirements-cube"','data-relation-id="requirements-client"'),
+      contains('data-route="bezier"'),
+      contains('data-relation-layer="halo"','stroke-linecap="round"'),
+      notContains('Business logic'),
+      contains('"entityId":"cube"', '"entityId":null', {
+        allText: json.stringify('%$revealLogger/revealLog%')
+      }),
+      contains('data-testid="diagram-master"')
+    ),
+    userActions: actions(
+      waitForText('Data Engineering Service'),
+      click('Wonder Cube'),
+      waitForText('Business logic'),
+      waitForText('Optimized Parquets'),
+      waitForText('Chooses Athena, Trino, or an optimized projection'),
+      click('✕'),
+      waitForText('Optimized Parquets')
+    ),
+    logger: 'revealLogger,uiLogger',
+    timeout: 8000
+  })
 })
 
 Test('revealTest.liveEditing', {
@@ -262,7 +413,7 @@ Test('revealTest.inPlaceEditingSave', {
     testedComp: revealSampleApplet(),
     expectedResult: and(
       contains('saved to revealSample.deck~impl~slides~0~title'),
-      contains('/wonder/ui/reveal/reveal-tests.js'),
+      contains(revealSampleDeckSourcePath),
       contains('reveal.textSaved', { allText: json.stringify('%$revealLogger/revealLog%') })
     ),
     userActions: actions(

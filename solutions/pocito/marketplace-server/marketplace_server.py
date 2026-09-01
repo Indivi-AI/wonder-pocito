@@ -2,6 +2,8 @@ import base64
 import json
 import os
 import sys
+import urllib.parse
+import urllib.request
 from enum import Enum
 from pathlib import Path
 from typing import Any, Literal
@@ -235,6 +237,18 @@ class UploadRequest(DownloadRequest):
     content_type: str | None = None
 
 
+def flapi_package(package_id):
+    base_url = os.getenv('FLAPI_BASE_URL', 'http://localhost:6001').rstrip('/')
+    headers = {'Content-Type': 'application/json', 'accept': 'application/json',
+      'Authorization': os.getenv('FLAPI_TOKEN', ''), 'Username': os.getenv('FLAPI_USERNAME', '')}
+    def request(path):
+        with urllib.request.urlopen(urllib.request.Request(f'{base_url}/{path}', b'{}', headers, method='POST'), timeout=30) as response:
+            return json.loads(response.read())
+    id = urllib.parse.quote(package_id, safe='')
+    quick, metadata = [request(path) for path in [f'package/v1/quick/{id}', f'package/v2/{id}']]
+    return {'quick': quick, 'metadata': metadata}
+
+
 def create_app():
     repo = MarketplaceRepository(S3ObjectStore())
     base = FastAPI(title='marketplace', version='0.1.0')
@@ -254,6 +268,8 @@ def create_app():
     @base.get('/healthz', tags=['health'])
     def healthz():
         return {'status': 'ok', 'object_store': 'ok' if repo.objects.healthy() else 'unreachable'}
+
+    base.add_api_route('/api/v1/flapi/package/{package_id}', flapi_package, methods=['GET'], include_in_schema=False)
 
     models = {'tool': (CreateTool, UpdateTool), 'skill': (CreateSkill, UpdateSkill), 'plugin': (CreatePlugin, UpdatePlugin),
       'agent': (CreateAgent, UpdateAgent), 'knowledge': (CreateKnowledge, UpdateKnowledge)}

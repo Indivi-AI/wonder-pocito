@@ -1,0 +1,1 @@
+Move the AI chat and BI dashboard to theme<theme>, consumed through ctx.vars.theme.

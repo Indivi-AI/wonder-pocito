@@ -13,13 +13,14 @@
     "deploy-react-lib-and-images-to-cdn": "bash cloud-services/deploy-react-lib-and-images-to-cdn.sh",
     "airgapped-export": "bash solutions/pocito/on-prem/export-airgap.sh",
     "pocito": "node solutions/pocito/on-prem/dev/pocito-dev.js",
+    "seed-marketplace-assets": "node solutions/pocito/traveling-test/scripts/seed-marketplace-assets.mjs",
     "server-secrets:pull:dev": "node scripts/secrets.js pull dev",
     "server-secrets:pull:prod": "node scripts/secrets.js pull prod",
     "server-secrets:push:dev": "node scripts/secrets.js push dev",
     "server-secrets:push:prod": "node scripts/secrets.js push prod",
     "update-jb6": "bash ./scripts/update-jb6.sh",
     "pocito-update": "bash scripts/sync-pocito.sh",
-    "pocito-dev": "POCITO_PYTHON=3.10 POCITO_NPM_INSTALL=install --omit=optional node solutions/pocito/on-prem/dev/pocito-dev.js"
+    "pocito-dev": "POCITO_PYTHON=3.10 POCITO_NPM_INSTALL='install --omit=optional' node solutions/pocito/on-prem/dev/pocito-dev.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.13.2",

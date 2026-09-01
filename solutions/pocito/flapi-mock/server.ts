@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
@@ -73,17 +73,7 @@ const signJwt = (claims: Record<string, unknown>): string => {
   return `${data}.${sig}`;
 };
 
-const decodeJwtPayload = (token: string): Record<string, unknown> | null => {
-  const parts = token.split('.');
-  if (parts.length !== 3) return null;
-  try {
-    return JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8')) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-};
-
-const server = Fastify({ logger: false }).withTypeProvider<TypeBoxTypeProvider>();
+export const server = Fastify({ logger: false }).withTypeProvider<TypeBoxTypeProvider>();
 
 // Register CORS
 await server.register(cors);
@@ -137,23 +127,13 @@ const PUBLIC_PATH_PREFIXES = ['/api-docs', '/documentation', '/public/', '/sso']
 const PUBLIC_PATHS = new Set(['/health']);
 
 server.addHook('preHandler', async (request, reply) => {
-  if (process.env.WONDER_AUTH_MODE === 'none') return;
   const url = request.url.split('?', 1)[0];
   if (PUBLIC_PATHS.has(url) || PUBLIC_PATH_PREFIXES.some((p) => url.startsWith(p))) {
     return;
   }
 
-  const auth = request.headers.authorization;
-  if (!auth || typeof auth !== 'string' || !auth.trim()) {
-    return reply.status(401).send(errorBody('unauthorized', 'Authorization header is required'));
-  }
-  const token = auth.replace(/^Bearer\s+/i, '').trim();
-  const payload = decodeJwtPayload(token);
-  if (payload && typeof payload.exp === 'number') {
-    if (payload.exp <= Math.floor(Date.now() / 1000)) {
-      return reply.status(401).send(errorBody('token_expired', 'Token has expired'));
-    }
-  }
+  if (!process.env.FLAPI_TOKEN || request.headers.authorization !== process.env.FLAPI_TOKEN || request.headers.username !== '625navehp')
+    return reply.status(401).send(errorBody('unauthorized', 'Invalid FLAPI credentials'));
 });
 
 // Convenience redirect so callers (frontend, backend config) can link to /sso
@@ -242,9 +222,9 @@ server.get(
 
 // ——— FLAPI Quick Params Info ———
 
-server.get(
-  '/package/v1/quick/:packageId',
-  {
+server.route({
+  method: ['GET', 'POST'],
+  url: '/package/v1/quick/:packageId',
     schema: {
       tags: ['Metadata'],
       description: 'Get quick parameters info for a package',
@@ -257,17 +237,16 @@ server.get(
         401: ErrorBodySchema,
       },
     },
-  },
-  async (request) => {
+  handler: async (request) => {
     return getQuickParamsInfo(request.params.packageId);
-  }
-);
+  },
+});
 
 // ——— FLAPI Package Metadata ———
 
-server.get(
-  '/package/v2/:packageId',
-  {
+server.route({
+  method: ['GET', 'POST'],
+  url: '/package/v2/:packageId',
     schema: {
       tags: ['Metadata'],
       description: 'Get full package metadata including queries and fields',
@@ -281,15 +260,14 @@ server.get(
         404: ErrorBodySchema,
       },
     },
-  },
-  async (request, reply) => {
+  handler: async (request, reply) => {
     const metadata = getPackageFullMetadata(request.params.packageId);
     if (!metadata) {
       return reply.status(404).send(errorBody('not_found', `No package found for id: ${request.params.packageId}`));
     }
     return metadata;
-  }
-);
+  },
+});
 
 // ——— FLAPI Run ———
 
@@ -357,7 +335,7 @@ server.get(
 
 // ——— Start Server ———
 
-try {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) try {
   await server.listen({ port: PORT, host: '0.0.0.0' });
   console.log(`Mock server listening on http://localhost:${PORT}`);
   console.log(`Swagger UI available at http://localhost:${PORT}/api-docs`);

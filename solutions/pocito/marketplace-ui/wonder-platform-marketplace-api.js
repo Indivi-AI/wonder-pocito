@@ -28,8 +28,9 @@ Data('wonderPlatformFlapiPackage', {
     {id: 'baseUrl', as: 'string'}
   ],
   impl: async (ctx, {}, {packageId, baseUrl}) => {
-    const flapiBase = (baseUrl || globalThis.FLAPI_BASE_URL || globalThis.process?.env?.FLAPI_BASE_URL || 'http://localhost:6001').replace(/\/$/, '')
-    const response = await fetch(`${flapiBase}/flapi/package/${encodeURIComponent(packageId)}`)
+    const marketplaceBase = (baseUrl || globalThis.MARKETPLACE_API_URL || globalThis.process?.env?.MARKETPLACE_API_URL ||
+      'http://localhost:7777').replace(/\/$/, '')
+    const response = await fetch(`${marketplaceBase}/api/v1/flapi/package/${encodeURIComponent(packageId)}`)
     if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || `FLAPI ${response.status}`)
     return response.json()
   }
