@@ -31,7 +31,7 @@ ReactComp('wonderPlatformResourceFields', {
             })
             .catch(error => setPackageState({loading: false, error: error.message || String(error)}))
         }
-      }, [item.id, resource])
+      }, [item.originalId, resource])
       const groupHead = (title, count) => h('div:flex items-center gap-2 border-b border-[var(--wp-border)] ' +
         'bg-[var(--wp-surface-2)] px-4 py-2', {},
       h('span:text-[12px] font-semibold text-[var(--wp-ink-2)]', {}, title),
