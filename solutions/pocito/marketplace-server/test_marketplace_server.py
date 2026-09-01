@@ -1,4 +1,5 @@
 import json
+import asyncio
 import os
 import tempfile
 import unittest
@@ -273,7 +274,7 @@ class MarketplaceServerTest(unittest.TestCase):
         
         # 4. Load the tool via Agno runtime
         runtime = self.agno.app.state.marketplace_runtime
-        agno_tool = runtime.tool('marketplace', 'flowTool')
+        agno_tool = asyncio.run(runtime.tool('marketplace', 'flowTool'))
         
         # Verify Agno Function contract
         self.assertEqual(agno_tool.name, 'flowTool')
@@ -331,46 +332,6 @@ class MarketplaceServerTest(unittest.TestCase):
     def test_adhoc_run_with_empty_message_returns_422(self):
         self.assertEqual(self.agno.post('/adhoc/runs', json={'message': ''}).status_code, 422)
         self.assertEqual(self.agno.post('/adhoc/runs', json={}).status_code, 422)
-
-    def test_adhoc_run_with_no_assets_uses_default_conversation(self):
-        run = self.agno.post('/adhoc/runs', json={'message': 'Hello there'})
-        self.assertEqual(run.status_code, 200, run.text)
-        body = run.json()
-        self.assertEqual(body['content'], 'No marketplace skill or tool is configured.')
-        self.assertEqual(body['status'], 'COMPLETED')
-        self.assertTrue(body['session_id'])
-        self.assertTrue(body['run_id'])
-
-    def test_adhoc_run_with_named_subset_of_assets_carries_them(self):
-        self.assertEqual(self.request('POST', '/api/v1/skills/', json=self.skill()).status_code, 201)
-        self.assertEqual(self.request('POST', '/api/v1/tools/', json=self.tool()).status_code, 201)
-        run = self.agno.post('/adhoc/runs', json={'message': 'What is the code? Double 21.',
-          'skills': ['roomFactsSkill'], 'tools': ['numberTool']})
-        self.assertEqual(run.status_code, 200, run.text)
-        body = run.json()
-        self.assertIn('THE ORBITAL CODE IS AMBER-17', body['content'])
-        self.assertIn('TOOL_CALLED:42', body['content'])
-
-    def test_adhoc_run_executes_flow_package_tool_via_same_executor(self):
-        tool_payload = {'id': 'adhocFlowTool', 'display_name': 'Adhoc Flow Tool', 'description': 'Flow tool for adhoc runs',
-          'tool_type': 'flow_package', 'package_id': '9',
-          'input_schema': [{'Name': 'category', 'Type': 'String', 'DisplayName': 'Category', 'IsRequired': True}]}
-        self.assertEqual(self.request('POST', '/api/v1/tools/', json=tool_payload).status_code, 201)
-        with patch('urllib.request.urlopen') as urlopen:
-            urlopen.return_value.__enter__.return_value.read.return_value = json.dumps({'results': ['ADHOC_FLOW_RESULT']}).encode()
-            run = self.agno.post('/adhoc/runs', json={'message': 'Filter by category.', 'tools': ['adhocFlowTool']})
-        self.assertEqual(run.status_code, 200, run.text)
-        self.assertIn('ADHOC_FLOW_RESULT', run.json()['content'])
-
-    def test_adhoc_run_with_missing_asset_returns_404(self):
-        run = self.agno.post('/adhoc/runs', json={'message': 'hi', 'tools': ['doesNotExist']})
-        self.assertEqual(run.status_code, 404, run.text)
-        self.assertIn('doesNotExist', run.json()['detail'])
-
-    def test_adhoc_run_with_empty_message_returns_422(self):
-        self.assertEqual(self.agno.post('/adhoc/runs', json={'message': ''}).status_code, 422)
-        self.assertEqual(self.agno.post('/adhoc/runs', json={}).status_code, 422)
-
 
 if __name__ == '__main__':
     unittest.main()
