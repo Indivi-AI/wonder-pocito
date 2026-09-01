@@ -10,7 +10,7 @@ import '@jb6/core/misc/import-map-services.js'
 import { useCors } from './lib/use-cors.js'
 import { setupWfetch } from './lib/wfetch.js'
 import { serveAppletPage } from './lib/room-lambda-and-applet.js'
-import { setupLiveRepoRoomApplet } from './lib/room-lambda-and-applet-live-repo.js'
+import { setupLiveRepoRoomApplet, setupLiveRepoDevApplet } from './lib/room-lambda-and-applet-live-repo.js'
 
 const dir = path.dirname(fileURLToPath(import.meta.url))
 if (process.env.ENV_PATH) dotenv.config({ path: process.env.ENV_PATH })
@@ -69,6 +69,7 @@ app.get('/studio/tests.html', async (_, res) => {
 app.use('/studio', express.static(path.join(root, 'wonder/studio')))
 app.use('/tests', express.static(path.join(root, 'tests')))
 setupLiveRepoRoomApplet(app, {serveAppletPage, imports: importMap.imports})
+setupLiveRepoDevApplet(app, {serveAppletPage, imports: importMap.imports})
 for (const {urlPath, diskPath} of staticMappings) {
   app.use(urlPath, async (req, res, next) => {
     if (!req.path.endsWith('.html')) return next()

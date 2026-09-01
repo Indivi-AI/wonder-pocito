@@ -56,6 +56,7 @@ Agent manifests with explicit models must use configured aliases. Embedding dime
 changing embedding model/dimensions requires rebuilding affected knowledge indexes.
 
 Open your existing applet at `http://localhost:3000/room/<room>/applet/<applet>`.
+Any registered react-comp also serves def-less at `http://localhost:3000/applet/<cmpId>` (derived spec; the comp must be imported from your `.jb6` entry point).
 Ctrl+C stops app processes only; Docker infrastructure remains running.
 
 ## Configuration

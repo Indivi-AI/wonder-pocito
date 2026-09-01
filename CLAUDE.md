@@ -110,6 +110,9 @@ react/tests/react-tests.js - use cases
 
 admin/room/room-applet-tests.js - usage in wonder
 
+When iterating on a UI at localhost, open `localhost:3000/applet/:cmpId` - it serves any registered react-comp with a spec derived
+from the comp itself: no def file, no upload. Make sure the comp is imported from your `.jb6/entry-points-*.js`; persistence uses the fs room `room://dev`.
+Alternative harness: `localhost:3000/jb6_packages/react/react-comp-view.html?cmpId=<id>&urlsToLoad=@solution/<path>.js` (bare viewer, needs `ctx-roomWUrl` for room comps).
 use `localhost:3000/room/:roomId/applet/:appletId` for public and `/signed-room/:roomId/applet/:appletId` for signed liverepo runs
 provide clickable links for the master
 
