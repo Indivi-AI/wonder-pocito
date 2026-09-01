@@ -108,18 +108,13 @@ def make_flow_package_executor(package_id):
         import urllib.error
         import json
         flapi_base_url = os.getenv('FLAPI_BASE_URL', 'http://localhost:6001')
-        flapi_token = os.getenv('FLAPI_BEARER_TOKEN', '')
+        flapi_token = os.getenv('FLAPI_TOKEN', '')
         
         url = f"{flapi_base_url.rstrip('/')}/package/v3/{package_id}"
         headers = {
             'Content-Type': 'application/json'
         }
-        if flapi_token:
-            headers['Authorization'] = f"Bearer {flapi_token}"
-            
-        payload = {
-            "params": flat_args
-        }
+        payload = {"params": flat_args, **({"token": flapi_token} if flapi_token else {})}
         req = urllib.request.Request(
             url,
             data=json.dumps(payload).encode('utf-8'),
@@ -142,10 +137,10 @@ class MarketplaceAgentRuntime:
         self.repo, self.runtime_dir = repo, Path(runtime_dir)
         self.db = InMemoryDb()
         self.room_dbs = defaultdict(InMemoryDb)
+        self.litellm_url = f"{os.getenv('LITELLM_HOST', 'http://localhost:4000').rstrip('/')}/v1"
         self.model_factory = model_factory or self.openai_model
-        self.embedder = embedder or OpenAIEmbedder(id=os.getenv('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small'),
-          dimensions=int(os.getenv('OPENAI_EMBEDDING_DIMENSIONS', '1536')), api_key=os.getenv('OPENAI_API_KEY'),
-          base_url=os.getenv('OPENAI_BASE_URL'))
+        self.embedder = embedder or OpenAIEmbedder(id='embeddings', dimensions=int(os.getenv('OPENAI_EMBEDDING_DIMENSIONS', '1536')),
+          api_key='unused', base_url=self.litellm_url)
         pgvector_url = os.getenv('PGVECTOR_URL') or URL.create('postgresql+psycopg',
           username=os.getenv('POSTGRES_USER', 'wonder'), password=os.getenv('POSTGRES_PASSWORD', 'wonder-pg-local'),
           host=os.getenv('PGVECTOR_HOST', '127.0.0.1'), port=int(os.getenv('PGVECTOR_PORT', '5432')),
@@ -154,8 +149,8 @@ class MarketplaceAgentRuntime:
         self.knowledge_instances, self.worker_id = {}, os.urandom(16).hex()
 
     def openai_model(self, manifest):
-        model = manifest.get('config', {}).get('backend_config', {}).get('model') or os.getenv('OPENAI_MODEL', 'gpt-5-mini')
-        return OpenAIChat(id=model, api_key=os.getenv('OPENAI_API_KEY'), base_url=os.getenv('OPENAI_BASE_URL'))
+        model = manifest.get('config', {}).get('backend_config', {}).get('model') or 'chat'
+        return OpenAIChat(id=model, api_key='unused', base_url=self.litellm_url)
 
     def agent_manifest(self, room, name):
         try:

@@ -169,15 +169,16 @@ Data('wonderPlatformWfetchRoundTrip', {
 Data('wonderPlatformFlapiRoundTrip', {
   impl: async () => {
     const {createServer} = await import('node:http'), requests = []
-    const upstream = createServer((req, res) => {
-      requests.push({url: req.url, authorization: req.headers.authorization})
+    const upstream = createServer(async (req, res) => {
+      const chunks = []; for await (const chunk of req) chunks.push(chunk)
+      requests.push({url: req.url, method: req.method, body: JSON.parse(Buffer.concat(chunks).toString())})
       res.setHeader('content-type', 'application/json')
       res.end(JSON.stringify(req.url.includes('/quick/') ? {'ecom-query-1': [{Name: 'category'}]}
         : {Id: 7, Name: 'E-commerce Analytics', Queries: [{Name: 'Orders Cube'}]}))
     })
     await new Promise(resolve => upstream.listen(0, '127.0.0.1', resolve))
-    const previous = {FLAPI_BASE_URL: process.env.FLAPI_BASE_URL, FLAPI_BEARER_TOKEN: process.env.FLAPI_BEARER_TOKEN}
-    process.env.FLAPI_BASE_URL = `http://127.0.0.1:${upstream.address().port}`; process.env.FLAPI_BEARER_TOKEN = 'test-token'
+    const previous = {FLAPI_BASE_URL: process.env.FLAPI_BASE_URL, FLAPI_TOKEN: process.env.FLAPI_TOKEN}
+    process.env.FLAPI_BASE_URL = `http://127.0.0.1:${upstream.address().port}`; process.env.FLAPI_TOKEN = 'test-token'
     try {
       const {createFlapiApp} = await import(`${await coreUtils.calcRepoRoot()}/solutions/pocito/on-prem/dev/flapi-server.js`)
       const app = await createFlapiApp(), server = await new Promise(resolve => {
@@ -256,8 +257,11 @@ Test('wonderPlatform.flapiRoundTrip', {
     calculate: dsls.common.data.wonderPlatformFlapiRoundTrip(),
     expectedResult: and(equals('%status%', 200), equals('%body/quick/ecom-query-1/0/Name%', 'category'),
       equals('%body/metadata/Queries/0/Name%', 'Orders Cube'), equals('%requests/length%', 2),
-      equals('%requests/0/authorization%', 'Bearer test-token'), equals('%requests/1/authorization%', 'Bearer test-token'))
-  })
+      equals('%requests/0/method%', 'POST'), equals('%requests/0/body/token%', 'test-token'),
+      equals('%requests/1/method%', 'POST'), equals('%requests/1/body/token%', 'test-token'))
+  }),
+  timeout: 5000,
+  logger: 'marketplaceLogger'
 })
 
 Test('wonderPlatform.marketplaceManifest', {
@@ -901,4 +905,3 @@ Test('wonderPlatform.marketplaceUiAgentE2e', {
     timeout: 120000
   })
 })
-

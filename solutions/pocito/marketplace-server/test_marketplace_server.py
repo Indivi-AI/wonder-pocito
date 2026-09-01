@@ -283,10 +283,15 @@ class MarketplaceServerTest(unittest.TestCase):
         self.assertIn('category', agno_tool.parameters['required'])
         
         # 5. Execute the tool entrypoint
-        with patch.dict(os.environ, {'FLAPI_BASE_URL': 'http://localhost:6001', 'FLAPI_BEARER_TOKEN': 'mock-test-token'}):
+        with patch.dict(os.environ, {'FLAPI_BASE_URL': 'http://localhost:6001', 'FLAPI_TOKEN': 'mock-test-token'}), \
+          patch('urllib.request.urlopen') as urlopen:
+            urlopen.return_value.__enter__.return_value.read.return_value = json.dumps({'results': ['Orders Cube']}).encode()
             result = agno_tool.entrypoint(category='Audio')
             self.assertIn('results', result)
             self.assertIn('Orders Cube', result['results'])
+            request = urlopen.call_args.args[0]
+            self.assertEqual(json.loads(request.data), {'params': {'category': 'Audio'}, 'token': 'mock-test-token'})
+            self.assertNotIn('Authorization', request.headers)
 
     def test_adhoc_run_with_no_assets_uses_default_conversation(self):
         run = self.agno.post('/adhoc/runs', json={'message': 'Hello there'})

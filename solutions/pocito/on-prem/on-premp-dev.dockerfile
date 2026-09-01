@@ -6,6 +6,8 @@ FROM debian:bookworm-slim
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
 COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
 COPY --from=uv /uv /uvx /usr/local/bin/
+
+ARG UV_PYTHON_VERSION=3.10
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates git python3 python3-pip tini \
     && rm -rf /var/lib/apt/lists/* \
     && ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
@@ -14,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certifi
 
 COPY package.json package-lock.json /tmp/pocito-npm/
 RUN --mount=type=secret,id=npmrc,target=/root/.npmrc \
-    cd /tmp/pocito-npm && npm ci && mkdir -p /workspace \
+    cd /tmp/pocito-npm && npm ci --omit=optional && mkdir -p /workspace \
     && mv node_modules /workspace/node_modules && rm -rf /tmp/pocito-npm
 COPY solutions/pocito/flapi-mock/package.json solutions/pocito/flapi-mock/package-lock.json /tmp/flapi-npm/
 RUN --mount=type=secret,id=npmrc,target=/root/.npmrc \
@@ -28,7 +30,7 @@ COPY solutions/pocito/on-prem/litellm/pyproject.toml solutions/pocito/on-prem/li
 RUN --mount=type=secret,id=uvconfig,target=/root/.config/uv/uv.toml \
     for project in marketplace-server agno-server litellm; do \
       uv export --frozen --no-dev --no-emit-project --project /opt/pocito/manifests/$project --output-file /tmp/requirements.txt \
-      && uv venv --python 3.12.12 /opt/pocito/venvs/$project \
+      && uv venv --python ${UV_PYTHON_VERSION} /opt/pocito/venvs/$project \
       && uv pip sync --require-hashes --python /opt/pocito/venvs/$project/bin/python /tmp/requirements.txt \
       && cat /opt/pocito/manifests/$project/pyproject.toml /opt/pocito/manifests/$project/uv.lock \
         | sha256sum | cut -d ' ' -f 1 > /opt/pocito/venvs/$project/.pocito-lock || exit 1; \

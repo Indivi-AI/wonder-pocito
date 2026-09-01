@@ -11,12 +11,11 @@ import { useCors } from './lib/use-cors.js'
 import { setupWfetch } from './lib/wfetch.js'
 import { serveAppletPage } from './lib/room-lambda-and-applet.js'
 import { setupLiveRepoRoomApplet } from './lib/room-lambda-and-applet-live-repo.js'
-import { setupLlmProxyRoute } from './lib/llm-proxy.js'
 
 const dir = path.dirname(fileURLToPath(import.meta.url))
 if (process.env.ENV_PATH) dotenv.config({ path: process.env.ENV_PATH })
 jb.coreRegistry.repoRoot = path.resolve(dir, '../..')
-export async function createLocalApp() {
+export async function createLocalApp({ llmProxyMode = process.env.LLM_PROXY_MODE || 'cloud' } = {}) {
 const root = await coreUtils.calcRepoRoot(), { importMap, staticMappings } = await coreUtils.getStaticServeConfig(root)
 process.env.HOST_NODE_MODULES_BASE = root
 
@@ -88,6 +87,7 @@ serverUtils.serveGotoSource(app)
 serverUtils.serveEditSource(app, {express})
 await serverUtils.serveMcpViaCli(app, {express})
 setupWfetch(app)
+const {setupLlmProxyRoute} = await import(`./lib/${llmProxyMode === 'onprem' ? 'llm-proxy-onprem' : 'llm-proxy'}.js`)
 setupLlmProxyRoute(app)
 app.get('/health', (_, res) => res.json({status: 'ok', mode: 'local'}))
 return app

@@ -1,6 +1,7 @@
 # Pocito local development
 
-`npm run pocito-dev` starts Pocito, Marketplace, Agno, LiteLLM and FLAPI, not MinIO or PostgreSQL.
+`npm run pocito-dev` starts Pocito, Marketplace and Agno, plus bundled LiteLLM and FLAPI unless their external URLs are set.
+It does not start MinIO or PostgreSQL.
 Applets use checkout source and existing `files/rooms` data. Publishing uploads to the configured MinIO that imitates production.
 The launcher does not create applets, change FLAPI fixtures, or provision external infrastructure.
 
@@ -38,15 +39,18 @@ Existing on-prem services can replace these containers: configure their endpoint
 ## Start the app
 
 Install Node 24+ and uv on macOS or Linux. No native MinIO or PostgreSQL installation is needed.
-The launcher installs missing npm dependencies and creates locked Python 3.12.12 environments.
+The launcher installs missing npm dependencies and creates locked Python environments for the configured `POCITO_PYTHON` (defaults to 3.10).
 
 ```sh
 cp -n solutions/pocito/.env.onprem.example solutions/pocito/.env.onprem
+# Only when LITELLM_HOST is empty:
 cp -n solutions/pocito/on-prem/litellm/config.yaml solutions/pocito/on-prem/litellm/config.local.yaml
 npm run pocito-dev
 ```
+`npm run pocito-dev` uses `POCITO_NPM_INSTALL='install --omit=optional'`, so root Google SDK/Auth packages are installed only for
+Cloud/credentialed targets and skipped in on-prem.
 
-Before launching, edit `config.local.yaml` with model endpoints and keys; keep real credentials out of the tracked template.
+When using bundled LiteLLM, edit `config.local.yaml` with model endpoints and keys; keep real credentials out of the tracked template.
 `chat` and `embeddings` are OpenAI-compatible aliases. Replace the OpenAI deployments with your on-prem providers.
 Agent manifests with explicit models must use configured aliases. Embedding dimensions must match the deployment;
 changing embedding model/dimensions requires rebuilding affected knowledge indexes.
@@ -67,13 +71,15 @@ No Wonder env file is loaded. Model credentials belong only in LiteLLM YAML, not
 | `MINIO_STORAGE_CLASS` | `STANDARD`; stock MinIO does not support `STANDARD_IA` |
 | `POCITO_DATA_DIR` | `.local-data` relative to this directory; Python environments and marketplace data, not applet files |
 | `OPENAI_EMBEDDING_DIMENSIONS` | `1536` |
+| `FLAPI_BASE_URL`, `FLAPI_TOKEN` | External FLAPI endpoint and body token; empty URL starts the local mock |
+| `LITELLM_HOST` | External LiteLLM origin; empty starts bundled LiteLLM at `http://localhost:${LITELLM_PORT}` |
 
 All storage endpoints are external to the launcher, even `localhost`. Agno chat sessions are currently in memory.
 App ports: Pocito `3000`, Marketplace `7777`, Agno `7778`, LiteLLM `4000`, FLAPI `6001`.
 Optional port overrides are listed in `.env.onprem.example`.
 The launcher preserves npm configuration and forwards pip's primary index to uv unless uv has its own index configuration.
 For advanced Artifactory authentication, configure uv directly. Missing Python binaries need an approved
-`UV_PYTHON_INSTALL_MIRROR` or preinstalled Python 3.12.12; package indexes alone do not supply Python or tokenizer assets.
+`UV_PYTHON_INSTALL_MIRROR` or preinstalled Python runtime matching `POCITO_PYTHON`; package indexes alone do not supply Python or tokenizer assets.
 
 ## Dependency-only Linux x86-64 image
 
