@@ -1,9 +1,12 @@
 import json
 import asyncio
+import io
 import os
 import tempfile
 import unittest
+import urllib.error
 import uuid
+from email.message import Message
 from pathlib import Path
 from unittest.mock import patch
 
@@ -13,6 +16,7 @@ from fastapi.testclient import TestClient
 from agno_server import create_app as create_agent_os_app, knowledge_reader
 from marketplace_e2e_model import MarketplaceE2EEmbedder, model_factory
 from marketplace_server import create_app, flapi_package
+from marketplace_storage import S3ObjectStore
 
 
 class KnowledgeChunkingTest(unittest.TestCase):
@@ -37,9 +41,25 @@ class FlapiProxyTest(unittest.TestCase):
                   {'Content-type': 'application/json', 'Accept': 'application/json', 'Authorization': 'test-token',
                     'Username': '625navehp'})
 
+    def test_upstream_error_is_proxied(self):
+        headers = Message()
+        headers['Content-Type'] = 'application/json'
+        error = urllib.error.HTTPError('http://flapi.test', 400, 'Bad Request', headers, io.BytesIO(b'{"error":"bad token"}'))
+        with patch('urllib.request.urlopen', side_effect=error):
+            response = flapi_package('101')
+        self.assertEqual((response.status_code, response.media_type, response.body),
+          (400, 'application/json', b'{"error":"bad token"}'))
+
     def test_route_is_registered(self):
         with patch('marketplace_server.S3ObjectStore'), patch('marketplace_server.MarketplaceRepository'):
             self.assertIn('/api/v1/flapi/package/{package_id}', [route.path for route in create_app().routes])
+
+
+class S3ObjectStoreTest(unittest.TestCase):
+    def test_path_style_configuration(self):
+        with patch.dict(os.environ, {'S3_USE_PATH_STYLE': 'true'}), patch('marketplace_storage.boto3.client') as client:
+            S3ObjectStore()
+        self.assertEqual(client.call_args.kwargs['config'].s3, {'addressing_style': 'path'})
 
 
 class MarketplaceServerTest(unittest.TestCase):

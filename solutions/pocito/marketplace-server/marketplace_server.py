@@ -2,6 +2,7 @@ import base64
 import json
 import os
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 from enum import Enum
@@ -242,12 +243,17 @@ def flapi_package(package_id):
     base_url = os.getenv('FLAPI_BASE_URL', 'http://localhost:6001').rstrip('/')
     headers = {'Content-Type': 'application/json', 'accept': 'application/json',
       'Authorization': os.getenv('FLAPI_TOKEN', ''), 'Username': os.getenv('FLAPI_USERNAME', '')}
-    def request(path):
-        with urllib.request.urlopen(urllib.request.Request(f'{base_url}/{path}', b'{}', headers, method='POST'), timeout=30) as response:
-            return json.loads(response.read())
-    id = urllib.parse.quote(package_id, safe='')
-    quick, metadata = [request(path) for path in [f'package/v1/quick/{id}', f'package/v2/{id}']]
-    return {'quick': quick, 'metadata': metadata}
+    encoded_id = urllib.parse.quote(package_id, safe='')
+    package = {}
+    for name, path in [('quick', f'package/v1/quick/{encoded_id}'), ('metadata', f'package/v2/{encoded_id}')]:
+        try:
+            request = urllib.request.Request(f'{base_url}/{path}', b'{}', headers, method='POST')
+            with urllib.request.urlopen(request, timeout=30) as response:
+                package[name] = json.loads(response.read())
+        except urllib.error.HTTPError as error:
+            return Response(error.read(), status_code=error.code,
+              media_type=error.headers.get_content_type() if error.headers else None)
+    return package
 
 
 def create_app():

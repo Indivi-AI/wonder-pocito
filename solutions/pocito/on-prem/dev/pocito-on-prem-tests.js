@@ -25,22 +25,20 @@ Data('pocitoOnPremRequest', {
 
 const { pocitoOnPremRequest } = dsls.common.data
 
-Data('pocitoOnPremServices', {
+Data('pocitoOnPremService', {
   params: [
+    {id: 'service', as: 'string', mandatory: true},
     {id: 'request', dynamic: true, defaultValue: pocitoOnPremRequest()}
   ],
-  impl: async (ctx, {onPremLogger}, {request}) => {
+  impl: async (ctx, {onPremLogger}, {service, request}) => {
     const wonder = process.env.WONDER_SERVICE_URL || 'http://localhost:3000'
     const marketplace = process.env.MARKETPLACE_API_URL || 'http://localhost:7777'
     const agno = process.env.AGNO_API_URL || 'http://localhost:7778'
-    const get = url => request(ctx.setVars({url, options: {}}))
-    const [wonderHealth, marketplaceHealth, agnoHealth, models, flapi] = await Promise.all([
-      get(`${wonder}/health`), get(`${marketplace}/healthz`), get(`${agno}/healthz`),
-      get(`${wonder}/llmProxy/models`), get(`${marketplace}/api/v1/flapi/package/101`)
-    ])
-    const result = {wonder: wonderHealth.status == 200, marketplace: marketplaceHealth.body, agno: agnoHealth.body,
-      models: models.body.data?.map(({id}) => id) || [], flapiPackage: flapi.body.metadata?.Id}
-    onPremLogger?.info?.({t: 'on-prem services checked', ...result}, {}, {ctx})
+    const urls = {wonder: `${wonder}/health`, marketplace: `${marketplace}/healthz`, agno: `${agno}/healthz`,
+      liteLlm: `${wonder}/llmProxy/models`, flapi: `${marketplace}/api/v1/flapi/package/101`}
+    const response = await request(ctx.setVars({url: urls[service], options: {}}))
+    const result = {httpStatus: response.status, ...response.body}
+    onPremLogger?.info?.({t: 'on-prem service checked', service, ...result}, {}, {ctx})
     return result
   }
 })
@@ -194,23 +192,59 @@ Data('pocitoOnPremAgentQuestion', {
 })
 
 const { pocitoOnPremAgentQuestion, pocitoOnPremDataset, pocitoOnPremFlapiPackage, pocitoOnPremLiteLlmRoundTrip, pocitoOnPremMarketplaceSeed,
-  pocitoOnPremMinioApplet, pocitoOnPremMinioRoundTrip, pocitoOnPremPgvectorRoundTrip, pocitoOnPremServices } = dsls.common.data
+  pocitoOnPremMinioApplet, pocitoOnPremMinioRoundTrip, pocitoOnPremPgvectorRoundTrip, pocitoOnPremService } = dsls.common.data
 
-Test('pocitoOnPrem.services', {
+Test('pocitoOnPrem.serviceWonder', {
+  HeavyTest: true,
+  nodeOnly: true,
+  impl: dataTest(pocitoOnPremService('wonder'), and(equals('%httpStatus%', 200), equals('%status%', 'ok')), {
+    timeout: 30000,
+    logger: 'onPremLogger'
+  })
+})
+
+Test('pocitoOnPrem.serviceMarketplace', {
   HeavyTest: true,
   nodeOnly: true,
   impl: dataTest({
-    calculate: pocitoOnPremServices(),
+    calculate: pocitoOnPremService('marketplace'),
+    expectedResult: and(equals('%httpStatus%', 200), equals('%status%', 'ok'), equals('%object_store%', 'ok')),
+    timeout: 30000,
+    logger: 'onPremLogger'
+  })
+})
+
+Test('pocitoOnPrem.serviceAgno', {
+  HeavyTest: true,
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: pocitoOnPremService('agno'),
     expectedResult: and(
-      equals('%wonder%', true),
-      equals('%marketplace/status%', 'ok'),
-      equals('%marketplace/object_store%', 'ok'),
-      equals('%agno/status%', 'ok'),
-      equals('%agno/object_store%', 'ok'),
-      equals('%agno/vector_store%', 'ok'),
-      equals('%models%', ['chat','embeddings']),
-      equals('%flapiPackage%', 101)
+      equals('%httpStatus%', 200),
+      equals('%status%', 'ok'),
+      equals('%object_store%', 'ok'),
+      equals('%vector_store%', 'ok')
     ),
+    timeout: 30000,
+    logger: 'onPremLogger'
+  })
+})
+
+Test('pocitoOnPrem.serviceLiteLlm', {
+  HeavyTest: true,
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: pocitoOnPremService('liteLlm'),
+    expectedResult: and(equals('%httpStatus%', 200), equals('%data/0/id%', 'chat'), equals('%data/1/id%', 'embeddings')),
+    timeout: 30000,
+    logger: 'onPremLogger'
+  })
+})
+
+Test('pocitoOnPrem.serviceFlapi', {
+  HeavyTest: true,
+  nodeOnly: true,
+  impl: dataTest(pocitoOnPremService('flapi'), and(equals('%httpStatus%', 200), equals('%metadata/Id%', 101)), {
     timeout: 30000,
     logger: 'onPremLogger'
   })

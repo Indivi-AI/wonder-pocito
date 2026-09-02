@@ -12,7 +12,8 @@ Object.assign(env, {
   WONDER_LOCAL_SERVER: `http://localhost:${port}`, WONDER_SERVICE_URL: `http://localhost:${port}`,
   WONDER_CDN_URL: `http://localhost:${port}/jb6_packages/react/lib`, MARKETPLACE_API_URL: marketplace,
   MARKETPLACE_S3_ENDPOINT: minio, MARKETPLACE_S3_PUBLIC_ENDPOINT: minio, MARKETPLACE_S3_ACCESS_KEY: env.MINIO_ACCESS_KEY || 'wonder',
-  MARKETPLACE_S3_SECRET_KEY: env.MINIO_SECRET_KEY || 'wonder-minio-local', LITELLM_HOST: litellm,
+  MARKETPLACE_S3_SECRET_KEY: env.MINIO_SECRET_KEY || 'wonder-minio-local', S3_USE_PATH_STYLE: env.S3_USE_PATH_STYLE || 'true',
+  LITELLM_HOST: litellm,
   OPENAI_BASE_URL: `${litellm}/v1`, OPENAI_API_KEY: 'unused', OPENAI_MODEL: 'chat',
   AGNO_API_URL: env.AGNO_API_URL || 'http://localhost:7778', LITELLM_LOCAL_MODEL_COST_MAP: 'True',
   LITELLM_LOCAL_POLICY_TEMPLATES: 'true', LITELLM_LOCAL_BLOG_POSTS: 'True'
