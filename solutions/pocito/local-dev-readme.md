@@ -101,6 +101,8 @@ cp -n solutions/pocito/on-prem/litellm/config.yaml solutions/pocito/on-prem/lite
 
 Edit `solutions/pocito/.env.onprem`:
 
+The air-gapped launcher converts this ignored file from Windows CRLF to LF before loading it.
+
 ```dotenv
 MINIO_ENDPOINT=http://localhost:9000
 PGVECTOR_URL=postgresql+psycopg://wonder:wonder-pg-local@localhost:5432/wonder
@@ -149,7 +151,7 @@ docker run -d --name pocito-dev --restart unless-stopped --network host \
 
 Replace `<REPO_PATH>` with the checkout's absolute path. No `node_modules` mount is needed: the repository sits below the image's
 `/workspace/node_modules`, which Node resolves as an ancestor. External FLAPI also removes the need for its nested dependency volume.
-The air-gapped command uses only image-baked Node/Python dependencies and fails with a rebuild instruction if mounted lockfiles differ.
+The air-gapped command directly uses the image-baked Node/Python dependencies and does not inspect mounted lockfiles.
 
 For Docker Desktop or bridge networking, replace `--network host` with:
 
@@ -167,7 +169,7 @@ docker logs -f pocito-dev
 curl -f http://localhost:3007/health
 ```
 
-The launcher proxies external FLAPI, starts bundled LiteLLM only when its URL is empty, then starts Marketplace, seed assets, Agno and Pocito.
+The script uses external FLAPI, uses external Agno when configured or starts baked Agno otherwise, then starts the remaining baked services.
 It reads only `solutions/pocito/.env.onprem`; model configuration comes from
 `solutions/pocito/on-prem/litellm/config.local.yaml`.
 
@@ -177,18 +179,18 @@ Open:
 
 `http://localhost:3007/wonder/studio/tests.html?pattern=pocitoOnPrem&includeHeavy`
 
-The thirteen tests cover service health, metadata and execution through the FLAPI proxy for packages 101–104, travel dataset counts, Marketplace MinIO,
+The seventeen tests cover individual service health, metadata and execution through the FLAPI proxy for packages 101–104, travel dataset counts,
+Marketplace MinIO,
 pgvector, LiteLLM chat and embeddings, seeded Marketplace assets, applet publication to MinIO, and both Agno travel-agent calls.
-They contain no Playwright test. When all thirteen are green, the mounted checkout and on-prem service chain are working together.
+They contain no Playwright test. When all seventeen are green, the mounted checkout and on-prem service chain are working together.
 This is an installation/integration check, not an exhaustive product-quality test. For a focused failure, run the matching `pocitoOnPrem.*`
 test through MCP and inspect its domain error arrays.
 
 ### 6. Stop or restart
 
-Always stop the app supervisor before restarting it:
+Stop or restart the standalone container directly:
 
 ```sh
-docker exec -u pocito pocito-dev sh -lc 'cd /workspace/repo && npm run pocito-dev:shutdown'
 docker stop pocito-dev
 docker start pocito-dev
 ```

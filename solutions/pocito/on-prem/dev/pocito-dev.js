@@ -26,12 +26,9 @@ export async function shutdownPocito() {
   console.log('Pocito stopped')
 }
 
-export async function startPocito({offline = false} = {}) {
+export async function startPocito() {
   if (!existsSync(envFile)) copyFileSync(`${envFile}.example`, envFile, constants.COPYFILE_EXCL)
   const env = loadPocitoEnv(), state = pocitoStateDir(env), host = env.POCITO_BIND_HOST || '127.0.0.1'
-  if (offline) Object.assign(env, {
-    UV_OFFLINE: '1', PIP_NO_INDEX: '1', npm_config_offline: 'true', HF_HUB_OFFLINE: '1', TRANSFORMERS_OFFLINE: '1'
-  })
   const ports = { pocito: env.POCITO_PORT || '3000', marketplace: env.MARKETPLACE_PORT || '7777',
     agno: env.AGENT_OS_PORT || '7778', litellm: env.LITELLM_PORT || '4000', flapi: env.FLAPI_PORT || '6001' }
   const url = name => `http://localhost:${ports[name]}`
@@ -40,7 +37,6 @@ export async function startPocito({offline = false} = {}) {
   const agnoBaseUrl = env.AGNO_API_URL, localAgno = !agnoBaseUrl
   const localLitellm = !env.LITELLM_HOST, litellmHost = env.LITELLM_HOST || url('litellm'), llmModel = env.LLM_MODEL || 'openai/chat'
   if (!minio || !env.PGVECTOR_URL) throw new Error('Set MINIO_ENDPOINT and PGVECTOR_URL in .env.onprem')
-  if (offline && !flapiBaseUrl) throw new Error('pocito-dev-airgapped requires external FLAPI_BASE_URL in .env.onprem')
   Object.assign(env, {
     ENV_PATH: envFile, WONDER_AUTH_MODE: 'none', STORAGE_PROVIDER: 'minio', MINIO_ENDPOINT: minio,
     MINIO_STORAGE_CLASS: storageClass, WONDER_STORAGE_URL: minio, WONDER_CDN_URL: `${url('pocito')}/jb6_packages/react/lib`,
@@ -120,11 +116,9 @@ export async function startPocito({offline = false} = {}) {
     })
     console.log('Preparing Pocito dependencies')
     for (const [directory, modules] of [[root, env.POCITO_NODE_MODULES || join(root, 'node_modules')],
-      ...(flapiBaseUrl ? [] : [[join(pocito, 'flapi-mock'), join(pocito, 'flapi-mock/node_modules')]])]) {
-      if (offline && !existsSync(modules)) throw new Error(`Air-gapped dependency missing: ${modules}. Rebuild the image.`)
+      ...(flapiBaseUrl ? [] : [[join(pocito, 'flapi-mock'), join(pocito, 'flapi-mock/node_modules')]])])
       if (!existsSync(modules)) await run('npm', npmInstall, { cwd: directory, stdio: 'inherit' })
-    }
-    if (!offline && !env.UV_DEFAULT_INDEX && !env.UV_INDEX_URL) {
+    if (!env.UV_DEFAULT_INDEX && !env.UV_INDEX_URL) {
       let pip = {}
       try {
         pip = Object.fromEntries(execFileSync('python3', ['-m', 'pip', 'config', 'list'], { env, stdio: ['ignore', 'pipe', 'ignore'] })
@@ -135,7 +129,7 @@ export async function startPocito({offline = false} = {}) {
       const index = env.PIP_INDEX_URL || pip['install.index-url'] || pip['global.index-url']
       if (index) env.UV_DEFAULT_INDEX = index
     }
-    if (!offline && env.PIP_EXTRA_INDEX_URL && !env.UV_EXTRA_INDEX_URL) env.UV_EXTRA_INDEX_URL = env.PIP_EXTRA_INDEX_URL
+    if (env.PIP_EXTRA_INDEX_URL && !env.UV_EXTRA_INDEX_URL) env.UV_EXTRA_INDEX_URL = env.PIP_EXTRA_INDEX_URL
     const environments = {}
     for (const name of ['marketplace-server', 'agno-server', ...(localLitellm ? ['on-prem/litellm'] : [])]) {
       const project = join(pocito, name), venv = join(env.POCITO_DEPS_DIR || state, 'venvs', name.split('/').pop())
@@ -143,7 +137,6 @@ export async function startPocito({offline = false} = {}) {
         .update(readFileSync(join(project, 'uv.lock'))).update(requestedPython || '').digest('hex')
       const stampFile = join(venv, '.pocito-lock')
       if (!existsSync(stampFile) || readFileSync(stampFile, 'utf8').trim() !== stamp) {
-        if (offline) throw new Error(`Air-gapped dependencies do not match ${name}. Rebuild the image.`)
         const requirements = join(state, `${name.split('/').pop()}.requirements.txt`)
         await run('uv', ['export', '--frozen', '--no-dev', '--no-emit-project', '--project', project, '--output-file', requirements])
         await run('uv', ['venv', '--clear', ...(requestedPython ? ['--python', requestedPython] : []), '--project', project, venv])

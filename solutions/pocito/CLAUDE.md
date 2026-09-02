@@ -118,10 +118,10 @@ Prepare the two ignored configuration files in the checkout before starting the 
 - `solutions/pocito/on-prem/litellm/config.local.yaml`, copied from `config.yaml`, contains model endpoints and provider keys when bundled LiteLLM is used.
 
 Never put provider keys in `.env.onprem`, the tracked LiteLLM template, Docker build arguments, or image layers.
-Run `npm run pocito-dev-airgapped`; it requires external FLAPI and fails instead of installing when image dependencies do not match the checkout.
+Run `npm run pocito-dev-airgapped`; it requires external FLAPI and directly uses image dependencies without inspecting mounted lockfiles.
 Do not mount `node_modules`; the image provides it at `/workspace/node_modules`. Keep only `/var/lib/pocito` on a named volume.
 The exact load, volume initialization, run, startup and shutdown commands are in `solutions/pocito/local-dev-readme.md`.
-Stop an existing stack with `npm run pocito-dev:shutdown` before starting it again.
+Stop or restart the air-gapped stack through its container lifecycle.
 
 The on-prem suite is imported by `.jb6/entry-points-default.js` because an air-gapped container normally has no Git identity.
 Run all HeavyTest cases at:
