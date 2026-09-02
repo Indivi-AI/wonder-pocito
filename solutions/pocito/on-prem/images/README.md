@@ -7,4 +7,5 @@ sha256sum -c SHA256SUMS
 cat pocito-dev-linux-amd64.tar.gz.part-* | gzip -dc | docker load
 ```
 
-The images load as `pocito-dev:linux-amd64` and `pocito-dev:sudo-linux-amd64`. The sudo image uses `pocito` as both username and password.
+The images load as `pocito-dev:linux-amd64` and `pocito-dev:sudo-linux-amd64`. Both include OMP and initialize `/workspace/repo` from the baked
+Git bundle when its volume is empty. The sudo image uses `pocito` as both username and password.

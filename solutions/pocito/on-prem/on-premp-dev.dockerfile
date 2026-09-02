@@ -4,6 +4,7 @@ FROM ghcr.io/astral-sh/uv:0.12.7@sha256:95f2aa1fe59274951cfe9b0cbc7972e879ff1004
 FROM minio/mc@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727 AS minio-client
 FROM debian:trixie-slim@sha256:d7e12182ce18b85b93007c1dedf31f2d29e01ccf3182cc4017c709b6259bc132 AS pocito-dev-base
 ARG POCITO_BUNDLE=wonder-pocito.bundle
+ARG POCITO_BUNDLE_BRANCH=master
 
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
 COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
@@ -41,21 +42,33 @@ RUN --mount=type=secret,id=uvconfig,target=/root/.config/uv/uv.toml \
         | sha256sum | cut -d ' ' -f 1 > /opt/pocito/venvs/$project/.pocito-lock || exit 1; \
     done
 RUN /opt/pocito/venvs/litellm/bin/python -c "import tiktoken; [tiktoken.get_encoding(n) for n in ['cl100k_base', 'o200k_base']]" \
-    && mkdir -p /var/lib/pocito \
-    && chown -R pocito:pocito /opt/pocito /var/lib/pocito
+    && mkdir -p /var/lib/pocito /workspace/repo \
+    && chown -R pocito:pocito /opt/pocito /var/lib/pocito /workspace/repo
 
 COPY --from=minio-client /usr/bin/mc /usr/local/bin/mc
-COPY --chown=pocito:pocito ${POCITO_BUNDLE} /home/pocito/wonder-pocito.bundle
+ADD --chmod=755 --checksum=sha256:c6a306347a57c872bf38587e81132db50490228867e3e179a363a4cf874da1a0 \
+    https://github.com/can1357/oh-my-pi/releases/download/v18.1.2/omp-linux-x64 /opt/pocito/bin/omp
+ADD --checksum=sha256:16c45f9d667442781f03fa198914cc39abcaa48ec5ed8f644643e554ca2fbf63 \
+    https://github.com/can1357/oh-my-pi/releases/download/v18.1.2/LICENSE /usr/share/licenses/omp/LICENSE
+ADD --checksum=sha256:104142244b8781b7828e64aa79a61b03fdf16e8a3464278647c3d84ad22cbce0 \
+    https://github.com/can1357/oh-my-pi/releases/download/v18.1.2/THIRD-PARTY-NOTICES.txt /usr/share/licenses/omp/THIRD-PARTY-NOTICES.txt
+COPY ${POCITO_BUNDLE} /opt/pocito/wonder-pocito.bundle
+COPY solutions/pocito/on-prem/dev/git-attributes /etc/pocito/gitattributes
+RUN git config --system core.autocrlf false && git config --system core.filemode false \
+    && git config --system core.attributesFile /etc/pocito/gitattributes
+COPY --chmod=755 solutions/pocito/on-prem/dev/omp.mjs /usr/local/bin/omp
+COPY --chmod=755 solutions/pocito/on-prem/dev/pocito-entrypoint.sh /usr/local/bin/pocito-entrypoint
 COPY --chmod=755 solutions/pocito/on-prem/dev/start-sshd.sh /usr/local/bin/start-pocito-sshd
 COPY solutions/pocito/on-prem/dev/sshd_config /etc/ssh/sshd_config_pocito
 
 ENV POCITO_DEPS_DIR=/opt/pocito POCITO_DATA_DIR=/var/lib/pocito POCITO_NODE_MODULES=/workspace/node_modules \
-    POCITO_BIND_HOST=0.0.0.0 UV_OFFLINE=1
+    POCITO_BIND_HOST=0.0.0.0 POCITO_BUNDLE_BRANCH=${POCITO_BUNDLE_BRANCH} PI_CODING_AGENT_DIR=/var/lib/pocito/omp \
+    OTEL_SDK_DISABLED=true UV_OFFLINE=1
 USER pocito
-WORKDIR /home/pocito
-VOLUME ["/home/pocito", "/var/lib/pocito"]
+WORKDIR /workspace/repo
+VOLUME ["/workspace/repo", "/home/pocito", "/var/lib/pocito"]
 EXPOSE 2222 3000 7777 7778 4000 6001
-ENTRYPOINT ["/usr/bin/tini", "--"]
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/pocito-entrypoint"]
 CMD ["/usr/local/bin/start-pocito-sshd"]
 
 FROM pocito-dev-base AS pocito-dev-sudo

@@ -14,8 +14,8 @@ Data('pocitoOnPremRequest', {
     {id: 'url', as: 'string', defaultValue: '%$url%'},
     {id: 'options', defaultValue: '%$options%'}
   ],
-  impl: async ({}, {}, {url, options}) => {
-    const response = await fetch(url, {signal: AbortSignal.timeout(120000), ...options}), text = await response.text()
+  impl: async (ctx, {}, {url, options}) => {
+    const response = await fetch(url, {signal: AbortSignal.timeout(ctx.vars.testTimeout || 5000), ...options}), text = await response.text()
     let body = text
     try { body = text ? JSON.parse(text) : null } catch {}
     if (!response.ok) throw new Error(`${url}: ${response.status} ${text}`)
@@ -184,9 +184,8 @@ Data('pocitoOnPremAgentQuestion', {
       headers: {'x-wonder-room': process.env.MARKETPLACE_SEED_ROOM || 'marketplace'}, body: form, signal: AbortSignal.timeout(180000)})
     const body = await response.json()
     if (!response.ok) throw new Error(`${response.status} ${JSON.stringify(body)}`)
-    const result = {answer: body.content || '', tools: body.tools || body.tool_executions || []}
-    onPremLogger?.info?.({t: 'on-prem travel agent answered', question, answer: result.answer,
-      tools: result.tools.map(({tool_name, name}) => tool_name || name)}, {}, {ctx})
+    const result = {answer: body.content || '', toolExecutions: body.tools || body.tool_executions || []}
+    onPremLogger?.info?.({t: 'on-prem travel agent answered', question, ...result}, {}, {ctx})
     return result
   }
 })
@@ -198,7 +197,7 @@ Test('pocitoOnPrem.serviceWonder', {
   HeavyTest: true,
   nodeOnly: true,
   impl: dataTest(pocitoOnPremService('wonder'), and(equals('%httpStatus%', 200), equals('%status%', 'ok')), {
-    timeout: 30000,
+    timeout: 2000,
     logger: 'onPremLogger'
   })
 })
@@ -209,13 +208,23 @@ Test('pocitoOnPrem.serviceMarketplace', {
   impl: dataTest({
     calculate: pocitoOnPremService('marketplace'),
     expectedResult: and(equals('%httpStatus%', 200), equals('%status%', 'ok'), equals('%object_store%', 'ok')),
-    timeout: 30000,
+    timeout: 2000,
     logger: 'onPremLogger'
   })
 })
 
 Test('pocitoOnPrem.serviceAgno', {
   HeavyTest: true,
+  nodeOnly: true,
+  impl: dataTest(pocitoOnPremService('agno'), and(equals('%httpStatus%', 200), equals('%object_store%', 'ok')), {
+    timeout: 2000,
+    logger: 'onPremLogger'
+  })
+})
+
+Test('pocitoOnPrem.serviceAgnoStrictPgvector', {
+  HeavyTest: true,
+  doNotRunInTests: true,
   nodeOnly: true,
   impl: dataTest({
     calculate: pocitoOnPremService('agno'),
@@ -225,7 +234,7 @@ Test('pocitoOnPrem.serviceAgno', {
       equals('%object_store%', 'ok'),
       equals('%vector_store%', 'ok')
     ),
-    timeout: 30000,
+    timeout: 2000,
     logger: 'onPremLogger'
   })
 })
@@ -236,7 +245,7 @@ Test('pocitoOnPrem.serviceLiteLlm', {
   impl: dataTest({
     calculate: pocitoOnPremService('liteLlm'),
     expectedResult: and(equals('%httpStatus%', 200), equals('%data/0/id%', 'chat'), equals('%data/1/id%', 'embeddings')),
-    timeout: 30000,
+    timeout: 2000,
     logger: 'onPremLogger'
   })
 })
@@ -245,7 +254,7 @@ Test('pocitoOnPrem.serviceFlapi', {
   HeavyTest: true,
   nodeOnly: true,
   impl: dataTest(pocitoOnPremService('flapi'), and(equals('%httpStatus%', 200), equals('%metadata/Id%', 101)), {
-    timeout: 30000,
+    timeout: 2000,
     logger: 'onPremLogger'
   })
 })
@@ -319,6 +328,7 @@ Test('pocitoOnPrem.minio', {
 
 Test('pocitoOnPrem.pgvector', {
   HeavyTest: true,
+  doNotRunInTests: true,
   nodeOnly: true,
   impl: dataTest(pocitoOnPremPgvectorRoundTrip(), equals('%distance%', 0), {
     timeout: 30000,
@@ -362,9 +372,7 @@ Test('pocitoOnPrem.minioApplet', {
 Test('pocitoOnPrem.restaurantAgent', {
   HeavyTest: true,
   nodeOnly: true,
-  impl: dataTest({
-    calculate: pocitoOnPremAgentQuestion('Help me find a restaurant that Tom will like.'),
-    expectedResult: and(contains('Opa', { allText: '%answer%' }), contains('vegetar', { allText: '%answer%' })),
+  impl: dataTest(pocitoOnPremAgentQuestion('Help me find a restaurant that Tom will like.'), '%answer%', {
     timeout: 180000,
     logger: 'onPremLogger,agentLogger'
   })

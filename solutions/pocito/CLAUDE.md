@@ -106,20 +106,18 @@ With the current schema call it with `roomId` and `entryCompFullId`; the registe
 Inspect the complete upload response, including errors and timeline; retry once only if arguments were wrong.
 Open the returned public or signed room URL in the browser and verify desktop plus 390px mobile screenshots.
 
-## On-prem live-repo verification
+## On-prem development-container verification
 
-The air-gapped dev image contains dependencies, while the operator bind-mounts the checkout at `/workspace`.
+The air-gapped dev image contains dependencies, OMP and a current-branch Git bundle. Its entrypoint clones the bundle into a named Linux volume at
+`/workspace/repo` only when that volume is empty. VS Code and coding agents work inside that checkout; do not bind-mount a Windows checkout.
 MinIO and PostgreSQL/pgvector remain external services. On native Linux prefer host networking; with bridge networking use endpoints reachable from
 the container, such as `host.docker.internal` where supported. Do not move these services into the image.
 
-Prepare the two ignored configuration files in the checkout before starting the container:
+Pass service configuration with Docker `--env-file`. If bundled LiteLLM is used, mount its ignored YAML outside the checkout and set
+`LITELLM_CONFIG` to that container path. Never put provider keys in the Git bundle, tracked template, build arguments, or image layers.
 
-- `solutions/pocito/.env.onprem`, copied from `.env.onprem.example`, contains service endpoints, storage credentials and port overrides.
-- `solutions/pocito/on-prem/litellm/config.local.yaml`, copied from `config.yaml`, contains model endpoints and provider keys when bundled LiteLLM is used.
-
-Never put provider keys in `.env.onprem`, the tracked LiteLLM template, Docker build arguments, or image layers.
 Run `npm run pocito-dev-airgapped`; it requires external FLAPI and directly uses image dependencies without inspecting mounted lockfiles.
-Do not mount `node_modules`; the image provides it at `/workspace/node_modules`. Keep only `/var/lib/pocito` on a named volume.
+Do not mount `node_modules`; the image provides it at `/workspace/node_modules`. Persist `/workspace/repo`, `/var/lib/pocito`, and `/home/pocito`.
 The exact load, volume initialization, run, startup and shutdown commands are in `solutions/pocito/local-dev-readme.md`.
 Stop or restart the air-gapped stack through its container lifecycle.
 
@@ -128,7 +126,7 @@ Run all HeavyTest cases at:
 
 `http://localhost:3007/wonder/studio/tests.html?pattern=pocitoOnPrem&includeHeavy`
 
-The thirteen smoke tests cover service health, dataset counts, Marketplace MinIO, pgvector, LiteLLM chat and embeddings, seeded Marketplace assets,
+The seventeen smoke tests cover service health, dataset counts, Marketplace MinIO, pgvector, LiteLLM chat and embeddings, seeded Marketplace assets,
 applet publication to MinIO, and the two Agno travel-agent calls. They intentionally contain no Playwright test.
 For focused diagnosis call `runTest` with the exact test id and inspect `onPremErrors` plus each relevant domain logger's error array.
 A green page is an installation/integration signal, not exhaustive product-quality validation.

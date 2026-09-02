@@ -85,25 +85,18 @@ The launcher preserves npm configuration and forwards pip's primary index to uv 
 For advanced Artifactory authentication, configure uv directly. Missing Python binaries need an approved
 `UV_PYTHON_INSTALL_MIRROR` or a compatible preinstalled Python runtime; package indexes alone do not supply Python or tokenizer assets.
 
-## Air-gapped live-repo container
+## Air-gapped development container
 
-The image supplies Linux dependencies and tools. The checkout remains outside the container and is bind-mounted at `/workspace`, so edits from
-the host or VS Code are immediately visible. MinIO and PostgreSQL/pgvector remain external and must be reachable from the container.
+The image supplies Linux dependencies, OMP 18.1.2 and a Git bundle. Its entrypoint clones the bundle into `/workspace/repo` on the first start.
+Use a named Docker volume for that path so Git, tools and VS Code all work on the same Linux filesystem without Windows CRLF or file-mode noise.
+MinIO and PostgreSQL/pgvector remain external and must be reachable from the container.
 
 ### 1. Prepare the ignored environment files
 
-Run from the checkout root before starting the container:
+Prepare an environment file on the host from `.env.onprem.example`. Docker passes it to the container with `--env-file`; it is not stored in the
+workspace volume or image. The external-service URLs must be reachable from inside the container.
 
-```sh
-cp -n solutions/pocito/.env.onprem.example solutions/pocito/.env.onprem
-cp -n solutions/pocito/on-prem/litellm/config.yaml solutions/pocito/on-prem/litellm/config.local.yaml
-```
-
-Edit `solutions/pocito/.env.onprem`:
-
-The air-gapped launcher converts this ignored file from Windows CRLF to LF before loading it.
-
-```dotenv
+```env
 MINIO_ENDPOINT=http://localhost:9000
 PGVECTOR_URL=postgresql+psycopg://wonder:wonder-pg-local@localhost:5432/wonder
 MINIO_ACCESS_KEY=wonder
@@ -112,6 +105,8 @@ MINIO_STORAGE_CLASS=STANDARD_IA
 FLAPI_BASE_URL=http://flapi.internal:6001
 FLAPI_TOKEN=<FLAPI_TOKEN>
 FLAPI_USERNAME=<FLAPI_USERNAME>
+LITELLM_HOST=http://litellm.internal:4000
+LITELLM_API_KEY=<LITELLM_API_KEY>
 POCITO_PORT=3007
 ```
 
@@ -119,10 +114,10 @@ On native Linux with `--network host`, `localhost` reaches host MinIO and Postgr
 reachable from inside the container; on Docker Desktop this is commonly `host.docker.internal`. External air-gapped services can use their
 normal DNS names or IP addresses. Ensure both MinIO buckets exist and PostgreSQL has the `vector` extension as described above.
 
-If bundled LiteLLM is used, leave `LITELLM_HOST` empty and edit
-`solutions/pocito/on-prem/litellm/config.local.yaml` with the OpenAI-compatible chat and embedding endpoints and keys.
-If the network already provides LiteLLM, set `LITELLM_HOST` in `.env.onprem`; `config.local.yaml` is then unused.
-Provider keys belong only in ignored `config.local.yaml`, never in `.env.onprem`, the tracked template, build arguments or image layers.
+If the network provides LiteLLM, set `LITELLM_HOST`; the bundled LiteLLM and its YAML are then unused. OMP discovers the models exposed by that
+gateway and uses `LITELLM_API_KEY` when supplied. If bundled LiteLLM is required, leave `LITELLM_HOST` empty and mount a prepared configuration
+at `/run/pocito/litellm.yaml`, then set `LITELLM_CONFIG=/run/pocito/litellm.yaml`.
+Provider keys belong only in runtime configuration, never in the Git bundle, tracked template, build arguments or image layers.
 Set `FLAPI_BASE_URL`, `FLAPI_TOKEN` and `FLAPI_USERNAME` for the external on-prem FLAPI service.
 
 ### 2. Load the transferred image
@@ -137,30 +132,44 @@ cd ../../../..
 The archive loads `pocito-dev:linux-amd64` and `pocito-dev:sudo-linux-amd64`.
 The sudo image uses `pocito` as both username and sudo password.
 
-### 3. Run with the live checkout mounted
+### 3. Run with a Linux workspace volume
 
-On the native Linux air-gapped host, from the checkout root:
+On Docker Desktop for Windows:
 
 ```sh
-docker run -d --name pocito-dev --restart unless-stopped --network host \
-  --mount type=bind,src="<REPO_PATH>",dst=/workspace/repo \
+docker volume create pocito-workspace
+docker volume create pocito-data
+docker volume create pocito-home
+docker run -d --name pocito-dev --restart unless-stopped \
+  --add-host host.docker.internal:host-gateway -p 127.0.0.1:3007:3007 \
+  --env-file "<ENV_PATH>" \
+  --mount type=volume,src=pocito-workspace,dst=/workspace/repo \
   --mount type=volume,src=pocito-data,dst=/var/lib/pocito \
-  --workdir /workspace/repo \
-  pocito-dev:linux-amd64 sh -lc 'exec npm run pocito-dev-airgapped'
+  --mount type=volume,src=pocito-home,dst=/home/pocito \
+  pocito-dev:linux-amd64 npm run pocito-dev-airgapped
 ```
 
-Replace `<REPO_PATH>` with the checkout's absolute path. No `node_modules` mount is needed: the repository sits below the image's
-`/workspace/node_modules`, which Node resolves as an ancestor. External FLAPI also removes the need for its nested dependency volume.
-The air-gapped command directly uses the image-baked Node/Python dependencies and does not inspect mounted lockfiles.
+Replace `<ENV_PATH>` with the host environment file. The entrypoint clones the baked current branch only when `pocito-workspace` is empty and
+never overwrites an existing checkout. It names the read-only bundle remote `image-bundle`. No `node_modules` mount is needed: the repository
+sits below `/workspace/node_modules`, which Node resolves as an ancestor. The command uses only image-baked dependencies.
 
-For Docker Desktop or bridge networking, replace `--network host` with:
+On native Linux, replace the port and host mapping with:
 
 ```sh
---add-host host.docker.internal:host-gateway -p 127.0.0.1:3007:3007
+--network host
 ```
 
-Then use `host.docker.internal` rather than `localhost` for host MinIO and PostgreSQL in `.env.onprem`.
 VS Code can use **Dev Containers: Attach to Running Container**; the checkout is `/workspace/repo` and the container user is `pocito`.
+
+OMP runs entirely inside the container and stores its sessions under `/var/lib/pocito/omp`:
+
+```sh
+omp models litellm
+omp --model litellm/<MODEL_ALIAS>
+```
+
+Expose stable coding aliases such as `coder-default`, `coder-fast` and `coder-deep` in LiteLLM. OMP discovers them from LiteLLM, so changing an
+alias's underlying MiniMax, Qwen or DeepSeek deployment does not require rebuilding the image.
 
 ### 4. Inspect Pocito
 
@@ -169,9 +178,7 @@ docker logs -f pocito-dev
 curl -f http://localhost:3007/health
 ```
 
-The script uses external FLAPI, uses external Agno when configured or starts baked Agno otherwise, then starts the remaining baked services.
-It reads only `solutions/pocito/.env.onprem`; model configuration comes from
-`solutions/pocito/on-prem/litellm/config.local.yaml`.
+The script uses external FLAPI, LiteLLM and Agno when configured and starts the baked LiteLLM or Agno otherwise.
 
 ### 5. Run the installation suite
 
@@ -179,10 +186,13 @@ Open:
 
 `http://localhost:3007/wonder/studio/tests.html?pattern=pocitoOnPrem&includeHeavy`
 
-The seventeen tests cover individual service health, metadata and execution through the FLAPI proxy for packages 101–104, travel dataset counts,
-Marketplace MinIO,
-pgvector, LiteLLM chat and embeddings, seeded Marketplace assets, applet publication to MinIO, and both Agno travel-agent calls.
-They contain no Playwright test. When all seventeen are green, the mounted checkout and on-prem service chain are working together.
+The default suite accepts Agno's `degraded`/`vector_store: unreachable` health when object storage is healthy. Run the optional strict pgvector health
+test directly at `http://localhost:3007/wonder/studio/tests.html?test=pocitoOnPrem.serviceAgnoStrictPgvector`; it requires fully healthy Agno object
+and vector stores. The direct `pocitoOnPrem.pgvector` round-trip is also optional and excluded from the default suite.
+
+The sixteen default tests cover individual service health, metadata and execution through the FLAPI proxy for packages 101–104, travel dataset
+counts, Marketplace MinIO, LiteLLM chat and embeddings, seeded Marketplace assets, applet publication to MinIO, and both Agno travel-agent calls.
+They contain no Playwright test. When all sixteen are green, the mounted checkout and on-prem service chain are working together.
 This is an installation/integration check, not an exhaustive product-quality test. For a focused failure, run the matching `pocitoOnPrem.*`
 test through MCP and inspect its domain error arrays.
 
@@ -206,8 +216,8 @@ npm run airgapped-export
 The exporter rebuilds `wonder-pocito.bundle`, builds both Linux AMD64 image variants, exports them together, splits the compressed archive into
 190 MiB parts and regenerates `solutions/pocito/on-prem/images/SHA256SUMS`. Run it from a connected checkout with Docker and Git installed.
 
-Only dependencies and the fallback Git bundle are baked in; the bind-mounted checkout supplies active source and applet files.
-Rebuild after npm or Python lock changes. BuildKit secrets `npmrc` and `uvconfig` support private indexes without baking credentials in.
+Dependencies, OMP and the current-branch Git bundle are baked in; the entrypoint creates the persistent checkout from that bundle.
+Rebuild after source, npm or Python lock changes. BuildKit secrets `npmrc` and `uvconfig` support private indexes without baking credentials in.
 The image uses Debian 13, Node 24, npm 11.19.1, uv 0.12.7 and Python 3.12.12; projects accept compatible Python versions from 3.10.
 Scan and test the exact image being transferred. Automatic whitening-gate acceptance is not guaranteed.
 

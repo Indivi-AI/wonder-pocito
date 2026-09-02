@@ -43,16 +43,15 @@ def safe_path(value):
 class S3ObjectStore:
     def __init__(self, bucket=None, client=None):
         self.bucket = bucket or os.getenv('MARKETPLACE_S3_BUCKET', 'indiviai-wonder')
-        self.storage_class = os.getenv('MARKETPLACE_S3_STORAGE_CLASS', '')
-        endpoint = os.getenv('MARKETPLACE_S3_ENDPOINT', 'http://127.0.0.1:9000')
+        self.storage_class = os.getenv('MINIO_STORAGE_CLASS', '')
+        endpoint = os.getenv('MINIO_ENDPOINT', 'http://127.0.0.1:9000')
         create_client = lambda url: boto3.client('s3', endpoint_url=url,
-          aws_access_key_id=os.getenv('MARKETPLACE_S3_ACCESS_KEY', 'wonder'),
-          aws_secret_access_key=os.getenv('MARKETPLACE_S3_SECRET_KEY', 'wonder-minio-local'), region_name='us-east-1',
+          aws_access_key_id=os.getenv('MINIO_ACCESS_KEY', 'wonder'),
+          aws_secret_access_key=os.getenv('MINIO_SECRET_KEY', 'wonder-minio-local'), region_name='us-east-1',
           config=BotoConfig(connect_timeout=5, read_timeout=20, retries={'max_attempts': 3, 'mode': 'standard'},
             s3={'addressing_style': 'path'} if os.getenv('S3_USE_PATH_STYLE', '').lower() == 'true' else None))
         self.client = client or create_client(endpoint)
-        public_endpoint = os.getenv('MARKETPLACE_S3_PUBLIC_ENDPOINT', endpoint)
-        self.presign_client = self.client if client or public_endpoint == endpoint else create_client(public_endpoint)
+        self.presign_client = self.client
         self.client.meta.events.register('before-send.s3.*', self.drop_expect_header)
         try:
             self.client.head_bucket(Bucket=self.bucket)
