@@ -667,7 +667,8 @@ UiAction('wonderPlatformSetControl', {
   impl: ({}, {}, {label, placeholder, selector, value}) => ({
     async exec({vars: {win}}) {
       const controls = [...win.document.querySelectorAll(selector || 'input, textarea')]
-      const control = selector ? controls[0] : controls.find(element => label ? element.parentElement?.textContent.trim().startsWith(label)
+      const control = selector ? controls[0] : controls.find(element => label
+        ? [element.parentElement, element.parentElement?.parentElement].some(container => container?.textContent.trim().startsWith(label))
         : element.placeholder?.includes(placeholder))
       if (!control || control.disabled) throw new Error(`Control unavailable: ${label || placeholder || selector}`)
       Object.getOwnPropertyDescriptor(Object.getPrototypeOf(control), 'value').set.call(control, value)
@@ -975,9 +976,7 @@ Test('wonderPlatform.chatRunsSelectedAgent', {
 })
 
 ReactComp('wonderPlatformMarketplaceE2eApp', {
-  impl: wonderPlatform('room://marketplace-e2e', { extraPrimaryNav: [
-    ['agents','Bot','סוכנים']
-  ] })
+  impl: wonderPlatform('room://marketplace-e2e')
 })
 
 UiAction('wonderPlatformCheckAgentReply', {
@@ -1057,6 +1056,7 @@ Test('wonderPlatform.marketplaceUiAgentE2e', {
       click('סוכנים'),
       waitForText('סוכן חדש'),
       click('סוכן חדש'),
+      waitForText('מי הסוכן'),
       wonderPlatformSetControl({ selector: '[aria-label="display_name"]', value: 'E2E Agent' }),
       wonderPlatformSetControl({ selector: '[aria-label="id"]', value: 'e2eAgent' }),
       wonderPlatformSetControl({

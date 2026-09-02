@@ -1,4 +1,5 @@
 import json
+import asyncio
 import os
 import tempfile
 import unittest
@@ -294,7 +295,7 @@ class MarketplaceServerTest(unittest.TestCase):
         
         # 4. Load the tool via Agno runtime
         runtime = self.agno.app.state.marketplace_runtime
-        agno_tool = runtime.tool('marketplace', 'flowTool')
+        agno_tool = asyncio.run(runtime.tool('marketplace', 'flowTool'))
         
         # Verify Agno Function contract
         self.assertEqual(agno_tool.name, 'flowTool')
@@ -355,7 +356,6 @@ class MarketplaceServerTest(unittest.TestCase):
     def test_adhoc_run_with_empty_message_returns_422(self):
         self.assertEqual(self.agno.post('/adhoc/runs', json={'message': ''}).status_code, 422)
         self.assertEqual(self.agno.post('/adhoc/runs', json={}).status_code, 422)
-
 
 if __name__ == '__main__':
     unittest.main()

@@ -21,7 +21,6 @@ Let me know you read the rules by writing
 as the first thing you write and do.
 When reading code files always read the whole file, not just a few lines. To let me know you did it write "Master I read the whole file". 
 lines are maximum 180 chars, if you work on some file and it's not the case - refactor as part of the job.
-please do not look outside your dir. maybe look at /tmp when you need it
 
 ## Pocito file placement
 
