@@ -118,7 +118,8 @@ Prepare the two ignored configuration files in the checkout before starting the 
 - `solutions/pocito/on-prem/litellm/config.local.yaml`, copied from `config.yaml`, contains model endpoints and provider keys when bundled LiteLLM is used.
 
 Never put provider keys in `.env.onprem`, the tracked LiteLLM template, Docker build arguments, or image layers.
-Keep `/workspace/node_modules`, `/workspace/solutions/pocito/flapi-mock/node_modules` and `/var/lib/pocito` on named volumes.
+Run `npm run pocito-dev-airgapped`; it requires external FLAPI and fails instead of installing when image dependencies do not match the checkout.
+Do not mount `node_modules`; the image provides it at `/workspace/node_modules`. Keep only `/var/lib/pocito` on a named volume.
 The exact load, volume initialization, run, startup and shutdown commands are in `solutions/pocito/local-dev-readme.md`.
 Stop an existing stack with `npm run pocito-dev:shutdown` before starting it again.
 
@@ -127,7 +128,7 @@ Run all HeavyTest cases at:
 
 `http://localhost:3007/wonder/studio/tests.html?pattern=pocitoOnPrem&includeHeavy`
 
-The nine smoke tests cover service health, dataset counts, Marketplace MinIO, pgvector, LiteLLM chat and embeddings, seeded Marketplace assets,
+The thirteen smoke tests cover service health, dataset counts, Marketplace MinIO, pgvector, LiteLLM chat and embeddings, seeded Marketplace assets,
 applet publication to MinIO, and the two Agno travel-agent calls. They intentionally contain no Playwright test.
 For focused diagnosis call `runTest` with the exact test id and inspect `onPremErrors` plus each relevant domain logger's error array.
 A green page is an installation/integration signal, not exhaustive product-quality validation.

@@ -1,6 +1,7 @@
 # Pocito local development
 
 `npm run pocito-dev` starts Pocito, Marketplace and Agno, plus bundled LiteLLM and FLAPI unless their external URLs are set.
+`npm run pocito-dev-airgapped` requires external FLAPI and never installs dependencies or downloads model assets.
 It does not start MinIO or PostgreSQL.
 Applets use checkout source and existing `files/rooms` data. Publishing uploads to the configured MinIO that imitates production.
 The launcher does not create applets, change FLAPI fixtures, or provision external infrastructure.
@@ -143,11 +144,12 @@ docker run -d --name pocito-dev --restart unless-stopped --network host \
   --mount type=bind,src="<REPO_PATH>",dst=/workspace/repo \
   --mount type=volume,src=pocito-data,dst=/var/lib/pocito \
   --workdir /workspace/repo \
-  pocito-dev:linux-amd64 sh -lc 'exec npm run pocito-dev'
+  pocito-dev:linux-amd64 sh -lc 'exec npm run pocito-dev-airgapped'
 ```
 
 Replace `<REPO_PATH>` with the checkout's absolute path. No `node_modules` mount is needed: the repository sits below the image's
 `/workspace/node_modules`, which Node resolves as an ancestor. External FLAPI also removes the need for its nested dependency volume.
+The air-gapped command uses only image-baked Node/Python dependencies and fails with a rebuild instruction if mounted lockfiles differ.
 
 For Docker Desktop or bridge networking, replace `--network host` with:
 
@@ -165,7 +167,7 @@ docker logs -f pocito-dev
 curl -f http://localhost:3007/health
 ```
 
-The launcher starts bundled FLAPI and LiteLLM when their external URLs are empty, then Marketplace, seed assets, Agno and the Pocito server.
+The launcher proxies external FLAPI, starts bundled LiteLLM only when its URL is empty, then starts Marketplace, seed assets, Agno and Pocito.
 It reads only `solutions/pocito/.env.onprem`; model configuration comes from
 `solutions/pocito/on-prem/litellm/config.local.yaml`.
 
