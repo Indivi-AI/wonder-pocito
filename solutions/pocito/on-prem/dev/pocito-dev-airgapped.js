@@ -8,6 +8,7 @@ const app = `http://localhost:${port}`, marketplace = `http://localhost:${env.MA
 const litellm = `http://localhost:${env.LITELLM_PORT || 4000}`, internalAgno = !env.AGNO_API_URL
 Object.assign(env, {
   ENV_PATH: envFile, WONDER_AUTH_MODE: 'none', STORAGE_PROVIDER: 'minio', WONDER_STORAGE_URL: minio,
+  MARKETPLACE_HOST: '0.0.0.0', AGENT_OS_HOST: '0.0.0.0',
   WONDER_LOCAL_SERVER: `http://localhost:${port}`, WONDER_SERVICE_URL: `http://localhost:${port}`,
   WONDER_CDN_URL: `http://localhost:${port}/jb6_packages/react/lib`, MARKETPLACE_API_URL: marketplace,
   MARKETPLACE_S3_ENDPOINT: minio, MARKETPLACE_S3_PUBLIC_ENDPOINT: minio, MARKETPLACE_S3_ACCESS_KEY: env.MINIO_ACCESS_KEY || 'wonder',
