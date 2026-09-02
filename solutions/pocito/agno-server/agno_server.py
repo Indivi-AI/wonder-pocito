@@ -208,7 +208,7 @@ class MarketplaceAgentRuntime:
             parameters = generate_json_schema(input_schema)
             entrypoint = make_flow_package_executor(package_id)
             return Function(name=re.sub(r'\W', '_', name), description=manifest['description'],
-              parameters=parameters, entrypoint=entrypoint)
+              parameters=parameters, entrypoint=entrypoint, skip_entrypoint_processing=True)
 
         digest = hashlib.sha256(json.dumps(manifest, sort_keys=True).encode()).hexdigest()[:12]
         target = self.runtime_dir / safe_name(room) / 'tools' / safe_name(name) / f"{manifest['version']}-{digest}"

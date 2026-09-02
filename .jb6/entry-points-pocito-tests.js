@@ -1,4 +1,4 @@
-import '@jb6/mcp/mcp-jb-tools.js'
+import './entry-points-pocito.js'
 import '../solutions/pocito/marketplace-ui/pocito-tests.js'
 import '../solutions/pocito/marketplace-ui/wonder-platform-picker-tests.js'
 import '../solutions/pocito/marketplace-ui/wonder-platform-agent-tests.js'

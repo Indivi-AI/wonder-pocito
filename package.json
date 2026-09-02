@@ -20,7 +20,7 @@
     "server-secrets:push:prod": "node scripts/secrets.js push prod",
     "update-jb6": "bash ./scripts/update-jb6.sh",
     "pocito-update": "bash scripts/sync-pocito.sh",
-    "pocito-dev": "POCITO_PYTHON=3.10 POCITO_NPM_INSTALL='install --omit=optional' node solutions/pocito/on-prem/dev/pocito-dev.js",
+    "pocito-dev": "POCITO_NPM_INSTALL='install --omit=optional' node solutions/pocito/on-prem/dev/pocito-dev.js",
     "pocito-dev:shutdown": "node solutions/pocito/on-prem/dev/pocito-dev.js --shutdown"
   },
   "dependencies": {
@@ -28,12 +28,12 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.28.2",
     "express": "^4.21.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "stream-json": "^1.9.1",
-    "tar": "^7.5.1",
+    "tar": "^7.5.22",
     "undici": "^8.3.0",
     "zod": "^3.25.0"
   },

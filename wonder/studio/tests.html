@@ -10,15 +10,18 @@
   <script type="importmap">JB_IMPORT_MAP</script>
   <script type="module">
     const query = name => new URLSearchParams(location.search).get(name)
-    const { coreUtils } = await import('@jb6/core')
+    const { coreUtils, jb } = await import('@jb6/core')
     await import('@jb6/lang-service')
     const { runTests } = await import('@jb6/testing')
     const { browserSpy } = await import('@jb6/core/utils/browser-spy.js')
 
-    const { staticMappings } = JSON.parse(document.querySelector('[type="importmap"]').textContent)
-    const developerEntryPoint = await coreUtils.resolveDeveloperEntryPoint()
+    const { imports, staticMappings } = JSON.parse(document.querySelector('[type="importmap"]').textContent)
+    const modulePath = query('modulePath')
+    const developerEntryPoint = modulePath && coreUtils.resolveWithImportMap(modulePath, { imports }, staticMappings)
+      || await coreUtils.resolveDeveloperEntryPoint()
     const mapping = staticMappings.find(({ diskPath }) => developerEntryPoint.startsWith(diskPath))
-    await import(query('modulePath') || developerEntryPoint.replace(mapping.diskPath, mapping.urlPath))
+    jb.coreRegistry.developerEntryPoint = developerEntryPoint
+    await import(modulePath || developerEntryPoint.replace(mapping.diskPath, mapping.urlPath))
     browserSpy.initSpyByUrl()
     const automation = query('automation')
     await runTests({

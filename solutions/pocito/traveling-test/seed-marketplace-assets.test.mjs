@@ -15,7 +15,7 @@ test('seeds four FLAPI tools, one skill, and one agent only once', async () => {
     if (method == 'GET') return stored.has(`${plural}/${id}`) ? Response.json(stored.get(`${plural}/${id}`)) : new Response('', {status: 404})
     const payload = JSON.parse(options.body)
     stored.set(`${plural}/${payload.id}`, payload)
-    return Response.json(payload, {status: 201})
+    return Response.json(payload, {status: method == 'POST' ? 201 : 200})
   }
   const options = {fetchImpl, env: {FLAPI_BASE_URL: 'http://flapi', MARKETPLACE_API_URL: 'http://marketplace'}}
   assert.deepEqual((await seedMarketplaceAssets(options)).created, [
@@ -23,6 +23,8 @@ test('seeds four FLAPI tools, one skill, and one agent only once', async () => {
     'northstar-travel-support', 'northstar-travel-agent'
   ])
   assert.equal((await seedMarketplaceAssets(options)).existing.length, 6)
+  stored.get('skills/northstar-travel-support').description = 'stale'
+  assert.deepEqual((await seedMarketplaceAssets(options)).updated, ['northstar-travel-support'])
   assert.deepEqual([...stored.values()].filter(({tool_type}) => tool_type).map(({package_id}) => package_id), ['101', '102', '103', '104'])
   const agent = stored.get('agents/northstar-travel-agent')
   assert.deepEqual(agent.config.tools, ['northstar-company-email', 'northstar-instagram', 'tel-aviv-places', 'northstar-itinerary'])

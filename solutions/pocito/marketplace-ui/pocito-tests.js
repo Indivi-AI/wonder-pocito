@@ -184,7 +184,7 @@ Data('wonderPlatformFlapiRoundTrip', {
     process.env.FLAPI_BASE_URL = `http://127.0.0.1:${upstream.address().port}`
     process.env.FLAPI_TOKEN = 'test-token'; process.env.FLAPI_USERNAME = 'test-user'
     try {
-      const {createFlapiApp} = await import(`${await coreUtils.calcRepoRoot()}/solutions/pocito/on-prem/dev/flapi-server.js`)
+      const {createFlapiApp} = await import(`${await coreUtils.calcRepoRoot()}/solutions/pocito/on-prem/flapi-proxy.js`)
       const app = await createFlapiApp(), server = await new Promise(resolve => {
         const instance = app.listen(0, '127.0.0.1', () => resolve(instance))
       })
@@ -998,8 +998,9 @@ const { wonderPlatformCheckAgentReply } = dsls.react['ui-action']
 
 CtxEnricher('wonderPlatformMarketplaceE2eSetup', {
   impl: async ctx => {
-    const marketplace = globalThis.MARKETPLACE_API_URL || globalThis.process?.env?.MARKETPLACE_API_URL || 'http://localhost:7777'
-    const agno = globalThis.AGNO_API_URL || globalThis.process?.env?.AGNO_API_URL || 'http://localhost:7778'
+    const local = url => url.replace('://localhost:', '://127.0.0.1:')
+    const marketplace = local(globalThis.MARKETPLACE_API_URL || globalThis.process?.env?.MARKETPLACE_API_URL || 'http://127.0.0.1:7777')
+    const agno = local(globalThis.AGNO_API_URL || globalThis.process?.env?.AGNO_API_URL || 'http://127.0.0.1:7778')
     for (const base of [marketplace, agno]) {
       const response = await fetch(base + '/healthz'), health = await response.json()
       ctx.vars.marketplaceLogger?.info?.({t: 'marketplaceE2eHealth', base, health}, {}, {ctx})
@@ -1031,8 +1032,11 @@ Test('wonderPlatform.marketplaceUiAgentE2e', {
       click('מיומנות חדשה'),
       wonderPlatformSetControl({ selector: '[aria-label="display_name"]', value: 'E2E Skill' }),
       wonderPlatformSetControl({ placeholder: 'uiRenderingSkill', value: 'e2eSkill' }),
-      wonderPlatformSetControl('תיאור באנגלית', { value: 'Read the verification code reference.' }),
-      wonderPlatformSetControl('תיאור בעברית', { value: 'מיומנות לבדיקת קוד' }),
+      wonderPlatformSetControl({
+        selector: 'main textarea[dir="ltr"]',
+        value: 'Read the verification code reference.'
+      }),
+      wonderPlatformSetControl({ selector: 'main textarea:not([dir])', value: 'מיומנות לבדיקת קוד' }),
       click('תוכן המיומנות'),
       wonderPlatformSetControl({
         selector: 'main textarea',
@@ -1043,47 +1047,49 @@ Test('wonderPlatform.marketplaceUiAgentE2e', {
       wonderPlatformUploadAsset('verification.py', 'def verification_code():\n    return "E2E_CODE_RESULT_937"\n', {
         mimeType: 'text/x-python'
       }),
+      waitForSelector('[aria-label="Asset path 1"]', 5000),
       wonderPlatformSetControl({
         selector: '[aria-label="Asset path 1"]',
         value: 'references/verification.py'
       }),
-      click('aria-label="שמירת עמוד"'),
-      wonderPlatformWaitForButtonGone('aria-label="שמירת עמוד"'),
+      click('aria-label="שמירת המסע"'),
+      wonderPlatformWaitForButtonGone('aria-label="שמירת המסע"'),
       click('סוכנים'),
       waitForText('סוכן חדש'),
       click('סוכן חדש'),
       wonderPlatformSetControl({ selector: '[aria-label="display_name"]', value: 'E2E Agent' }),
-      wonderPlatformSetControl({ placeholder: 'uiRenderingSkill', value: 'e2eAgent' }),
-      wonderPlatformSetControl('תיאור באנגלית', {
+      wonderPlatformSetControl({ selector: '[aria-label="id"]', value: 'e2eAgent' }),
+      wonderPlatformSetControl({
+        selector: '[aria-label="description"]',
         value: 'Answer questions using the attached skill and its reference files.'
       }),
-      wonderPlatformSetControl('תיאור בעברית', { value: 'סוכן לבדיקת מיומנות וקוד' }),
+      wonderPlatformSetControl({
+        selector: '[aria-label="hebrew_description"]',
+        value: 'סוכן לבדיקת מיומנות וקוד'
+      }),
       click('הנחיות'),
       wonderPlatformSetControl({
-        selector: 'main section textarea',
+        selector: '[aria-label="system_prompt"]',
         value: 'Use the attached e2eSkill. Read its instructions and reference files before answering. Return exact values, never guess.'
       }),
-      click('חיבורים'),
-      wonderPlatformClickInSection('מיומנויות', 'הוספה'),
+      click('יכולות'),
+      wonderPlatformClickInSection('מיומנויות', 'חיבור קיים'),
       waitForText('אישור בחירה'),
       click('E2E Skill'),
       click('אישור בחירה'),
       wonderPlatformWaitForButtonGone('אישור בחירה'),
-      click('aria-label="שמירת סביבת עבודה"'),
-      waitForSelector('main input[placeholder="uiRenderingSkill"]:disabled', 5000),
-      waitForMutations(100),
+      click('aria-label="שמירת המסע"'),
+      waitForSelector('input[aria-label="id"]:disabled', 5000),
       click('aria-label="חזרה לסוכנים"'),
-      waitForMutations(100),
       waitForText('E2E Agent'),
       click('E2E Agent'),
-      waitForText('Marketplace API'),
+      waitForSelector('input[aria-label="id"]:disabled', 5000),
       waitForMutations(100),
-      click('חיבורים'),
-      waitForText('E2E Skill'),
-      click('שיחה חדשה'),
-      waitForText('הקשר השיחה'),
-      click('data-testid="agent-selector-board"'),
-      click('E2E Agent'),
+      click('יכולות'),
+      waitForSelector('button[aria-label="הסרת E2E Skill"]'),
+      click('הנחיות'),
+      click('aria-label="סיום ומעבר לשיחה"'),
+      waitForSelector('[data-testid="chat-input"]'),
       wonderPlatformSetControl({
         selector: '[data-testid="chat-input"]',
         value: 'Read the attached skill and references/verification.py. What is the verification phrase and what does verification_code() return?'

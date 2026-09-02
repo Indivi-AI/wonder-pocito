@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises'
+import { isDeepStrictEqual } from 'node:util'
 import { fileURLToPath } from 'node:url'
 
 const packages = [
@@ -53,12 +54,20 @@ export const marketplaceAssets = async ({fetchImpl = fetch, env = process.env} =
 export const seedMarketplaceAssets = async ({fetchImpl = fetch, env = process.env} = {}) => {
   const baseUrl = (env.MARKETPLACE_API_URL || 'http://localhost:7777').replace(/\/$/, '')
   const headers = {'content-type': 'application/json', 'x-wonder-room': env.MARKETPLACE_SEED_ROOM || 'marketplace'}
-  const result = {created: [], existing: []}
+  const result = {created: [], updated: [], existing: []}
   for (const asset of await marketplaceAssets({fetchImpl, env})) {
     const plural = asset.kind == 'skill' ? 'skills' : `${asset.kind}s`, url = `${baseUrl}/api/v1/${plural}`
     const existing = await fetchImpl(`${url}/${encodeURIComponent(asset.payload.id)}`, {headers})
-    if (existing.ok) result.existing.push(asset.payload.id)
-    else {
+    if (existing.ok) {
+      const current = await existing.json(), unchanged = isDeepStrictEqual(asset.payload,
+        Object.fromEntries(Object.keys(asset.payload).map(key => [key, current[key]])))
+      if (unchanged) result.existing.push(asset.payload.id)
+      else {
+        await json(await fetchImpl(`${url}/${encodeURIComponent(asset.payload.id)}`,
+          {method: 'PUT', headers, body: JSON.stringify(asset.payload)}))
+        result.updated.push(asset.payload.id)
+      }
+    } else {
       if (existing.status != 404) await json(existing)
       await json(await fetchImpl(`${url}/`, {method: 'POST', headers, body: JSON.stringify(asset.payload)}))
       result.created.push(asset.payload.id)

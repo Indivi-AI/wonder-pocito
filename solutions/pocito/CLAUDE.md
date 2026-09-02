@@ -106,6 +106,32 @@ With the current schema call it with `roomId` and `entryCompFullId`; the registe
 Inspect the complete upload response, including errors and timeline; retry once only if arguments were wrong.
 Open the returned public or signed room URL in the browser and verify desktop plus 390px mobile screenshots.
 
+## On-prem live-repo verification
+
+The air-gapped dev image contains dependencies, while the operator bind-mounts the checkout at `/workspace`.
+MinIO and PostgreSQL/pgvector remain external services. On native Linux prefer host networking; with bridge networking use endpoints reachable from
+the container, such as `host.docker.internal` where supported. Do not move these services into the image.
+
+Prepare the two ignored configuration files in the checkout before starting the container:
+
+- `solutions/pocito/.env.onprem`, copied from `.env.onprem.example`, contains service endpoints, storage credentials and port overrides.
+- `solutions/pocito/on-prem/litellm/config.local.yaml`, copied from `config.yaml`, contains model endpoints and provider keys when bundled LiteLLM is used.
+
+Never put provider keys in `.env.onprem`, the tracked LiteLLM template, Docker build arguments, or image layers.
+Keep `/workspace/node_modules`, `/workspace/solutions/pocito/flapi-mock/node_modules` and `/var/lib/pocito` on named volumes.
+The exact load, volume initialization, run, startup and shutdown commands are in `solutions/pocito/local-dev-readme.md`.
+Stop an existing stack with `npm run pocito-dev:shutdown` before starting it again.
+
+The on-prem suite is imported by `.jb6/entry-points-default.js` because an air-gapped container normally has no Git identity.
+Run all HeavyTest cases at:
+
+`http://localhost:3007/wonder/studio/tests.html?pattern=pocitoOnPrem&includeHeavy`
+
+The nine smoke tests cover service health, dataset counts, Marketplace MinIO, pgvector, LiteLLM chat and embeddings, seeded Marketplace assets,
+applet publication to MinIO, and the two Agno travel-agent calls. They intentionally contain no Playwright test.
+For focused diagnosis call `runTest` with the exact test id and inspect `onPremErrors` plus each relevant domain logger's error array.
+A green page is an installation/integration signal, not exhaustive product-quality validation.
+
 ## Verify after every edit
 
 - Syntax passes and no line exceeds 180 characters.

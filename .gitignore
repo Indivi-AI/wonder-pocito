@@ -8,6 +8,7 @@ cloud-services/.local/
 /files/
 
 wonder.zip
+/wonder-pocito.bundle
 
 tmp/
 cloud-services/express-server/.env.onprem
@@ -31,6 +32,9 @@ solutions/pocito/on-prem/litellm/config.local.yaml
 
 solutions/pocito/flapi-mock/node_modules/
 /solutions/pocito/assets/traveling-test/
+/solutions/pocito/on-prem/images/*
+!/solutions/pocito/on-prem/images/README.md
+!/solutions/pocito/on-prem/images/SHA256SUMS
 # Playwright MCP generated artifacts
 .playwright-mcp/
 *.png

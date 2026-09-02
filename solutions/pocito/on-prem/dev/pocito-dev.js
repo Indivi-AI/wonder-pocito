@@ -1,5 +1,5 @@
 import { spawn, execFileSync } from 'node:child_process'
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { existsSync, readFileSync, mkdirSync, writeFileSync, copyFileSync, rmSync, constants } from 'node:fs'
 import { createServer } from 'node:net'
 import { dirname, resolve, join } from 'node:path'
@@ -34,21 +34,26 @@ export async function startPocito() {
   const url = name => `http://localhost:${ports[name]}`
   const npmInstall = (env.POCITO_NPM_INSTALL || 'ci').split(/\s+/).filter(Boolean)
   const minio = env.MINIO_ENDPOINT, storageClass = env.MINIO_STORAGE_CLASS || 'STANDARD', flapiBaseUrl = env.FLAPI_BASE_URL
-  const localLitellm = !env.LITELLM_HOST, litellmHost = env.LITELLM_HOST || url('litellm')
+  const agnoBaseUrl = env.AGNO_API_URL, localAgno = !agnoBaseUrl
+  const localLitellm = !env.LITELLM_HOST, litellmHost = env.LITELLM_HOST || url('litellm'), llmModel = env.LLM_MODEL || 'openai/chat'
   if (!minio || !env.PGVECTOR_URL) throw new Error('Set MINIO_ENDPOINT and PGVECTOR_URL in .env.onprem')
   Object.assign(env, {
     ENV_PATH: envFile, WONDER_AUTH_MODE: 'none', STORAGE_PROVIDER: 'minio', MINIO_ENDPOINT: minio,
     MINIO_STORAGE_CLASS: storageClass, WONDER_STORAGE_URL: minio, WONDER_CDN_URL: `${url('pocito')}/jb6_packages/react/lib`,
     WONDER_LOCAL_SERVER: url('pocito'), WONDER_SERVICE_URL: url('pocito'),
-    MARKETPLACE_API_URL: url('marketplace'), AGNO_API_URL: url('agno'), FLAPI_BASE_URL: flapiBaseUrl || url('flapi'),
-    LLM_PROXY_URL: `${url('pocito')}/llmProxy`, LLM_PROXY_MODE: 'onprem', LITELLM_HOST: litellmHost, LLM_MODEL: 'openai/chat',
+    MARKETPLACE_API_URL: url('marketplace'), AGNO_API_URL: agnoBaseUrl || url('agno'), FLAPI_BASE_URL: flapiBaseUrl || url('flapi'),
+    FLAPI_TOKEN: env.FLAPI_TOKEN || (flapiBaseUrl ? '' : randomUUID()),
+    FLAPI_USERNAME: env.FLAPI_USERNAME || (flapiBaseUrl ? '' : '625navehp'),
+    LLM_PROXY_URL: `${url('pocito')}/llmProxy`, LLM_PROXY_MODE: 'onprem', LITELLM_HOST: litellmHost, LLM_MODEL: llmModel,
+    OPENAI_BASE_URL: `${litellmHost.replace(/\/$/, '')}/v1`, OPENAI_API_KEY: env.OPENAI_API_KEY || 'unused',
+    OPENAI_MODEL: env.OPENAI_MODEL || llmModel.split('/').pop(),
     OPENAI_EMBEDDING_DIMENSIONS: env.OPENAI_EMBEDDING_DIMENSIONS || '1536',
     MARKETPLACE_HOST: host, MARKETPLACE_PORT: ports.marketplace, AGENT_OS_HOST: host, AGENT_OS_PORT: ports.agno,
     MARKETPLACE_S3_ENDPOINT: minio, MARKETPLACE_S3_PUBLIC_ENDPOINT: minio,
     MARKETPLACE_S3_ACCESS_KEY: env.MINIO_ACCESS_KEY || 'wonder', MARKETPLACE_S3_SECRET_KEY: env.MINIO_SECRET_KEY || 'wonder-minio-local',
     MARKETPLACE_S3_BUCKET: 'wonder-marketplace', MARKETPLACE_S3_STORAGE_CLASS: storageClass, PGVECTOR_URL: env.PGVECTOR_URL,
     MARKETPLACE_DATA_DIR: join(state, 'marketplace'), MCP_BEARER_TOKEN: '',
-    CORS_ALLOWED_ORIGINS: `${url('pocito')},http://127.0.0.1:${ports.pocito}`, PYTHONUNBUFFERED: '1',
+    CORS_ALLOWED_ORIGINS: '*', PYTHONUNBUFFERED: '1',
     LITELLM_LOCAL_MODEL_COST_MAP: 'True', LITELLM_LOCAL_POLICY_TEMPLATES: 'true', LITELLM_LOCAL_BLOG_POSTS: 'True'
   })
   mkdirSync(state, { recursive: true })
@@ -99,17 +104,19 @@ export async function startPocito() {
     throw new Error(`${name} was not ready within 60 seconds`)
   }
   const ready = async address => (await fetch(address, { signal: AbortSignal.timeout(2000) })).ok
-  const pythonVersion = env.POCITO_PYTHON || '3.10'
+  const requestedPython = env.POCITO_PYTHON
   try {
-    const requiredPorts = Object.entries(ports).filter(([name]) => name !== 'litellm' || localLitellm).map(([, port]) => port)
+    const requiredPorts = Object.entries(ports).filter(([name]) => (name !== 'litellm' || localLitellm) && (name !== 'agno' || localAgno))
+      .map(([, port]) => port)
     if (new Set(requiredPorts).size !== requiredPorts.length) throw new Error('Service ports must be distinct')
     for (const port of requiredPorts) await new Promise((ok, fail) => {
       const socket = createServer().once('error', () => fail(new Error(`Port ${port} is occupied; stop its owner or configure an external service`)))
       socket.listen(Number(port), host, () => socket.close(ok))
     })
     console.log('Preparing Pocito dependencies')
-    for (const directory of [root, ...(flapiBaseUrl ? [] : [join(pocito, 'flapi-mock')])])
-      if (!existsSync(join(directory, 'node_modules'))) await run('npm', npmInstall, { cwd: directory, stdio: 'inherit' })
+    for (const [directory, modules] of [[root, env.POCITO_NODE_MODULES || join(root, 'node_modules')],
+      ...(flapiBaseUrl ? [] : [[join(pocito, 'flapi-mock'), join(pocito, 'flapi-mock/node_modules')]])])
+      if (!existsSync(modules)) await run('npm', npmInstall, { cwd: directory, stdio: 'inherit' })
     if (!env.UV_DEFAULT_INDEX && !env.UV_INDEX_URL) {
       let pip = {}
       try {
@@ -125,12 +132,13 @@ export async function startPocito() {
     const environments = {}
     for (const name of ['marketplace-server', 'agno-server', ...(localLitellm ? ['on-prem/litellm'] : [])]) {
       const project = join(pocito, name), venv = join(env.POCITO_DEPS_DIR || state, 'venvs', name.split('/').pop())
-      const stamp = createHash('sha256').update(readFileSync(join(project, 'pyproject.toml'))).update(readFileSync(join(project, 'uv.lock'))).digest('hex')
+      const stamp = createHash('sha256').update(readFileSync(join(project, 'pyproject.toml')))
+        .update(readFileSync(join(project, 'uv.lock'))).update(requestedPython || '').digest('hex')
       const stampFile = join(venv, '.pocito-lock')
       if (!existsSync(stampFile) || readFileSync(stampFile, 'utf8').trim() !== stamp) {
         const requirements = join(state, `${name.split('/').pop()}.requirements.txt`)
         await run('uv', ['export', '--frozen', '--no-dev', '--no-emit-project', '--project', project, '--output-file', requirements])
-        if (!existsSync(join(venv, 'bin/python'))) await run('uv', ['venv', '--python', pythonVersion, venv])
+        await run('uv', ['venv', '--clear', ...(requestedPython ? ['--python', requestedPython] : []), '--project', project, venv])
         await run('uv', ['pip', 'sync', '--require-hashes', '--python', join(venv, 'bin/python'), requirements], { stdio: 'inherit' })
         writeFileSync(stampFile, stamp)
       }
@@ -152,9 +160,9 @@ export async function startPocito() {
       return health.status === 'ok' && health.object_store === 'ok'
     })
     await run(process.execPath, [join(pocito, 'traveling-test/scripts/seed-marketplace-assets.mjs')], {stdio: 'inherit'})
-    service('Agno', python('agno-server'), [join(pocito, 'agno-server/agno_server.py')])
+    if (localAgno) service('Agno', python('agno-server'), [join(pocito, 'agno-server/agno_server.py')])
     await waitFor('Agno', async () => {
-      const health = await (await fetch(`${url('agno')}/healthz`, { signal: AbortSignal.timeout(2000) })).json()
+      const health = await (await fetch(`${(agnoBaseUrl || url('agno')).replace(/\/$/, '')}/healthz`, { signal: AbortSignal.timeout(2000) })).json()
       return health.status === 'ok' && health.object_store === 'ok'
     })
     service('Pocito', process.execPath, ['--import', join(root, 'nodejs-importmap.js'), join(pocito, 'on-prem/dev/pocito-local-server.js')], {

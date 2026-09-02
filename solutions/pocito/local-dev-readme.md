@@ -39,7 +39,8 @@ Existing on-prem services can replace these containers: configure their endpoint
 ## Start the app
 
 Install Node 24+ and uv on macOS or Linux. No native MinIO or PostgreSQL installation is needed.
-The launcher installs missing npm dependencies and creates locked Python environments for the configured `POCITO_PYTHON` (defaults to 3.10).
+The launcher installs missing npm dependencies and lets uv select a compatible Python for each locked environment.
+Set `POCITO_PYTHON` only to request a specific compatible version.
 
 ```sh
 cp -n solutions/pocito/.env.onprem.example solutions/pocito/.env.onprem
@@ -80,28 +81,130 @@ App ports: Pocito `3000`, Marketplace `7777`, Agno `7778`, LiteLLM `4000`, FLAPI
 Optional port overrides are listed in `.env.onprem.example`.
 The launcher preserves npm configuration and forwards pip's primary index to uv unless uv has its own index configuration.
 For advanced Artifactory authentication, configure uv directly. Missing Python binaries need an approved
-`UV_PYTHON_INSTALL_MIRROR` or preinstalled Python runtime matching `POCITO_PYTHON`; package indexes alone do not supply Python or tokenizer assets.
+`UV_PYTHON_INSTALL_MIRROR` or a compatible preinstalled Python runtime; package indexes alone do not supply Python or tokenizer assets.
 
-## Dependency-only Linux x86-64 image
+## Air-gapped live-repo container
 
-Build on a connected/prepared machine and transfer the image if needed. Run with Linux host networking so the same
-localhost storage endpoints and browser-facing URLs work inside and outside the dev container:
+The image supplies Linux dependencies and tools. The checkout remains outside the container and is bind-mounted at `/workspace`, so edits from
+the host or VS Code are immediately visible. MinIO and PostgreSQL/pgvector remain external and must be reachable from the container.
+
+### 1. Prepare the ignored environment files
+
+Run from the checkout root before starting the container:
 
 ```sh
-docker build --platform linux/amd64 -f solutions/pocito/on-prem/on-premp-dev.dockerfile -t pocito-dev .
-docker run --rm -it --platform linux/amd64 --network host -e POCITO_BIND_HOST=127.0.0.1 \
-  --mount type=bind,src="$PWD",dst=/workspace \
-  --mount type=volume,src=pocito-data,dst=/var/lib/pocito pocito-dev
+cp -n solutions/pocito/.env.onprem.example solutions/pocito/.env.onprem
+cp -n solutions/pocito/on-prem/litellm/config.yaml solutions/pocito/on-prem/litellm/config.local.yaml
 ```
 
-Start the separate infrastructure containers and edit both ignored config files first.
-Only app dependencies are baked in; no application code, MinIO or PostgreSQL. The checkout supplies source and applet files.
-Image-populated npm volumes preserve Linux dependencies; Python environments live outside the checkout.
-Rebuild after dependency lock changes. BuildKit secrets `npmrc` and `uvconfig` support private indexes without baking credentials in.
+Edit `solutions/pocito/.env.onprem`:
 
-## Maintenance
+```dotenv
+MINIO_ENDPOINT=http://localhost:9000
+PGVECTOR_URL=postgresql+psycopg://wonder:wonder-pg-local@localhost:5432/wonder
+MINIO_ACCESS_KEY=wonder
+MINIO_SECRET_KEY=wonder-minio-local
+MINIO_STORAGE_CLASS=STANDARD
+FLAPI_BASE_URL=http://flapi.internal:6001
+FLAPI_TOKEN=<FLAPI_TOKEN>
+FLAPI_USERNAME=<FLAPI_USERNAME>
+POCITO_PORT=3007
+```
 
-`.jb6/entry-points-pocito.js` explicitly imports the MCP application; tests use `entry-points-pocito-tests.js` separately.
-`uploadRoomApplet` publishes to configured MinIO. Local applet serving remains filesystem-based; production serving is separate.
-Python servers share `marketplace-schema` from the checkout. Use `uv lock --project <server-directory>` after manifest changes;
-startup never updates locks. A healthy LiteLLM process does not prove provider connectivity: exercise chat and embeddings before the demo.
+On native Linux with `--network host`, `localhost` reaches host MinIO and PostgreSQL. For bridge networking, use service hostnames or addresses
+reachable from inside the container; on Docker Desktop this is commonly `host.docker.internal`. External air-gapped services can use their
+normal DNS names or IP addresses. Ensure the three MinIO buckets exist and PostgreSQL has the `vector` extension as described above.
+
+If bundled LiteLLM is used, leave `LITELLM_HOST` empty and edit
+`solutions/pocito/on-prem/litellm/config.local.yaml` with the OpenAI-compatible chat and embedding endpoints and keys.
+If the network already provides LiteLLM, set `LITELLM_HOST` in `.env.onprem`; `config.local.yaml` is then unused.
+Provider keys belong only in ignored `config.local.yaml`, never in `.env.onprem`, the tracked template, build arguments or image layers.
+Set `FLAPI_BASE_URL`, `FLAPI_TOKEN` and `FLAPI_USERNAME` for the external on-prem FLAPI service.
+
+### 2. Load the transferred image
+
+```sh
+cd solutions/pocito/on-prem/images
+sha256sum -c SHA256SUMS
+cat pocito-dev-linux-amd64.tar.gz.part-* | gzip -dc | docker load
+cd ../../../..
+```
+
+The archive loads `pocito-dev:linux-amd64` and `pocito-dev:sudo-linux-amd64`.
+The sudo image uses `pocito` as both username and sudo password.
+
+### 3. Run with the live checkout mounted
+
+On the native Linux air-gapped host, from the checkout root:
+
+```sh
+docker run -d --name pocito-dev --restart unless-stopped --network host \
+  --mount type=bind,src="<REPO_PATH>",dst=/workspace/repo \
+  --mount type=volume,src=pocito-data,dst=/var/lib/pocito \
+  --workdir /workspace/repo \
+  pocito-dev:linux-amd64 sh -lc 'exec npm run pocito-dev'
+```
+
+Replace `<REPO_PATH>` with the checkout's absolute path. No `node_modules` mount is needed: the repository sits below the image's
+`/workspace/node_modules`, which Node resolves as an ancestor. External FLAPI also removes the need for its nested dependency volume.
+
+For Docker Desktop or bridge networking, replace `--network host` with:
+
+```sh
+--add-host host.docker.internal:host-gateway -p 127.0.0.1:3007:3007
+```
+
+Then use `host.docker.internal` rather than `localhost` for host MinIO and PostgreSQL in `.env.onprem`.
+VS Code can use **Dev Containers: Attach to Running Container**; the checkout is `/workspace/repo` and the container user is `pocito`.
+
+### 4. Inspect Pocito
+
+```sh
+docker logs -f pocito-dev
+curl -f http://localhost:3007/health
+```
+
+The launcher starts bundled FLAPI and LiteLLM when their external URLs are empty, then Marketplace, seed assets, Agno and the Pocito server.
+It reads only `solutions/pocito/.env.onprem`; model configuration comes from
+`solutions/pocito/on-prem/litellm/config.local.yaml`.
+
+### 5. Run the installation suite
+
+Open:
+
+`http://localhost:3007/wonder/studio/tests.html?pattern=pocitoOnPrem&includeHeavy`
+
+The nine tests cover service health, travel dataset counts, Marketplace MinIO, pgvector, LiteLLM chat and embeddings, seeded Marketplace assets,
+applet publication to MinIO, and both Agno travel-agent calls. They contain no Playwright test.
+When all nine are green, the mounted checkout and on-prem service chain are working together. This is an installation/integration check, not an
+exhaustive product-quality test. For a focused failure, run the matching `pocitoOnPrem.*` test through MCP and inspect its domain error arrays.
+
+### 6. Stop or restart
+
+Always stop the app supervisor before restarting it:
+
+```sh
+docker exec -u pocito pocito-dev sh -lc 'cd /workspace/repo && npm run pocito-dev:shutdown'
+docker stop pocito-dev
+docker start pocito-dev
+```
+
+## Image maintenance
+
+Build on a connected/prepared machine and transfer the exact tested image:
+
+```sh
+npm run airgapped-export
+```
+
+The exporter rebuilds `wonder-pocito.bundle`, builds both Linux AMD64 image variants, exports them together, splits the compressed archive into
+190 MiB parts and regenerates `solutions/pocito/on-prem/images/SHA256SUMS`. Run it from a connected checkout with Docker and Git installed.
+
+Only dependencies and the fallback Git bundle are baked in; the bind-mounted checkout supplies active source and applet files.
+Rebuild after npm or Python lock changes. BuildKit secrets `npmrc` and `uvconfig` support private indexes without baking credentials in.
+The image uses Debian 13, Node 24, npm 11.19.1, uv 0.12.7 and Python 3.12.12; projects accept compatible Python versions from 3.10.
+Scan and test the exact image being transferred. Automatic whitening-gate acceptance is not guaranteed.
+
+`.jb6/entry-points-default.js` imports the on-prem suite for containers without a Git identity.
+`uploadRoomApplet` publishes to configured MinIO. Python servers share `marketplace-schema` from the checkout.
+Use `uv lock --project <server-directory>` after Python manifest changes; startup never updates locks.

@@ -302,8 +302,10 @@ function testResultHtml(res, repo) {
     const { success, duration, reason, testID} = res
     const studioUrl = ''
     const _repo = repo ? `&repo=${repo}` : ''
+    const modulePath = new URLSearchParams(globalThis.location.search).get('modulePath')
+    const _modulePath = modulePath ? `&modulePath=${encodeURIComponent(modulePath)}` : ''
     return `<div class="${success ? 'success' : 'failure'}">
-        <a href="${baseUrl}/tests.html?test=${testID}${_repo}&show&browserSpy=${spyParamForTest(testID)}" style="color:${success ? 'green' : 'red'}">${testID}</a>
+        <a href="${baseUrl}/tests.html?test=${testID}${_repo}${_modulePath}&show&browserSpy=${spyParamForTest(testID)}" style="color:${success ? 'green' : 'red'}">${testID}</a>
         <span> ${duration}mSec</span> 
         <a class="test-button" href="javascript:goto_editor('${testID}','${repo||''}')">src</a>
         <a class="test-button" href="${studioUrl}">studio</a>
