@@ -33,7 +33,7 @@ export async function startPocito() {
     agno: env.AGENT_OS_PORT || '7778', litellm: env.LITELLM_PORT || '4000', flapi: env.FLAPI_PORT || '6001' }
   const url = name => `http://localhost:${ports[name]}`
   const npmInstall = (env.POCITO_NPM_INSTALL || 'ci').split(/\s+/).filter(Boolean)
-  const minio = env.MINIO_ENDPOINT, storageClass = env.MINIO_STORAGE_CLASS || 'STANDARD', flapiBaseUrl = env.FLAPI_BASE_URL
+  const minio = env.MINIO_ENDPOINT, storageClass = env.MINIO_STORAGE_CLASS || 'STANDARD_IA', flapiBaseUrl = env.FLAPI_BASE_URL
   const agnoBaseUrl = env.AGNO_API_URL, localAgno = !agnoBaseUrl
   const localLitellm = !env.LITELLM_HOST, litellmHost = env.LITELLM_HOST || url('litellm'), llmModel = env.LLM_MODEL || 'openai/chat'
   if (!minio || !env.PGVECTOR_URL) throw new Error('Set MINIO_ENDPOINT and PGVECTOR_URL in .env.onprem')
@@ -51,7 +51,8 @@ export async function startPocito() {
     MARKETPLACE_HOST: host, MARKETPLACE_PORT: ports.marketplace, AGENT_OS_HOST: host, AGENT_OS_PORT: ports.agno,
     MARKETPLACE_S3_ENDPOINT: minio, MARKETPLACE_S3_PUBLIC_ENDPOINT: minio,
     MARKETPLACE_S3_ACCESS_KEY: env.MINIO_ACCESS_KEY || 'wonder', MARKETPLACE_S3_SECRET_KEY: env.MINIO_SECRET_KEY || 'wonder-minio-local',
-    MARKETPLACE_S3_BUCKET: 'wonder-marketplace', MARKETPLACE_S3_STORAGE_CLASS: storageClass, PGVECTOR_URL: env.PGVECTOR_URL,
+    MARKETPLACE_S3_BUCKET: env.MARKETPLACE_S3_BUCKET || 'indiviai-wonder', MARKETPLACE_S3_STORAGE_CLASS: storageClass,
+    PGVECTOR_URL: env.PGVECTOR_URL,
     MARKETPLACE_DATA_DIR: join(state, 'marketplace'), MCP_BEARER_TOKEN: '',
     CORS_ALLOWED_ORIGINS: '*', PYTHONUNBUFFERED: '1',
     LITELLM_LOCAL_MODEL_COST_MAP: 'True', LITELLM_LOCAL_POLICY_TEMPLATES: 'true', LITELLM_LOCAL_BLOG_POSTS: 'True'

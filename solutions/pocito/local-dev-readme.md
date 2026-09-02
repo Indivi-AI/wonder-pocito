@@ -25,7 +25,7 @@ After PostgreSQL finishes initializing, enable pgvector and create the demo buck
 docker exec pocito-postgres psql -U wonder -d wonder -c 'CREATE EXTENSION IF NOT EXISTS vector;'
 docker run --rm --network container:pocito-minio --entrypoint /bin/sh minio/mc:latest -ec '
   mc alias set local http://localhost:9000 wonder wonder-minio-local
-  for bucket in indiviai-wonder wonder-code-packages wonder-marketplace; do
+  for bucket in indiviai-wonder wonder-code-packages; do
     mc mb --ignore-existing local/$bucket
     mc anonymous set public local/$bucket
   done'
@@ -70,7 +70,8 @@ No Wonder env file is loaded. Model credentials belong only in LiteLLM YAML, not
 | `MINIO_ENDPOINT` | Required; template uses `http://localhost:9000` |
 | `PGVECTOR_URL` | Required; template uses `postgresql+psycopg://wonder:wonder-pg-local@localhost:5432/wonder` |
 | `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY` | Defaults: `wonder`, `wonder-minio-local` |
-| `MINIO_STORAGE_CLASS` | `STANDARD`; stock MinIO does not support `STANDARD_IA` |
+| `MARKETPLACE_S3_BUCKET` | Marketplace room storage; defaults to `indiviai-wonder` |
+| `MINIO_STORAGE_CLASS` | Defaults to `STANDARD_IA`; use `STANDARD` with stock MinIO |
 | `POCITO_DATA_DIR` | `.local-data` relative to this directory; Python environments and marketplace data, not applet files |
 | `OPENAI_EMBEDDING_DIMENSIONS` | `1536` |
 | `FLAPI_BASE_URL`, `FLAPI_TOKEN`, `FLAPI_USERNAME` | FLAPI endpoint and credentials; the local mock requires username `625navehp` |
@@ -104,7 +105,7 @@ MINIO_ENDPOINT=http://localhost:9000
 PGVECTOR_URL=postgresql+psycopg://wonder:wonder-pg-local@localhost:5432/wonder
 MINIO_ACCESS_KEY=wonder
 MINIO_SECRET_KEY=wonder-minio-local
-MINIO_STORAGE_CLASS=STANDARD
+MINIO_STORAGE_CLASS=STANDARD_IA
 FLAPI_BASE_URL=http://flapi.internal:6001
 FLAPI_TOKEN=<FLAPI_TOKEN>
 FLAPI_USERNAME=<FLAPI_USERNAME>
@@ -113,7 +114,7 @@ POCITO_PORT=3007
 
 On native Linux with `--network host`, `localhost` reaches host MinIO and PostgreSQL. For bridge networking, use service hostnames or addresses
 reachable from inside the container; on Docker Desktop this is commonly `host.docker.internal`. External air-gapped services can use their
-normal DNS names or IP addresses. Ensure the three MinIO buckets exist and PostgreSQL has the `vector` extension as described above.
+normal DNS names or IP addresses. Ensure both MinIO buckets exist and PostgreSQL has the `vector` extension as described above.
 
 If bundled LiteLLM is used, leave `LITELLM_HOST` empty and edit
 `solutions/pocito/on-prem/litellm/config.local.yaml` with the OpenAI-compatible chat and embedding endpoints and keys.
@@ -174,10 +175,11 @@ Open:
 
 `http://localhost:3007/wonder/studio/tests.html?pattern=pocitoOnPrem&includeHeavy`
 
-The nine tests cover service health, travel dataset counts, Marketplace MinIO, pgvector, LiteLLM chat and embeddings, seeded Marketplace assets,
-applet publication to MinIO, and both Agno travel-agent calls. They contain no Playwright test.
-When all nine are green, the mounted checkout and on-prem service chain are working together. This is an installation/integration check, not an
-exhaustive product-quality test. For a focused failure, run the matching `pocitoOnPrem.*` test through MCP and inspect its domain error arrays.
+The thirteen tests cover service health, metadata and execution through the FLAPI proxy for packages 101–104, travel dataset counts, Marketplace MinIO,
+pgvector, LiteLLM chat and embeddings, seeded Marketplace assets, applet publication to MinIO, and both Agno travel-agent calls.
+They contain no Playwright test. When all thirteen are green, the mounted checkout and on-prem service chain are working together.
+This is an installation/integration check, not an exhaustive product-quality test. For a focused failure, run the matching `pocitoOnPrem.*`
+test through MCP and inspect its domain error arrays.
 
 ### 6. Stop or restart
 

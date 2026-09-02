@@ -42,7 +42,7 @@ def safe_path(value):
 
 class S3ObjectStore:
     def __init__(self, bucket=None, client=None):
-        self.bucket = bucket or os.getenv('MARKETPLACE_S3_BUCKET', 'wonder-marketplace')
+        self.bucket = bucket or os.getenv('MARKETPLACE_S3_BUCKET', 'indiviai-wonder')
         self.storage_class = os.getenv('MARKETPLACE_S3_STORAGE_CLASS', '')
         endpoint = os.getenv('MARKETPLACE_S3_ENDPOINT', 'http://127.0.0.1:9000')
         create_client = lambda url: boto3.client('s3', endpoint_url=url,

@@ -135,6 +135,27 @@ Data('pocitoOnPremMarketplaceSeed', {
   }
 })
 
+Data('pocitoOnPremFlapiPackage', {
+  params: [
+    {id: 'packageId', as: 'number', mandatory: true},
+    {id: 'table', as: 'string', mandatory: true},
+    {id: 'request', dynamic: true, defaultValue: pocitoOnPremRequest()}
+  ],
+  impl: async (ctx, {onPremLogger}, {packageId, table, request}) => {
+    const base = (process.env.FLAPI_BASE_URL || 'http://localhost:6001').replace(/\/$/, '')
+    const [details, run] = await Promise.all([
+      request(ctx.setVars({url: `${base}/flapi/package/${packageId}`, options: {}})),
+      request(ctx.setVars({url: `${base}/flapi/package/${packageId}/run`, options: {method: 'POST',
+        headers: {'content-type': 'application/json'}, body: '{}'}}))
+    ])
+    const result = {packageId: details.body.metadata?.Id,
+      metadataTable: details.body.metadata?.Queries?.some(({originalName}) => originalName === table) || false,
+      rowCount: Array.isArray(run.body.results?.[table]) ? run.body.results[table].length : 0}
+    onPremLogger?.info?.({t: 'on-prem FLAPI package checked', requestedPackageId: packageId, table, ...result}, {}, {ctx})
+    return result
+  }
+})
+
 Data('pocitoOnPremMinioApplet', {
   impl: async (ctx, {onPremLogger}) => {
     const tool = await dsls.mcp.tool.uploadRoomApplet.$runWithCtx(ctx, {
@@ -172,7 +193,7 @@ Data('pocitoOnPremAgentQuestion', {
   }
 })
 
-const { pocitoOnPremAgentQuestion, pocitoOnPremDataset, pocitoOnPremLiteLlmRoundTrip, pocitoOnPremMarketplaceSeed,
+const { pocitoOnPremAgentQuestion, pocitoOnPremDataset, pocitoOnPremFlapiPackage, pocitoOnPremLiteLlmRoundTrip, pocitoOnPremMarketplaceSeed,
   pocitoOnPremMinioApplet, pocitoOnPremMinioRoundTrip, pocitoOnPremPgvectorRoundTrip, pocitoOnPremServices } = dsls.common.data
 
 Test('pocitoOnPrem.services', {
@@ -191,6 +212,46 @@ Test('pocitoOnPrem.services', {
       equals('%flapiPackage%', 101)
     ),
     timeout: 30000,
+    logger: 'onPremLogger'
+  })
+})
+
+Test('pocitoOnPrem.flapiEmails', {
+  HeavyTest: true,
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: pocitoOnPremFlapiPackage(101, 'Emails'),
+    expectedResult: and(equals('%packageId%', 101), equals('%metadataTable%', true), '%rowCount% > 0'),
+    logger: 'onPremLogger'
+  })
+})
+
+Test('pocitoOnPrem.flapiInstagram', {
+  HeavyTest: true,
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: pocitoOnPremFlapiPackage(102, 'Posts'),
+    expectedResult: and(equals('%packageId%', 102), equals('%metadataTable%', true), '%rowCount% > 0'),
+    logger: 'onPremLogger'
+  })
+})
+
+Test('pocitoOnPrem.flapiPlaces', {
+  HeavyTest: true,
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: pocitoOnPremFlapiPackage(103, 'Places'),
+    expectedResult: and(equals('%packageId%', 103), equals('%metadataTable%', true), '%rowCount% > 0'),
+    logger: 'onPremLogger'
+  })
+})
+
+Test('pocitoOnPrem.flapiItinerary', {
+  HeavyTest: true,
+  nodeOnly: true,
+  impl: dataTest({
+    calculate: pocitoOnPremFlapiPackage(104, 'Events'),
+    expectedResult: and(equals('%packageId%', 104), equals('%metadataTable%', true), '%rowCount% > 0'),
     logger: 'onPremLogger'
   })
 })
