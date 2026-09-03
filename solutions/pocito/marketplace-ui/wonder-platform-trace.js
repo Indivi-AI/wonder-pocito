@@ -4,8 +4,8 @@ import './wonder-platform-domain.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
-const wonderPlatformStepIcon = {thinking: 'Lightbulb', tool: 'Wrench', model: 'Sparkles'}
-const wonderPlatformStepLabel = {thinking: 'חשיבה', tool: 'כלי', model: 'מודל'}
+const wonderPlatformStepIcon = {thinking: 'Lightbulb', tool: 'Wrench', model: 'Sparkles', skill: 'BookOpenText'}
+const wonderPlatformStepLabel = {thinking: 'חשיבה', tool: 'כלי', model: 'מודל', skill: 'מיומנות'}
 
 ReactComp('wonderPlatformTraceStep', {
   impl: comp({

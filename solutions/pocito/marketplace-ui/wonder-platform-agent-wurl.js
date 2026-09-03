@@ -121,9 +121,12 @@ Data('wonderPlatformAgnoRunSteps', {
     const thinking = reasoningSteps.length ? reasoningSteps
       : run.reasoning_content ? [{type: 'thinking', title: 'חשיבה', detail: run.reasoning_content,
         running: !run.reasoningDone && !run.done}] : []
-    const tools = (run.tools || []).map(call => ({type: 'tool', title: call.tool_name, input: call.tool_args,
-      output: call.result, error: call.tool_call_error || undefined, seconds: call.metrics?.duration,
-      running: call.result == null && !call.tool_call_error}))
+    const tools = (run.tools || []).map(call => {
+      const isSkill = call.tool_name?.startsWith('get_skill_')
+      return {type: isSkill ? 'skill' : 'tool', title: isSkill ? call.tool_args?.skill_name || call.tool_name : call.tool_name,
+        input: call.tool_args, output: call.result, error: call.tool_call_error || undefined, seconds: call.metrics?.duration,
+        running: call.result == null && !call.tool_call_error}
+    })
     return [...thinking, ...tools]
   }
 })
