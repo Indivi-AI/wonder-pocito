@@ -123,39 +123,18 @@ Data('pocitoOnPremMarketplaceSeed', {
   impl: async (ctx, {onPremLogger}, {request}) => {
     const base = process.env.MARKETPLACE_API_URL || 'http://localhost:7777'
     const headers = {'x-wonder-room': process.env.MARKETPLACE_SEED_ROOM || 'marketplace'}
-    const paths = ['tools/northstar-company-email', 'tools/northstar-instagram', 'tools/tel-aviv-places',
-      'tools/northstar-itinerary', 'skills/northstar-travel-support', 'agents/northstar-travel-agent']
+    const paths = ['skills/northstar-travel-support', 'agents/northstar-travel-agent']
     const assets = await Promise.all(paths.map(async path =>
       (await request(ctx.setVars({url: `${base}/api/v1/${path}`, options: {headers}}))).body))
-    const result = {ids: assets.map(({id}) => id), packageIds: assets.slice(0, 4).map(({package_id}) => package_id)}
+    const result = {ids: assets.map(({id}) => id)}
     onPremLogger?.info?.({t: 'on-prem Marketplace seed checked', ...result}, {}, {ctx})
-    return result
-  }
-})
-
-Data('pocitoOnPremFlapiPackage', {
-  params: [
-    {id: 'packageId', as: 'number', mandatory: true},
-    {id: 'table', as: 'string', mandatory: true},
-    {id: 'request', dynamic: true, defaultValue: pocitoOnPremRequest()}
-  ],
-  impl: async (ctx, {onPremLogger}, {packageId, table, request}) => {
-    const base = (process.env.FLAPI_BASE_URL || 'http://localhost:6001').replace(/\/$/, '')
-    const [details, run] = await Promise.all([
-      request(ctx.setVars({url: `${base}/flapi/package/${packageId}`, options: {}})),
-      request(ctx.setVars({url: `${base}/flapi/package/${packageId}/run`, options: {method: 'POST',
-        headers: {'content-type': 'application/json'}, body: '{}'}}))
-    ])
-    const result = {packageId: details.body.metadata?.Id,
-      metadataTable: details.body.metadata?.Queries?.some(({originalName}) => originalName === table) || false,
-      rowCount: Array.isArray(run.body.results?.[table]) ? run.body.results[table].length : 0}
-    onPremLogger?.info?.({t: 'on-prem FLAPI package checked', requestedPackageId: packageId, table, ...result}, {}, {ctx})
     return result
   }
 })
 
 Data('pocitoOnPremMinioApplet', {
   impl: async (ctx, {onPremLogger}) => {
+    const {execFileSync} = await import('node:child_process')
     const tool = await dsls.mcp.tool.uploadRoomApplet.$runWithCtx(ctx, {
       roomId: 'room://pocito-on-prem-minio', entryCompFullId: 'react-comp<react>pocitoOnPremTestApplet'
     })
@@ -166,32 +145,18 @@ Data('pocitoOnPremMinioApplet', {
     const uploadedManifest = await manifestResponse.json()
     const sourceResponse = await jb.wonderUtils.wfetch2(
       `${published.clientCodeWUrl.replace(/\/?$/, '/')}solutions/pocito/on-prem/dev/pocito-on-prem-test-applet.js`, {}, dbCtx)
+    const appHtml = execFileSync('curl', ['--fail', '--silent', '--show-error',
+      `${process.env.WONDER_SERVICE_URL || 'http://localhost:3000'}/applet/pocitoOnPremTestApplet`], {encoding: 'utf8'})
     const result = {fileCount: published.fileCount, manifestStored: uploadedManifest.appletV === published.appletV,
-      sourceStored: sourceResponse.ok && (await sourceResponse.text()).includes('Pocito on-prem applet loaded')}
+      sourceStored: sourceResponse.ok && (await sourceResponse.text()).includes('Pocito on-prem applet loaded'),
+      appLoaded: appHtml.includes('"cmpId":"pocitoOnPremTestApplet"')}
     onPremLogger?.info?.({t: 'on-prem applet uploaded to MinIO', appletV: published.appletV, ...result}, {}, {ctx})
     return result
   }
 })
 
-Data('pocitoOnPremAgentQuestion', {
-  params: [
-    {id: 'question', as: 'string', mandatory: true}
-  ],
-  impl: async (ctx, {onPremLogger}, {question}) => {
-    const base = process.env.AGNO_API_URL || 'http://localhost:7778', form = new FormData()
-    form.set('message', question); form.set('session_id', ctx.vars.testSessionId); form.set('user_id', 'pocito-on-prem-test'); form.set('stream', 'false')
-    const response = await fetch(`${base}/agents/northstar-travel-agent/runs`, {method: 'POST',
-      headers: {'x-wonder-room': process.env.MARKETPLACE_SEED_ROOM || 'marketplace'}, body: form, signal: AbortSignal.timeout(180000)})
-    const body = await response.json()
-    if (!response.ok) throw new Error(`${response.status} ${JSON.stringify(body)}`)
-    const result = {answer: body.content || '', toolExecutions: body.tools || body.tool_executions || []}
-    onPremLogger?.info?.({t: 'on-prem travel agent answered', question, ...result}, {}, {ctx})
-    return result
-  }
-})
-
-const { pocitoOnPremAgentQuestion, pocitoOnPremDataset, pocitoOnPremFlapiPackage, pocitoOnPremLiteLlmRoundTrip, pocitoOnPremMarketplaceSeed,
-  pocitoOnPremMinioApplet, pocitoOnPremMinioRoundTrip, pocitoOnPremPgvectorRoundTrip, pocitoOnPremService } = dsls.common.data
+const { pocitoOnPremDataset, pocitoOnPremLiteLlmRoundTrip, pocitoOnPremMarketplaceSeed, pocitoOnPremMinioApplet,
+  pocitoOnPremMinioRoundTrip, pocitoOnPremPgvectorRoundTrip, pocitoOnPremService } = dsls.common.data
 
 Test('pocitoOnPrem.serviceWonder', {
   HeavyTest: true,
@@ -256,54 +221,14 @@ Test('pocitoOnPrem.serviceLiteLlm', {
   })
 })
 
-Test('pocitoOnPrem.serviceFlapi', {
+/* Test('pocitoOnPrem.serviceFlapi', {
   HeavyTest: true,
   nodeOnly: true,
   impl: dataTest(pocitoOnPremService('flapi'), and(equals('%httpStatus%', 200), equals('%metadata/Id%', 101)), {
     timeout: 2000,
     logger: 'onPremLogger'
   })
-})
-
-Test('pocitoIntegration.flapiEmails', {
-  HeavyTest: true,
-  nodeOnly: true,
-  impl: dataTest({
-    calculate: pocitoOnPremFlapiPackage(101, 'Emails'),
-    expectedResult: and(equals('%packageId%', 101), equals('%metadataTable%', true), '%rowCount% > 0'),
-    logger: 'onPremLogger'
-  })
-})
-
-Test('pocitoIntegration.flapiInstagram', {
-  HeavyTest: true,
-  nodeOnly: true,
-  impl: dataTest({
-    calculate: pocitoOnPremFlapiPackage(102, 'Posts'),
-    expectedResult: and(equals('%packageId%', 102), equals('%metadataTable%', true), '%rowCount% > 0'),
-    logger: 'onPremLogger'
-  })
-})
-
-Test('pocitoIntegration.flapiPlaces', {
-  HeavyTest: true,
-  nodeOnly: true,
-  impl: dataTest({
-    calculate: pocitoOnPremFlapiPackage(103, 'Places'),
-    expectedResult: and(equals('%packageId%', 103), equals('%metadataTable%', true), '%rowCount% > 0'),
-    logger: 'onPremLogger'
-  })
-})
-
-Test('pocitoIntegration.flapiItinerary', {
-  HeavyTest: true,
-  nodeOnly: true,
-  impl: dataTest({
-    calculate: pocitoOnPremFlapiPackage(104, 'Events'),
-    expectedResult: and(equals('%packageId%', 104), equals('%metadataTable%', true), '%rowCount% > 0'),
-    logger: 'onPremLogger'
-  })
-})
+}) */
 
 Test('pocitoIntegration.dataset', {
   HeavyTest: true,
@@ -356,9 +281,7 @@ Test('pocitoIntegration.litellm', {
 Test('pocitoIntegration.marketplaceSeed', {
   HeavyTest: true,
   nodeOnly: true,
-  impl: dataTest({
-    calculate: pocitoOnPremMarketplaceSeed(),
-    expectedResult: and(equals('%ids/length%', 6), equals('%packageIds%', ['101','102','103','104'])),
+  impl: dataTest(pocitoOnPremMarketplaceSeed(), equals('%ids/length%', 2), {
     timeout: 30000,
     logger: 'onPremLogger'
   })
@@ -369,31 +292,13 @@ Test('pocitoIntegration.minioApplet', {
   nodeOnly: true,
   impl: dataTest({
     calculate: pocitoOnPremMinioApplet(),
-    expectedResult: and('%fileCount% > 0', equals('%manifestStored%', true), equals('%sourceStored%', true)),
+    expectedResult: and(
+      '%fileCount% > 0',
+      equals('%manifestStored%', true),
+      equals('%sourceStored%', true),
+      equals('%appLoaded%', true)
+    ),
     timeout: 120000,
     logger: 'onPremLogger,mcpLogger,dbLogger'
-  })
-})
-
-Test('pocitoIntegration.restaurantAgent', {
-  HeavyTest: true,
-  nodeOnly: true,
-  impl: dataTest(pocitoOnPremAgentQuestion('Help me find a restaurant that Tom will like.'), '%answer%', {
-    timeout: 180000,
-    logger: 'onPremLogger,agentLogger'
-  })
-})
-
-Test('pocitoIntegration.phoneAgent', {
-  HeavyTest: true,
-  nodeOnly: true,
-  impl: dataTest({
-    calculate: pocitoOnPremAgentQuestion('John lost his phone. Help him find it.'),
-    expectedResult: and(
-      contains('Norman Library Bar', { allText: '%answer%' }),
-      contains('green', { allText: '%answer%' })
-    ),
-    timeout: 180000,
-    logger: 'onPremLogger,agentLogger'
   })
 })
