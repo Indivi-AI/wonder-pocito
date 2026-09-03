@@ -4,6 +4,7 @@ import './wonder-platform-domain.js'
 import './wonder-platform-kit.js'
 import './wonder-platform-agent-results.js'
 import './wonder-platform-searchable-select.js'
+import './wonder-platform-trace.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
@@ -171,13 +172,6 @@ ReactComp('wonderPlatformChat', {
       const opikUrl = conversation?.messages.filter(item => item.opikUrl).at(-1)?.opikUrl
       const statusText = status => wonderPlatformRunStatusLabel[String(status).toLowerCase()] || status || 'הושלם'
       const locked = conversation?.messages.length > 0
-      const trace = item => (item.steps || []).length > 0 && h('details:mt-3 rounded-[8px] border ' +
-        'border-[var(--wp-border)] bg-[var(--wp-surface-2)]', {},
-      h('summary:cursor-pointer list-none px-3 py-2 text-[12px] text-[var(--wp-ink-3)]', {},
-        `מעקב הרצה · ${item.steps.length} שלבים · ${statusText(item.status)}`),
-      h('div:border-t border-[var(--wp-border)] p-3', {}, item.steps.map((step, index) =>
-        h('div:flex items-center gap-2 py-1 text-[12px] text-[var(--wp-ink-2)]', {key: index},
-          h(`span:${classes.chip}`, {}, step.kind), step.title || step.name))))
       const messages = h('div:mx-auto w-full max-w-[760px] px-5 py-8', {},
         conversation?.messages.map(item => item.role == 'user'
           ? h('div:mb-6 flex', {key: item.id, 'data-message-role': 'user'},
@@ -187,7 +181,8 @@ ReactComp('wonderPlatformChat', {
             h('div:mb-2 flex items-center gap-2', {},
               hh(ctx, dsls.react['react-comp'].wonderPlatformMark, {icon: agent?.icon, text: agent?.mark || 'AI', size: 'sm'}),
               h('span:text-[12px] font-medium text-[var(--wp-ink-2)]', {}, agent?.name || 'סוכן')),
-            hh(ctx, dsls.react['react-comp'].wonderPlatformAgentResult, {result: item, setMessage}), trace(item))),
+            hh(ctx, dsls.react['react-comp'].wonderPlatformAgentResult, {result: item, setMessage}),
+            hh(ctx, dsls.react['react-comp'].wonderPlatformRunTrace, {steps: item.steps, status: statusText(item.status)}))),
         busy && h('div:flex items-center gap-2 text-[13px] text-[var(--wp-ink-3)]', {},
           h('L:Loader2', {size: 15, className: 'animate-spin'}), 'הסוכן פועל…'))
       return h('main:flex h-screen min-w-0 flex-1 bg-[var(--wp-surface)] pb-16 sm:pb-0', {},

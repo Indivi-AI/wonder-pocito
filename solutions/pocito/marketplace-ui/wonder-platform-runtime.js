@@ -100,6 +100,7 @@ Data('wonderPlatformAnswer', {
       duration: `${Math.max(1, Math.round((Date.now() - startedAt) / 1000))} שנ׳`, runId: result.runId || result.traceId,
       opikUrl: result.opikUrl, loadedSkillIds: loadedSkills.map(skill => skill.id),
       runtimeSteps: (result.workflowTrace || []).filter(step => step.flowIndex != null).map((step, index) => ({
-        kind: index ? 'כלי' : 'מודל', title: step.setVars ? Object.keys(step.setVars)[0] : `שלב llm-flow ${index + 1}`, runtime: true}))}
+        type: index ? 'tool' : 'model', title: step.setVars ? Object.keys(step.setVars)[0] : `שלב ${index + 1}`,
+        input: step.input, output: step.output ?? (step.setVars && Object.values(step.setVars)[0]), error: step.failure?.error}))}
   }
 })

@@ -424,7 +424,7 @@ Test('wonderPlatform.atomicComposition', {
 Test('wonderPlatform.moduleContracts', {
   impl: dataTest({
     calculate: () => ({result: ['data<common>wonderPlatformSeed', 'data<common>wonderPlatformNormalize', 'data<common>wonderPlatformUpsert',
-      'data<common>wonderPlatformTrace', 'data<common>parseDocletWUrl', 'data<common>publishDocletFamily',
+      'data<common>parseDocletWUrl', 'data<common>publishDocletFamily',
       'data<common>publishedDocletCatalog', 'data<common>publishedDoclet', 'data<common>wonderPlatformSeedSkills',
       'data<common>wonderPlatformListSkills', 'data<common>wonderPlatformLoadSkill', 'data<common>wonderPlatformLoadTargetSkills',
       'data<common>wonderPlatformLoadRepository', 'data<common>wonderPlatformSaveRepository', 'data<common>wonderPlatformAnswer',

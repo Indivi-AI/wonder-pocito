@@ -14,10 +14,9 @@ ReactComp('wonderPlatformAgentResultTestHost', {
   impl: comp({
     hFunc: (ctx, {react: {h, hh}}) => () => h('div', {},
       hh(ctx, dsls.react['react-comp'].wonderPlatformAgentResult, {
-        result: {harness: 'agno', text: 'Agno answer', runId: 'run-1', sessionId: 'session-1'}}),
+        result: {text: 'Agno answer', runId: 'run-1', sessionId: 'session-1'}}),
       hh(ctx, dsls.react['react-comp'].wonderPlatformAgentResult, {
-        result: {harness: 'llmflow', text: 'Flow answer', runId: 'flow-run', followUps: ['Next step'],
-          runtimeSteps: [{kind: 'מודל'}]}}))
+        result: {text: 'Flow answer', runId: 'flow-run', followUps: ['Next step']}}))
   })
 })
 Test('wonderPlatform.agentWUrlRejectsLlmFlow', {
@@ -71,7 +70,7 @@ Test('wonderPlatform.agentWUrlAgno', {
 })
 Test('wonderPlatform.agentResultComponents', {
   impl: reactTest({$: 'react-comp<react>wonderPlatformAgentResultTestHost'},
-    and(contains('תשובת AgentOS'), contains('run-1'), contains('תשובת LLM Flow'), contains('Next step')))
+    and(contains('Agno answer'), contains('run-1'), contains('Flow answer'), contains('Next step')))
 })
 Test('wonderPlatform.agentUsesAgno', {
   impl: dataTest({

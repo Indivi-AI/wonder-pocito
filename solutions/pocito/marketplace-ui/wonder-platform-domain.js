@@ -47,10 +47,17 @@ Data('wonderPlatformSeed', {
         'רשימת מסמכים קיימים וחסרים.']
     ]).map(({input, expected, ...item}) => ({...item, version: 'V0', created: '08/2026', updated: 'היום',
       rows: [{input, expected, notes: ''}]}))
-    const steps = rows(['kind', 'name', 'ms'], [
-      ['מיומנות', 'הוכחת קיום — תהליך מלא', '8.4s'], ['כלי', 'חיפוש Jira', '4.7s'],
-      ['כלי', 'חיפוש Confluence', '6.2s'], ['האצלה', 'מחלץ ישויות', '5.1s'], ['מודל', 'ניסוח תשובה מאומתת', '4.4s']
-    ])
+    const steps = [
+      {type: 'thinking', title: 'תכנון בדיקה',
+        detail: 'צריך לאתר את סטטוס האישור התקציבי ואת תוצאות בדיקות המוכנות לפני שאפשר לקבוע אם התוכנית מוכנה ליציאה.'},
+      {type: 'tool', title: 'חיפוש Jira', input: {project: 'SHACHAR', query: 'סטטוס אישור תקציבי'},
+        output: 'אושר ב-14/08/2026, מספר PO-4471.', seconds: 4.7},
+      {type: 'tool', title: 'חיפוש Confluence', input: {space: 'readiness', query: 'תוצאות בדיקות מוכנות'},
+        output: '92% מהבדיקות עברו; נוהל ההתאוששות עדיין בטיוטה.', seconds: 6.2},
+      {type: 'tool', title: 'מחלץ ישויות', input: {text: 'נוהל ההתאוששות עדיין בטיוטה'}, output: {missing: ['נוהל התאוששות']}, seconds: 5.1},
+      {type: 'model', title: 'ניסוח תשובה מאומתת',
+        detail: 'משלב את שני המקורות למסקנה אחת עם ציון הפער החוסם.', seconds: 4.4}
+    ]
     const conversations = [{id: 'c1', title: 'מוכנות תוכנית שחר', agentId: 'p1', when: 'היום', messages: [
       {id: 'm1', role: 'user', text: 'בדוק האם תוכנית שחר מוכנה ליציאה והצג את הראיות המרכזיות.'},
       {id: 'm2', role: 'agent', status: 'הושלם', duration: '41 שנ׳', steps,
@@ -123,21 +130,6 @@ Data('wonderPlatformUpsert', {
     const {originalId, ...saved} = {...item, updated: 'עכשיו'}, id = originalId || saved.id, items = repo[resource]
     return {saved, repo: {...repo, [resource]: items.some(value => value.id == id)
       ? items.map(value => value.id == id ? saved : value) : [...items, saved]}}
-  }
-})
-
-Data('wonderPlatformTrace', {
-  params: [{id: 'repo', as: 'object'}, {id: 'target', as: 'object'}],
-  impl: ({}, {}, {repo, target}) => {
-    const labels = {skills: 'מיומנות', tools: 'כלי', subagents: 'האצלה'}, fields = {skills: 'skillIds', tools: 'toolIds', subagents: 'subagentIds'}
-    const steps = [], seen = new Set(), visit = (resource, id, parent) => {
-      const item = repo[resource]?.find(value => value.id == id), key = `${resource}:${id}`
-      if (!item || seen.has(key)) return
-      seen.add(key); steps.push({resource, id, parent, kind: labels[resource], title: item.name})
-      ;['skills', 'tools'].forEach(child => (item[fields[child]] || []).forEach(childId => visit(child, childId, id)))
-    }
-    ;['skills', 'tools', 'subagents'].forEach(resource => (target[fields[resource]] || []).forEach(id => visit(resource, id, target.id)))
-    return steps
   }
 })
 

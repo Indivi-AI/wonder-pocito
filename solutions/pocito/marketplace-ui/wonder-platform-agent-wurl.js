@@ -108,7 +108,21 @@ Data('wonderPlatformAgentWUrlRequest', {
   }
 })
 
-const { wonderPlatformAgentWUrlRequest, wonderPlatformAgentWUrlResponse } = dsls.common.data
+Data('wonderPlatformAgnoRunSteps', {
+  description: 'real runtime trace: model thinking (reasoning_content/reasoning_steps) and tool calls with actual input/output',
+  params: [{id: 'run', as: 'object', mandatory: true}],
+  impl: ({}, {}, {run}) => {
+    const reasoningSteps = (run.reasoning_steps || []).map(step => ({type: 'thinking', title: step.title || 'חשיבה',
+      detail: [step.reasoning, step.action, step.result].filter(Boolean).join('\n')}))
+    const thinking = reasoningSteps.length ? reasoningSteps
+      : run.reasoning_content ? [{type: 'thinking', title: 'חשיבה', detail: run.reasoning_content}] : []
+    const tools = (run.tools || []).map(call => ({type: 'tool', title: call.tool_name, input: call.tool_args,
+      output: call.result, error: call.tool_call_error || undefined, seconds: call.metrics?.duration}))
+    return [...thinking, ...tools]
+  }
+})
+
+const { wonderPlatformAgentWUrlRequest, wonderPlatformAgentWUrlResponse, wonderPlatformAgnoRunSteps } = dsls.common.data
 Data('wonderPlatformWUrlResponse', {
   params: [
     {id: 'url', as: 'string', mandatory: true},
@@ -174,7 +188,7 @@ Data('wonderPlatformRunAgent', {
       duration: `${Math.max(1, Math.round((Date.now() - startedAt) / 1000))} שנ׳`,
       runId: run.run_id || run.runId, sessionId: run.sessionId,
       opikUrl: run.opik_url || run.trace_url,
-      runtimeSteps: [{kind: 'AgentOS', title: target.name, runtime: true}]
+      runtimeSteps: wonderPlatformAgnoRunSteps.$run(run)
     }
   }
 })
@@ -231,7 +245,7 @@ Data('wonderPlatformRunAdhoc', {
       duration: `${Math.max(1, Math.round((Date.now() - startedAt) / 1000))} שנ׳`,
       runId: run.run_id || run.runId, sessionId: run.session_id || run.sessionId,
       opikUrl: run.opik_url || run.trace_url,
-      runtimeSteps: [{kind: 'AgentOS', title: 'הרצה ללא סוכן', runtime: true}]
+      runtimeSteps: wonderPlatformAgnoRunSteps.$run(run)
     }
   }
 })

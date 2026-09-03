@@ -6,6 +6,7 @@ import './wonder-platform-searchable-select.js'
 import './wonder-platform-wizard.js'
 import './wonder-platform-kit.js'
 import './wonder-platform-capability-step.js'
+import './wonder-platform-trace.js'
 
 const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 
@@ -34,16 +35,15 @@ ReactComp('wonderPlatformWorkspace', {
       const primary = isAgent ? ['plugins'] : isPlugin ? ['skills', 'tools', 'knowledge']
         : repo.marketplace ? ['plugins', 'skills', 'tools'] : ['skills', 'tools']
       const secondary = isAgent ? ['skills', 'tools', 'knowledge'] : []
-      const semanticTrace = dsls.common.data.wonderPlatformTrace.$runWithCtx(ctx, {repo, target: item})
       const sendTest = async input => {
         const text = input.trim()
         if (!text || runs.some(run => run.status == 'מריץ…')) return
-        const id = `test-${Date.now()}`, pending = {id, input: text, status: 'מריץ…', trace: semanticTrace}
+        const id = `test-${Date.now()}`, pending = {id, input: text, status: 'מריץ…', trace: []}
         setRuns(items => [...items, pending]); setTestInput('')
         try {
           const result = await runTarget(text, item, chatSessionId)
           setRuns(items => items.map(run => run.id == id ? {...run, ...result, output: result.text || result.output, status: result.status || 'הושלם',
-            trace: [...semanticTrace, ...(result.runtimeSteps || [])]} : run))
+            trace: result.runtimeSteps || []} : run))
         } catch (error) {
           setRuns(items => items.map(run => run.id == id ? {...run, status: 'נכשל', output: String(error.message || error)} : run))
         }
@@ -58,7 +58,7 @@ ReactComp('wonderPlatformWorkspace', {
         setRuns([]); setChatSessionId(`${item.id}-${Date.now()}`); setSessionConfig(savedConfig)
       }
       const configNotice = itemDirty ? 'יש שינויי תצורה שלא נשמרו' : sessionOutdated
-        ? `תצורת ${targetLabel} עודכנה — פתחו שיחה חדשה` : 'שיחת AgentOS פעילה'
+        ? `תצורת ${targetLabel} עודכנה — פתחו שיחה חדשה` : 'שיחה פעילה'
       const chatRun = run => h('div:space-y-3', {key: run.id}, h('div:flex justify-end', {}, h(
         'div:max-w-[85%] whitespace-pre-wrap break-words rounded-[12px] rounded-br-sm bg-[var(--wp-ink)] px-4 py-3 text-[13px] text-white',
         {}, run.input)), h(
@@ -67,10 +67,9 @@ ReactComp('wonderPlatformWorkspace', {
           'div:flex items-center gap-2', {}, h(`span:${classes.chip}`, {}, run.status), run.opikUrl && h(
             'a:inline-flex items-center gap-1 text-[12px] text-[var(--wp-ink)]',
             {href: run.opikUrl, target: '_blank', rel: 'noreferrer'}, 'Opik', h('L:ExternalLink', {size: 12}))), h(
-          'p:mt-3 whitespace-pre-wrap break-words text-[13px] leading-7', {}, run.output || run.status), (run.trace || []).length > 0 && h(
-          'details:mt-3', {}, h('summary:cursor-pointer text-[12px] text-[var(--wp-ink-3)]', {}, 'מעקב הרצה'), (run.trace || []).map((step, stepIndex) => h(
-            'div:mt-2 flex items-center gap-2 text-[12px]', {key: `${step.kind}-${step.id || stepIndex}`}, h(
-              `span:${classes.chip}`, {}, step.kind), h('span:flex-1', {}, step.title)))))))
+          'p:mt-3 whitespace-pre-wrap break-words text-[13px] leading-7', {}, run.output || run.status),
+          hh(ctx, dsls.react['react-comp'].wonderPlatformRunTrace, {steps: run.trace}))))
+
       const testPanel = h('div:flex h-full min-h-0 flex-col', {}, h('div:flex shrink-0 items-center justify-between gap-3 border-b ' +
         'border-[var(--wp-border)] bg-[var(--wp-surface)] p-3', {},
       h(`span:text-[12px] ${itemDirty || sessionOutdated ? 'text-[var(--wp-warn)]' : 'text-[var(--wp-ink-3)]'}`, {}, configNotice), h(
@@ -86,7 +85,7 @@ ReactComp('wonderPlatformWorkspace', {
         h('button:grid h-8 w-8 shrink-0 place-items-center rounded-[8px] bg-[var(--wp-ink)] text-white transition-colors ' +
           'hover:bg-[var(--wp-ink-hover)] disabled:bg-[var(--wp-border-strong)]', {disabled: !testInput.trim(),
           onClick: () => sendTest(testInput), 'aria-label': 'הרצה'}, h('L:ArrowUp', {size: 15}))),
-      h('p:mt-2 text-[11px] text-[var(--wp-ink-3)]', {}, 'ההקשר נשמר לאורך השיחה ב-AgentOS')))
+      h('p:mt-2 text-[11px] text-[var(--wp-ink-3)]', {}, 'ההקשר נשמר לאורך השיחה')))
       const shownRun = evaluationRun || repo.evalRuns.filter(run => run.evaluationId == evaluationId && run.targetId == item.id)
         .sort((a, b) => b.startedAt - a.startedAt)[0]
       const evalRow = (row, index) => h(`article:${classes.panel} p-3`, {key: index},
@@ -95,8 +94,7 @@ ReactComp('wonderPlatformWorkspace', {
             onClick: () => setDetail(detail == index ? -1 : index)}, 'קלט ופלט')), detail == index && h('div:mt-3 grid gap-3 border-t border-dashed pt-3', {},
           [['קלט', row.input], ['פלט מצופה', row.expected], ['פלט בפועל', row.actual]].map(([title, value]) => h('div', {key: title},
             h('b:text-[11px] text-[var(--wp-ink-3)]', {}, title), h('p:mt-1 whitespace-pre-wrap break-words text-[13px]', {}, value || '—'))),
-          (row.trace || []).length > 0 && h('details', {}, h('summary:cursor-pointer text-[12px] text-[var(--wp-ink)]', {}, 'מעקב הרצה'),
-            (row.trace || []).map((step, stepIndex) => h('div:mt-2 text-[12px]', {key: stepIndex}, `${step.kind} · ${step.title}`))),
+          hh(ctx, dsls.react['react-comp'].wonderPlatformRunTrace, {steps: row.trace}),
           row.opikUrl && h('a:inline-flex items-center gap-1 text-[12px] text-[var(--wp-ink)]',
             {href: row.opikUrl, target: '_blank', rel: 'noreferrer'}, 'הטרייס המלא ב-Opik', h('L:ExternalLink', {size: 12}))))
       const evalPanel = h('div:wp-scroll h-full overflow-y-auto p-4', {}, h('div:flex items-end gap-2', {}, h('div:flex-1', {},

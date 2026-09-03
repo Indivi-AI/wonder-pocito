@@ -217,13 +217,11 @@ ReactComp('wonderPlatform', {
           dateStyle: 'short', timeStyle: 'short'}), pending = {id, evaluationId: evaluation.id, targetResource, targetId: target.id,
           started, startedAt, status: 'מריץ…', completed: 0, total: evaluation.rows.length, rows: []}
         const pendingRepo = await persistRepo({...runRepo, evalRuns: [pending, ...runRepo.evalRuns]})
-        const semanticTrace = dsls.common.data.wonderPlatformTrace.$runWithCtx(ctx, {repo: runRepo, target})
         const rows = await Promise.all(evaluation.rows.map(async row => {
           try {
             const result = await runTarget(row.input, target)
-            return {...row, actual: result.text, runId: result.runId, opikUrl: result.opikUrl,
-              trace: [...semanticTrace, ...(result.runtimeSteps || [])]}
-          } catch (error) { return {...row, actual: String(error.message || error), error: true, trace: semanticTrace} }
+            return {...row, actual: result.text, runId: result.runId, opikUrl: result.opikUrl, trace: result.runtimeSteps || []}
+          } catch (error) { return {...row, actual: String(error.message || error), error: true, trace: []} }
         }))
         const result = {...pending, status: rows.some(row => row.error) ? 'נכשל' : 'הושלם', completed: rows.filter(row => !row.error).length, rows}
         await persistRepo({...pendingRepo, evalRuns: pendingRepo.evalRuns.map(run => run.id == id ? result : run)}); return result
@@ -258,9 +256,8 @@ ReactComp('wonderPlatform', {
         try {
           const result = agent ? await runTarget(text, agent, conversation.id) : await runAdhoc(ctx.setVars({text, conversation,
             sessionId: conversation.id, roomWUrl: repositoryRoomWUrl, agentOsBaseUrl: agentUrl, agentOsToken: token, selectedModel: model}))
-          const steps = [...dsls.common.data.wonderPlatformTrace.$runWithCtx(ctx, {repo, target: agent || conversation}), ...(result.runtimeSteps || [])]
           await updateConversation({...pending, messages: [...pending.messages, {...result, id: `m-${Date.now() + 1}`, role: 'agent',
-            text: result.text || result.output, steps}]})
+            text: result.text || result.output, steps: result.runtimeSteps || []}]})
         } catch (error) {
           await updateConversation({...pending, messages: [...pending.messages, {id: `m-${Date.now() + 1}`, role: 'agent',
             text: String(error.message || error), status: 'נכשל', steps: []}]})

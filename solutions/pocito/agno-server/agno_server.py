@@ -434,7 +434,7 @@ def create_app(data_dir=None, model_factory=None, embedder=None):
           'system_prompt': payload.instructions or ADHOC_DEFAULT_INSTRUCTIONS, 'plugins': plugins, 'skills': skills, 'tools': tools}}
         agent = await runtime.build_agent(room, manifest, f'adhoc-{session_id}', knowledge)
         result = await agent.arun(payload.message, session_id=session_id, stream=False)
-        return {'run_id': result.run_id, 'content': result.content, 'status': result.status.value, 'session_id': session_id}
+        return {**result.to_dict(), 'session_id': session_id}
 
     sync_factories()
     agent_os = AgentOS(name='Wonder AgentOS', agents=factories, db=runtime.db, base_app=base,
