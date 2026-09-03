@@ -107,7 +107,7 @@ FLAPI_TOKEN=<FLAPI_TOKEN>
 FLAPI_USERNAME=<FLAPI_USERNAME>
 LITELLM_HOST=http://litellm.internal:4000
 LITELLM_API_KEY=<LITELLM_API_KEY>
-POCITO_PORT=3007
+POCITO_PORT=3000
 ```
 
 On native Linux with `--network host`, `localhost` reaches host MinIO and PostgreSQL. For bridge networking, use service hostnames or addresses
@@ -120,38 +120,30 @@ at `/run/pocito/litellm.yaml`, then set `LITELLM_CONFIG=/run/pocito/litellm.yaml
 Provider keys belong only in runtime configuration, never in the Git bundle, tracked template, build arguments or image layers.
 Set `FLAPI_BASE_URL`, `FLAPI_TOKEN` and `FLAPI_USERNAME` for the external on-prem FLAPI service.
 
-### 2. Load the transferred image
-
-```sh
-cd solutions/pocito/on-prem/images
-sha256sum -c SHA256SUMS
-cat pocito-dev-linux-amd64.tar.gz.part-* | gzip -dc | docker load
-cd ../../../..
-```
-
-The archive loads `pocito-dev:linux-amd64` and `pocito-dev:sudo-linux-amd64`.
-The sudo image uses `pocito` as both username and sudo password.
-
-### 3. Run with a Linux workspace volume
+### 2. Run with a Linux workspace volume
 
 On Docker Desktop for Windows:
 
 ```sh
 docker volume create pocito-workspace
-docker volume create pocito-data
 docker volume create pocito-home
-docker run -d --name pocito-dev --restart unless-stopped \
-  --add-host host.docker.internal:host-gateway -p 127.0.0.1:3007:3007 \
+docker run -it --name pocito-dev \
+  --add-host host.docker.internal:host-gateway \
+  -p 2222:2222 -p 3000:3000 -p 4000:4000 -p 6001:6001 -p 7777:7777 -p 7778:7778 \
   --env-file "<ENV_PATH>" \
+  --mount "type=bind,source=<LITELLM_CONFIG_PATH>,target=/run/pocito/litellm.yaml,readonly" \
+  -e POCITO_PORT=3000 -e LITELLM_CONFIG=/run/pocito/litellm.yaml -e LITELLM_HOST= \
+  -e POCITO_DATA_DIR=/home/pocito/.local/share/pocito \
+  -e PI_CODING_AGENT_DIR=/home/pocito/.local/share/pocito/omp \
   --mount type=volume,src=pocito-workspace,dst=/workspace/repo \
-  --mount type=volume,src=pocito-data,dst=/var/lib/pocito \
   --mount type=volume,src=pocito-home,dst=/home/pocito \
-  pocito-dev:linux-amd64 npm run pocito-dev-airgapped
+  pocito-dev:linux-amd64 /bin/bash
 ```
 
-Replace `<ENV_PATH>` with the host environment file. The entrypoint clones the baked current branch only when `pocito-workspace` is empty and
-never overwrites an existing checkout. It names the read-only bundle remote `image-bundle`. No `node_modules` mount is needed: the repository
-sits below `/workspace/node_modules`, which Node resolves as an ancestor. The command uses only image-baked dependencies.
+Replace `<ENV_PATH>` and `<LITELLM_CONFIG_PATH>` with their host file paths. The entrypoint clones the baked current branch only when
+`pocito-workspace` is empty and never overwrites an existing checkout. It names the read-only bundle remote `image-bundle`. No `node_modules`
+mount is needed: the repository sits below `/workspace/node_modules`, which Node resolves as an ancestor. The command uses only image-baked
+dependencies. Run `npm run pocito-dev-airgapped` inside the shell to start the services.
 
 On native Linux, replace the port and host mapping with:
 
@@ -161,7 +153,7 @@ On native Linux, replace the port and host mapping with:
 
 VS Code can use **Dev Containers: Attach to Running Container**; the checkout is `/workspace/repo` and the container user is `pocito`.
 
-OMP runs entirely inside the container and stores its sessions under `/var/lib/pocito/omp`:
+OMP runs entirely inside the container and stores its sessions under `/home/pocito/.local/share/pocito/omp`:
 
 ```sh
 omp models litellm
@@ -171,38 +163,36 @@ omp --model litellm/<MODEL_ALIAS>
 Expose stable coding aliases such as `coder-default`, `coder-fast` and `coder-deep` in LiteLLM. OMP discovers them from LiteLLM, so changing an
 alias's underlying MiniMax, Qwen or DeepSeek deployment does not require rebuilding the image.
 
-### 4. Inspect Pocito
+### 3. Inspect Pocito
 
 ```sh
 docker logs -f pocito-dev
-curl -f http://localhost:3007/health
+curl -f http://localhost:3000/health
 ```
 
 The script uses external FLAPI, LiteLLM and Agno when configured and starts the baked LiteLLM or Agno otherwise.
 
-### 5. Run the installation suite
+### 4. Run the installation suite
 
 Open:
 
-`http://localhost:3007/wonder/studio/tests.html?pattern=pocitoOnPrem&includeHeavy`
+`http://localhost:3000/wonder/studio/tests.html?pattern=pocitoOnPrem&includeHeavy`
 
 The default suite accepts Agno's `degraded`/`vector_store: unreachable` health when object storage is healthy. Run the optional strict pgvector health
-test directly at `http://localhost:3007/wonder/studio/tests.html?test=pocitoOnPrem.serviceAgnoStrictPgvector`; it requires fully healthy Agno object
-and vector stores. The direct `pocitoOnPrem.pgvector` round-trip is also optional and excluded from the default suite.
+test directly at `http://localhost:3000/wonder/studio/tests.html?test=pocitoOnPrem.serviceAgnoStrictPgvector`; it requires fully healthy Agno object
+and vector stores.
 
-The sixteen default tests cover individual service health, metadata and execution through the FLAPI proxy for packages 101–104, travel dataset
-counts, Marketplace MinIO, LiteLLM chat and embeddings, seeded Marketplace assets, applet publication to MinIO, and both Agno travel-agent calls.
-They contain no Playwright test. When all sixteen are green, the mounted checkout and on-prem service chain are working together.
-This is an installation/integration check, not an exhaustive product-quality test. For a focused failure, run the matching `pocitoOnPrem.*`
-test through MCP and inspect its domain error arrays.
+The five default tests only verify that Wonder, Marketplace/MinIO, Agno, LiteLLM and FLAPI are configured and reachable. Functional package,
+dataset, storage, model, applet, seed and travel-agent checks remain available with `pattern=pocitoIntegration`.
+For a focused failure, run the matching test through MCP and inspect its domain error arrays.
 
-### 6. Stop or restart
+### 5. Stop or restart
 
 Stop or restart the standalone container directly:
 
 ```sh
 docker stop pocito-dev
-docker start pocito-dev
+docker start -ai pocito-dev
 ```
 
 ## Image maintenance

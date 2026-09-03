@@ -967,11 +967,14 @@ Test('wonderPlatform.chatRunsSelectedAgent', {
       click('data-testid="agent-selector-board"'),
       waitForText('סוכן תמיכת לקוחות B2B'),
       click('סוכן תמיכת לקוחות B2B'),
-      wonderPlatformSetControl({ placeholder: 'כתוב הודעה…', value: 'Question' }),
+      waitForSelector('[data-testid="model-selector"]'),
+      wonderPlatformSetControl({selector: '[data-testid="model-selector"]', value: 'chat'}),
+      wonderPlatformSetControl({placeholder: 'שאלו כל דבר…', value: 'Question'}),
       click('aria-label="שליחה"'),
       waitForText('AGNO_AGENT:ag1')
     ),
-    logger: 'uiLogger'
+    logger: 'uiLogger',
+    timeout: 10000
   })
 })
 

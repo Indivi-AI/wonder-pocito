@@ -244,7 +244,13 @@ Test('pocitoOnPrem.serviceLiteLlm', {
   nodeOnly: true,
   impl: dataTest({
     calculate: pocitoOnPremService('liteLlm'),
-    expectedResult: and(equals('%httpStatus%', 200), equals('%data/0/id%', 'chat'), equals('%data/1/id%', 'embeddings')),
+    expectedResult: and(
+      equals('%httpStatus%', 200),
+      equals('%object%', 'list'),
+      '%data/length% > 0',
+      equals('%data/0/object%', 'model'),
+      '%data/0/id%'
+    ),
     timeout: 2000,
     logger: 'onPremLogger'
   })
@@ -259,7 +265,7 @@ Test('pocitoOnPrem.serviceFlapi', {
   })
 })
 
-Test('pocitoOnPrem.flapiEmails', {
+Test('pocitoIntegration.flapiEmails', {
   HeavyTest: true,
   nodeOnly: true,
   impl: dataTest({
@@ -269,7 +275,7 @@ Test('pocitoOnPrem.flapiEmails', {
   })
 })
 
-Test('pocitoOnPrem.flapiInstagram', {
+Test('pocitoIntegration.flapiInstagram', {
   HeavyTest: true,
   nodeOnly: true,
   impl: dataTest({
@@ -279,7 +285,7 @@ Test('pocitoOnPrem.flapiInstagram', {
   })
 })
 
-Test('pocitoOnPrem.flapiPlaces', {
+Test('pocitoIntegration.flapiPlaces', {
   HeavyTest: true,
   nodeOnly: true,
   impl: dataTest({
@@ -289,7 +295,7 @@ Test('pocitoOnPrem.flapiPlaces', {
   })
 })
 
-Test('pocitoOnPrem.flapiItinerary', {
+Test('pocitoIntegration.flapiItinerary', {
   HeavyTest: true,
   nodeOnly: true,
   impl: dataTest({
@@ -299,7 +305,7 @@ Test('pocitoOnPrem.flapiItinerary', {
   })
 })
 
-Test('pocitoOnPrem.dataset', {
+Test('pocitoIntegration.dataset', {
   HeavyTest: true,
   nodeOnly: true,
   impl: dataTest({
@@ -315,7 +321,7 @@ Test('pocitoOnPrem.dataset', {
   })
 })
 
-Test('pocitoOnPrem.minio', {
+Test('pocitoIntegration.minio', {
   HeavyTest: true,
   nodeOnly: true,
   impl: dataTest({
@@ -326,7 +332,7 @@ Test('pocitoOnPrem.minio', {
   })
 })
 
-Test('pocitoOnPrem.pgvector', {
+Test('pocitoIntegration.pgvector', {
   HeavyTest: true,
   doNotRunInTests: true,
   nodeOnly: true,
@@ -336,7 +342,7 @@ Test('pocitoOnPrem.pgvector', {
   })
 })
 
-Test('pocitoOnPrem.litellm', {
+Test('pocitoIntegration.litellm', {
   HeavyTest: true,
   nodeOnly: true,
   impl: dataTest({
@@ -347,7 +353,7 @@ Test('pocitoOnPrem.litellm', {
   })
 })
 
-Test('pocitoOnPrem.marketplaceSeed', {
+Test('pocitoIntegration.marketplaceSeed', {
   HeavyTest: true,
   nodeOnly: true,
   impl: dataTest({
@@ -358,7 +364,7 @@ Test('pocitoOnPrem.marketplaceSeed', {
   })
 })
 
-Test('pocitoOnPrem.minioApplet', {
+Test('pocitoIntegration.minioApplet', {
   HeavyTest: true,
   nodeOnly: true,
   impl: dataTest({
@@ -369,7 +375,7 @@ Test('pocitoOnPrem.minioApplet', {
   })
 })
 
-Test('pocitoOnPrem.restaurantAgent', {
+Test('pocitoIntegration.restaurantAgent', {
   HeavyTest: true,
   nodeOnly: true,
   impl: dataTest(pocitoOnPremAgentQuestion('Help me find a restaurant that Tom will like.'), '%answer%', {
@@ -378,7 +384,7 @@ Test('pocitoOnPrem.restaurantAgent', {
   })
 })
 
-Test('pocitoOnPrem.phoneAgent', {
+Test('pocitoIntegration.phoneAgent', {
   HeavyTest: true,
   nodeOnly: true,
   impl: dataTest({

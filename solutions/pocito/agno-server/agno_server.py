@@ -13,6 +13,7 @@ import sys
 import uuid
 from collections import defaultdict
 from contextlib import asynccontextmanager, suppress
+from contextvars import ContextVar
 from pathlib import Path
 
 from agno.agent import Agent
@@ -45,6 +46,7 @@ from marketplace_storage import DEFAULT_ROOM, ROOM_CONTEXT, ROOT, MarketplaceRep
 from knowledge_mcp import BearerAuthMiddleware, create_knowledge_mcp
 
 ADHOC_DEFAULT_INSTRUCTIONS = 'את/ה עוזר בינה מלאכותית ידידותי ומדויק. השב/י בעברית, בבהירות ובתמציתיות.'
+MODEL_CONTEXT = ContextVar('model', default='')
 
 
 def knowledge_reader(path):
@@ -146,7 +148,7 @@ class MarketplaceAgentRuntime:
         self.mcp_tools = {}
 
     def openai_model(self, manifest):
-        model = manifest.get('config', {}).get('backend_config', {}).get('model') or os.getenv('OPENAI_MODEL', 'gpt-5-mini')
+        model = MODEL_CONTEXT.get() or manifest.get('config', {}).get('backend_config', {}).get('model') or os.getenv('OPENAI_MODEL', 'gpt-5-mini')
         return OpenAIChat(id=model, api_key=os.getenv('OPENAI_API_KEY'), base_url=os.getenv('OPENAI_BASE_URL'),
                           reasoning_effort=os.getenv("OPENAI_REASONING_EFFORT") or None)
 
@@ -401,13 +403,14 @@ def create_app(data_dir=None, model_factory=None, embedder=None):
             room = safe_name(request.headers.get('x-wonder-room', DEFAULT_ROOM))
         except ValueError as error:
             return JSONResponse({'detail': str(error)}, status_code=422)
-        token = ROOM_CONTEXT.set(room)
+        token, model_token = ROOM_CONTEXT.set(room), MODEL_CONTEXT.set(request.headers.get('x-wonder-model', ''))
         try:
             if request.url.path.startswith('/agents'):
                 sync_factories(room)
             return await call_next(request)
         finally:
             ROOM_CONTEXT.reset(token)
+            MODEL_CONTEXT.reset(model_token)
 
     @base.get('/healthz', tags=['health'])
     def healthz():

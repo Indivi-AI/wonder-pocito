@@ -46,11 +46,11 @@ Test('wonderPlatform.agentWUrlAgno', {
       const server = createServer((request, response) => {
         response.setHeader('content-type', 'application/json')
         response.end(JSON.stringify({content: `${request.method} ${request.url} room=${request.headers['x-wonder-room']}`,
-          run_id: 'run-1', status: 'COMPLETED'}))
+          model: request.headers['x-wonder-model'], run_id: 'run-1', status: 'COMPLETED'}))
       })
       await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
       try {
-        const result = await dsls.common.data.wonderPlatformAgentWUrlRequest.$runWithCtx(ctx, {
+        const result = await dsls.common.data.wonderPlatformAgentWUrlRequest.$runWithCtx(ctx.setVars({selectedModel: 'minimax-skynet'}), {
           agentId: 'agent-a', message: 'Question', sessionId: 'session-1', roomWUrl: 'room://room-a',
           baseUrl: `http://127.0.0.1:${server.address().port}`
         })
@@ -61,6 +61,7 @@ Test('wonderPlatform.agentWUrlAgno', {
       equals('%result/harness%', 'agno'),
       equals('%result/run_id%', 'run-1'),
       equals('%result/sessionId%', 'session-1'),
+      equals('%result/model%', 'minimax-skynet'),
       contains('/agents/agent-a/runs room=room-a', { allText: '%result/content%' }),
       equals('%agentLogger/agentLog/0/t%', 'agentWUrl')
     ),

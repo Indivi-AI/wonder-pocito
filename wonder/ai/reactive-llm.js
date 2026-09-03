@@ -27,7 +27,8 @@ const PROVIDER_URLS = {
   chrome: () => null   // Chrome built-in Gemini Nano (Prompt API) - on-device, no endpoint
 }
 
-const getProviderConfig = (modelString) => {
+export const getProviderConfig = (modelString, proxyAlias) => {
+  if (proxyAlias) return {provider: 'openai', model: modelString, url: PROVIDER_URLS.openai()}
   const [provider, ...rest] = (MODEL_ALIASES[modelString] || modelString).split('/')
   const model = rest.join('/')
   const urlFn = PROVIDER_URLS[provider]
@@ -122,7 +123,7 @@ const countTokens = async ({messages, instructions = '', context = ''}) => {
 export async function fetchItemsFromLLMReactive({messages, goal, prompt, instructions, context, progressiveHandler = {}, onDone,
   onChunk, model: modelString = DEFAULT_MODEL, maxTokens = 10000, temperature = 0.0, thinkingBudget, responseSchema,
   userId, roomId, passedContext = {}, contentType, inputOrigins, ctx}) {
-    const {provider, model, url} = getProviderConfig(modelString)
+    const {provider, model, url} = getProviderConfig(modelString, ctx.vars.selectedModel == modelString)
     const logger = loggerOf(ctx)
     const {categories, userRequestId} = ctx.vars
     if (ctx.vars.llmAbortFlag?.aborted) {   // run aborted by the user - skip the remaining llm calls so the flow completes fast and the bigLog is still written

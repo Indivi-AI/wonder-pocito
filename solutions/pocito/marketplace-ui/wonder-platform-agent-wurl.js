@@ -69,14 +69,14 @@ Data('wonderPlatformAgentWUrlResponse', {
     const headers = new Headers(opts.headers || {})
     headers.delete('content-type')
     headers.set('x-wonder-room', ctx.vars.roomId)
+    const input = opts.body || {}
+    if (input.model) headers.set('x-wonder-model', input.model)
     let body, sessionId
     if (adhoc) {
-      const input = opts.body || {}
       if (!String(input.message || '').trim()) return json({detail: 'message is required'}, 422)
       headers.set('content-type', 'application/json')
       body = JSON.stringify(input)
     } else if (method == 'POST') {
-      const input = opts.body || {}
       if (!String(input.message || '').trim()) return json({detail: 'message is required'}, 422)
       sessionId = input.sessionId || `${agentId}-${Date.now()}`
       body = new FormData()
@@ -95,12 +95,13 @@ Data('wonderPlatformAgentWUrlRequest', {
     {id: 'sessionId', as: 'string'},
     {id: 'roomWUrl', as: 'string', defaultValue: 'room://wonder-platform'},
     {id: 'baseUrl', as: 'string'},
-    {id: 'token', as: 'string'}
+    {id: 'token', as: 'string'},
+    {id: 'model', as: 'string', defaultValue: '%$selectedModel%'}
   ],
-  impl: async (ctx, {}, {agentId, message, sessionId, roomWUrl, baseUrl, token}) => {
+  impl: async (ctx, {}, {agentId, message, sessionId, roomWUrl, baseUrl, token, model}) => {
     const wUrl = `${roomWUrl.replace(/\/$/, '')}/agent/${encodeURIComponent(agentId)}?harness=agno`
     const response = await jb.wonderUtils.wfetch2(wUrl, {
-      method: 'POST', headers: token ? {Authorization: `Bearer ${token}`} : {}, body: {message, sessionId}
+      method: 'POST', headers: token ? {Authorization: `Bearer ${token}`} : {}, body: {message, sessionId, model}
     }, ctx.setVars({marketplaceBaseUrl: baseUrl, agnoBaseUrl: baseUrl}))
     if (!response.ok) throw new Error(`Agent ${response.status}: ${await response.text()}`)
     return response.json()
@@ -188,13 +189,14 @@ Data('wonderPlatformAdhocRunRequest', {
     {id: 'pluginIds', as: 'array', defaultValue: []},
     {id: 'roomWUrl', as: 'string', defaultValue: 'room://wonder-platform'},
     {id: 'baseUrl', as: 'string'},
-    {id: 'token', as: 'string'}
+    {id: 'token', as: 'string'},
+    {id: 'model', as: 'string', defaultValue: '%$selectedModel%'}
   ],
-  impl: async (ctx, {}, {message, sessionId, skillIds, toolIds, knowledgeIds, pluginIds, roomWUrl, baseUrl, token}) => {
+  impl: async (ctx, {}, {message, sessionId, skillIds, toolIds, knowledgeIds, pluginIds, roomWUrl, baseUrl, token, model}) => {
     const wUrl = `${roomWUrl.replace(/\/$/, '')}/adhoc/runs?harness=agno`
     const response = await jb.wonderUtils.wfetch2(wUrl, {
       method: 'POST', headers: token ? {Authorization: `Bearer ${token}`} : {},
-      body: {message, session_id: sessionId, skills: skillIds, tools: toolIds, knowledge: knowledgeIds, plugins: pluginIds}
+      body: {message, session_id: sessionId, skills: skillIds, tools: toolIds, knowledge: knowledgeIds, plugins: pluginIds, model}
     }, ctx.setVars({marketplaceBaseUrl: baseUrl, agnoBaseUrl: baseUrl}))
     if (!response.ok) throw new Error(`Adhoc run ${response.status}: ${await response.text()}`)
     return response.json()

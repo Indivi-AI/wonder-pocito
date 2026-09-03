@@ -126,8 +126,8 @@ Run all HeavyTest cases at:
 
 `http://localhost:3007/wonder/studio/tests.html?pattern=pocitoOnPrem&includeHeavy`
 
-The seventeen smoke tests cover service health, dataset counts, Marketplace MinIO, pgvector, LiteLLM chat and embeddings, seeded Marketplace assets,
-applet publication to MinIO, and the two Agno travel-agent calls. They intentionally contain no Playwright test.
+The five `pocitoOnPrem.*` tests only verify that Wonder, Marketplace/MinIO, Agno, LiteLLM and FLAPI are configured and reachable.
+Functional checks use the separate `pocitoIntegration.*` namespace. The suites intentionally contain no Playwright test.
 For focused diagnosis call `runTest` with the exact test id and inspect `onPremErrors` plus each relevant domain logger's error array.
 A green page is an installation/integration signal, not exhaustive product-quality validation.
 
