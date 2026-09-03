@@ -23,8 +23,9 @@ from agno.knowledge.chunking.fixed import FixedSizeChunking
 from agno.knowledge.embedder.openai import OpenAIEmbedder
 from agno.knowledge.knowledge import Knowledge
 from agno.knowledge.reader import ReaderFactory
-from agno.models.openai import OpenAIChat
+from agno.models.openai import OpenAIResponses
 from agno.os import AgentOS
+from agno.os.utils import format_sse_event
 from agno.skills import LocalSkills, Skills
 from agno.tools.function import Function
 from agno.tools.mcp import MCPTools
@@ -32,7 +33,7 @@ from agno.vectordb.pgvector import PgVector
 from agno.vectordb.search import SearchType
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from mcp.server.transport_security import TransportSecuritySettings
 from pydantic import BaseModel, Field
 from sqlalchemy import Index, create_engine, text
@@ -47,6 +48,13 @@ from knowledge_mcp import BearerAuthMiddleware, create_knowledge_mcp
 
 ADHOC_DEFAULT_INSTRUCTIONS = 'את/ה עוזר בינה מלאכותית ידידותי ומדויק. השב/י בעברית, בבהירות ובתמציתיות.'
 MODEL_CONTEXT = ContextVar('model', default='')
+
+
+class LiteLLMResponses(OpenAIResponses):
+    """LiteLLM model groups are named by role ('chat'), so agno's id-prefix reasoning detection must be forced on."""
+
+    def _using_reasoning_model(self):
+        return True
 
 
 def knowledge_reader(path):
@@ -149,8 +157,8 @@ class MarketplaceAgentRuntime:
 
     def openai_model(self, manifest):
         model = MODEL_CONTEXT.get() or manifest.get('config', {}).get('backend_config', {}).get('model') or os.getenv('OPENAI_MODEL', 'gpt-5-mini')
-        return OpenAIChat(id=model, api_key=os.getenv('OPENAI_API_KEY'), base_url=os.getenv('OPENAI_BASE_URL'),
-                          reasoning_effort=os.getenv("OPENAI_REASONING_EFFORT") or None)
+        return LiteLLMResponses(id=model, api_key=os.getenv('OPENAI_API_KEY'), base_url=os.getenv('OPENAI_BASE_URL'),
+                               reasoning_effort=os.getenv("OPENAI_REASONING_EFFORT") or None, reasoning_summary='auto')
 
     def agent_manifest(self, room, name):
         try:
@@ -349,6 +357,7 @@ class AdhocRunRequest(BaseModel):
     tools: list[str] | None = None
     knowledge: list[str] | None = None
     plugins: list[str] | None = None
+    stream: bool = False
 
 
 def configured_model_factory():
@@ -433,6 +442,11 @@ def create_app(data_dir=None, model_factory=None, embedder=None):
         manifest = {'display_name': payload.display_name or 'Ad-hoc agent', 'config': {
           'system_prompt': payload.instructions or ADHOC_DEFAULT_INSTRUCTIONS, 'plugins': plugins, 'skills': skills, 'tools': tools}}
         agent = await runtime.build_agent(room, manifest, f'adhoc-{session_id}', knowledge)
+        if payload.stream:
+            async def events():
+                async for chunk in agent.arun(payload.message, session_id=session_id, stream=True, stream_events=True):
+                    yield format_sse_event(chunk)
+            return StreamingResponse(events(), media_type='text/event-stream')
         result = await agent.arun(payload.message, session_id=session_id, stream=False)
         return {**result.to_dict(), 'session_id': session_id}
 

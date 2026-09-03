@@ -49,17 +49,16 @@ Test('wonderPlatform.agentWUrlAgno', {
       })
       await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
       try {
-        const result = await dsls.common.data.wonderPlatformAgentWUrlRequest.$runWithCtx(ctx.setVars({selectedModel: 'minimax-skynet'}), {
+        const response = await dsls.common.data.wonderPlatformAgentWUrlRequest.$runWithCtx(ctx.setVars({selectedModel: 'minimax-skynet'}), {
           agentId: 'agent-a', message: 'Question', sessionId: 'session-1', roomWUrl: 'room://room-a',
           baseUrl: `http://127.0.0.1:${server.address().port}`
         })
+        const result = await response.json()
         return {result, ...coreUtils.harvestLogs(ctx)}
       } finally { await new Promise(resolve => server.close(resolve)) }
     },
     expectedResult: and(
-      equals('%result/harness%', 'agno'),
       equals('%result/run_id%', 'run-1'),
-      equals('%result/sessionId%', 'session-1'),
       equals('%result/model%', 'minimax-skynet'),
       contains('/agents/agent-a/runs room=room-a', { allText: '%result/content%' }),
       equals('%agentLogger/agentLog/0/t%', 'agentWUrl')
@@ -76,7 +75,7 @@ Test('wonderPlatform.agentUsesAgno', {
   impl: dataTest({
     calculate: ctx => dsls.common.data.wonderPlatformRunAgent.$runWithCtx(ctx, {
       text: 'Question', target: {id: 'agent-a', backendConfig: {harness: 'llmflow'}},
-      request: () => ({harness: 'agno', content: 'Agno answer', runId: 'agno-run'})
+      request: () => ({headers: new Headers(), json: async () => ({content: 'Agno answer', run_id: 'agno-run'})})
     }),
     expectedResult: and(equals('%harness%', 'agno'), equals('%text%', 'Agno answer'), equals('%runId%', 'agno-run'))
   })

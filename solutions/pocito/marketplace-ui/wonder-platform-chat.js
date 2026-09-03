@@ -181,10 +181,11 @@ ReactComp('wonderPlatformChat', {
             h('div:mb-2 flex items-center gap-2', {},
               hh(ctx, dsls.react['react-comp'].wonderPlatformMark, {icon: agent?.icon, text: agent?.mark || 'AI', size: 'sm'}),
               h('span:text-[12px] font-medium text-[var(--wp-ink-2)]', {}, agent?.name || 'סוכן')),
-            hh(ctx, dsls.react['react-comp'].wonderPlatformAgentResult, {result: item, setMessage}),
-            hh(ctx, dsls.react['react-comp'].wonderPlatformRunTrace, {steps: item.steps, status: statusText(item.status)}))),
-        busy && h('div:flex items-center gap-2 text-[13px] text-[var(--wp-ink-3)]', {},
-          h('L:Loader2', {size: 15, className: 'animate-spin'}), 'הסוכן פועל…'))
+            hh(ctx, dsls.react['react-comp'].wonderPlatformRunTrace, {steps: item.steps, status: statusText(item.status)}),
+            item.text ? hh(ctx, dsls.react['react-comp'].wonderPlatformAgentResult, {result: item, setMessage})
+              : !(item.steps || []).length && h('div:flex items-center gap-1.5 py-1', {},
+                [0, 1, 2].map(index => h('span:h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--wp-ink-4)]',
+                  {key: index, style: {animationDelay: `${index * 120}ms`}}))))))
       return h('main:flex h-screen min-w-0 flex-1 bg-[var(--wp-surface)] pb-16 sm:pb-0', {},
         h('section:flex min-w-0 flex-1 flex-col', {},
           hh(ctx, dsls.react['react-comp'].wonderPlatformDetailHeader,

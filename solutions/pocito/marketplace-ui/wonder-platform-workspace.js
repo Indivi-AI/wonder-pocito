@@ -40,10 +40,11 @@ ReactComp('wonderPlatformWorkspace', {
         if (!text || runs.some(run => run.status == 'מריץ…')) return
         const id = `test-${Date.now()}`, pending = {id, input: text, status: 'מריץ…', trace: []}
         setRuns(items => [...items, pending]); setTestInput('')
+        const applyPartial = partial => setRuns(items => items.map(run => run.id == id ? {...run, ...partial,
+          output: partial.text || partial.output || run.output, status: partial.status || run.status, trace: partial.runtimeSteps || run.trace} : run))
         try {
-          const result = await runTarget(text, item, chatSessionId)
-          setRuns(items => items.map(run => run.id == id ? {...run, ...result, output: result.text || result.output, status: result.status || 'הושלם',
-            trace: result.runtimeSteps || []} : run))
+          const result = await runTarget(text, item, chatSessionId, applyPartial)
+          applyPartial({...result, status: result.status || 'הושלם'})
         } catch (error) {
           setRuns(items => items.map(run => run.id == id ? {...run, status: 'נכשל', output: String(error.message || error)} : run))
         }
@@ -68,7 +69,7 @@ ReactComp('wonderPlatformWorkspace', {
             'a:inline-flex items-center gap-1 text-[12px] text-[var(--wp-ink)]',
             {href: run.opikUrl, target: '_blank', rel: 'noreferrer'}, 'Opik', h('L:ExternalLink', {size: 12}))), h(
           'p:mt-3 whitespace-pre-wrap break-words text-[13px] leading-7', {}, run.output || run.status),
-          hh(ctx, dsls.react['react-comp'].wonderPlatformRunTrace, {steps: run.trace}))))
+          hh(ctx, dsls.react['react-comp'].wonderPlatformRunTrace, {steps: run.trace, status: run.status}))))
 
       const testPanel = h('div:flex h-full min-h-0 flex-col', {}, h('div:flex shrink-0 items-center justify-between gap-3 border-b ' +
         'border-[var(--wp-border)] bg-[var(--wp-surface)] p-3', {},

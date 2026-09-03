@@ -45,13 +45,15 @@ ReactComp('wonderPlatform', {
       sessionId: '%$sessionId%',
       roomWUrl: '%$roomWUrl%',
       baseUrl: '%$agentOsBaseUrl%',
-      token: '%$agentOsToken%'
+      token: '%$agentOsToken%',
+      onUpdate: '%$onUpdate%'
     })},
     {id: 'runAdhoc', dynamic: true, defaultValue: wonderPlatformRunAdhoc('%$text%', '%$conversation%', {
       sessionId: '%$sessionId%',
       roomWUrl: '%$roomWUrl%',
       baseUrl: '%$agentOsBaseUrl%',
-      token: '%$agentOsToken%'
+      token: '%$agentOsToken%',
+      onUpdate: '%$onUpdate%'
     })}
   ],
   impl: comp({
@@ -210,8 +212,8 @@ ReactComp('wonderPlatform', {
       const saveAndLeave = async () => { const action = pendingLeave; setSaving(true)
         try { await saveTop() } catch (error) { setSaving(false); return }
         setSaving(false); setPendingLeave(); action() }
-      const runTarget = (text, target, sessionId = `${target.id}-${Date.now()}`) => runAgent(ctx.setVars({text, target, sessionId,
-        roomWUrl: repositoryRoomWUrl, agentOsBaseUrl: agentUrl, agentOsToken: token, ...(model && {selectedModel: model})}))
+      const runTarget = (text, target, sessionId = `${target.id}-${Date.now()}`, onUpdate) => runAgent(ctx.setVars({text, target, sessionId,
+        roomWUrl: repositoryRoomWUrl, agentOsBaseUrl: agentUrl, agentOsToken: token, onUpdate, ...(model && {selectedModel: model})}))
       const runEval = async (evaluation, targetResource, target, runRepo = repo) => {
         const startedAt = Date.now(), id = `eval-${startedAt}`, started = new Date(startedAt).toLocaleString('he-IL', {
           dateStyle: 'short', timeStyle: 'short'}), pending = {id, evaluationId: evaluation.id, targetResource, targetId: target.id,
@@ -250,17 +252,20 @@ ReactComp('wonderPlatform', {
         const text = message.trim(), agent = repo.agents.find(item => item.id == conversation?.agentId)
         if (!text || busy) return
         setMessage(''); setBusy(true)
+        const agentMessageId = `m-${Date.now() + 1}`
         const pending = {...conversation, title: conversation.messages.length ? conversation.title : text.slice(0, 42), when: 'עכשיו',
           messages: [...conversation.messages, {id: `m-${Date.now()}`, role: 'user', text}]}
-        await updateConversation(pending)
+        const withAgentMessage = partial => ({...pending, messages: [...pending.messages, {status: 'בהרצה…', ...partial,
+          id: agentMessageId, role: 'agent', text: partial.text || partial.output || '', steps: partial.runtimeSteps || []}]})
+        await updateConversation(withAgentMessage({}))
+        const onUpdate = partial => updateConversation(withAgentMessage(partial))
         try {
-          const result = agent ? await runTarget(text, agent, conversation.id) : await runAdhoc(ctx.setVars({text, conversation,
-            sessionId: conversation.id, roomWUrl: repositoryRoomWUrl, agentOsBaseUrl: agentUrl, agentOsToken: token, selectedModel: model}))
-          await updateConversation({...pending, messages: [...pending.messages, {...result, id: `m-${Date.now() + 1}`, role: 'agent',
-            text: result.text || result.output, steps: result.runtimeSteps || []}]})
+          const result = agent ? await runTarget(text, agent, conversation.id, onUpdate) : await runAdhoc(ctx.setVars({text, conversation,
+            sessionId: conversation.id, roomWUrl: repositoryRoomWUrl, agentOsBaseUrl: agentUrl, agentOsToken: token, selectedModel: model,
+            onUpdate}))
+          await updateConversation(withAgentMessage(result))
         } catch (error) {
-          await updateConversation({...pending, messages: [...pending.messages, {id: `m-${Date.now() + 1}`, role: 'agent',
-            text: String(error.message || error), status: 'נכשל', steps: []}]})
+          await updateConversation(withAgentMessage({text: String(error.message || error), status: 'נכשל', runtimeSteps: []}))
         } finally { setBusy(false) }
       }
       const runSet = async (evaluation, target) => {
