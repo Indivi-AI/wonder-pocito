@@ -118,8 +118,9 @@ Data('wonderPlatformAgnoRunSteps', {
   impl: ({}, {}, {run}) => {
     const reasoningSteps = (run.reasoning_steps || []).map(step => ({type: 'thinking', title: step.title || 'חשיבה',
       detail: [step.reasoning, step.action, step.result].filter(Boolean).join('\n')}))
+    const thinkingTitles = [...(run.reasoning_content || '').matchAll(/\*\*(.+?)\*\*/g)]
     const thinking = reasoningSteps.length ? reasoningSteps
-      : run.reasoning_content ? [{type: 'thinking', title: 'חשיבה', detail: run.reasoning_content,
+      : run.reasoning_content ? [{type: 'thinking', title: thinkingTitles.at(-1)?.[1] || 'חשיבה', detail: run.reasoning_content,
         running: !run.reasoningDone && !run.done}] : []
     const tools = (run.tools || []).map(call => {
       const isSkill = call.tool_name?.startsWith('get_skill_')
@@ -160,7 +161,7 @@ Data('wonderPlatformConsumeAgentRun', {
     if (!response.headers.get('content-type')?.includes('text/event-stream'))
       return notify({...(await response.json()), done: true})
     const reader = response.body.getReader(), decoder = new TextDecoder()
-    let state = {tools: [], done: false}, buffer = ''
+    let state = {tools: [], done: false}, lastNotifyAt = 0, buffer = ''
     const applyEvent = ({type, data}) => {
       if (type == 'RunStarted') state = {...state, run_id: data.run_id, session_id: data.session_id}
       else if (type == 'ToolCallStarted') state = {...state, tools: [...state.tools, data.tool]}
@@ -172,7 +173,9 @@ Data('wonderPlatformConsumeAgentRun', {
       else if (type == 'RunCompleted') state = {...state, content: data.content, reasoning_content: data.reasoning_content ?? state.reasoning_content,
         reasoning_steps: data.reasoning_steps, status: data.status, metrics: data.metrics, reasoningDone: true, done: true}
       else if (type == 'RunError') state = {...state, content: data.content, status: 'ERROR', done: true}
-      notify(state)
+      // RunContent deltas can arrive tens of times per second; throttle those repaints, never the structural events (tool calls, completion).
+      const now = Date.now()
+      if (type != 'RunContent' || now - lastNotifyAt >= 100) { lastNotifyAt = now; notify(state) }
     }
     while (true) {
       const {done, value} = await reader.read()

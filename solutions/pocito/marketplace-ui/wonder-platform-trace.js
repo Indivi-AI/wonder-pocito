@@ -39,7 +39,7 @@ ReactComp('wonderPlatformRunTrace', {
   impl: comp({
     hFunc: (ctx, {react: {h, hh, useEffect, useState}}) => ({steps, status}) => {
       const [open, setOpen] = useState(true), [touched, setTouched] = useState(false)
-      const running = (steps || []).some(step => step.running)
+      const running = status == 'בהרצה…' || status == 'מריץ…'
       useEffect(() => { if (!running && !touched) setOpen(false) }, [running])
       if (!(steps || []).length) return null
       const header = running ? 'חושב…' : `בוצעו ${steps.length} שלבים${status ? ` · ${status}` : ''}`
