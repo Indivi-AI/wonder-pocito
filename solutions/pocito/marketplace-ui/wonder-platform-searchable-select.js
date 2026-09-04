@@ -53,15 +53,18 @@ ReactComp('wonderPlatformSearchableSelect', {
           'hover:bg-[var(--wp-surface-2)]', {onClick: () => (setOpen(false), setQuery(''))}, 'סיום'))
       if (card) {
         const count = multi ? chosen.length : (selected ? 1 : 0)
+        const children = !multi && selected
+          ? [mark(selected), h('span:min-w-0 flex-1 truncate text-start font-medium text-[var(--wp-ink)]', {}, selected.name),
+              h('L:ChevronDown', {size: 13, className: 'shrink-0 text-[var(--wp-ink-3)]'})]
+          : [h(`L:${icon || 'Plus'}`, {size: 14, className: 'shrink-0 text-[var(--wp-ink-4)]'}),
+              h('span:min-w-0 flex-1 truncate text-start font-medium text-[var(--wp-ink)]', {}, label),
+              count ? h('span:wp-num shrink-0 text-[12px] text-[var(--wp-ink-3)]', {}, count)
+                : h('L:Plus', {size: 13, className: 'shrink-0 text-[var(--wp-ink-4)]'})]
         return h('div:relative', {ref}, h(`button:flex h-9 ${full ? 'w-full' : 'w-[184px]'} items-center gap-2 ` +
-          'rounded-full border px-3 ' +
+          'rounded-[8px] border px-3 ' +
           `text-[13px] transition-colors ${count ? 'border-[var(--wp-border-strong)] bg-[var(--wp-surface-3)]'
             : 'border-dashed border-[var(--wp-border-strong)] hover:bg-[var(--wp-surface-2)]'}`,
-        {type: 'button', 'data-testid': testId, onClick: toggle},
-        h(`L:${icon || 'Plus'}`, {size: 14, className: 'shrink-0 text-[var(--wp-ink-4)]'}),
-        h('span:min-w-0 flex-1 truncate text-start font-medium text-[var(--wp-ink)]', {}, label),
-        count ? h('span:wp-num shrink-0 text-[12px] text-[var(--wp-ink-3)]', {}, count)
-          : h('L:Plus', {size: 13, className: 'shrink-0 text-[var(--wp-ink-4)]'})), dropdown)
+        {type: 'button', 'data-testid': testId, onClick: toggle}, ...children), dropdown)
       }
       const triggerLabel = multi ? placeholder : (selected?.name || placeholder)
       return h('div:relative', {ref}, h(`button:flex w-full items-center justify-between gap-2 px-3.5 py-3 text-[13px] ${

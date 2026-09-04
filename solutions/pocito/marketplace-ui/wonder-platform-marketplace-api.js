@@ -117,7 +117,8 @@ Data('wonderPlatformMarketplaceItem', {
   ],
   impl: ({}, {}, {resource, item}) => {
     const config = item.config || {}, id = item.id, name = item.display_name || id
-    return {...item, _marketplace: true, id, name, mark: name?.slice(0, 2), desc: item.hebrew_description || item.description || '',
+    const mark = name?.trim().split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()
+    return {...item, _marketplace: true, id, name, mark, desc: item.hebrew_description || item.description || '',
       apiDescription: item.description || '', tags: item.tags || [], version: item.version == null ? 'V0' : String(item.version),
       created: item.created_at || item.created || '—', updated: item.updated_at || item.updated || '—',
       skillIds: config.skills || item.skills || [], toolIds: config.tools || item.tools || [], knowledgeIds: config.knowledge_bases || [],

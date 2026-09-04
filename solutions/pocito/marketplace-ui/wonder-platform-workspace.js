@@ -60,16 +60,11 @@ ReactComp('wonderPlatformWorkspace', {
       }
       const configNotice = itemDirty ? 'יש שינויי תצורה שלא נשמרו' : sessionOutdated
         ? `תצורת ${targetLabel} עודכנה — פתחו שיחה חדשה` : 'שיחה פעילה'
-      const chatRun = run => h('div:space-y-3', {key: run.id}, h('div:flex justify-end', {}, h(
-        'div:max-w-[85%] whitespace-pre-wrap break-words rounded-[12px] rounded-br-sm bg-[var(--wp-ink)] px-4 py-3 text-[13px] text-white',
-        {}, run.input)), h(
-        'div:flex justify-start', {}, h('div:max-w-[85%] rounded-[12px] rounded-bl-sm border border-[var(--wp-border)] ' +
-          'bg-[var(--wp-surface)] px-4 py-3', {}, h(
-          'div:flex items-center gap-2', {}, h(`span:${classes.chip}`, {}, run.status), run.opikUrl && h(
-            'a:inline-flex items-center gap-1 text-[12px] text-[var(--wp-ink)]',
-            {href: run.opikUrl, target: '_blank', rel: 'noreferrer'}, 'Opik', h('L:ExternalLink', {size: 12}))), h(
-          'p:mt-3 whitespace-pre-wrap break-words text-[13px] leading-7', {}, run.output || run.status),
-          hh(ctx, dsls.react['react-comp'].wonderPlatformRunTrace, {steps: run.trace, status: run.status}))))
+      const chatRun = run => h('div:space-y-2', {key: run.id},
+        h('p:text-[12px] text-[var(--wp-ink-3)]', {dir: 'auto'}, run.input),
+        hh(ctx, dsls.react['react-comp'].wonderPlatformRunTrace, {steps: run.trace, status: run.status, duration: run.duration, dense: true}),
+        run.status == 'נכשל' ? h('p:mt-1 text-[13px] text-[var(--wp-danger)]', {dir: 'auto'}, run.output)
+          : (run.text || run.output) && hh(ctx, dsls.react['react-comp'].wonderPlatformAgentResult, {result: run}))
 
       const testPanel = h('div:flex h-full min-h-0 flex-col', {}, h('div:flex shrink-0 items-center justify-between gap-3 border-b ' +
         'border-[var(--wp-border)] bg-[var(--wp-surface)] p-3', {},

@@ -173,6 +173,9 @@ Data('wonderPlatformUi', {
       body: 'text-[14px] leading-[1.65] text-[var(--wp-ink-2)]',
       meta: 'text-[12px] text-[var(--wp-ink-3)]',
       mono: 'wp-num text-[11px] text-[var(--wp-ink-3)]',
+      monoId: 'wp-num text-[12px] text-[var(--wp-ink)]',
+      metaMono: 'wp-num text-[11px] text-[var(--wp-ink-5)]',
+      code: 'wp-scroll max-w-full overflow-auto rounded-[8px] bg-[var(--wp-surface-code)] p-2 text-[11px] leading-[1.6]',
       button: 'inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-[8px] border border-[var(--wp-border)] ' +
         'bg-[var(--wp-surface)] px-3 text-[13px] font-medium text-[var(--wp-ink)] transition-colors ' +
         'hover:border-[var(--wp-border-strong)] hover:bg-[var(--wp-surface-2)] disabled:pointer-events-none disabled:opacity-40',
@@ -217,9 +220,9 @@ Data('wonderPlatformUi', {
 Data('wonderPlatformCss', {
   impl: () => `@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300..700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 :root {
-  --wp-canvas: #f3f3f4; --wp-surface: #ffffff; --wp-surface-2: #fafafa; --wp-surface-3: #f1f1f3;
+  --wp-canvas: #f3f3f4; --wp-surface: #ffffff; --wp-surface-2: #fafafa; --wp-surface-3: #f1f1f3; --wp-surface-code: #f6f6f9;
   --wp-border: #e5e5e8; --wp-border-strong: #d2d2d8;
-  --wp-ink: #111114; --wp-ink-hover: #2c2c33; --wp-ink-2: #3f3f46; --wp-ink-3: #5c5c66; --wp-ink-4: #71717a;
+  --wp-ink: #111114; --wp-ink-hover: #2c2c33; --wp-ink-2: #3f3f46; --wp-ink-3: #5c5c66; --wp-ink-4: #71717a; --wp-ink-5: #8b8b95;
   --wp-danger: #b3261e; --wp-danger-soft: #fdf1f0;
   --wp-warn: #8a5a12; --wp-warn-soft: #fdf4e6;
   --wp-sh-1: 0 1px 2px rgb(17 17 19 / 0.06);

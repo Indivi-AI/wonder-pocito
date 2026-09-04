@@ -50,8 +50,9 @@ ReactComp('wonderPlatformChatContext', {
         rootNodes.length > 0
           ? h('div', {}, rootNodes.map(node => renderNode(node, 0)))
           : h('p:text-[12px] leading-[1.5] text-[var(--wp-ink-3)]', {}, 'לא נבחרו חיבורים עדיין.'),
-        conversation?.messages?.length > 0 && h('p:mt-5 border-t border-[var(--wp-border)] pt-4 text-[12px] ' +
-          'leading-[1.5] text-[var(--wp-ink-4)]', {}, 'ההקשר ננעל כשהשיחה התחילה. פתחו שיחה חדשה כדי לשנות אותו.')))
+        conversation?.messages?.length > 0 && h('p:mt-5 flex items-center gap-1.5 border-t border-[var(--wp-border)] ' +
+          'pt-4 text-[11px] text-[var(--wp-ink-4)]', {}, h('L:Lock', {size: 11, className: 'shrink-0'}),
+          'ההקשר ננעל עם תחילת השיחה')))
     }
   })
 })
@@ -181,20 +182,18 @@ ReactComp('wonderPlatformChat', {
             h('div:mb-2 flex items-center gap-2', {},
               hh(ctx, dsls.react['react-comp'].wonderPlatformMark, {icon: agent?.icon, text: agent?.mark || 'AI', size: 'sm'}),
               h('span:text-[12px] font-medium text-[var(--wp-ink-2)]', {}, agent?.name || 'סוכן')),
-            hh(ctx, dsls.react['react-comp'].wonderPlatformRunTrace, {steps: item.steps, status: statusText(item.status)}),
-            item.text ? hh(ctx, dsls.react['react-comp'].wonderPlatformAgentResult, {result: item, setMessage})
-              : !(item.steps || []).length && h('div:flex items-center gap-1.5 py-1', {},
-                [0, 1, 2].map(index => h('span:h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--wp-ink-4)]',
-                  {key: index, style: {animationDelay: `${index * 120}ms`}}))))))
+            hh(ctx, dsls.react['react-comp'].wonderPlatformRunTrace,
+              {steps: item.steps, status: statusText(item.status), duration: item.duration}),
+            item.text && hh(ctx, dsls.react['react-comp'].wonderPlatformAgentResult, {result: item, setMessage}))))
       return h('main:flex h-screen min-w-0 flex-1 bg-[var(--wp-surface)] pb-16 sm:pb-0', {},
         h('section:flex min-w-0 flex-1 flex-col', {},
           hh(ctx, dsls.react['react-comp'].wonderPlatformDetailHeader,
             {title: agent?.name || conversation?.title || 'שיחה חופשית',
-            subtitle: locked ? 'ההקשר ננעל עם תחילת השיחה' : '', icon: agent?.icon, mark: agent?.mark || 'AI',
+            subtitle: locked ? agent?.desc || '' : '', icon: agent?.icon, mark: agent?.mark || 'AI',
             actions: opikUrl && h(`a:${classes.button}`, {href: opikUrl, target: '_blank', rel: 'noreferrer'},
               h('L:ExternalLink', {size: 14}), 'Opik')}),
           h('div:wp-scroll flex-1 overflow-y-auto overflow-x-hidden', {},
-            locked || busy ? messages : h('div:mx-auto flex min-h-full w-full max-w-[800px] items-center px-5 py-8', {},
+            locked || busy ? messages : h('div:mx-auto flex min-h-full w-full max-w-[760px] items-center px-5 py-8', {},
               hh(ctx, dsls.react['react-comp'].wonderPlatformChatContextBoard,
                 {repo, conversation, selectAgent, setContext, setMessage}))),
           hh(ctx, dsls.react['react-comp'].wonderPlatformChatComposer,

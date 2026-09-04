@@ -113,23 +113,19 @@ Data('wonderPlatformAgentWUrlRequest', {
 })
 
 Data('wonderPlatformAgnoRunSteps', {
-  description: 'real runtime trace: model thinking (reasoning_content) and tool calls with actual input/output, live while running',
+  description: 'real runtime trace, in true chronological order: model thinking beats and tool calls with actual input/output/timing',
   params: [{id: 'run', as: 'object', mandatory: true}],
-  impl: ({}, {}, {run}) => {
-    const reasoningSteps = (run.reasoning_steps || []).map(step => ({type: 'thinking', title: step.title || 'חשיבה',
-      detail: [step.reasoning, step.action, step.result].filter(Boolean).join('\n')}))
-    const thinkingTitles = [...(run.reasoning_content || '').matchAll(/\*\*(.+?)\*\*/g)]
-    const thinking = reasoningSteps.length ? reasoningSteps
-      : run.reasoning_content ? [{type: 'thinking', title: thinkingTitles.at(-1)?.[1] || 'חשיבה', detail: run.reasoning_content,
-        running: !run.reasoningDone && !run.done}] : []
-    const tools = (run.tools || []).map(call => {
-      const isSkill = call.tool_name?.startsWith('get_skill_')
-      return {type: isSkill ? 'skill' : 'tool', title: isSkill ? call.tool_args?.skill_name || call.tool_name : call.tool_name,
-        input: call.tool_args, output: call.result, error: call.tool_call_error || undefined, seconds: call.metrics?.duration,
-        running: call.result == null && !call.tool_call_error}
-    })
-    return [...thinking, ...tools]
-  }
+  impl: ({}, {}, {run}) => (run.timeline || []).map((entry, index) => {
+    if (entry.kind == 'thinking') {
+      const title = [...entry.detail.matchAll(/\*\*(.+?)\*\*/g)].at(-1)?.[1] || 'חשיבה'
+      return {type: 'thinking', title, detail: entry.detail.replace(/\*\*/g, ''),
+        running: !run.done && index == run.timeline.length - 1}
+    }
+    const call = entry.tool, isSkill = call.tool_name?.startsWith('get_skill_')
+    return {type: isSkill ? 'skill' : 'tool', title: isSkill ? call.tool_args?.skill_name || call.tool_name : call.tool_name,
+      input: call.tool_args, output: call.result, error: call.tool_call_error || undefined, seconds: entry.seconds,
+      running: call.result == null && !call.tool_call_error}
+  })
 })
 
 Data('wonderPlatformSseFrames', {
@@ -161,17 +157,22 @@ Data('wonderPlatformConsumeAgentRun', {
     if (!response.headers.get('content-type')?.includes('text/event-stream'))
       return notify({...(await response.json()), done: true})
     const reader = response.body.getReader(), decoder = new TextDecoder()
-    let state = {tools: [], done: false}, lastNotifyAt = 0, buffer = ''
+    let state = {timeline: [], done: false}, lastNotifyAt = 0, buffer = ''
     const applyEvent = ({type, data}) => {
       if (type == 'RunStarted') state = {...state, run_id: data.run_id, session_id: data.session_id}
-      else if (type == 'ToolCallStarted') state = {...state, tools: [...state.tools, data.tool]}
-      else if (type == 'ToolCallCompleted' || type == 'ToolCallError')
-        state = {...state, tools: state.tools.map(tool => tool.tool_call_id == data.tool.tool_call_id ? {...tool, ...data.tool} : tool)}
-      else if (type == 'RunContent') state = {...state,
-        content: (typeof state.content == 'string' ? state.content : '') + (data.content || ''),
-        reasoning_content: (state.reasoning_content || '') + (data.reasoning_content || '')}
-      else if (type == 'RunCompleted') state = {...state, content: data.content, reasoning_content: data.reasoning_content ?? state.reasoning_content,
-        reasoning_steps: data.reasoning_steps, status: data.status, metrics: data.metrics, reasoningDone: true, done: true}
+      else if (type == 'ToolCallStarted') state = {...state,
+        timeline: [...state.timeline, {kind: 'tool', startedAt: Date.now(), tool: data.tool}]}
+      else if (type == 'ToolCallCompleted' || type == 'ToolCallError') state = {...state,
+        timeline: state.timeline.map(entry => entry.kind == 'tool' && entry.tool.tool_call_id == data.tool.tool_call_id
+          ? {...entry, tool: {...entry.tool, ...data.tool}, seconds: (Date.now() - entry.startedAt) / 1000} : entry)}
+      else if (type == 'RunContent' && data.reasoning_content) {
+        // deltas of one continuous reasoning phase get appended to the same beat; a phase ends the moment a tool call starts
+        const last = state.timeline.at(-1)
+        state = {...state, timeline: last?.kind == 'thinking'
+          ? [...state.timeline.slice(0, -1), {...last, detail: last.detail + data.reasoning_content}]
+          : [...state.timeline, {kind: 'thinking', detail: data.reasoning_content}]}
+      } else if (type == 'RunContent' && data.content) state = {...state, content: (state.content || '') + data.content}
+      else if (type == 'RunCompleted') state = {...state, content: data.content, status: data.status, metrics: data.metrics, done: true}
       else if (type == 'RunError') state = {...state, content: data.content, status: 'ERROR', done: true}
       // RunContent deltas can arrive tens of times per second; throttle those repaints, never the structural events (tool calls, completion).
       const now = Date.now()

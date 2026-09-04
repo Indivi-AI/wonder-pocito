@@ -14,8 +14,7 @@ ReactComp('wonderPlatformHome', {
       const action = (icon, title, body, onClick) => h(
         `button:${classes.panel} flex flex-1 flex-col items-start gap-2 p-6 text-start transition-colors ` +
         `hover:border-[var(--wp-border-strong)] hover:shadow-[var(--wp-sh-1)]`, {key: title, onClick},
-        h('span:grid h-11 w-11 place-items-center rounded-[10px] bg-[var(--wp-ink)] text-white', {},
-          h(`L:${icon}`, {size: 20})),
+        hh(ctx, dsls.react['react-comp'].wonderPlatformMark, {icon, size: 'lg'}),
         h(`h2:${classes.h2} mt-2`, {}, title),
         h(`p:${classes.body} text-[13px]`, {}, body))
       const row = (icon, title, subtitle, onClick) => h(
@@ -26,7 +25,7 @@ ReactComp('wonderPlatformHome', {
           h('span:block truncate text-[13px] font-medium text-[var(--wp-ink)]', {title}, title),
           h('span:block truncate text-[12px] text-[var(--wp-ink-4)]', {}, subtitle)),
         h('L:ArrowLeft', {size: 14, className: 'shrink-0 text-[var(--wp-ink-4)]'}))
-      const group = (label, rows) => rows.length > 0 && h('div:min-w-0 flex-1', {},
+      const group = (label, rows) => rows.length > 0 && h('div:min-w-0', {},
         h('div:pb-2 text-[11px] font-medium text-[var(--wp-ink-4)]', {}, label),
         h('div:grid gap-px overflow-hidden rounded-[8px] border border-[var(--wp-border)] bg-[var(--wp-border)]',
           {}, rows))
@@ -40,7 +39,7 @@ ReactComp('wonderPlatformHome', {
             action(resources.plugins.icon, 'בנה פלאגין',
               'אריזה של מיומנויות, כלים וידע, כדי לתת לכל סוכן', createPlugin),
             action('MessageCircle', 'התחל שיחה', 'דברו עם סוכן קיים, או פשוט שאלו שאלה.', startChat)),
-          h('div:mt-10 flex gap-6', {},
+          h('div:mt-10 grid grid-cols-2 gap-6', {},
             group('הסוכנים שלי', mine.map(item => row(item.icon || resources.agents.icon, item.name,
               item.desc || '', () => openItem('agents', item)))),
             group('שיחות אחרונות', talks.map(item => row('MessageCircle', item.title,
