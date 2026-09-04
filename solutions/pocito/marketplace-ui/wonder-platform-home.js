@@ -14,7 +14,7 @@ ReactComp('wonderPlatformHome', {
       const action = (icon, title, body, onClick) => h(
         `button:${classes.panel} flex flex-1 flex-col items-start gap-2 p-6 text-start transition-colors ` +
         `hover:border-[var(--wp-border-strong)] hover:shadow-[var(--wp-sh-1)]`, {key: title, onClick},
-        hh(ctx, dsls.react['react-comp'].wonderPlatformMark, {icon, size: 'lg'}),
+        h('span:grid h-11 w-11 shrink-0 place-items-center rounded-[8px] bg-[var(--wp-ink)] text-white', {}, h(`L:${icon}`, {size: 18})),
         h(`h2:${classes.h2} mt-2`, {}, title),
         h(`p:${classes.body} text-[13px]`, {}, body))
       const row = (icon, title, subtitle, onClick) => h(

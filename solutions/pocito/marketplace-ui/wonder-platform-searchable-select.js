@@ -8,7 +8,7 @@ const { react: { ReactComp, 'react-comp': { comp } } } = dsls
 ReactComp('wonderPlatformSearchableSelect', {
   impl: comp({
     hFunc: (ctx, {react: {h, hh, useState, useEffect, useRef}}) =>
-      ({items, value, onChange, placeholder, empty, testId, multi, bare, icon, label, card, full}) => {
+      ({items, value, onChange, placeholder, empty, testId, multi, bare, icon, label, card}) => {
       const {classes} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
       const [open, setOpen] = useState(false), [query, setQuery] = useState(''), [rect, setRect] = useState()
       const ref = useRef(), toggle = () => (setRect(ref.current.getBoundingClientRect()), setOpen(!open))
@@ -60,7 +60,7 @@ ReactComp('wonderPlatformSearchableSelect', {
               h('span:min-w-0 flex-1 truncate text-start font-medium text-[var(--wp-ink)]', {}, label),
               count ? h('span:wp-num shrink-0 text-[12px] text-[var(--wp-ink-3)]', {}, count)
                 : h('L:Plus', {size: 13, className: 'shrink-0 text-[var(--wp-ink-4)]'})]
-        return h('div:relative', {ref}, h(`button:flex h-9 ${full ? 'w-full' : 'w-[184px]'} items-center gap-2 ` +
+        return h('div:relative', {ref}, h('button:flex h-9 w-[184px] items-center gap-2 ' +
           'rounded-[8px] border px-3 ' +
           `text-[13px] transition-colors ${count ? 'border-[var(--wp-border-strong)] bg-[var(--wp-surface-3)]'
             : 'border-dashed border-[var(--wp-border-strong)] hover:bg-[var(--wp-surface-2)]'}`,

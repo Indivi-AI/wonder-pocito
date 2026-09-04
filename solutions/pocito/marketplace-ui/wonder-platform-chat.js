@@ -74,7 +74,7 @@ ReactComp('wonderPlatformChatContextBoard', {
       return h('div:w-full max-w-[760px]', {},
         h('div:mb-5', {}, h(`h2:${classes.h2}`, {}, 'במה נתחיל?'),
           h(`p:${classes.help}`, {}, 'בחרו סוכן וחיבורים שילוו את השיחה, או פשוט כתבו שאלה. הכול אופציונלי.')),
-        select({items: mine(repo.agents), value: conversation?.agentId || '', onChange: selectAgent, full: true,
+        select({items: mine(repo.agents), value: conversation?.agentId || '', onChange: selectAgent,
           icon: ui.resources.agents.icon, label: ui.labels.agents, empty: 'ללא סוכן', testId: 'agent-selector-board'}),
         h('div:mt-5', {},
           h('div:pb-2 text-[11px] font-medium text-[var(--wp-ink-4)]', {}, 'חיבורים נוספים'),
