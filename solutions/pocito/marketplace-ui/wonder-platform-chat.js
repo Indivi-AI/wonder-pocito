@@ -65,7 +65,7 @@ ReactComp('wonderPlatformChatContextBoard', {
       const agent = repo.agents.find(item => item.id == conversation?.agentId)
       const prompts = agent ? [`מה אתה יודע לעשות, ${agent.name}?`, 'הראה לי דוגמה מלאה', 'אילו מקורות מידע עומדים לרשותך?']
         : ['מה אפשר לעשות כאן?', 'עזרו לי לבחור סוכן מתאים', 'איך בונים סוכן חדש?']
-      const select = props => h('div', {key: props.testId},
+      const select = props => h('div:min-w-0 flex-1', {key: props.testId},
         hh(ctx, dsls.react['react-comp'].wonderPlatformSearchableSelect, {card: true, ...props}))
       const [pluginRow, ...restRows] = wonderPlatformChatContextRows
       const tile = ([field, resource, headerLabel]) => select({items: mine(repo[resource]), multi: true,
