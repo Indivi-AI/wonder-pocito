@@ -91,25 +91,42 @@ ReactComp('wonderPlatformChatContextBoard', {
   })
 })
 
+ReactComp('wonderPlatformModelSelect', {
+  impl: comp({
+    hFunc: (ctx, {react: {h, useEffect, useState}}) => ({model, setModel}) => {
+      const {classes} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
+      const [models, setModels] = useState()
+      const loadModels = async () => {
+        setModels()
+        try {
+          const base = (globalThis.LLM_PROXY_URL || globalThis.process?.env?.LLM_PROXY_URL || '/llmProxy').replace(/\/$/, '')
+          const response = await fetch(`${base}/models`)
+          if (!response.ok) throw new Error()
+          const names = (await response.json()).data?.map(entry => entry.id).filter(name => name && name != '*') || []
+          if (!names.length) throw new Error()
+          setModels(names); setModel(current => names.includes(current) ? current : names[0])
+        } catch { setModels([]); setModel('') }
+      }
+      useEffect(() => { void loadModels() }, [])
+      if (!models) return null
+      return models.length
+        ? h(`label:${classes.ghost} cursor-pointer gap-1.5`, {title: 'מודל השפה לשיחה זו'},
+          h('L:Cpu', {size: 14, className: 'shrink-0'}),
+          h('select:max-w-[130px] cursor-pointer appearance-none truncate border-none bg-transparent p-0 text-[13px] ' +
+            'font-medium text-[var(--wp-ink-2)] outline-none wp-noring', {dir: 'ltr', value: model,
+            'data-testid': 'model-selector', 'aria-label': 'מודל שפה', onChange: event => setModel(event.target.value)},
+          models.map(name => h('option', {key: name, value: name}, name))))
+        : h(`button:${classes.ghost} gap-1 text-[var(--wp-danger)]`, {onClick: loadModels,
+          'aria-label': 'טעינה מחדש של מודלים'}, h('L:CircleAlert', {size: 13}), 'מודלים לא זמינים')
+    }
+  })
+})
+
 ReactComp('wonderPlatformChatComposer', {
   impl: comp({
-    hFunc: (ctx, {react: {h, useEffect, useRef, useState}}) =>
-      ({repo, conversation, message, setMessage, busy, send, model, setModel}) => {
-        const {classes} = dsls.common.data.wonderPlatformUi.$run()
+    hFunc: (ctx, {react: {h, useEffect, useRef}}) =>
+      ({repo, conversation, message, setMessage, busy, send, model}) => {
         const ref = useRef(), submit = () => message.trim() && model && !busy && send()
-        const [models, setModels] = useState()
-        const loadModels = async () => {
-          setModels()
-          try {
-            const base = (globalThis.LLM_PROXY_URL || globalThis.process?.env?.LLM_PROXY_URL || '/llmProxy').replace(/\/$/, '')
-            const response = await fetch(`${base}/models`)
-            if (!response.ok) throw new Error()
-            const names = (await response.json()).data?.map(entry => entry.id).filter(name => name && name != '*') || []
-            if (!names.length) throw new Error()
-            setModels(names); setModel(current => names.includes(current) ? current : names[0])
-          } catch { setModels([]); setModel('') }
-        }
-        useEffect(() => { void loadModels() }, [])
         useEffect(() => { const el = ref.current; if (!el) return
           el.style.height = 'auto'
           if (message) el.style.height = `${Math.min(el.scrollHeight, 176)}px` }, [message])
@@ -121,19 +138,12 @@ ReactComp('wonderPlatformChatComposer', {
         {ref, rows: 1, value: message, 'data-testid': 'chat-input', placeholder: 'שאלו כל דבר…',
           onInput: event => setMessage(event.target.value),
           onKeyDown: event => event.key == 'Enter' && !event.shiftKey && (event.preventDefault(), submit())}),
-        h('div:flex items-center justify-between gap-2 px-2.5 pb-2.5', {},
-          h('div:flex min-w-0 items-center gap-2', {},
-            models?.length ? h(`select:${classes.fieldBare} w-44`, {dir: 'ltr', value: model, 'data-testid': 'model-selector',
-              'aria-label': 'מודל שפה', onChange: event => setModel(event.target.value)},
-            models.map(name => h('option', {key: name, value: name}, name)))
-              : models && h('button:flex items-center gap-1 text-[11px] text-[var(--wp-danger)]',
-                {onClick: loadModels, 'aria-label': 'טעינה מחדש של מודלים'}, h('L:CircleAlert', {size: 13}), 'המודלים לא זמינים · נסו שוב')),
-          h('div:flex shrink-0 items-center gap-2.5', {},
-            h('span:hidden text-[11px] text-[var(--wp-ink-4)] sm:block', {}, 'Enter לשליחה · Shift+Enter לשורה חדשה'),
-            h('button:grid h-8 w-8 shrink-0 place-items-center rounded-[8px] bg-[var(--wp-ink)] text-white ' +
-            'transition-colors hover:bg-[var(--wp-ink-hover)] disabled:bg-[var(--wp-border-strong)]',
-          {disabled: !message.trim() || !model || busy, onClick: submit, 'aria-label': 'שליחה'},
-          h(`L:${busy ? 'Loader2' : 'ArrowUp'}`, {size: 15, className: busy ? 'animate-spin' : ''}))))))
+        h('div:flex items-center justify-end gap-2.5 px-2.5 pb-2.5', {},
+          h('span:hidden text-[11px] text-[var(--wp-ink-4)] sm:block', {}, 'Enter לשליחה · Shift+Enter לשורה חדשה'),
+          h('button:grid h-8 w-8 shrink-0 place-items-center rounded-[8px] bg-[var(--wp-ink)] text-white ' +
+          'transition-colors hover:bg-[var(--wp-ink-hover)] disabled:bg-[var(--wp-border-strong)]',
+        {disabled: !message.trim() || !model || busy, onClick: submit, 'aria-label': 'שליחה'},
+        h(`L:${busy ? 'Loader2' : 'ArrowUp'}`, {size: 15, className: busy ? 'animate-spin' : ''})))))
       }
   })
 })
@@ -190,14 +200,16 @@ ReactComp('wonderPlatformChat', {
           hh(ctx, dsls.react['react-comp'].wonderPlatformDetailHeader,
             {title: agent?.name || conversation?.title || 'שיחה חופשית',
             subtitle: locked ? agent?.desc || '' : '', icon: agent?.icon, mark: agent?.mark || 'AI',
-            actions: opikUrl && h(`a:${classes.button}`, {href: opikUrl, target: '_blank', rel: 'noreferrer'},
-              h('L:ExternalLink', {size: 14}), 'Opik')}),
+            actions: h('div:flex items-center gap-2', {},
+              hh(ctx, dsls.react['react-comp'].wonderPlatformModelSelect, {model, setModel}),
+              opikUrl && h(`a:${classes.button}`, {href: opikUrl, target: '_blank', rel: 'noreferrer'},
+                h('L:ExternalLink', {size: 14}), 'Opik'))}),
           h('div:wp-scroll flex-1 overflow-y-auto overflow-x-hidden', {},
             locked || busy ? messages : h('div:mx-auto flex min-h-full w-full max-w-[760px] items-center px-5 py-8', {},
               hh(ctx, dsls.react['react-comp'].wonderPlatformChatContextBoard,
                 {repo, conversation, selectAgent, setContext, setMessage}))),
           hh(ctx, dsls.react['react-comp'].wonderPlatformChatComposer,
-            {repo, conversation, message, setMessage, busy, send, model, setModel})),
+            {repo, conversation, message, setMessage, busy, send, model})),
         hh(ctx, dsls.react['react-comp'].wonderPlatformChatContext, {repo, conversation}))
     }
   })
