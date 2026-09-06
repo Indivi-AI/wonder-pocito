@@ -3,6 +3,7 @@ import '@jb6/core/misc/import-map-services.js'
 import '@jb6/testing'
 import '@wonder/studio/mcp-tools/wonder-mcp-tools.js'
 import './pocito-on-prem-test-applet.js'
+import './pocito-gateway-tests.js'
 
 const {
   common: { Data, boolean: { and, contains, equals } },

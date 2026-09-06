@@ -15,11 +15,12 @@ import { setupLiveRepoRoomApplet, setupLiveRepoDevApplet } from './lib/room-lamb
 const dir = path.dirname(fileURLToPath(import.meta.url))
 if (process.env.ENV_PATH) dotenv.config({ path: process.env.ENV_PATH })
 jb.coreRegistry.repoRoot = path.resolve(dir, '../..')
-export async function createLocalApp({ llmProxyMode = process.env.LLM_PROXY_MODE || 'cloud' } = {}) {
+export async function createLocalApp({ llmProxyMode = process.env.LLM_PROXY_MODE || 'cloud', app = express() } = {}) {
 const root = await coreUtils.calcRepoRoot(), { importMap, staticMappings } = await coreUtils.getStaticServeConfig(root)
 process.env.HOST_NODE_MODULES_BASE = root
 
-const app = express().set('trust proxy', 1), filesRoot = path.join(root, 'files')
+app.set('trust proxy', 1)
+const filesRoot = path.join(root, 'files')
 const filePath = req => path.join(filesRoot, req.params[0])
 const prepareFile = async (name, res) => {
   const data = await fs.readFile(name), {mtime} = await fs.stat(name)

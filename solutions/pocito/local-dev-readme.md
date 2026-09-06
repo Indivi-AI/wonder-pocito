@@ -158,11 +158,11 @@ dependencies. Run `npm run pocito-dev-airgapped` inside the shell to start the s
 Before starting each bundled service, the launcher terminates any process using that container port. Service and readiness failures warn without
 stopping the remaining services.
 
-On native Linux, replace the port and host mapping with:
-
-```sh
---network host
-```
+On shared native Linux, keep bridge networking and publish only the app, for example `-p 58000:3000` with `POCITO_PORT=3000`.
+Open `http://linux-machine:58000/applet/wonderAgents` from another machine. Marketplace, Agno and LiteLLM use same-origin Pocito routes;
+do not put their published host ports in browser configuration. Internal service URLs remain reachable from inside the container.
+Use distinct container and volume names per user. `--network host` is optional only when sharing the host's ports is intentional;
+it cannot be combined with effective `-p` remapping.
 
 VS Code can use **Dev Containers: Attach to Running Container**; the checkout is `/workspace/repo` and the container user is `pocito`.
 
@@ -198,6 +198,10 @@ and vector stores.
 The four default tests verify that Wonder, Marketplace/MinIO, Agno and LiteLLM are configured and reachable. Functional dataset, storage, model,
 applet and seed checks remain available with `pattern=pocitoIntegration`.
 For a focused failure, run the matching test through MCP and inspect its domain error arrays.
+
+`pocitoIntegration.browserGateway` opens Wonder Agents in Chromium at a non-localhost test hostname and checks same-origin Marketplace CRUD,
+room scoping, uploads/downloads, redirects and model discovery. `pocitoIntegration.browserGatewayAgent` also calls a real Agno agent and streams
+a LiteLLM response using the `chat` alias. Both use the configured services and clean up their isolated test assets.
 
 ### 5. Stop or restart
 

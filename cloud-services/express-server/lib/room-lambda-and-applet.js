@@ -65,6 +65,7 @@ const runAutomation = async mCtx => {
 // extendCtxWithUrl seeds ctx-* query params (e.g. ?ctx-reportUrl=…) + loggers from the URL; then add react + the applet's roomWUrl.
 const ctx = reactUtils.extendCtxWithUrl().setVars({ react: reactUtils, db: globalThis.WONDER_STORAGE_PROVIDER,
   bucketEndpoint: globalThis.WONDER_STORAGE_URL, ...appletSpec.runtimeVars,
+  ...(appletSpec.liveRepo && { localhostServer: location.origin }),
   ...(roomWUrl && { roomWUrl }), ...(noAuth && { noAuth: true }) })
 const uiSource = appletSpec.liveRepo
   ? 'live-repo (localhost /jb6_packages, /wonder, /solution, /indiviai)'
@@ -106,7 +107,7 @@ export async function serveAppletPage(spec, res, localImports) {
     'Cross-Origin-Embedder-Policy': 'credentialless'
   })
   const codeCtx = new coreUtils.Ctx().setVars(storageEnvVars({ forBrowser: true }))   // resolved urls are fetched by the BROWSER - public endpoint
-  const runtimeBase = await jb.wonderUtils.wresolve(CLIENT_RUNTIME_WURL, codeCtx, 'GET')
+  const runtimeBase = localImports?.['@jb6/react/lib/'] || await jb.wonderUtils.wresolve(CLIENT_RUNTIME_WURL, codeCtx, 'GET')
   if (!localImports && !spec.clientCodeWUrl) throw new Error(`applet ${spec.cmpId} has no clientCodeWUrl; publish it again`)
   const shareBase = localImports ? '' : (await jb.wonderUtils.wresolve(spec.clientCodeWUrl, codeCtx, 'GET')).replace(/\/$/, '')
   const imports = localImports ? localImports : spec.clientCodeWUrl ? {
@@ -122,7 +123,8 @@ export async function serveAppletPage(spec, res, localImports) {
       WONDER_STORAGE_PROVIDER: storageProvider(), WONDER_STORAGE_URL: browserStorageUrl(),
       MARKETPLACE_API_URL: process.env.MARKETPLACE_API_URL, AGNO_API_URL: process.env.AGNO_API_URL,
       FLAPI_BASE_URL: process.env.FLAPI_BASE_URL,
-      LLM_PROXY_URL: process.env.LLM_PROXY_URL, LLM_MODEL: process.env.LLM_MODEL
+      LLM_PROXY_URL: process.env.LLM_PROXY_URL, LLM_MODEL: process.env.LLM_MODEL,
+      ...res.app?.locals.appletClientEnv
     }))   // undefined keys are dropped by JSON.stringify
     .replace('_IMPORT_MAP_', JSON.stringify({ imports }))
     .replace('_APPLET_SPEC_', JSON.stringify({ ...clientSpec, liveRepo: !!localImports }))

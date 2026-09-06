@@ -1,4 +1,20 @@
-# Pocito on Windows
+# Pocito on-prem
+
+## Windows Chrome connecting to a Linux Docker host
+
+Publish only Pocito's application port, for example `-p 58000:3000`, with `POCITO_PORT=3000` in `pocito.env`.
+Open `http://linux-machine:58000/applet/wonderAgents` in Chrome on Windows.
+Marketplace, Agno and LiteLLM requests go through that same address; their internal ports do not need publishing for the UI.
+Keep upstream service URLs in `pocito.env` reachable from **inside the container**, not from the Windows browser.
+An external LiteLLM still uses `LITELLM_HOST`; a bundled one still uses the mounted `LITELLM_CONFIG`.
+
+Use bridge networking with `-p` on a shared Linux machine. Choose a different published port and container/volume names for each user.
+The gateway covers Wonder Agents' Marketplace assets and uploads; direct S3/presigned URLs still require browser-reachable object storage.
+
+After updating the checkout in `/workspace/repo`, stop Pocito before starting `npm run pocito-dev-airgapped` again, then reload Chrome.
+This routing change adds no dependencies and does not require rebuilding the image when the checkout is updated separately.
+
+The instructions below describe running Docker on Windows itself.
 
 ## Environment configuration
 
