@@ -38,7 +38,7 @@ const ready = async (name, url) => {
   warn(`${name} readiness`, 'timed out after 60 seconds')
 }
 if (internalLiteLlm && env.LITELLM_CONFIG) start('LiteLLM', ports.litellm, `${venvs}/litellm/bin/litellm`,
-  ['--config', env.LITELLM_CONFIG, '--port', ports.litellm])
+  ['--config', env.LITELLM_CONFIG, '--port', ports.litellm], {PYTHONPATH: `${process.cwd()}/${pocito}/on-prem/litellm`})
 else if (internalLiteLlm) warn('LiteLLM', 'LITELLM_CONFIG is not set')
 for (const service of ['marketplace', ...(internalAgno ? ['agno'] : [])]) start(service, ports[service],
   `${venvs}/${service}-server/bin/python`, [`${pocito}/${service}-server/${service}_server.py`])

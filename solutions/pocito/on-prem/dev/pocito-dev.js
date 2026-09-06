@@ -146,7 +146,8 @@ export async function startPocito() {
     const config = env.LITELLM_CONFIG || join(pocito, 'on-prem/litellm/config.local.yaml')
     if (localLitellm) {
       if (!env.LITELLM_CONFIG && !existsSync(config)) copyFileSync(join(dirname(config), 'config.yaml'), config, constants.COPYFILE_EXCL)
-      service('LiteLLM', join(environments['on-prem/litellm'], 'litellm'), ['--config', config, '--host', host, '--port', ports.litellm])
+      service('LiteLLM', join(environments['on-prem/litellm'], 'litellm'), ['--config', config, '--host', host, '--port', ports.litellm],
+        {env: {...env, PYTHONPATH: join(pocito, 'on-prem/litellm')}})
     }
     service('FLAPI', process.execPath, flapiBaseUrl ? [join(pocito, 'on-prem/dev/flapi-server.js')] : ['--import', 'tsx', 'server.ts'],
       flapiBaseUrl ? {env: {...env, PORT: ports.flapi}} : {cwd: join(pocito, 'flapi-mock'), env: {...env, MOCK_PORT: ports.flapi}})

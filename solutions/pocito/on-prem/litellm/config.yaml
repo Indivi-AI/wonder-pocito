@@ -14,3 +14,5 @@ model_list:
       mode: embedding
 litellm_settings:
   telemetry: false
+  # Moves <mm:think> blocks leaked into content into reasoning_content so OMP renders them as thinking. LITELLM_THINK_TAG overrides the tag.
+  callbacks: minimax_think.reasoning_splitter

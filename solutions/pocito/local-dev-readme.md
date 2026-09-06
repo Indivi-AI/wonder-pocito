@@ -55,6 +55,7 @@ Cloud/credentialed targets and skipped in on-prem.
 
 When using bundled LiteLLM, edit `config.local.yaml` with model endpoints and keys; keep real credentials out of the tracked template.
 `chat` and `embeddings` are OpenAI-compatible aliases. Replace the OpenAI deployments with your on-prem providers.
+`callbacks: minimax_think.reasoning_splitter` moves `<mm:think>` reasoning leaked into content (MiniMax on vLLM) to `reasoning_content`, so OMP shows it as thinking.
 Agent manifests with explicit models must use configured aliases. Embedding dimensions must match the deployment;
 changing embedding model/dimensions requires rebuilding affected knowledge indexes.
 
