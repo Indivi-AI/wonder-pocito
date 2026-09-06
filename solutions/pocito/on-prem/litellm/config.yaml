@@ -1,4 +1,4 @@
-# Copied to ignored config.local.yaml on first startup. Put real provider settings and keys there.
+# Copied to ignored config.local.yaml on first connected startup. Put real provider settings and keys there.
 model_list:
   - model_name: chat
     litellm_params:

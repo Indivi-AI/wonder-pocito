@@ -13,7 +13,7 @@ ARG UV_PYTHON_VERSION=3.12.12
 RUN --mount=type=secret,id=npmrc,target=/root/.npmrc \
     apt-get update && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends curl ca-certificates git python3 python3-pip tini bash rsync jq less \
-      vim-tiny zip unzip procps iputils-ping dnsutils netcat-openbsd openssh-client openssh-server \
+      vim-tiny zip unzip procps psmisc iputils-ping dnsutils netcat-openbsd openssh-client openssh-server \
     && rm -rf /var/lib/apt/lists/* \
     && ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \

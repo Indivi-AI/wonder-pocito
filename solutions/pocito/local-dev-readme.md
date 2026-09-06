@@ -49,6 +49,7 @@ cp -n solutions/pocito/.env.onprem.example solutions/pocito/.env.onprem
 cp -n solutions/pocito/on-prem/litellm/config.yaml solutions/pocito/on-prem/litellm/config.local.yaml
 npm run pocito-dev
 ```
+When using the stock local MinIO container above, set `MINIO_STORAGE_CLASS=STANDARD` in `.env.onprem`.
 `npm run pocito-dev` uses `POCITO_NPM_INSTALL='install --omit=optional'`, so root Google SDK/Auth packages are installed only for
 Cloud/credentialed targets and skipped in on-prem.
 
@@ -77,6 +78,7 @@ No Wonder env file is loaded. Model credentials belong only in LiteLLM YAML, not
 | `OPENAI_EMBEDDING_DIMENSIONS` | `1536` |
 | `FLAPI_BASE_URL`, `FLAPI_TOKEN`, `FLAPI_USERNAME` | FLAPI endpoint and credentials; the local mock requires username `625navehp` |
 | `LITELLM_HOST` | External LiteLLM origin; empty starts bundled LiteLLM at `http://localhost:${LITELLM_PORT}` |
+| `LITELLM_CONFIG` | Bundled LiteLLM YAML; connected development defaults to ignored `config.local.yaml` |
 
 All storage endpoints are external to the launcher, even `localhost`. Agno chat sessions are currently in memory.
 App ports: Pocito `3000`, Marketplace `7777`, Agno `7778`, LiteLLM `4000`, FLAPI `6001`.
@@ -93,30 +95,42 @@ MinIO and PostgreSQL/pgvector remain external and must be reachable from the con
 
 ### 1. Prepare the ignored environment files
 
-Prepare an environment file on the host from `.env.onprem.example`. Docker passes it to the container with `--env-file`; it is not stored in the
-workspace volume or image. The external-service URLs must be reachable from inside the container.
+Prepare an environment file on the host from `.env.onprem.example`, the source of truth for these settings. Docker passes it to the container with
+`--env-file`; it is not stored in the workspace volume or image. Set the values below for the air-gapped environment; `STANDARD_IA` is intentional.
+The external-service URLs must be reachable from inside the container.
 
 ```env
 MINIO_ENDPOINT=http://localhost:9000
 PGVECTOR_URL=postgresql+psycopg://wonder:wonder-pg-local@localhost:5432/wonder
 MINIO_ACCESS_KEY=wonder
 MINIO_SECRET_KEY=wonder-minio-local
+MARKETPLACE_S3_BUCKET=indiviai-wonder
+S3_USE_PATH_STYLE=true
 MINIO_STORAGE_CLASS=STANDARD_IA
 FLAPI_BASE_URL=http://flapi.internal:6001
 FLAPI_TOKEN=<FLAPI_TOKEN>
 FLAPI_USERNAME=<FLAPI_USERNAME>
-LITELLM_HOST=http://litellm.internal:4000
+LITELLM_HOST=
+LITELLM_CONFIG=/run/pocito/litellm.yaml
 LITELLM_API_KEY=<LITELLM_API_KEY>
+AGNO_API_URL=
 POCITO_PORT=3000
+POCITO_DATA_DIR=/home/pocito/.local/share/pocito
+PI_CODING_AGENT_DIR=/home/pocito/.local/share/pocito/omp
+# MARKETPLACE_PORT=7777
+# AGENT_OS_PORT=7778
+# LITELLM_PORT=4000
+# FLAPI_PORT=6001
+# OPENAI_EMBEDDING_DIMENSIONS=1536
 ```
 
 On native Linux with `--network host`, `localhost` reaches host MinIO and PostgreSQL. For bridge networking, use service hostnames or addresses
 reachable from inside the container; on Docker Desktop this is commonly `host.docker.internal`. External air-gapped services can use their
 normal DNS names or IP addresses. Ensure both MinIO buckets exist and PostgreSQL has the `vector` extension as described above.
 
-If the network provides LiteLLM, set `LITELLM_HOST`; the bundled LiteLLM and its YAML are then unused. OMP discovers the models exposed by that
-gateway and uses `LITELLM_API_KEY` when supplied. If bundled LiteLLM is required, leave `LITELLM_HOST` empty and mount a prepared configuration
-at `/run/pocito/litellm.yaml`, then set `LITELLM_CONFIG=/run/pocito/litellm.yaml`.
+If the network provides LiteLLM, set `LITELLM_HOST`; the bundled LiteLLM, `LITELLM_CONFIG` and YAML mount are then unused. OMP discovers the models
+exposed by that gateway and uses `LITELLM_API_KEY` when supplied. For bundled LiteLLM, leave `LITELLM_HOST` empty, mount a prepared configuration
+at `/run/pocito/litellm.yaml`, and set `LITELLM_CONFIG=/run/pocito/litellm.yaml` in the environment file.
 Provider keys belong only in runtime configuration, never in the Git bundle, tracked template, build arguments or image layers.
 Set `FLAPI_BASE_URL`, `FLAPI_TOKEN` and `FLAPI_USERNAME` for the external on-prem FLAPI service.
 
@@ -132,9 +146,6 @@ docker run -it --name pocito-dev \
   -p 2222:2222 -p 3000:3000 -p 4000:4000 -p 6001:6001 -p 7777:7777 -p 7778:7778 \
   --env-file "<ENV_PATH>" \
   --mount "type=bind,source=<LITELLM_CONFIG_PATH>,target=/run/pocito/litellm.yaml,readonly" \
-  -e POCITO_PORT=3000 -e LITELLM_CONFIG=/run/pocito/litellm.yaml -e LITELLM_HOST= \
-  -e POCITO_DATA_DIR=/home/pocito/.local/share/pocito \
-  -e PI_CODING_AGENT_DIR=/home/pocito/.local/share/pocito/omp \
   --mount type=volume,src=pocito-workspace,dst=/workspace/repo \
   --mount type=volume,src=pocito-home,dst=/home/pocito \
   pocito-dev:linux-amd64 /bin/bash
@@ -144,6 +155,8 @@ Replace `<ENV_PATH>` and `<LITELLM_CONFIG_PATH>` with their host file paths. The
 `pocito-workspace` is empty and never overwrites an existing checkout. It names the read-only bundle remote `image-bundle`. No `node_modules`
 mount is needed: the repository sits below `/workspace/node_modules`, which Node resolves as an ancestor. The command uses only image-baked
 dependencies. Run `npm run pocito-dev-airgapped` inside the shell to start the services.
+Before starting each bundled service, the launcher terminates any process using that container port. Service and readiness failures warn without
+stopping the remaining services.
 
 On native Linux, replace the port and host mapping with:
 
@@ -182,8 +195,8 @@ The default suite accepts Agno's `degraded`/`vector_store: unreachable` health w
 test directly at `http://localhost:3000/wonder/studio/tests.html?test=pocitoOnPrem.serviceAgnoStrictPgvector`; it requires fully healthy Agno object
 and vector stores.
 
-The five default tests only verify that Wonder, Marketplace/MinIO, Agno, LiteLLM and FLAPI are configured and reachable. Functional package,
-dataset, storage, model, applet, seed and travel-agent checks remain available with `pattern=pocitoIntegration`.
+The four default tests verify that Wonder, Marketplace/MinIO, Agno and LiteLLM are configured and reachable. Functional dataset, storage, model,
+applet and seed checks remain available with `pattern=pocitoIntegration`.
 For a focused failure, run the matching test through MCP and inspect its domain error arrays.
 
 ### 5. Stop or restart
