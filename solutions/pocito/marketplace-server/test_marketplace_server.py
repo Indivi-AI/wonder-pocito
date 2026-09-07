@@ -11,9 +11,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 import httpx
+from agno.models.message import Message as AgnoMessage
 from fastapi.testclient import TestClient
 
-from agno_server import create_app as create_agent_os_app, knowledge_reader
+from agno_server import MarketplaceAgentRuntime, create_app as create_agent_os_app, knowledge_reader
 from marketplace_e2e_model import MarketplaceE2EEmbedder, model_factory
 from marketplace_server import create_app, flapi_package
 from marketplace_storage import S3ObjectStore
@@ -23,6 +24,22 @@ class KnowledgeChunkingTest(unittest.TestCase):
     def test_configuration(self):
         strategy = knowledge_reader(Path('knowledge.txt')).chunking_strategy
         self.assertEqual((strategy.chunk_size, strategy.overlap), (3000, 300))
+
+
+class OpenAIModelTest(unittest.TestCase):
+    def test_uses_chat_completions(self):
+        request_paths = []
+        def capture_request(request):
+            request_paths.append(request.url.path)
+            return httpx.Response(200, json={'id': 'run', 'object': 'chat.completion', 'created': 0, 'model': 'chat',
+              'choices': [{'index': 0, 'message': {'role': 'assistant', 'content': 'ok'}, 'finish_reason': 'stop'}],
+              'usage': {'prompt_tokens': 1, 'completion_tokens': 1, 'total_tokens': 2}})
+        with patch.dict(os.environ, {'OPENAI_BASE_URL': 'http://llm.test/v1', 'OPENAI_API_KEY': 'unused'}), \
+          httpx.Client(transport=httpx.MockTransport(capture_request)) as http_client:
+            model = MarketplaceAgentRuntime.__new__(MarketplaceAgentRuntime).openai_model({})
+            model.http_client = http_client
+            self.assertEqual(model.response([AgnoMessage(role='user', content='hi')]).content, 'ok')
+        self.assertEqual(request_paths, ['/v1/chat/completions'])
 
 
 class FlapiProxyTest(unittest.TestCase):
