@@ -28,6 +28,7 @@ from agno.os import AgentOS
 from agno.skills import LocalSkills, Skills
 from agno.tools.function import Function
 from agno.tools.mcp import MCPTools
+from agno.utils.message import normalize_tool_messages
 from agno.vectordb.pgvector import PgVector
 from agno.vectordb.search import SearchType
 from fastapi import FastAPI, HTTPException
@@ -130,6 +131,14 @@ def make_flow_package_executor(package_id):
     return execute
 
 
+class NativeToolIdChat(OpenAIChat):
+    """Keeps the tool call ids the model server issued; agno rewrites foreign ids to a per-request
+    counter, so every first tool call collides and upstreams keyed on that id resolve stale state."""
+
+    def _format_all_messages(self, messages, compress_tool_results=False):
+        return [self._format_message(message, compress_tool_results) for message in normalize_tool_messages(messages)]
+
+
 class MarketplaceAgentRuntime:
     def __init__(self, repo, runtime_dir, model_factory=None, embedder=None):
         self.repo, self.runtime_dir = repo, Path(runtime_dir)
@@ -149,8 +158,8 @@ class MarketplaceAgentRuntime:
 
     def openai_model(self, manifest):
         model = MODEL_CONTEXT.get() or manifest.get('config', {}).get('backend_config', {}).get('model') or os.getenv('OPENAI_MODEL', 'gpt-5-mini')
-        return OpenAIChat(id=model, api_key=os.getenv('OPENAI_API_KEY'), base_url=os.getenv('OPENAI_BASE_URL'),
-                          reasoning_effort=os.getenv("OPENAI_REASONING_EFFORT") or None)
+        return NativeToolIdChat(id=model, api_key=os.getenv('OPENAI_API_KEY'), base_url=os.getenv('OPENAI_BASE_URL'),
+                               reasoning_effort=os.getenv("OPENAI_REASONING_EFFORT") or None)
 
     def agent_manifest(self, room, name):
         try:

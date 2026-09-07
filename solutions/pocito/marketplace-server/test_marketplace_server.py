@@ -2,6 +2,7 @@ import json
 import asyncio
 import io
 import os
+import secrets
 import tempfile
 import unittest
 import urllib.error
@@ -13,7 +14,11 @@ from unittest.mock import patch
 import httpx
 from fastapi.testclient import TestClient
 
-from agno_server import create_app as create_agent_os_app, knowledge_reader
+from agno.agent import Agent
+from agno.models.message import Message as AgnoMessage
+from agno.models.openai import OpenAIChat
+
+from agno_server import NativeToolIdChat, create_app as create_agent_os_app, knowledge_reader
 from marketplace_e2e_model import MarketplaceE2EEmbedder, model_factory
 from marketplace_server import create_app, flapi_package
 from marketplace_storage import S3ObjectStore
@@ -376,6 +381,73 @@ class MarketplaceServerTest(unittest.TestCase):
     def test_adhoc_run_with_empty_message_returns_422(self):
         self.assertEqual(self.agno.post('/adhoc/runs', json={'message': ''}).status_code, 422)
         self.assertEqual(self.agno.post('/adhoc/runs', json={}).status_code, 422)
+
+
+def chat_completion(**message):
+    return {'id': 'chatcmpl-1', 'object': 'chat.completion', 'created': 0, 'model': 'minimax-skynet',
+      'choices': [{'index': 0, 'finish_reason': 'tool_calls' if 'tool_calls' in message else 'stop',
+        'message': {'role': 'assistant', 'content': None, **message}}]}
+
+
+def stateful_upstream(issued, echoed):
+    """A model server that keys per-conversation state on the tool call id it issued, and answers an
+    unknown id the way vLLM answers a response id it no longer holds."""
+    def handle(request):
+        calls = [call for message in json.loads(request.content)['messages'] for call in (message.get('tool_calls') or [])]
+        if not calls:
+            issued.append(f'chatcmpl-tool-{uuid.uuid4().hex}')
+            return httpx.Response(200, json=chat_completion(tool_calls=[{'id': issued[-1], 'type': 'function',
+              'function': {'name': 'clock', 'arguments': '{}'}}]))
+        echoed.append(calls[-1]['id'])
+        if echoed[-1] not in issued:
+            return httpx.Response(404, json={'error': {'code': 404, 'param': 'response_id', 'type': 'invalid_request_error',
+              'message': f"Response with id 'resp_{secrets.token_hex(8)}' not found."}})
+        return httpx.Response(200, json=chat_completion(content='12:00'))
+    return httpx.MockTransport(handle)
+
+
+def clock() -> str:
+    """Return the current time."""
+    return '12:00'
+
+
+class ToolCallIdFormattingTest(unittest.TestCase):
+    """The model server's tool call ids must reach it unchanged."""
+    server_id = f'chatcmpl-tool-{uuid.uuid4().hex}'
+
+    def formatted(self, model):
+        return model._format_all_messages([
+            AgnoMessage(role='assistant', tool_calls=[{'id': self.server_id, 'type': 'function',
+              'function': {'name': 'clock', 'arguments': '{}'}}]),
+            AgnoMessage(role='tool', tool_call_id=self.server_id, content='12:00')])
+
+    def test_agno_replaces_foreign_ids_with_a_colliding_counter(self):
+        replaced = self.formatted(OpenAIChat(id='minimax-skynet'))[0]['tool_calls'][0]['id']
+        self.assertNotEqual(replaced, self.server_id)
+        self.assertEqual(replaced, self.formatted(OpenAIChat(id='minimax-skynet'))[0]['tool_calls'][0]['id'])
+
+    def test_native_tool_ids_survive(self):
+        sent = self.formatted(NativeToolIdChat(id='minimax-skynet'))
+        self.assertEqual((sent[0]['tool_calls'][0]['id'], sent[1]['tool_call_id']), (self.server_id, self.server_id))
+
+
+class StatefulUpstreamRunTest(unittest.IsolatedAsyncioTestCase):
+    async def run_agent(self, model_class):
+        issued, echoed = [], []
+        agent = Agent(tools=[clock], telemetry=False, model=model_class(id='minimax-skynet', api_key='unused',
+          http_client=httpx.AsyncClient(transport=stateful_upstream(issued, echoed))))
+        return await agent.arun('what time is it'), issued, echoed
+
+    async def test_rewritten_ids_break_the_call_after_the_tool(self):
+        run, issued, echoed = await self.run_agent(OpenAIChat)
+        self.assertNotEqual(echoed, issued)
+        self.assertIn('not found', run.content)
+
+    async def test_native_ids_complete_the_run(self):
+        run, issued, echoed = await self.run_agent(NativeToolIdChat)
+        self.assertEqual(echoed, issued)
+        self.assertEqual(run.content, '12:00')
+
 
 if __name__ == '__main__':
     unittest.main()
