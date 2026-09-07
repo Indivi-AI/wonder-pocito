@@ -1,24 +1,33 @@
-#!/bin/sh
-set -eu
+#!/bin/bash
+set -euo pipefail
+mode=${1:---all}
+case "$mode" in --all|--code|--images) ;; *) echo "Usage: $0 [--all|--code|--images]" >&2; exit 1 ;; esac
+[ "$#" -le 1 ] || { echo "Expected one export mode" >&2; exit 1; }
 root=$(CDPATH= cd -- "$(dirname "$0")/../../.." && pwd)
 images="$root/solutions/pocito/on-prem/images"
+mkdir -p "$images"
 stage=$(mktemp -d "$images/.export.XXXXXX")
-bundle_next="$root/wonder-pocito.bundle.next"
-trap '[ ! -f "$bundle_next" ] || unlink "$bundle_next"; find "$stage" -type f -delete 2>/dev/null; rmdir "$stage" 2>/dev/null || :' EXIT HUP INT TERM
+trap 'rm -rf "$stage"' EXIT
+checksum() { if command -v sha256sum >/dev/null; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
 cd "$root"
-branch=$(git symbolic-ref --quiet --short HEAD)
-git bundle create "$bundle_next" HEAD "refs/heads/$branch"
-mv "$bundle_next" wonder-pocito.bundle
-docker build --platform linux/amd64 --build-arg POCITO_BUNDLE_BRANCH="$branch" --target pocito-dev \
-  -f solutions/pocito/on-prem/on-premp-dev.dockerfile -t pocito-dev:linux-amd64 .
-docker build --platform linux/amd64 --build-arg POCITO_BUNDLE_BRANCH="$branch" --target pocito-dev-sudo \
-  -f solutions/pocito/on-prem/on-premp-dev.dockerfile -t pocito-dev:sudo-linux-amd64 .
-prefix=pocito-dev-linux-amd64.tar.gz.part-
-docker save pocito-dev:linux-amd64 pocito-dev:sudo-linux-amd64 | gzip -1 | split -b 190m -a 3 - "$stage/$prefix"
-cat "$stage/$prefix"* | gzip -t
-for part in "$stage/$prefix"*; do [ "$(wc -c < "$part")" -lt 200000000 ]; done
-(cd "$stage" && { command -v sha256sum >/dev/null && sha256sum "$prefix"* || shasum -a 256 "$prefix"*; } > SHA256SUMS)
-find "$images" -maxdepth 1 -name "$prefix*" -delete
-mv "$stage/$prefix"* "$images/"
-mv "$stage/SHA256SUMS" "$images/"
-echo "Created $(find "$images" -maxdepth 1 -name "$prefix*" | wc -l | tr -d ' ') verified parts in $images"
+sed -n '/^## Air-gapped development container/,$p' solutions/pocito/local-dev-readme.md | sed '1s/^## /# /' > "$stage/README.md"
+if [ "$mode" != --images ]; then
+  branch=$(git symbolic-ref --quiet --short HEAD)
+  git bundle create "$stage/wonder-pocito.bundle" HEAD "refs/heads/$branch"
+  git bundle verify "$stage/wonder-pocito.bundle"
+  (cd "$stage" && checksum wonder-pocito.bundle > SHA256SUMS.code)
+fi
+if [ "$mode" != --code ]; then
+  docker build --platform linux/amd64 --target pocito-dev \
+    -f solutions/pocito/on-prem/on-premp-dev.dockerfile -t pocito-dev:linux-amd64 .
+  docker build --platform linux/amd64 --target pocito-dev-sudo \
+    -f solutions/pocito/on-prem/on-premp-dev.dockerfile -t pocito-dev:sudo-linux-amd64 .
+  prefix=pocito-dev-linux-amd64.tar.gz.part-
+  docker save pocito-dev:linux-amd64 pocito-dev:sudo-linux-amd64 | gzip -1 | split -b 190m -a 3 - "$stage/$prefix"
+  cat "$stage/$prefix"* | gzip -t
+  for part in "$stage/$prefix"*; do [ "$(wc -c < "$part")" -lt 200000000 ]; done
+  (cd "$stage" && checksum "$prefix"* > SHA256SUMS)
+  find "$images" -maxdepth 1 -name "$prefix*" -delete
+fi
+mv "$stage/"* "$images/"
+echo "Exported $mode to $images; follow README.md for setup and updates."

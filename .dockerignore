@@ -6,3 +6,5 @@ tests
 **/tests
 **/static-wasm
 *.log
+/wonder-pocito.bundle
+solutions/pocito/on-prem/images

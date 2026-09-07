@@ -108,17 +108,18 @@ Open the returned public or signed room URL in the browser and verify desktop pl
 
 ## On-prem development-container verification
 
-The air-gapped dev image contains dependencies, OMP and a current-branch Git bundle. Its entrypoint clones the bundle into a named Linux volume at
-`/workspace/repo` only when that volume is empty. VS Code and coding agents work inside that checkout; do not bind-mount a Windows checkout.
-MinIO and PostgreSQL/pgvector remain external services. On native Linux prefer host networking; with bridge networking use endpoints reachable from
-the container, such as `host.docker.internal` where supported. Do not move these services into the image.
+The air-gapped dev image contains dependencies and the OMP binary. Clone the exported Git bundle on the native Linux host and bind-mount that
+checkout at `/workspace/repo`. The entrypoint requires the checkout and never clones or updates it; `omp` runs its launcher from the checkout.
+MinIO and PostgreSQL/pgvector remain external services. With bridge networking use endpoints reachable from the container, such as
+`host.docker.internal`; host networking is optional on dedicated native Linux hosts. Do not move these services into the image.
 
 Pass service configuration with Docker `--env-file`. If bundled LiteLLM is used, mount its ignored YAML outside the checkout and set
 `LITELLM_CONFIG` to that container path. Never put provider keys in the Git bundle, tracked template, build arguments, or image layers.
 
 Run `npm run pocito-dev-airgapped`; it requires external FLAPI and directly uses image dependencies without inspecting mounted lockfiles.
-Do not mount `node_modules`; the image provides it at `/workspace/node_modules`. Persist `/workspace/repo`, `/var/lib/pocito`, and `/home/pocito`.
-The exact load, volume initialization, run, startup and shutdown commands are in `solutions/pocito/local-dev-readme.md`.
+Do not put `node_modules` in the host checkout; the image provides it at `/workspace/node_modules`. Persist `/var/lib/pocito` and `/home/pocito`.
+The exact export, host clone, permissions, run, update and migration commands are in `solutions/pocito/local-dev-readme.md` and the exported README.
+`npm run airgapped-export -- --code` exports code without Docker; `--images` exports images only; the default exports both under `on-prem/images`.
 Stop or restart the air-gapped stack through its container lifecycle.
 
 The on-prem suite is imported by `.jb6/entry-points-default.js` because an air-gapped container normally has no Git identity.
