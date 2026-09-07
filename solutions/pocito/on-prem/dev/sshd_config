@@ -1,7 +1,7 @@
 Port 2222
 ListenAddress 0.0.0.0
-HostKey /var/lib/pocito/ssh/ssh_host_ed25519_key
-PidFile /var/lib/pocito/ssh/sshd.pid
+HostKey /home/pocito/.ssh/ssh_host_ed25519_key
+PidFile /home/pocito/.ssh/sshd.pid
 AuthorizedKeysFile .ssh/authorized_keys
 PubkeyAuthentication yes
 PasswordAuthentication no

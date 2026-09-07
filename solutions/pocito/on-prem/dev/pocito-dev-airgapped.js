@@ -11,6 +11,7 @@ const internalLiteLlm = !env.LITELLM_HOST, internalAgno = !env.AGNO_API_URL
 Object.assign(env, {
   ENV_PATH: envFile, WONDER_AUTH_MODE: 'none', STORAGE_PROVIDER: 'minio', WONDER_STORAGE_URL: minio,
   MARKETPLACE_HOST: '0.0.0.0', AGENT_OS_HOST: '0.0.0.0',
+  MARKETPLACE_DATA_DIR: env.MARKETPLACE_DATA_DIR || '/tmp/pocito-marketplace',
   WONDER_LOCAL_SERVER: app, WONDER_SERVICE_URL: app,
   WONDER_CDN_URL: `${app}/jb6_packages/react/lib`, MARKETPLACE_API_URL: marketplace,
   S3_USE_PATH_STYLE: env.S3_USE_PATH_STYLE || 'true',

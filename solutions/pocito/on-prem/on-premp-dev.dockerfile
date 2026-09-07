@@ -40,8 +40,8 @@ RUN --mount=type=secret,id=uvconfig,target=/root/.config/uv/uv.toml \
         | sha256sum | cut -d ' ' -f 1 > /opt/pocito/venvs/$project/.pocito-lock || exit 1; \
     done
 RUN /opt/pocito/venvs/litellm/bin/python -c "import tiktoken; [tiktoken.get_encoding(n) for n in ['cl100k_base', 'o200k_base']]" \
-    && mkdir -p /var/lib/pocito /workspace/repo \
-    && chown -R pocito:pocito /opt/pocito /var/lib/pocito /workspace/repo
+    && mkdir -p /workspace/repo \
+    && chown -R pocito:pocito /opt/pocito /workspace/repo
 
 COPY --from=minio-client /usr/bin/mc /usr/local/bin/mc
 ADD --chmod=755 --checksum=sha256:c6a306347a57c872bf38587e81132db50490228867e3e179a363a4cf874da1a0 \
@@ -58,12 +58,11 @@ COPY --chmod=755 solutions/pocito/on-prem/dev/pocito-entrypoint.sh /usr/local/bi
 COPY --chmod=755 solutions/pocito/on-prem/dev/start-sshd.sh /usr/local/bin/start-pocito-sshd
 COPY solutions/pocito/on-prem/dev/sshd_config /etc/ssh/sshd_config_pocito
 
-ENV POCITO_DEPS_DIR=/opt/pocito POCITO_DATA_DIR=/var/lib/pocito POCITO_NODE_MODULES=/workspace/node_modules \
-    POCITO_BIND_HOST=0.0.0.0 PI_CODING_AGENT_DIR=/var/lib/pocito/omp \
+ENV POCITO_DEPS_DIR=/opt/pocito POCITO_DATA_DIR=/home/pocito/.local/share/pocito POCITO_NODE_MODULES=/workspace/node_modules \
+    POCITO_BIND_HOST=0.0.0.0 PI_CODING_AGENT_DIR=/home/pocito/.local/share/pocito/omp \
     OTEL_SDK_DISABLED=true UV_OFFLINE=1
 USER pocito
 WORKDIR /workspace/repo
-VOLUME ["/home/pocito", "/var/lib/pocito"]
 EXPOSE 2222 3000 7777 7778 4000 6001
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/pocito-entrypoint"]
 CMD ["/usr/local/bin/start-pocito-sshd"]

@@ -117,7 +117,8 @@ Pass service configuration with Docker `--env-file`. If bundled LiteLLM is used,
 `LITELLM_CONFIG` to that container path. Never put provider keys in the Git bundle, tracked template, build arguments, or image layers.
 
 Run `npm run pocito-dev-airgapped`; it requires external FLAPI and directly uses image dependencies without inspecting mounted lockfiles.
-Do not put `node_modules` in the host checkout; the image provides it at `/workspace/node_modules`. Persist `/var/lib/pocito` and `/home/pocito`.
+Do not put `node_modules` in the host checkout; the image provides it at `/workspace/node_modules`.
+Agno working files use `/tmp/pocito-marketplace`. OMP state and SSH keys use `/home/pocito`; a home volume is optional and no data volume is needed.
 The exact export, host clone, permissions, run, update and migration commands are in `solutions/pocito/local-dev-readme.md` and the exported README.
 `npm run airgapped-export -- --code` exports code without Docker; `--images` exports images only; the default exports both under `on-prem/images`.
 Stop or restart the air-gapped stack through its container lifecycle.

@@ -130,8 +130,6 @@ export POCITO_CONFIG="$HOME/.config/pocito"
 export POCITO_IMAGE=pocito-dev:latest
 export POCITO_CONTAINER=pocito-dev
 export POCITO_HTTP_PORT=58000
-export POCITO_HOME_VOLUME=pocito-home
-export POCITO_DATA_VOLUME=pocito-data
 cd "$POCITO_KIT"
 sha256sum -c SHA256SUMS
 set -o pipefail
@@ -179,11 +177,7 @@ mkdir -p "$POCITO_CONFIG"
 chmod 700 "$POCITO_CONFIG"
 cp "$POCITO_CHECKOUT/solutions/pocito/.env.onprem.example" "$POCITO_CONFIG/pocito.env"
 cp "$POCITO_CHECKOUT/solutions/pocito/on-prem/litellm/config.yaml" "$POCITO_CONFIG/litellm.yaml"
-cat >> "$POCITO_CONFIG/pocito.env" <<'ENV'
-POCITO_PORT=3000
-POCITO_DATA_DIR=/var/lib/pocito
-PI_CODING_AGENT_DIR=/var/lib/pocito/omp
-ENV
+printf 'POCITO_PORT=3000\n' >> "$POCITO_CONFIG/pocito.env"
 chmod 600 "$POCITO_CONFIG/pocito.env" "$POCITO_CONFIG/litellm.yaml"
 vi "$POCITO_CONFIG/pocito.env"
 vi "$POCITO_CONFIG/litellm.yaml"
@@ -206,6 +200,12 @@ Set these values in `pocito.env`:
 | `LITELLM_CONFIG` | `/run/pocito/litellm.yaml` when using bundled LiteLLM |
 | `LITELLM_API_KEY` | Gateway API key if authentication is enabled |
 | `AGNO_API_URL` | External Agno origin, or empty to start bundled Agno |
+
+When upgrading an existing configuration, remove `POCITO_DATA_DIR`, `PI_CODING_AGENT_DIR` and `MARKETPLACE_DATA_DIR` overrides to use the new defaults:
+
+```sh
+sed -i.bak '/^POCITO_DATA_DIR=/d; /^PI_CODING_AGENT_DIR=/d; /^MARKETPLACE_DATA_DIR=/d' "$POCITO_CONFIG/pocito.env"
+```
 
 For bundled LiteLLM, change the copied YAML's OpenAI examples to your on-prem model endpoints, model names and keys.
 Provide `chat` and `embeddings` aliases. Embedding dimensions must agree with the configured model and existing knowledge indexes.
@@ -233,16 +233,12 @@ MinIO/PostgreSQL images and their data are separate from this export. Existing i
 ### 6. Start the container and services
 
 ```sh
-docker volume create "$POCITO_HOME_VOLUME"
-docker volume create "$POCITO_DATA_VOLUME"
 docker run -d --name "$POCITO_CONTAINER" --platform linux/amd64 \
   --add-host host.docker.internal:host-gateway \
   -p "$POCITO_HTTP_PORT:3000" \
   --env-file "$POCITO_CONFIG/pocito.env" \
   --mount "type=bind,src=$POCITO_CHECKOUT,dst=/workspace/repo" \
   --mount "type=bind,src=$POCITO_CONFIG/litellm.yaml,dst=/run/pocito/litellm.yaml,readonly" \
-  --mount "type=volume,src=$POCITO_HOME_VOLUME,dst=/home/pocito" \
-  --mount "type=volume,src=$POCITO_DATA_VOLUME,dst=/var/lib/pocito" \
   "$POCITO_IMAGE" npm run pocito-dev-airgapped
 if [ "$(id -u)" != 1000 ]; then
   docker exec "$POCITO_CONTAINER" git config --global --add safe.directory /workspace/repo
@@ -254,8 +250,14 @@ docker logs -f "$POCITO_CONTAINER"
 Ctrl+C leaves the detached container running. The entrypoint requires the checkout and executes the supplied command without changing Git state.
 The launcher starts Pocito, Marketplace and configured bundled Agno/LiteLLM services. It requires external FLAPI and uses image dependencies.
 Before starting a bundled service it terminates processes on that container port. Inspect startup warnings and readiness failures in the logs.
-Home and application data persist in named volumes; source and local edits persist in the host checkout.
+This command uses no Docker volumes. Source and local edits persist in the host checkout.
+Agno writes working copies of skills, Python tools and knowledge documents from MinIO under `/tmp/pocito-marketplace`; they can be recreated.
+OMP state is under `/home/pocito/.local/share/pocito/omp`, and SSH keys are under `/home/pocito/.ssh`.
+Home files survive stop/start but are lost when the container is removed unless home is mounted or backed up.
 Marketplace, Agno and LiteLLM browser requests use Pocito's same-origin routes, so only the app port needs publishing.
+
+To persist home, optionally add `--mount type=volume,src=pocito-home,dst=/home/pocito` before `"$POCITO_IMAGE"` in the run command.
+Docker creates the named volume if needed. Use a separate home volume name for each developer; no data volume is needed.
 
 ### 7. Inspect, develop and verify
 
@@ -328,15 +330,16 @@ docker stop "$POCITO_CONTAINER"
 docker start "$POCITO_CONTAINER"
 ```
 
-To install a new image, stop the container, verify/load the new image parts with section 2, then remove only the stopped container:
+To install a new image, preserve any home files you need, stop the container, verify/load the new image parts with section 2, then remove the stopped container:
 
 ```sh
 docker stop "$POCITO_CONTAINER"
 docker rm "$POCITO_CONTAINER"
 ```
 
-Repeat the `docker run` command in section 6 with the same checkout and home/data volumes. This also applies after changing `--env-file` values.
+Repeat the `docker run` command in section 6 with the same checkout and optional home mount. This also applies after changing `--env-file` values.
 A plain `docker start` reuses the old container's image and environment; it does not adopt a newly loaded image or changed environment file.
+Older images still declare automatic home/data volumes. Load a rebuilt image and recreate the container to remove those declarations.
 Rebuild images after npm/Python dependency changes, OMP binary upgrades, or Dockerfile/bootstrap changes. Normal source updates use code-only export.
 BuildKit secrets `npmrc` and `uvconfig` support private package indexes when passed to `docker build --secret` on the connected machine.
 
@@ -353,9 +356,10 @@ docker cp "$POCITO_CONTAINER:/workspace/repo/." "$POCITO_CHECKOUT/"
 git -C "$POCITO_CHECKOUT" status --short
 ```
 
-Set `POCITO_HOME_VOLUME` and `POCITO_DATA_VOLUME` to the existing volumes shown by inspect, including an anonymous volume name when applicable.
-Preserve the old `POCITO_DATA_DIR` and `PI_CODING_AGENT_DIR` values when data was stored under the home volume.
+To reuse an existing home volume, use its inspected name in the optional home mount from section 6, including an anonymous volume name when applicable.
 Copy an old environment file outside the checkout into `POCITO_CONFIG` rather than replacing it with the initial setup template.
+Remove the old directory overrides with section 4. The new container does not mount the old data volume.
+Before removing the old container, copy any OMP sessions or SSH host keys you want to retain from its data directory into the new home paths in section 6.
 If the copied checkout contains `node_modules`, move it outside the checkout before starting; the new container uses its own dependencies.
 Apply the permissions from section 3, prepare the runtime configuration, then remove the stopped container with `docker rm` and run section 6.
 Keep the old workspace volume until Git state, local files and application behavior have been verified. The update commands fetch directly from the
