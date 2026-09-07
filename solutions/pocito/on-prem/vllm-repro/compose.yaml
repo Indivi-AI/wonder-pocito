@@ -1,0 +1,57 @@
+name: pocito-vllm-repro
+
+services:
+  vllm:
+    image: vllm/vllm-openai-cpu:v0.28.0@sha256:197354e6475e638eb5ccca09beb078488046a82de0e204e7429bf1a804df9647
+    ports: ["127.0.0.1:${VLLM_REPRO_PORT:-18000}:8000"]
+    volumes: ["models:/root/.cache/huggingface"]
+    shm_size: 1gb
+    mem_limit: 4gb
+    environment:
+      VLLM_ENABLE_RESPONSES_API_STORE: "${RESPONSES_STORE:-0}"
+      VLLM_CPU_OMP_THREADS_BIND: nobind
+      OMP_NUM_THREADS: "2"
+      VLLM_NO_USAGE_STATS: "1"
+      HF_HUB_DISABLE_TELEMETRY: "1"
+    command:
+      - HuggingFaceTB/SmolLM2-135M-Instruct
+      - --revision=12fd25f77366fa6b3b4b768ec3050bf629380bac
+      - --served-model-name=tiny
+      - --enable-auto-tool-choice
+      - --tool-call-parser=hermes
+      - --dtype=bfloat16
+      - --max-model-len=1024
+      - --max-num-seqs=1
+      - --max-num-batched-tokens=1024
+      - --kv-cache-memory-bytes=134217728
+      - --enforce-eager
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 120
+
+  litellm:
+    build: .
+    image: pocito-vllm-repro-client:local
+    command: ["litellm", "--config", "litellm.yaml", "--host", "0.0.0.0", "--port", "4000"]
+    ports: ["127.0.0.1:${LITELLM_REPRO_PORT:-14000}:4000"]
+    depends_on:
+      vllm: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4000/health/liveliness')"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  reproduce:
+    image: pocito-vllm-repro-client:local
+    profiles: ["test"]
+    command: ["python", "-u", "reproduce.py"]
+    environment:
+      RESPONSES_STORE: "${RESPONSES_STORE:-0}"
+    depends_on:
+      litellm: {condition: service_healthy}
+
+volumes:
+  models:

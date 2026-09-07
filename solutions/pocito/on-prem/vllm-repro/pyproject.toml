@@ -1,0 +1,5 @@
+[project]
+name = "pocito-vllm-repro"
+version = "0.1.0"
+requires-python = ">=3.11,<3.12"
+dependencies = ["agno==2.8.5", "openai==2.54.0", "httpx==0.28.1", "litellm[proxy]==1.98.0"]

@@ -1,0 +1,9 @@
+model_list:
+  - model_name: tiny
+    litellm_params:
+      model: openai/tiny
+      api_base: http://vllm:8000/v1
+      api_key: unused
+router_settings:
+  num_retries: 0
+  disable_cooldowns: true

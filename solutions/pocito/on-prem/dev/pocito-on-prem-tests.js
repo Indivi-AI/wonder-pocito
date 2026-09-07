@@ -4,9 +4,10 @@ import '@jb6/testing'
 import '@wonder/studio/mcp-tools/wonder-mcp-tools.js'
 import './pocito-on-prem-test-applet.js'
 import './pocito-gateway-tests.js'
+import '../../agno-server/agno-test-runner.js'
 
 const {
-  common: { Data, boolean: { and, contains, equals } },
+  common: { Data, data: { pocitoAgnoChatContinuation }, boolean: { and, contains, equals } },
   test: { Test, test: { dataTest } }
 } = dsls
 
@@ -276,6 +277,15 @@ Test('pocitoIntegration.litellm', {
     expectedResult: and(contains('POCITO_LITELLM_OK', { allText: '%reply%' }), equals('%dimensions%', 1536)),
     timeout: 120000,
     logger: 'onPremLogger'
+  })
+})
+
+Test('pocitoIntegration.agnoChatContinuation', {
+  HeavyTest: true,
+  nodeOnly: true,
+  impl: dataTest(pocitoAgnoChatContinuation(), and(equals('%nonStreaming%', true), equals('%streaming%', true)), {
+    timeout: 370000,
+    logger: 'agentOsLogger,onPremLogger'
   })
 })
 

@@ -5,13 +5,14 @@ import '@jb6/react/tests/react-testers.js'
 import './wonder-platform-runtime.js'
 import './wonder-platform.js'
 import './wonder-agents.js'
+import '../agno-server/agno-test-runner.js'
 
 const {
   tgp: { CtxEnricher },
   common: { Data, data: { asIs, wFetch, wonderPlatformAnswer, wonderPlatformListSkills, wonderPlatformLoadSkill,
     wonderPlatformLoadTargetSkills, wonderPlatformMarketplaceCall, wonderPlatformMarketplaceItem, wonderPlatformMarketplaceManifest,
     wonderPlatformNormalize, wonderPlatformPublishSkill, wonderPlatformSeed, wonderPlatformUpsert, wonderPlatformAgentOsRun,
-    wonderPlatformFlapiPackage },
+    wonderPlatformFlapiPackage, pocitoAgnoChatContinuation },
     boolean: { and, contains, equals, notContains } },
   react: { ReactComp, UiAction, 'react-comp': { comp, wonderPlatform },
     'ui-action': { actions, click, waitForText, waitForSelector, waitForMutations } },
@@ -368,6 +369,15 @@ Test('wonderPlatform.agentOsRun', {
       request: dsls.common.data.wonderPlatformAgentOsCapture()}),
     expectedResult: and(equals('%text%', 'Grounded answer'), equals('%runId%', 'run-1'),
       equals('%runtimeSteps/0/kind%', 'AgentOS'))
+  })
+})
+
+Test('wonderPlatform.agnoChatContinuation', {
+  HeavyTest: true,
+  nodeOnly: true,
+  impl: dataTest(pocitoAgnoChatContinuation(), and(equals('%nonStreaming%', true), equals('%streaming%', true)), {
+    timeout: 370000,
+    logger: 'agentOsLogger'
   })
 })
 
