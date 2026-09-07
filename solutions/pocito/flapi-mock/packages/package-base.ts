@@ -147,6 +147,37 @@ function inferFieldType(value: unknown): { fieldType: FieldType; ontologyType: O
   return { fieldType: 'string', ontologyType: 'TEXT' };
 }
 
+function inferFieldDescription(fieldName: string, cubeName: string): string {
+  const map: Record<string, string> = {
+    id: 'מזהה ייחודי של הרשומה',
+    customer_id: 'מזהה הלקוח במערכת',
+    customer_name: 'שם הלקוח המלא',
+    product_id: 'מזהה המוצר במערכת',
+    product_name: 'שם המוצר',
+    category: 'קטגוריית המוצר',
+    price: 'מחיר המוצר',
+    unit_price: 'מחיר ליחידה',
+    cost: 'עלות המוצר',
+    quantity: 'כמות פריטים',
+    order_date: 'תאריך ביצוע ההזמנה',
+    status: 'סטטוס ההזמנה',
+    payment: 'אמצעי תשלום',
+    stock: 'כמות במלאי',
+    rating: 'דירוג ממוצע (1-5)',
+    reviews_count: 'מספר ביקורות שנכתבו',
+    email: 'כתובת אימייל של הלקוח',
+    city: 'עיר מגורים',
+    total_orders: 'סך כל ההזמנות שבוצעו',
+    total_spent: 'סך כל הרכישות הכספיות',
+    member_since: 'תאריך הצטרפות למועדון',
+    tier: 'רמת חברות במועדון',
+    date: 'תאריך הרשומה',
+    title: 'כותרת הרשומה',
+    brand: 'מותג המוצר',
+  };
+  return map[fieldName.toLowerCase()] || `ערך שדה ${fieldName}`;
+}
+
 export function buildQueriesFromData(
   data: Record<string, unknown>,
   packageId: number,
@@ -175,7 +206,7 @@ export function buildQueriesFromData(
             OntologyType: ontologyType,
             OriginalOntologyType: ontologyType,
           },
-          Description: null,
+          Description: inferFieldDescription(fieldName, cubeName),
         };
       });
 

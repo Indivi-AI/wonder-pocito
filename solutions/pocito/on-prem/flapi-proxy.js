@@ -11,9 +11,7 @@ export function setupFlapiProxyRoute(app) {
   app.get('/flapi/package/:packageId', async (req, res) => {
     if (!baseUrl) return res.status(503).json({error: 'FLAPI_BASE_URL is not configured'})
     try {
-      const id = encodeURIComponent(req.params.packageId), [quick, metadata] = await Promise.all([
-        postJson(`/package/v1/quick/${id}`), postJson(`/package/v2/${id}`)])
-      res.json({quick, metadata})
+      res.json({metadata: await postJson(`/package/v2/${encodeURIComponent(req.params.packageId)}`)})
     } catch (error) { res.status(error.status || 502).json({error: error.message}) }
   })
   app.post('/flapi/package/:packageId/run', express.json(), async (req, res) => {

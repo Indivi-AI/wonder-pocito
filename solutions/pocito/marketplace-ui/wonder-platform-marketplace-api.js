@@ -106,7 +106,10 @@ Data('wonderPlatformMarketplaceManifest', {
     if (resource == 'knowledge') return base
     const {tags, ...toolBase} = base
     return {...toolBase, tool_type: 'flow_package', is_async: true, tracable: true,
-      package_id: item.packageId || '', input_schema: item.inputSchema || [], output_cubes: item.outputCubes || []}
+      package_id: item.packageId || '', input_schema: item.inputSchema || [], input_bindings: (item.inputBindings || []).map(binding => ({
+        query_id: binding.queryId, query_name: binding.queryName, field: binding.field, display_name: binding.displayName,
+        type: binding.type, mode: binding.mode, description: binding.description, ...(binding.mode == 'fixed' && {value: binding.value})})),
+      output_cubes: item.outputCubes || []}
   }
 })
 
@@ -129,7 +132,9 @@ Data('wonderPlatformMarketplaceItem', {
       kind: resource == 'tools' ? ['flow_package', 'flow_cube'].includes(item.tool_type) ? 'flow' : 'connector' : item.kind,
       managed: resource == 'tools' && item.tool_type == 'kick_graphql', files: item.contents?.data || item.files || [],
       fileCount: item.contents?.meta?.total_count ?? item.files?.length ?? 0,
-      packageId: item.package_id || '', inputSchema: item.input_schema || [],
+      packageId: item.package_id || '', inputSchema: item.input_schema || [], inputBindings: (item.input_bindings || []).map(binding => ({
+        queryId: binding.query_id, queryName: binding.query_name, field: binding.field, displayName: binding.display_name,
+        type: binding.type, mode: binding.mode, description: binding.description, ...('value' in binding && {value: binding.value})})),
       outputCubes: (item.output_cubes || []).map(cube => {
         const name = cube.Name || cube.name || cube.id || '';
         return {
@@ -256,7 +261,7 @@ Data('wonderPlatformAgentOsRun', {
       duration: `${Math.max(1, Math.round((Date.now() - startedAt) / 1000))} שנ׳`,
       runId: run.run_id || run.runId,
       opikUrl: run.opik_url || run.trace_url,
-      runtimeSteps: [{kind: 'AgentOS', title: target.name, runtime: true}]
+      runtimeSteps: dsls.common.data.wonderPlatformRuntimeSteps.$runWithCtx(ctx, {run})
     }
   }
 })

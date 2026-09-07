@@ -17,7 +17,11 @@ ReactComp('wonderPlatformAgentResultTestHost', {
         result: {harness: 'agno', text: 'Agno answer', runId: 'run-1', sessionId: 'session-1'}}),
       hh(ctx, dsls.react['react-comp'].wonderPlatformAgentResult, {
         result: {harness: 'llmflow', text: 'Flow answer', runId: 'flow-run', followUps: ['Next step'],
-          runtimeSteps: [{kind: 'מודל'}]}}))
+          runtimeSteps: [{kind: 'מודל'}]}}),
+      hh(ctx, dsls.react['react-comp'].wonderPlatformRunTrace, {status: 'נכשל', steps: [
+        {kind: 'כלי', title: 'run_flow', status: 'הושלם', input: {category: 'Audio'},
+          output: {rows: Array.from({length: 7}, (_, index) => ({id: index + 1, name: `row-${index + 1}`}))}},
+        {kind: 'מודל', title: 'תשובה סופית', status: 'נכשל', error: 'Model timeout'}]}))
   })
 })
 Test('wonderPlatform.agentWUrlRejectsLlmFlow', {
@@ -71,7 +75,19 @@ Test('wonderPlatform.agentWUrlAgno', {
 })
 Test('wonderPlatform.agentResultComponents', {
   impl: reactTest({$: 'react-comp<react>wonderPlatformAgentResultTestHost'},
-    and(contains('תשובת AgentOS'), contains('run-1'), contains('תשובת LLM Flow'), contains('Next step')))
+    and(contains('תשובת AgentOS'), contains('run-1'), contains('תשובת LLM Flow'), contains('Next step'),
+      contains('5 מתוך 7 שורות'), contains('Model timeout'), contains('run_flow')))
+})
+Test('wonderPlatform.runtimeStepsReflectAgentOs', {
+  impl: dataTest({
+    calculate: ctx => dsls.common.data.wonderPlatformRuntimeSteps.$runWithCtx(ctx, {run: {status: 'COMPLETED', content: 'Done', tools: [
+      {tool_name: 'search_knowledge_base', tool_args: {query: 'refund'}, result: '{"matches":[1]}', metrics: {duration: 0.2}},
+      {tool_name: 'get_skill_instructions', tool_args: {skill_name: 'support'}, result: 'Use policy'},
+      {tool_name: 'run_flow', tool_args: {category: 'Audio'}, result: '{"rows":[1,2]}', tool_call_error: false}
+    ]}}),
+    expectedResult: and(equals('%0/kind%', 'ידע'), equals('%1/kind%', 'מיומנות'), equals('%2/kind%', 'כלי'),
+      equals('%2/input/category%', 'Audio'), equals('%2/output/rows/1%', 2), equals('%3/kind%', 'מודל'), equals('%3/output%', 'Done'))
+  })
 })
 Test('wonderPlatform.agentUsesAgno', {
   impl: dataTest({

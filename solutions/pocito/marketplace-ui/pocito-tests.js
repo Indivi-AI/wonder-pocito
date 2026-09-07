@@ -53,8 +53,8 @@ Data('wonderPlatformChatAgentCapture', {
 })
 
 Data('wonderPlatformFlapiFixture', {
-  impl: () => ({quick: {'ecom-query-1': [{Name: 'category', DisplayName: 'Category', Type: 'string', Description: 'Product category'}]},
-    metadata: {Id: 7, Name: 'E-commerce Analytics', Queries: [{id: 'orders', Name: 'Orders Cube', ResultsLimit: 1000, Fields: []}]}})
+  impl: () => ({metadata: {Id: 7, Name: 'E-commerce Analytics', Queries: [{id: 'orders', Name: 'Orders Cube', ResultsLimit: 1000,
+    Fields: [{Name: 'category', DisplayName: 'Category', Type: 'String'}, {Name: 'limit', DisplayName: 'Limit', Type: 'Int'}]}]}})
 })
 
 const { wonderPlatformChatAgentCapture, wonderPlatformTestSave } = dsls.common.data
@@ -176,8 +176,7 @@ Data('wonderPlatformFlapiRoundTrip', {
       requests.push({url: req.url, method: req.method, headers: req.headers,
         body: JSON.parse(Buffer.concat(chunks).toString() || 'null')})
       res.setHeader('content-type', 'application/json')
-      res.end(JSON.stringify(req.url.includes('/quick/') ? {'ecom-query-1': [{Name: 'category'}]}
-        : {Id: 7, Name: 'E-commerce Analytics', Queries: [{Name: 'Orders Cube'}]}))
+      res.end(JSON.stringify({Id: 7, Name: 'E-commerce Analytics', Queries: [{Name: 'Orders Cube'}]}))
     })
     await new Promise(resolve => upstream.listen(0, '127.0.0.1', resolve))
     const previous = {FLAPI_BASE_URL: process.env.FLAPI_BASE_URL, FLAPI_TOKEN: process.env.FLAPI_TOKEN,
@@ -204,7 +203,7 @@ Data('wonderPlatformFlapiUiRoundTrip', {
   impl: async () => {
     const {createServer} = await import('node:http'); let path
     const upstream = createServer((req, res) => {
-      path = req.url; res.setHeader('content-type', 'application/json'); res.end('{"quick":{},"metadata":{"Id":7}}')
+      path = req.url; res.setHeader('content-type', 'application/json'); res.end('{"metadata":{"Id":7}}')
     })
     await new Promise(resolve => upstream.listen(0, '127.0.0.1', resolve))
     try {
@@ -280,12 +279,10 @@ Test('wonderPlatform.flapiRoundTrip', {
   nodeOnly: true,
   impl: dataTest({
     calculate: dsls.common.data.wonderPlatformFlapiRoundTrip(),
-    expectedResult: and(equals('%status%', 200), equals('%body/quick/ecom-query-1/0/Name%', 'category'),
-      equals('%body/metadata/Queries/0/Name%', 'Orders Cube'), equals('%requests/length%', 2),
+    expectedResult: and(equals('%status%', 200), equals('%body/metadata/Queries/0/Name%', 'Orders Cube'), equals('%requests/length%', 1),
       equals('%requests/0/method%', 'POST'), equals('%requests/0/body%', asIs({})),
       equals('%requests/0/headers/content-type%', 'application/json'), equals('%requests/0/headers/accept%', 'application/json'),
-      equals('%requests/0/headers/authorization%', 'test-token'), equals('%requests/0/headers/username%', 'test-user'),
-      equals('%requests/1/headers/authorization%', 'test-token'), equals('%requests/1/headers/username%', 'test-user'))
+      equals('%requests/0/headers/authorization%', 'test-token'), equals('%requests/0/headers/username%', 'test-user'))
   }),
   timeout: 5000,
   logger: 'marketplaceLogger'
@@ -348,6 +345,19 @@ Test('wonderPlatform.marketplaceSkillAssetManifest', {
     expectedResult: equals('%assets%', asIs([
         {path: 'references/checklist.md', content_b64: 'IyBDaGVja2xpc3Q=', mime_type: 'text/markdown'}
     ]))
+  })
+})
+
+Test('wonderPlatform.flowToolManifest', {
+  impl: dataTest({
+    calculate: () => {
+      const inputBindings = [{queryId: 'orders', queryName: 'Orders', field: 'category', displayName: 'Category',
+        type: 'String', mode: 'dynamic', description: 'Category filter'}]
+      const manifest = wonderPlatformMarketplaceManifest.$run({resource: 'tools', item: {id: 'flowTool', packageId: '7', inputBindings}})
+      return wonderPlatformMarketplaceItem.$run({resource: 'tools', item: manifest})
+    },
+    expectedResult: and(equals('%inputBindings/0/queryId%', 'orders'), equals('%inputBindings/0/field%', 'category'),
+      equals('%inputBindings/0/description%', 'Category filter'))
   })
 })
 
@@ -753,11 +763,14 @@ Test('wonderPlatform.navGuardPrompts', {
 
 Test('wonderPlatform.flowToolWizard', {
   impl: reactTest(dsls.react['react-comp'].wonderPlatformMarketplaceTestApp(),
-    and(contains('קוביות פלט'), contains('Orders Cube'), contains('פרמטרים'), notContains('טעינת מארז')), {
+    and(contains('קוביות פלט'), contains('Orders Cube'), contains('קלטים'), contains('חתימת הפונקציה'), notContains('טעינת מארז')), {
       userActions: actions(waitForText('פלאגין ראיות'), click('כלים'), waitForText('כלי ממארז Flow'),
-        click('כלי ממארז Flow'), waitForText('טעינת מארז'), wonderPlatformSetControl('id', {value: '7'}),
-        click('טעינת מארז'), waitForText('E-commerce Analytics'), click('פרמטרים'), waitForText('Category'),
-        click('קוביות פלט'), waitForText('בחר קוביות פלט'), click('בחר קוביות פלט'), click('Orders Cube'))})
+        click('כלי ממארז Flow'), waitForText('טעינת מארז'),
+        wonderPlatformSetControl({selector: '[aria-label="packageId"]', value: '7'}),
+        click('טעינת מארז'), waitForText('E-commerce Analytics'), click('קלטים'), click('Ecom Products Cube'), waitForText('Category'),
+        click('Category'), waitForText('דינמי'), wonderPlatformSetControl({selector: '[aria-label="תיאור category"]', value: 'Category filter'}),
+        click('קוביות פלט'), waitForText('בחירת קוביות פלט'), click('בחירת קוביות פלט'), click('Orders Cube'),
+        click('סיכום'), waitForText('category: string'))})
 })
 
 Test('wonderPlatform.marketplaceSkillAssetUpload', {

@@ -91,7 +91,8 @@ ReactComp('wonderPlatform', {
         rows: resource == 'evaluations' ? [{input: '', expected: '', notes: ''}] : [], rubric: '',
         kind: resource == 'tools' ? 'flow' : undefined, managed: false, tags: [], readme: '',
         backendConfig: {harness: 'agno', harness_type: 'deepagents'},
-        pluginIds: [], assets: [], toolType: resource == 'tools' ? 'flow_package' : undefined, packageId: '', inputSchema: [], outputCubes: [],
+        pluginIds: [], assets: [], toolType: resource == 'tools' ? 'flow_package' : undefined, packageId: '', inputSchema: [],
+        inputBindings: [], outputCubes: [],
         fileCount: 0, syncStatus: 'טיוטה מקומית'})
       const saveRemote = async (resource, item) => {
         const operation = item.originalId ? 'update' : 'create', body = manifest(ctx.setVars({resource, item, operation}))
@@ -210,20 +211,21 @@ ReactComp('wonderPlatform', {
       const saveAndLeave = async () => { const action = pendingLeave; setSaving(true)
         try { await saveTop() } catch (error) { setSaving(false); return }
         setSaving(false); setPendingLeave(); action() }
-      const runTarget = (text, target, sessionId = `${target.id}-${Date.now()}`) => runAgent(ctx.setVars({text, target, sessionId,
-        roomWUrl: repositoryRoomWUrl, agentOsBaseUrl: agentUrl, agentOsToken: token, ...(model && {selectedModel: model})}))
+      const runTarget = (text, target, sessionId = `${target.id}-${Date.now()}`, extraVars = {}) => runAgent(ctx.setVars({text, target, sessionId,
+        roomWUrl: repositoryRoomWUrl, agentOsBaseUrl: agentUrl, agentOsToken: token, ...(model && {selectedModel: model}), ...extraVars}))
       const runEval = async (evaluation, targetResource, target, runRepo = repo) => {
         const startedAt = Date.now(), id = `eval-${startedAt}`, started = new Date(startedAt).toLocaleString('he-IL', {
           dateStyle: 'short', timeStyle: 'short'}), pending = {id, evaluationId: evaluation.id, targetResource, targetId: target.id,
           started, startedAt, status: 'מריץ…', completed: 0, total: evaluation.rows.length, rows: []}
         const pendingRepo = await persistRepo({...runRepo, evalRuns: [pending, ...runRepo.evalRuns]})
-        const semanticTrace = dsls.common.data.wonderPlatformTrace.$runWithCtx(ctx, {repo: runRepo, target})
         const rows = await Promise.all(evaluation.rows.map(async row => {
           try {
             const result = await runTarget(row.input, target)
             return {...row, actual: result.text, runId: result.runId, opikUrl: result.opikUrl,
-              trace: [...semanticTrace, ...(result.runtimeSteps || [])]}
-          } catch (error) { return {...row, actual: String(error.message || error), error: true, trace: semanticTrace} }
+              trace: result.runtimeSteps || []}
+          } catch (error) { const message = String(error.message || error)
+            return {...row, actual: message, error: true,
+              trace: [{kind: 'שגיאה', title: 'הרצת AgentOS', status: 'נכשל', error: message}]} }
         }))
         const result = {...pending, status: rows.some(row => row.error) ? 'נכשל' : 'הושלם', completed: rows.filter(row => !row.error).length, rows}
         await persistRepo({...pendingRepo, evalRuns: pendingRepo.evalRuns.map(run => run.id == id ? result : run)}); return result
@@ -252,18 +254,36 @@ ReactComp('wonderPlatform', {
         const text = message.trim(), agent = repo.agents.find(item => item.id == conversation?.agentId)
         if (!text || busy) return
         setMessage(''); setBusy(true)
+        const agentMsgId = `m-${Date.now() + 1}`
+        let streamedText = ''
         const pending = {...conversation, title: conversation.messages.length ? conversation.title : text.slice(0, 42), when: 'עכשיו',
-          messages: [...conversation.messages, {id: `m-${Date.now()}`, role: 'user', text}]}
+          messages: [
+            ...conversation.messages,
+            {id: `m-${Date.now()}`, role: 'user', text},
+            {id: agentMsgId, role: 'agent', text: '', streaming: true, steps: []}
+          ]}
         await updateConversation(pending)
+        const onChunk = chunk => {
+          streamedText += chunk
+          const current = repoRef.current?.conversations.find(item => item.id == conversation.id) || pending
+          updateConversation({...current, messages: current.messages.map(m =>
+            m.id == agentMsgId ? {...m, text: streamedText} : m
+          )})
+        }
         try {
-          const result = agent ? await runTarget(text, agent, conversation.id) : await runAdhoc(ctx.setVars({text, conversation,
+          const result = agent ? await runTarget(text, agent, conversation.id, {stream: true, onChunk}) : await runAdhoc(ctx.setVars({text, conversation,
             sessionId: conversation.id, roomWUrl: repositoryRoomWUrl, agentOsBaseUrl: agentUrl, agentOsToken: token, selectedModel: model}))
-          const steps = [...dsls.common.data.wonderPlatformTrace.$runWithCtx(ctx, {repo, target: agent || conversation}), ...(result.runtimeSteps || [])]
-          await updateConversation({...pending, messages: [...pending.messages, {...result, id: `m-${Date.now() + 1}`, role: 'agent',
-            text: result.text || result.output, steps}]})
+          const steps = result.runtimeSteps || []
+          const current = repoRef.current?.conversations.find(item => item.id == conversation.id) || pending
+          await updateConversation({...current, messages: current.messages.map(m =>
+            m.id == agentMsgId ? {...m, ...result, streaming: false, text: result.text || streamedText, steps} : m
+          )})
         } catch (error) {
-          await updateConversation({...pending, messages: [...pending.messages, {id: `m-${Date.now() + 1}`, role: 'agent',
-            text: String(error.message || error), status: 'נכשל', steps: []}]})
+          const current = repoRef.current?.conversations.find(item => item.id == conversation.id) || pending
+          await updateConversation({...current, messages: current.messages.map(m =>
+            m.id == agentMsgId ? {...m, streaming: false, text: String(error.message || error), status: 'נכשל',
+              steps: [{kind: 'שגיאה', title: 'הרצת AgentOS', status: 'נכשל', error: String(error.message || error)}]} : m
+          )})
         } finally { setBusy(false) }
       }
       const runSet = async (evaluation, target) => {

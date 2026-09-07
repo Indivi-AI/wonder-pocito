@@ -2825,6 +2825,22 @@
               "$ref": "#/components/schemas/CodeFile"
             },
             "title": "Code Files"
+          },
+          "package_id": {
+            "anyOf": [{"type": "string"}, {"type": "null"}],
+            "title": "Package Id"
+          },
+          "input_schema": {
+            "anyOf": [{"type": "array", "items": {"type": "object", "additionalProperties": true}}, {"type": "null"}],
+            "title": "Input Schema"
+          },
+          "input_bindings": {
+            "anyOf": [{"type": "array", "items": {"type": "object", "additionalProperties": true}}, {"type": "null"}],
+            "title": "Input Bindings"
+          },
+          "output_cubes": {
+            "anyOf": [{"type": "array", "items": {"type": "object", "additionalProperties": true}}, {"type": "null"}],
+            "title": "Output Cubes"
           }
         },
         "title": "CreateTool",
@@ -3359,6 +3375,22 @@
               }
             ],
             "title": "Code Files"
+          },
+          "package_id": {
+            "anyOf": [{"type": "string"}, {"type": "null"}],
+            "title": "Package Id"
+          },
+          "input_schema": {
+            "anyOf": [{"type": "array", "items": {"type": "object", "additionalProperties": true}}, {"type": "null"}],
+            "title": "Input Schema"
+          },
+          "input_bindings": {
+            "anyOf": [{"type": "array", "items": {"type": "object", "additionalProperties": true}}, {"type": "null"}],
+            "title": "Input Bindings"
+          },
+          "output_cubes": {
+            "anyOf": [{"type": "array", "items": {"type": "object", "additionalProperties": true}}, {"type": "null"}],
+            "title": "Output Cubes"
           }
         },
         "title": "UpdateTool",

@@ -229,6 +229,7 @@ Data('wonderPlatformCss', {
   --wp-border: #e5e5e8; --wp-border-strong: #d2d2d8;
   --wp-ink: #111114; --wp-ink-hover: #2c2c33; --wp-ink-2: #3f3f46; --wp-ink-3: #5c5c66; --wp-ink-4: #71717a;
   --wp-danger: #b3261e; --wp-danger-soft: #fdf1f0;
+  --wp-success: #16855b;
   --wp-warn: #8a5a12; --wp-warn-soft: #fdf4e6;
   --wp-sh-1: 0 1px 2px rgb(17 17 19 / 0.06);
   --wp-sh-2: 0 20px 44px -16px rgb(17 17 19 / 0.28), 0 1px 2px rgb(17 17 19 / 0.06);

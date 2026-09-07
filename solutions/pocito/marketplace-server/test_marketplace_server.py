@@ -47,11 +47,11 @@ class FlapiProxyTest(unittest.TestCase):
         with patch.dict(os.environ, {'FLAPI_BASE_URL': 'http://flapi.test', 'FLAPI_TOKEN': 'test-token',
           'FLAPI_USERNAME': '625navehp'}), \
           patch('urllib.request.urlopen') as urlopen:
-            urlopen.return_value.__enter__.return_value.read.side_effect = [b'{"quick": true}', b'{"metadata": true}']
-            self.assertEqual(flapi_package('a/b'), {'quick': {'quick': True}, 'metadata': {'metadata': True}})
+            urlopen.return_value.__enter__.return_value.read.return_value = b'{"metadata": true}'
+            self.assertEqual(flapi_package('a/b'), {'metadata': {'metadata': True}})
             requests = [call.args[0] for call in urlopen.call_args_list]
             self.assertEqual([request.full_url for request in requests],
-              ['http://flapi.test/package/v1/quick/a%2Fb', 'http://flapi.test/package/v2/a%2Fb'])
+              ['http://flapi.test/package/v2/a%2Fb'])
             for request in requests:
                 self.assertEqual(json.loads(request.data), {})
                 self.assertEqual({name: request.get_header(name) for name in ['Content-type', 'Accept', 'Authorization', 'Username']},
@@ -346,7 +346,7 @@ class MarketplaceServerTest(unittest.TestCase):
           'FLAPI_USERNAME': 'mock-test-user'}), \
           patch('urllib.request.urlopen') as urlopen:
             urlopen.return_value.__enter__.return_value.read.return_value = json.dumps({'results': ['Orders Cube']}).encode()
-            result = agno_tool.entrypoint(category='Audio')
+            result = json.loads(agno_tool.entrypoint(category='Audio'))
             self.assertIn('results', result)
             self.assertIn('Orders Cube', result['results'])
             request = urlopen.call_args.args[0]
@@ -354,6 +354,29 @@ class MarketplaceServerTest(unittest.TestCase):
             self.assertEqual({name: request.get_header(name) for name in ['Content-type', 'Accept', 'Authorization', 'Username']},
               {'Content-type': 'application/json', 'Accept': 'application/json', 'Authorization': 'mock-test-token',
                 'Username': 'mock-test-user'})
+
+    def test_flow_package_field_bindings(self):
+        bindings = [
+            {'query_id': 'orders', 'query_name': 'Orders', 'field': 'category', 'display_name': 'Category',
+              'type': 'String', 'mode': 'dynamic', 'description': 'Category selected by the agent'},
+            {'query_id': 'orders', 'query_name': 'Orders', 'field': 'limit', 'display_name': 'Limit',
+              'type': 'Int', 'mode': 'fixed', 'value': 25}
+        ]
+        payload = {'id': 'boundFlowTool', 'display_name': 'Bound Flow Tool', 'description': 'Runs selected fields',
+          'tool_type': 'flow_package', 'package_id': '7', 'input_bindings': bindings,
+          'output_cubes': [{'id': 'orders-result', 'Name': 'Orders Result'}]}
+        created = self.request('POST', '/api/v1/tools/', json=payload)
+        self.assertEqual(created.status_code, 201, created.text)
+        self.assertEqual(created.json()['input_bindings'], bindings)
+        agno_tool = asyncio.run(self.agno.app.state.marketplace_runtime.tool('marketplace', 'boundFlowTool'))
+        self.assertEqual(agno_tool.parameters['required'], ['category'])
+        self.assertEqual(agno_tool.parameters['properties']['category'], {
+          'type': 'string', 'description': 'Category selected by the agent'})
+        with patch('urllib.request.urlopen') as urlopen:
+            urlopen.return_value.__enter__.return_value.read.return_value = b'{"results": []}'
+            agno_tool.entrypoint(category='Audio')
+        self.assertEqual(json.loads(urlopen.call_args.args[0].data), {
+          'orders': {'category': 'Audio', 'limit': 25}})
 
     def test_adhoc_run_with_no_assets_uses_default_conversation(self):
         run = self.agno.post('/adhoc/runs', json={'message': 'Hello there'})

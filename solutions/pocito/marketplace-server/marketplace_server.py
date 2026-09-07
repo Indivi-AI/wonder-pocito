@@ -144,6 +144,7 @@ class CreateTool(ToolDescription):
     code_files: list[CodeFile] = Field(default_factory=list)
     package_id: str | None = None
     input_schema: list[dict[str, Any]] | None = Field(default_factory=list)
+    input_bindings: list[dict[str, Any]] | None = Field(default_factory=list)
     output_cubes: list[dict[str, Any]] | None = Field(default_factory=list)
 
 
@@ -197,6 +198,7 @@ class UpdateTool(StrictModel):
     code_files: list[CodeFile] | None = None
     package_id: str | None = None
     input_schema: list[dict[str, Any]] | None = Field(default_factory=list)
+    input_bindings: list[dict[str, Any]] | None = Field(default_factory=list)
     output_cubes: list[dict[str, Any]] | None = Field(default_factory=list)
 
 
@@ -240,20 +242,17 @@ class UploadRequest(DownloadRequest):
 
 
 def flapi_package(package_id):
-    base_url = os.getenv('FLAPI_BASE_URL', 'http://localhost:6001').rstrip('/')
+    base_url = (os.getenv('FLAPI_BASE_URL') or 'http://localhost:6001').rstrip('/')
     headers = {'Content-Type': 'application/json', 'accept': 'application/json',
       'Authorization': os.getenv('FLAPI_TOKEN', ''), 'Username': os.getenv('FLAPI_USERNAME', '')}
     encoded_id = urllib.parse.quote(package_id, safe='')
-    package = {}
-    for name, path in [('quick', f'package/v1/quick/{encoded_id}'), ('metadata', f'package/v2/{encoded_id}')]:
-        try:
-            request = urllib.request.Request(f'{base_url}/{path}', b'{}', headers, method='POST')
-            with urllib.request.urlopen(request, timeout=30) as response:
-                package[name] = json.loads(response.read())
-        except urllib.error.HTTPError as error:
-            return Response(error.read(), status_code=error.code,
-              media_type=error.headers.get_content_type() if error.headers else None)
-    return package
+    try:
+        request = urllib.request.Request(f'{base_url}/package/v2/{encoded_id}', b'{}', headers, method='POST')
+        with urllib.request.urlopen(request, timeout=30) as response:
+            return {'metadata': json.loads(response.read())}
+    except urllib.error.HTTPError as error:
+        return Response(error.read(), status_code=error.code,
+          media_type=error.headers.get_content_type() if error.headers else None)
 
 
 def create_app():

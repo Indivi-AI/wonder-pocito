@@ -60,16 +60,16 @@ def generate_json_schema(input_schema):
     required = []
     
     type_map = {
-        'String': lambda: {'type': 'string'},
-        'Int': lambda: {'type': 'integer'},
-        'Double': lambda: {'type': 'number'},
-        'Boolean': lambda: {'type': 'boolean'},
-        'Timestamp': lambda: {'type': 'string', 'format': 'date-time'},
-        'DateTime': lambda: {
+        'string': lambda: {'type': 'string'},
+        'int': lambda: {'type': 'integer'},
+        'double': lambda: {'type': 'number'},
+        'boolean': lambda: {'type': 'boolean'},
+        'timestamp': lambda: {'type': 'string', 'format': 'date-time'},
+        'datetime': lambda: {
             'type': 'object',
             'description': 'Date range: e.g. {"From": "YYYY-MM-DD", "To": "YYYY-MM-DD"} or {"TimeBackValue": 30, "TimeBackUnit": "DAY"}'
         },
-        'Haphoch': lambda: {
+        'haphoch': lambda: {
             'type': 'array',
             'items': {
                 'type': 'object',
@@ -87,7 +87,7 @@ def generate_json_schema(input_schema):
         name = param.get('Name')
         if not name:
             continue
-        p_type = param.get('Type', 'String')
+        p_type = str(param.get('Type', 'String')).lower()
         display = param.get('DisplayName', name)
         desc = param.get('Description') or display
         
@@ -105,29 +105,144 @@ def generate_json_schema(input_schema):
     }
 
 
-def make_flow_package_executor(package_id):
+def binding_name(binding, bindings):
+    field = binding.get('field', '')
+    if sum(item.get('field') == field and item.get('mode') == 'dynamic' for item in bindings) == 1:
+        return field
+    query = re.sub(r'\W+', '_', binding.get('query_name') or binding.get('query_id', '')).strip('_').lower()
+    return f'{query}__{field}'
+
+
+def generate_binding_schema(bindings):
+    dynamic = [binding for binding in bindings if binding.get('mode') == 'dynamic']
+    return generate_json_schema([{'Name': binding_name(binding, dynamic), 'Type': binding.get('type', 'String'),
+      'DisplayName': binding.get('display_name') or binding.get('field'), 'Description': binding.get('description'),
+      'IsRequired': True} for binding in dynamic])
+
+
+class JsonDict(dict):
+    def __str__(self):
+        return json.dumps(self, ensure_ascii=False)
+
+
+def make_flow_package_executor(package_id, bindings=None, repo=None, output_cubes=None):
     def execute(**flat_args):
         import urllib.request
         import urllib.error
         import json
-        flapi_base_url = os.getenv('FLAPI_BASE_URL', 'http://localhost:6001')
+        flapi_base_url = os.getenv('FLAPI_BASE_URL') or 'http://localhost:6001'
         url = f"{flapi_base_url.rstrip('/')}/package/v3/{package_id}"
+        params = flat_args if not bindings else {}
+        for binding in bindings or []:
+            value = binding.get('value') if binding.get('mode') == 'fixed' else flat_args[binding_name(binding, bindings)]
+            params.setdefault(binding['query_id'], {})[binding['field']] = value
         req = urllib.request.Request(
             url,
-            data=json.dumps({'params': flat_args}).encode('utf-8'),
+            data=json.dumps(params if bindings else {'params': params}).encode('utf-8'),
             headers={'Content-Type': 'application/json', 'accept': 'application/json',
               'Authorization': os.getenv('FLAPI_TOKEN', ''), 'Username': os.getenv('FLAPI_USERNAME', '')},
             method='POST'
         )
         try:
             with urllib.request.urlopen(req, timeout=30) as response:
-                return json.loads(response.read().decode('utf-8'))
+                raw = response.read().decode('utf-8')
         except urllib.error.HTTPError as e:
             raise RuntimeError(f"FLAPI error {e.code}: {e.read().decode('utf-8')}")
         except Exception as e:
             raise RuntimeError(f"FLAPI request failed: {e}")
-            
+
+        try:
+            data = json.loads(raw) if isinstance(raw, str) else (raw or {})
+        except Exception:
+            return JsonDict({'raw': str(raw)})
+
+        room = ROOM_CONTEXT.get() or 'dev'
+        results = data.get('results') or data.get('cubes') or (data if isinstance(data, dict) else {})
+        cubes = output_cubes or []
+        if len(cubes) == 1:
+            target = cubes[0].get('Name') or cubes[0].get('id') or ''
+            matched = next((k for k in results if k == target or target in k or k in target or k == cubes[0].get('id')), None)
+            rows = results.get(matched) if matched else []
+            if isinstance(rows, dict) and 'rows' in rows: rows = rows['rows']
+            if not isinstance(rows, list): rows = [rows] if rows else []
+            cube_name = cubes[0].get('Name') or matched or 'output'
+            safe_cube = re.sub(r'\W+', '_', str(cube_name)).strip('_') or 'table'
+            file_meta = {'name': f'{safe_cube}.json', 'path': f'{room}/files/{safe_cube}.json', 'row_count': len(rows)}
+            if repo and rows:
+                body = json.dumps(rows, ensure_ascii=False, indent=2).encode()
+                repo.objects.put(file_meta['path'], body, 'application/json')
+                repo.objects.put(f"files/{file_meta['name']}", body, 'application/json')
+            return JsonDict({'cube': cube_name, 'rows': rows, 'total_rows': len(rows), '_file': file_meta})
+
+        files_meta = {}
+        filtered = {}
+        for cube_id, cube_val in (results.items() if isinstance(results, dict) else []):
+            if cubes and not any(c.get('Name') == cube_id or c.get('id') == cube_id or str(c.get('Name') or '') in str(cube_id) for c in cubes):
+                continue
+            rows = cube_val if isinstance(cube_val, list) else (cube_val.get('rows') if isinstance(cube_val, dict) else None)
+            if isinstance(rows, list):
+                filtered[cube_id] = rows
+                safe_cube = re.sub(r'\W+', '_', str(cube_id)).strip('_') or 'table'
+                file_meta = {'name': f'{safe_cube}.json', 'path': f'{room}/files/{safe_cube}.json', 'row_count': len(rows)}
+                files_meta[safe_cube] = file_meta
+                if repo:
+                    body = json.dumps(rows, ensure_ascii=False, indent=2).encode()
+                    repo.objects.put(file_meta['path'], body, 'application/json')
+                    repo.objects.put(f"files/{file_meta['name']}", body, 'application/json')
+        out = {'results': filtered or results}
+        if files_meta: out['_files'] = files_meta
+        return JsonDict(out)
+
     return execute
+
+
+def make_file_reader_tool(repo):
+    params = generate_json_schema([
+        {'Name': 'file_path', 'Type': 'String', 'Description': 'נתיב הקובץ או שמו לקריאה (למשל Ecom_Products_Cube.json)', 'IsRequired': True},
+        {'Name': 'limit', 'Type': 'int', 'Description': 'מספר שורות מקסימלי לקריאה (ברירת מחדל 50)', 'IsRequired': False},
+        {'Name': 'offset', 'Type': 'int', 'Description': 'דילוג שורות (ברירת מחדל 0)', 'IsRequired': False},
+        {'Name': 'search', 'Type': 'String', 'Description': 'סינון טקסט חופשי בשורות', 'IsRequired': False}
+    ])
+
+    def read_file(file_path: str, limit: int = 50, offset: int = 0, search: str = '') -> JsonDict:
+        room = ROOM_CONTEXT.get() or 'dev'
+        clean = file_path.strip().replace('\\', '/')
+        base_name = Path(clean).name
+        candidates = [clean, f"{room}/files/{clean}", f"{room}/files/{base_name}", f"files/{clean}", f"files/{base_name}", base_name]
+        content = None
+        for cand in candidates:
+            try:
+                content = repo.objects.get(cand)
+                break
+            except Exception:
+                continue
+        if not content:
+            return JsonDict({'error': f'קובץ {file_path} לא נמצא במערכת'})
+        try:
+            parsed = json.loads(content.decode())
+            if isinstance(parsed, list):
+                rows = parsed
+                if search:
+                    rows = [r for r in rows if search.lower() in json.dumps(r, ensure_ascii=False).lower()]
+                total = len(rows)
+                sliced = rows[offset:offset + limit]
+                return JsonDict({'total_rows': total, 'returned_rows': len(sliced), 'offset': offset, 'rows': sliced})
+            return JsonDict({'content': parsed})
+        except Exception:
+            text = content.decode()
+            lines = text.splitlines()
+            if search:
+                lines = [l for l in lines if search.lower() in l.lower()]
+            return JsonDict({'total_lines': len(lines), 'lines': lines[offset:offset + limit]})
+
+    return Function(
+        name='read_file',
+        description='קריאת קובץ נתונים או טבלה שנשמרו במערכת (כגון קובץ תוצאות מקוביות קודמות) לצורך סינון, ניתוח או העברה הלאה.',
+        parameters=params,
+        entrypoint=read_file,
+        skip_entrypoint_processing=True,
+    )
+
 
 
 class MarketplaceAgentRuntime:
@@ -206,9 +321,9 @@ class MarketplaceAgentRuntime:
             package_id = manifest.get('package_id')
             if not package_id:
                 raise ValueError(f"flow_package tool {name} is missing package_id")
-            input_schema = manifest.get('input_schema') or []
-            parameters = generate_json_schema(input_schema)
-            entrypoint = make_flow_package_executor(package_id)
+            bindings = manifest.get('input_bindings') or []
+            parameters = generate_binding_schema(bindings) if bindings else generate_json_schema(manifest.get('input_schema') or [])
+            entrypoint = make_flow_package_executor(package_id, bindings, self.repo, manifest.get('output_cubes') or [])
             return Function(name=re.sub(r'\W', '_', name), description=manifest['description'],
               parameters=parameters, entrypoint=entrypoint, skip_entrypoint_processing=True)
 
@@ -328,6 +443,7 @@ class MarketplaceAgentRuntime:
         skills = Skills([LocalSkills(str(self.materialize_skill(room, item)), validate=False) for item in sorted(skill_names)])
         knowledge = self.knowledge(room, sorted(knowledge_names)[0]) if knowledge_names else None
         tools = [await self.tool(room, item, context_ref) for item in sorted(tool_names)]
+        tools.append(make_file_reader_tool(self.repo))
         return Agent(id=agent_id, name=manifest['display_name'], model=self.model_factory(manifest),
           db=self.room_dbs[room], add_history_to_context=True,
           tools=tools, skills=skills,

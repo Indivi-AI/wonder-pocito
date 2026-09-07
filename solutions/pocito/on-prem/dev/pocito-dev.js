@@ -35,7 +35,7 @@ export async function startPocito() {
   const npmInstall = (env.POCITO_NPM_INSTALL || 'ci').split(/\s+/).filter(Boolean)
   const minio = env.MINIO_ENDPOINT, storageClass = env.MINIO_STORAGE_CLASS || 'STANDARD_IA', flapiBaseUrl = env.FLAPI_BASE_URL
   const agnoBaseUrl = env.AGNO_API_URL, localAgno = !agnoBaseUrl
-  const localLitellm = !env.LITELLM_HOST, litellmHost = env.LITELLM_HOST || url('litellm'), llmModel = env.LLM_MODEL || 'openai/chat'
+  const localLitellm = !env.LITELLM_HOST, litellmHost = env.LITELLM_HOST || url('litellm'), llmModel = env.LLM_MODEL || 'chat'
   if (!minio || !env.PGVECTOR_URL) throw new Error('Set MINIO_ENDPOINT and PGVECTOR_URL in .env.onprem')
   Object.assign(env, {
     ENV_PATH: envFile, WONDER_AUTH_MODE: 'none', STORAGE_PROVIDER: 'minio', MINIO_ENDPOINT: minio,

@@ -34,18 +34,19 @@ ReactComp('wonderPlatformWorkspace', {
       const primary = isAgent ? ['plugins'] : isPlugin ? ['skills', 'tools', 'knowledge']
         : repo.marketplace ? ['plugins', 'skills', 'tools'] : ['skills', 'tools']
       const secondary = isAgent ? ['skills', 'tools', 'knowledge'] : []
-      const semanticTrace = dsls.common.data.wonderPlatformTrace.$runWithCtx(ctx, {repo, target: item})
       const sendTest = async input => {
         const text = input.trim()
         if (!text || runs.some(run => run.status == 'מריץ…')) return
-        const id = `test-${Date.now()}`, pending = {id, input: text, status: 'מריץ…', trace: semanticTrace}
+        const id = `test-${Date.now()}`, pending = {id, input: text, status: 'מריץ…', trace: []}
         setRuns(items => [...items, pending]); setTestInput('')
         try {
           const result = await runTarget(text, item, chatSessionId)
           setRuns(items => items.map(run => run.id == id ? {...run, ...result, output: result.text || result.output, status: result.status || 'הושלם',
-            trace: [...semanticTrace, ...(result.runtimeSteps || [])]} : run))
+            trace: result.runtimeSteps || []} : run))
         } catch (error) {
-          setRuns(items => items.map(run => run.id == id ? {...run, status: 'נכשל', output: String(error.message || error)} : run))
+          const message = String(error.message || error)
+          setRuns(items => items.map(run => run.id == id ? {...run, status: 'נכשל', output: message,
+            trace: [{kind: 'שגיאה', title: 'הרצת AgentOS', status: 'נכשל', error: message}]} : run))
         }
       }
       const executeEval = async () => {
@@ -67,10 +68,8 @@ ReactComp('wonderPlatformWorkspace', {
           'div:flex items-center gap-2', {}, h(`span:${classes.chip}`, {}, run.status), run.opikUrl && h(
             'a:inline-flex items-center gap-1 text-[12px] text-[var(--wp-ink)]',
             {href: run.opikUrl, target: '_blank', rel: 'noreferrer'}, 'Opik', h('L:ExternalLink', {size: 12}))), h(
-          'p:mt-3 whitespace-pre-wrap break-words text-[13px] leading-7', {}, run.output || run.status), (run.trace || []).length > 0 && h(
-          'details:mt-3', {}, h('summary:cursor-pointer text-[12px] text-[var(--wp-ink-3)]', {}, 'מעקב הרצה'), (run.trace || []).map((step, stepIndex) => h(
-            'div:mt-2 flex items-center gap-2 text-[12px]', {key: `${step.kind}-${step.id || stepIndex}`}, h(
-              `span:${classes.chip}`, {}, step.kind), h('span:flex-1', {}, step.title)))))))
+          'p:mt-3 whitespace-pre-wrap break-words text-[13px] leading-7', {}, run.output || run.status),
+          hh(ctx, dsls.react['react-comp'].wonderPlatformRunTrace, {steps: run.trace, status: run.status}))))
       const testPanel = h('div:flex h-full min-h-0 flex-col', {}, h('div:flex shrink-0 items-center justify-between gap-3 border-b ' +
         'border-[var(--wp-border)] bg-[var(--wp-surface)] p-3', {},
       h(`span:text-[12px] ${itemDirty || sessionOutdated ? 'text-[var(--wp-warn)]' : 'text-[var(--wp-ink-3)]'}`, {}, configNotice), h(
@@ -95,8 +94,7 @@ ReactComp('wonderPlatformWorkspace', {
             onClick: () => setDetail(detail == index ? -1 : index)}, 'קלט ופלט')), detail == index && h('div:mt-3 grid gap-3 border-t border-dashed pt-3', {},
           [['קלט', row.input], ['פלט מצופה', row.expected], ['פלט בפועל', row.actual]].map(([title, value]) => h('div', {key: title},
             h('b:text-[11px] text-[var(--wp-ink-3)]', {}, title), h('p:mt-1 whitespace-pre-wrap break-words text-[13px]', {}, value || '—'))),
-          (row.trace || []).length > 0 && h('details', {}, h('summary:cursor-pointer text-[12px] text-[var(--wp-ink)]', {}, 'מעקב הרצה'),
-            (row.trace || []).map((step, stepIndex) => h('div:mt-2 text-[12px]', {key: stepIndex}, `${step.kind} · ${step.title}`))),
+          hh(ctx, dsls.react['react-comp'].wonderPlatformRunTrace, {steps: row.trace, status: row.error ? 'נכשל' : 'הושלם'}),
           row.opikUrl && h('a:inline-flex items-center gap-1 text-[12px] text-[var(--wp-ink)]',
             {href: row.opikUrl, target: '_blank', rel: 'noreferrer'}, 'הטרייס המלא ב-Opik', h('L:ExternalLink', {size: 12}))))
       const evalPanel = h('div:wp-scroll h-full overflow-y-auto p-4', {}, h('div:flex items-end gap-2', {}, h('div:flex-1', {},

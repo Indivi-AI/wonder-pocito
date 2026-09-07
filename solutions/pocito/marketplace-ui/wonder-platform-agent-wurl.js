@@ -42,6 +42,32 @@ Data('wonderPlatformAgentContent', {
   }
 })
 
+Data('wonderPlatformRuntimeSteps', {
+  params: [
+    {id: 'run', as: 'object', mandatory: true}
+  ],
+  impl: ({}, {}, {run}) => {
+    const parse = value => {
+      if (typeof value != 'string') return value
+      try { return JSON.parse(value) } catch {}
+      try {
+        return JSON.parse(value.replace(/'/g, '"').replace(/\bNone\b/g, 'null').replace(/\bTrue\b/g, 'true').replace(/\bFalse\b/g, 'false'))
+      } catch { return value }
+    }
+    const tools = (run.tools || []).map(tool => {
+      const name = tool.tool_name || tool.name || 'כלי', failed = !!tool.tool_call_error
+      const kind = name == 'search_knowledge_base' ? 'ידע' : name.startsWith('get_skill_') ? 'מיומנות' : 'כלי'
+      const subject = kind == 'ידע' ? tool.tool_args?.query : kind == 'מיומנות' ? tool.tool_args?.skill_name : name
+      return {kind, title: `${kind == 'ידע' ? 'חיפוש ידע' : kind == 'מיומנות' ? 'טעינת מיומנות' : 'הפעלת כלי'} · ${subject || name}`,
+        status: failed ? 'נכשל' : 'הושלם', duration: tool.metrics?.duration,
+        input: tool.tool_args || tool.arguments, output: failed ? undefined : parse(tool.result), error: failed ? String(tool.result || 'שגיאה') : ''}
+    })
+    const failed = String(run.status || '').toLowerCase().includes('fail')
+    return [...tools, {kind: 'מודל', title: 'תשובה סופית', status: failed ? 'נכשל' : 'הושלם',
+      duration: run.metrics?.duration, output: parse(run.content), ...(failed && {error: String(run.error || run.content || 'הריצה נכשלה')})}]
+  }
+})
+
 Data('wonderPlatformAgentWUrlResponse', {
   params: [
     {id: 'url', as: 'string', mandatory: true},
@@ -79,12 +105,14 @@ Data('wonderPlatformAgentWUrlResponse', {
     } else if (method == 'POST') {
       if (!String(input.message || '').trim()) return json({detail: 'message is required'}, 422)
       sessionId = input.sessionId || `${agentId}-${Date.now()}`
+      const isStream = !!(opts.stream || input.stream)
       body = new FormData()
-      Object.entries({message: input.message, session_id: sessionId, user_id: 'wonder-platform', stream: 'false'})
+      Object.entries({message: input.message, session_id: sessionId, user_id: 'wonder-platform', stream: isStream ? 'true' : 'false'})
         .forEach(([key, value]) => body.append(key, value))
     }
     const upstream = await fetch(`${apiBase}${apiPath}`, {method, headers, ...(body ? {body} : {})})
     if (!upstream.ok) return upstream
+    if (opts.stream || input.stream) return upstream
     return json({...(await upstream.json()), harness, ...(agentId ? {agentId} : {}), ...(sessionId ? {sessionId} : {})}, upstream.status)
   }
 })
@@ -99,11 +127,14 @@ Data('wonderPlatformAgentWUrlRequest', {
     {id: 'model', as: 'string', defaultValue: '%$selectedModel%'}
   ],
   impl: async (ctx, {}, {agentId, message, sessionId, roomWUrl, baseUrl, token, model}) => {
+    const isStream = !!ctx.vars.stream
     const wUrl = `${roomWUrl.replace(/\/$/, '')}/agent/${encodeURIComponent(agentId)}?harness=agno`
     const response = await jb.wonderUtils.wfetch2(wUrl, {
-      method: 'POST', headers: token ? {Authorization: `Bearer ${token}`} : {}, body: {message, sessionId, model}
+      method: 'POST', headers: token ? {Authorization: `Bearer ${token}`} : {},
+      body: {message, sessionId, model, stream: isStream}, stream: isStream
     }, ctx.setVars({marketplaceBaseUrl: baseUrl, agnoBaseUrl: baseUrl}))
     if (!response.ok) throw new Error(`Agent ${response.status}: ${await response.text()}`)
+    if (isStream) return response
     return response.json()
   }
 })
@@ -165,16 +196,50 @@ Data('wonderPlatformRunAgent', {
     })}
   ],
   impl: async (ctx, {}, {text, target, sessionId, roomWUrl, baseUrl, token, request}) => {
-    const startedAt = Date.now(), run = await request(ctx.setVars({
-      text, target, sessionId, roomWUrl, baseUrl, token
-    }))
+    const startedAt = Date.now(), isStream = !!ctx.vars.stream, onChunk = ctx.vars.onChunk
+    const res = await request(ctx.setVars({text, target, sessionId, roomWUrl, baseUrl, token, stream: isStream}))
+    let run
+    if (isStream && res && typeof res.body?.getReader == 'function') {
+      const reader = res.body.getReader(), decoder = new TextDecoder()
+      let buffer = '', currentEvent = 'message'
+      const tools = []
+      while (true) {
+        const {done, value} = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, {stream: true})
+        const lines = buffer.split('\n')
+        buffer = lines.pop()
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (!trimmed) { currentEvent = 'message'; continue }
+          if (trimmed.startsWith('event:')) {
+            currentEvent = trimmed.slice(6).trim()
+          } else if (trimmed.startsWith('data:')) {
+            const raw = trimmed.slice(5).trim()
+            let data = raw
+            try { data = JSON.parse(raw) } catch {}
+            if (currentEvent == 'ToolCallCompleted') {
+              const tool = data?.tool || (data?.tool_name ? data : null)
+              if (tool) tools.push(tool)
+            }
+            if (currentEvent == 'RunContent' && data?.content) onChunk?.(data.content)
+            if (currentEvent == 'RunCompleted' && data) {
+              run = data
+              run.tools = run.tools || tools
+            }
+          }
+        }
+      }
+      if (!run) run = {content: '', status: 'completed', tools}
+      else if (!run.tools || !run.tools.length) run.tools = tools
+    } else { run = res }
     return {
       harness: 'agno', text: dsls.common.data.wonderPlatformAgentContent.$run(run.content),
       status: String(run.status || '').toLowerCase().includes('fail') ? 'נכשל' : 'הושלם',
       duration: `${Math.max(1, Math.round((Date.now() - startedAt) / 1000))} שנ׳`,
-      runId: run.run_id || run.runId, sessionId: run.sessionId,
+      runId: run.run_id || run.runId, sessionId: run.sessionId || sessionId,
       opikUrl: run.opik_url || run.trace_url,
-      runtimeSteps: [{kind: 'AgentOS', title: target.name, runtime: true}]
+      runtimeSteps: dsls.common.data.wonderPlatformRuntimeSteps.$runWithCtx(ctx, {run})
     }
   }
 })
@@ -231,7 +296,7 @@ Data('wonderPlatformRunAdhoc', {
       duration: `${Math.max(1, Math.round((Date.now() - startedAt) / 1000))} שנ׳`,
       runId: run.run_id || run.runId, sessionId: run.session_id || run.sessionId,
       opikUrl: run.opik_url || run.trace_url,
-      runtimeSteps: [{kind: 'AgentOS', title: 'הרצה ללא סוכן', runtime: true}]
+      runtimeSteps: dsls.common.data.wonderPlatformRuntimeSteps.$runWithCtx(ctx, {run})
     }
   }
 })
