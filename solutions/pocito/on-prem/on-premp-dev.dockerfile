@@ -73,5 +73,3 @@ USER root
 RUN apt-get update && apt-get install -y --no-install-recommends sudo && rm -rf /var/lib/apt/lists/* \
     && printf 'pocito:pocito\n' | chpasswd && usermod --append --groups sudo pocito
 USER pocito
-
-FROM pocito-dev-base AS pocito-dev

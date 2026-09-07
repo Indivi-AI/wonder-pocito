@@ -108,7 +108,7 @@ Open the returned public or signed room URL in the browser and verify desktop pl
 
 ## On-prem development-container verification
 
-The air-gapped dev image contains dependencies and the OMP binary. Clone the exported Git bundle on the native Linux host and bind-mount that
+The air-gapped dev image `pocito-dev:latest` contains dependencies, sudo and the OMP binary. Clone the exported Git bundle on Linux and bind-mount that
 checkout at `/workspace/repo`. The entrypoint requires the checkout and never clones or updates it; `omp` runs its launcher from the checkout.
 MinIO and PostgreSQL/pgvector remain external services. With bridge networking use endpoints reachable from the container, such as
 `host.docker.internal`; host networking is optional on dedicated native Linux hosts. Do not move these services into the image.

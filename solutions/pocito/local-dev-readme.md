@@ -89,7 +89,7 @@ For advanced Artifactory authentication, configure uv directly. Missing Python b
 
 ## Air-gapped development container
 
-The Linux AMD64 image supplies dependencies and OMP 18.1.2. Source lives in a native Linux host Git checkout, bind-mounted at `/workspace/repo`.
+The Linux AMD64 image supplies dependencies, sudo and OMP 18.1.2. Source lives in a native Linux host Git checkout, bind-mounted at `/workspace/repo`.
 The Git bundle is an offline delivery artifact. Clone and update it on the host; the container runs the checkout without cloning or updating it.
 MinIO, PostgreSQL/pgvector and FLAPI remain external services. LiteLLM and Agno can run in this container or at configured external endpoints.
 
@@ -114,8 +114,8 @@ Transfer these files from that directory:
 - Image update: `README.md`, `SHA256SUMS`, and every `pocito-dev-linux-amd64.tar.gz.part-*` file.
 
 Code and image checksums are independent. A code-only export leaves existing image archives and their checksums unchanged.
-Image exports include both `pocito-dev:linux-amd64` and `pocito-dev:sudo-linux-amd64`, split into 190 MiB parts, each below 200 MB.
-The sudo variant uses `pocito` as both username and sudo password. Code updates reuse the installed image while dependencies remain compatible.
+The image export contains only the sudo image, tagged `pocito-dev:latest`, split into 190 MiB parts, each below 200 MB.
+The image uses `pocito` as both username and sudo password. Code updates reuse the installed image while dependencies remain compatible.
 
 ### 2. Prepare paths and load images on native Linux
 
@@ -127,7 +127,7 @@ Set these variables in the host shell used for the remaining commands; change th
 export POCITO_KIT="$HOME/pocito-kit"
 export POCITO_CHECKOUT="$HOME/pocito-workspace"
 export POCITO_CONFIG="$HOME/.config/pocito"
-export POCITO_IMAGE=pocito-dev:linux-amd64
+export POCITO_IMAGE=pocito-dev:latest
 export POCITO_CONTAINER=pocito-dev
 export POCITO_HTTP_PORT=58000
 export POCITO_HOME_VOLUME=pocito-home
@@ -140,7 +140,6 @@ cat pocito-dev-linux-amd64.tar.gz.part-* | gzip -dc | docker load
 ```
 
 These commands use Bash. Skip image loading for a code-only delivery when the compatible image is already installed.
-Select `POCITO_IMAGE=pocito-dev:sudo-linux-amd64` to use the sudo variant.
 
 ### 3. Create the host checkout
 

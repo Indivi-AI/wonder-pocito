@@ -18,12 +18,10 @@ if [ "$mode" != --images ]; then
   (cd "$stage" && checksum wonder-pocito.bundle > SHA256SUMS.code)
 fi
 if [ "$mode" != --code ]; then
-  docker build --platform linux/amd64 --target pocito-dev \
-    -f solutions/pocito/on-prem/on-premp-dev.dockerfile -t pocito-dev:linux-amd64 .
   docker build --platform linux/amd64 --target pocito-dev-sudo \
-    -f solutions/pocito/on-prem/on-premp-dev.dockerfile -t pocito-dev:sudo-linux-amd64 .
+    -f solutions/pocito/on-prem/on-premp-dev.dockerfile -t pocito-dev:latest .
   prefix=pocito-dev-linux-amd64.tar.gz.part-
-  docker save pocito-dev:linux-amd64 pocito-dev:sudo-linux-amd64 | gzip -1 | split -b 190m -a 3 - "$stage/$prefix"
+  docker save pocito-dev:latest | gzip -1 | split -b 190m -a 3 - "$stage/$prefix"
   cat "$stage/$prefix"* | gzip -t
   for part in "$stage/$prefix"*; do [ "$(wc -c < "$part")" -lt 200000000 ]; done
   (cd "$stage" && checksum "$prefix"* > SHA256SUMS)
