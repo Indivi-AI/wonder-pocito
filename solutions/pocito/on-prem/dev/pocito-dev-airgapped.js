@@ -43,7 +43,7 @@ const ready = async (name, url) => {
   }
   if (!stopping) warn(`${name} readiness`, 'timed out after 60 seconds')
 }
-if (internalAgno && !env.PGVECTOR_URL) startPostgres(env)
+if (internalAgno && !env.PGVECTOR_URL) try { startPostgres(env) } catch (error) { warn('PostgreSQL', error) }
 if (internalLiteLlm && env.LITELLM_CONFIG) start('LiteLLM', ports.litellm, `${venvs}/litellm/bin/litellm`,
   ['--config', env.LITELLM_CONFIG, '--port', ports.litellm])
 else if (internalLiteLlm) warn('LiteLLM', 'LITELLM_CONFIG is not set')

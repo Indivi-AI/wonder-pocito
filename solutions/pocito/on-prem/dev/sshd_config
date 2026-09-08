@@ -6,6 +6,7 @@ PubkeyAuthentication no
 PasswordAuthentication yes
 PermitEmptyPasswords yes
 KbdInteractiveAuthentication no
+PermitUserEnvironment PATH,POCITO_*,PI_CODING_AGENT_DIR,UV_*,OTEL_*,TIKTOKEN_CACHE_DIR
 PermitRootLogin no
 UsePAM no
 AllowUsers pocito
