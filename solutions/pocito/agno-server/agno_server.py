@@ -23,7 +23,7 @@ from agno.knowledge.chunking.fixed import FixedSizeChunking
 from agno.knowledge.embedder.openai import OpenAIEmbedder
 from agno.knowledge.knowledge import Knowledge
 from agno.knowledge.reader import ReaderFactory
-from agno.models.openai import OpenAIResponses
+from agno.models.openai import OpenAIChat
 from agno.os import AgentOS
 from agno.os.utils import format_sse_event
 from agno.skills import LocalSkills, Skills
@@ -48,13 +48,6 @@ from knowledge_mcp import BearerAuthMiddleware, create_knowledge_mcp
 
 ADHOC_DEFAULT_INSTRUCTIONS = 'את/ה עוזר בינה מלאכותית ידידותי ומדויק. השב/י בעברית, בבהירות ובתמציתיות.'
 MODEL_CONTEXT = ContextVar('model', default='')
-
-
-class LiteLLMResponses(OpenAIResponses):
-    """LiteLLM model groups are named by role ('chat'), so agno's id-prefix reasoning detection must be forced on."""
-
-    def _using_reasoning_model(self):
-        return True
 
 
 def knowledge_reader(path):
@@ -157,8 +150,8 @@ class MarketplaceAgentRuntime:
 
     def openai_model(self, manifest):
         model = MODEL_CONTEXT.get() or manifest.get('config', {}).get('backend_config', {}).get('model') or os.getenv('OPENAI_MODEL', 'gpt-5-mini')
-        return LiteLLMResponses(id=model, api_key=os.getenv('OPENAI_API_KEY'), base_url=os.getenv('OPENAI_BASE_URL'),
-                               reasoning_effort=os.getenv("OPENAI_REASONING_EFFORT") or None, reasoning_summary='auto')
+        return OpenAIChat(id=model, api_key=os.getenv('OPENAI_API_KEY'), base_url=os.getenv('OPENAI_BASE_URL'),
+                          reasoning_effort=os.getenv("OPENAI_REASONING_EFFORT") or None)
 
     def agent_manifest(self, room, name):
         try:
