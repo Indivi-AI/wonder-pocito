@@ -53,6 +53,7 @@ ADD --checksum=sha256:104142244b8781b7828e64aa79a61b03fdf16e8a3464278647c3d84ad2
 COPY solutions/pocito/on-prem/dev/git-attributes /etc/pocito/gitattributes
 RUN git config --system core.autocrlf false && git config --system core.filemode false \
     && git config --system core.attributesFile /etc/pocito/gitattributes
+COPY solutions/pocito/on-prem/dev/omp.mjs solutions/pocito/on-prem/dev/omp-minimax.mjs /opt/pocito/omp/
 COPY --chmod=755 solutions/pocito/on-prem/dev/omp.sh /usr/local/bin/omp
 COPY --chmod=755 solutions/pocito/on-prem/dev/pocito-entrypoint.sh /usr/local/bin/pocito-entrypoint
 COPY --chmod=755 solutions/pocito/on-prem/dev/start-sshd.sh /usr/local/bin/start-pocito-sshd
