@@ -64,11 +64,12 @@ ENV POCITO_DEPS_DIR=/opt/pocito POCITO_DATA_DIR=/home/pocito/.local/share/pocito
 USER pocito
 WORKDIR /workspace/repo
 EXPOSE 2222 3000 7777 7778 4000 6001
-ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/pocito-entrypoint"]
-CMD ["/usr/local/bin/start-pocito-sshd"]
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/pocito-entrypoint", "/usr/local/bin/start-pocito-sshd"]
+CMD ["sleep", "infinity"]
 
 FROM pocito-dev-base AS pocito-dev-sudo
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends sudo && rm -rf /var/lib/apt/lists/* \
-    && printf 'pocito:pocito\n' | chpasswd && usermod --append --groups sudo pocito
+    && passwd -d pocito && printf 'pocito ALL=(ALL) NOPASSWD: ALL\n' > /etc/sudoers.d/pocito \
+    && chmod 440 /etc/sudoers.d/pocito && visudo -cf /etc/sudoers.d/pocito
 USER pocito

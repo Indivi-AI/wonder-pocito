@@ -20,6 +20,8 @@ fi
 if [ "$mode" != --code ]; then
   docker build --platform linux/amd64 --target pocito-dev-sudo \
     -f solutions/pocito/on-prem/on-premp-dev.dockerfile -t pocito-dev:latest .
+  docker run --rm --platform linux/amd64 --mount "type=bind,src=$root,dst=/workspace/repo,readonly" pocito-dev:latest \
+    node --test solutions/pocito/on-prem/dev/ssh.test.mjs
   prefix=pocito-dev-linux-amd64.tar.gz.part-
   docker save pocito-dev:latest | gzip -1 | split -b 190m -a 3 - "$stage/$prefix"
   cat "$stage/$prefix"* | gzip -t

@@ -3,6 +3,8 @@
 The Linux AMD64 image supplies dependencies, sudo and OMP 18.1.2. Source lives in a native Linux host Git checkout, bind-mounted at `/workspace/repo`.
 The Git bundle is an offline delivery artifact. Clone and update it on the host; the container runs the checkout without cloning or updating it.
 MinIO, PostgreSQL/pgvector and FLAPI remain external services. LiteLLM and Agno can run in this container or at configured external endpoints.
+Section 1 prepares the delivery on a connected machine. If you already have the exported files, start at section 2 on the native Linux Docker host.
+Run host commands in Bash. SSH commands run on the computer you connect from; replace `LINUX_HOST` with the Docker host's hostname or IP address.
 
 ### 1. Export on the connected machine
 
@@ -16,6 +18,7 @@ npm run airgapped-export -- --images
 ```
 
 Choose one command: the default exports code and images; `--code` exports only code without invoking Docker; `--images` builds and exports only images.
+Image exports verify SSH login and sudo without credentials before creating the archive.
 Every mode writes this standalone `README.md` into `solutions/pocito/on-prem/images/`, using the air-gapped section of the local development README.
 
 Transfer these files from that directory:
@@ -26,7 +29,7 @@ Transfer these files from that directory:
 
 Code and image checksums are independent. A code-only export leaves existing image archives and their checksums unchanged.
 The image export contains only the sudo image, tagged `pocito-dev:latest`, split into 190 MiB parts, each below 200 MB.
-The image uses `pocito` as both username and sudo password. Code updates reuse the installed image while dependencies remain compatible.
+The username is `pocito`; SSH and sudo require no password or client key. Code updates reuse the image while dependencies remain compatible.
 
 ### 2. Prepare paths and load images on native Linux
 
@@ -41,6 +44,7 @@ export POCITO_CONFIG="$HOME/.config/pocito"
 export POCITO_IMAGE=pocito-dev:latest
 export POCITO_CONTAINER=pocito-dev
 export POCITO_HTTP_PORT=58000
+export POCITO_SSH_PORT=2222
 cd "$POCITO_KIT"
 sha256sum -c SHA256SUMS
 set -o pipefail
@@ -112,12 +116,6 @@ Set these values in `pocito.env`:
 | `LITELLM_API_KEY` | Gateway API key if authentication is enabled |
 | `AGNO_API_URL` | External Agno origin, or empty to start bundled Agno |
 
-When upgrading an existing configuration, remove `POCITO_DATA_DIR`, `PI_CODING_AGENT_DIR` and `MARKETPLACE_DATA_DIR` overrides to use the new defaults:
-
-```sh
-sed -i.bak '/^POCITO_DATA_DIR=/d; /^PI_CODING_AGENT_DIR=/d; /^MARKETPLACE_DATA_DIR=/d' "$POCITO_CONFIG/pocito.env"
-```
-
 For bundled LiteLLM, change the copied YAML's OpenAI examples to your on-prem model endpoints, model names and keys.
 Provide `chat` and `embeddings` aliases. Embedding dimensions must agree with the configured model and existing knowledge indexes.
 For external LiteLLM, the YAML is unused; the run command can keep its mount or omit it.
@@ -125,8 +123,6 @@ Model-provider credentials belong in runtime LiteLLM configuration, never in a b
 
 The commands below use bridge networking. `localhost` inside the container refers to the container itself.
 Host services must listen on an address reachable from Docker's bridge; loopback-only host listeners cannot be reached through `host.docker.internal`.
-For dedicated native Linux hosts, `--network host` can replace `--add-host` and `-p`; then use host `localhost` endpoints and app port 3000 directly.
-Do not combine host networking with port remapping.
 
 ### 5. Verify external infrastructure
 
@@ -146,7 +142,7 @@ MinIO/PostgreSQL images and their data are separate from this export. Existing i
 ```sh
 docker run -d --name "$POCITO_CONTAINER" --platform linux/amd64 \
   --add-host host.docker.internal:host-gateway \
-  -p "$POCITO_HTTP_PORT:3000" \
+  -p "$POCITO_HTTP_PORT:3000" -p "$POCITO_SSH_PORT:2222" \
   --env-file "$POCITO_CONFIG/pocito.env" \
   --mount "type=bind,src=$POCITO_CHECKOUT,dst=/workspace/repo" \
   --mount "type=bind,src=$POCITO_CONFIG/litellm.yaml,dst=/run/pocito/litellm.yaml,readonly" \
@@ -159,11 +155,14 @@ docker logs -f "$POCITO_CONTAINER"
 ```
 
 Ctrl+C leaves the detached container running. The entrypoint requires the checkout and executes the supplied command without changing Git state.
+SSH starts automatically on container port 2222 before the supplied command, including Bash or npm. With no command, the container stays running for SSH access.
+Choose an unused `POCITO_SSH_PORT` for each developer: setting it to `5555` publishes `5555:2222`; connect with `ssh -p 5555 pocito@LINUX_HOST`.
+Anyone who can reach the published SSH port can enter this development container as `pocito` and use sudo without credentials.
 The launcher starts Pocito, Marketplace and configured bundled Agno/LiteLLM services. It requires external FLAPI and uses image dependencies.
 Before starting a bundled service it terminates processes on that container port. Inspect startup warnings and readiness failures in the logs.
 This command uses no Docker volumes. Source and local edits persist in the host checkout.
 Agno writes working copies of skills, Python tools and knowledge documents from MinIO under `/tmp/pocito-marketplace`; they can be recreated.
-OMP state is under `/home/pocito/.local/share/pocito/omp`, and SSH keys are under `/home/pocito/.ssh`.
+OMP state is under `/home/pocito/.local/share/pocito/omp`, and generated SSH host keys are under `/home/pocito/.ssh`.
 Home files survive stop/start but are lost when the container is removed unless home is mounted or backed up.
 Marketplace, Agno and LiteLLM browser requests use Pocito's same-origin routes, so only the app port needs publishing.
 
@@ -171,6 +170,15 @@ To persist home, optionally add `--mount type=volume,src=pocito-home,dst=/home/p
 Docker creates the named volume if needed. Use a separate home volume name for each developer; no data volume is needed.
 
 ### 7. Inspect, develop and verify
+
+Connect from your computer, using the hostname and published SSH port chosen in section 2. The default port is 2222; no client key or password is required:
+
+```sh
+ssh -p 2222 pocito@LINUX_HOST
+```
+
+The client may ask you to confirm the server fingerprint on first connection. Use `cd /workspace/repo` after logging in.
+Exit SSH before running these commands on the Docker host:
 
 ```sh
 curl -f "http://localhost:$POCITO_HTTP_PORT/health"
@@ -184,8 +192,6 @@ docker exec -it "$POCITO_CONTAINER" omp --model litellm/coder-default
 Exit the interactive Bash shell before running the subsequent host commands. Choose a model alias returned by `omp models litellm`.
 `omp` invokes the launcher and MiniMax streaming adapter from the mounted checkout; launcher changes take effect in the next OMP session.
 The OMP binary remains in the image. Its adapter displays MiniMax `<mm:think>...</mm:think>` content as reasoning in new responses.
-For an older image with a baked launcher, invoke `node solutions/pocito/on-prem/dev/omp.mjs` inside the checkout until the image is upgraded.
-
 Attach VS Code with **Dev Containers: Attach to Running Container** and open `/workspace/repo` as user `pocito`.
 From another machine open `http://LINUX_HOST:58000/applet/wonderAgents`, replacing the hostname and port with your settings.
 Run the installation suite at `http://LINUX_HOST:58000/wonder/studio/tests.html?pattern=pocitoOnPrem&includeHeavy`.
@@ -250,7 +256,7 @@ docker rm "$POCITO_CONTAINER"
 
 Repeat the `docker run` command in section 6 with the same checkout and optional home mount. This also applies after changing `--env-file` values.
 A plain `docker start` reuses the old container's image and environment; it does not adopt a newly loaded image or changed environment file.
-Older images still declare automatic home/data volumes. Load a rebuilt image and recreate the container to remove those declarations.
+Container creation publishes SSH on the chosen host port; SSH starts automatically without a manual sshd command.
 Rebuild images after npm/Python dependency changes, OMP binary upgrades, or Dockerfile/bootstrap changes. Normal source updates use code-only export.
 BuildKit secrets `npmrc` and `uvconfig` support private package indexes when passed to `docker build --secret` on the connected machine.
 
@@ -269,7 +275,13 @@ git -C "$POCITO_CHECKOUT" status --short
 
 To reuse an existing home volume, use its inspected name in the optional home mount from section 6, including an anonymous volume name when applicable.
 Copy an old environment file outside the checkout into `POCITO_CONFIG` rather than replacing it with the initial setup template.
-Remove the old directory overrides with section 4. The new container does not mount the old data volume.
+To use the image's home paths and temporary Agno files, remove directory overrides from the copied configuration:
+
+```sh
+sed -i.bak '/^POCITO_DATA_DIR=/d; /^PI_CODING_AGENT_DIR=/d; /^MARKETPLACE_DATA_DIR=/d' "$POCITO_CONFIG/pocito.env"
+```
+
+The run command in section 6 uses no data volume.
 Before removing the old container, copy any OMP sessions or SSH host keys you want to retain from its data directory into the new home paths in section 6.
 If the copied checkout contains `node_modules`, move it outside the checkout before starting; the new container uses its own dependencies.
 Apply the permissions from section 3, prepare the runtime configuration, then remove the stopped container with `docker rm` and run section 6.
