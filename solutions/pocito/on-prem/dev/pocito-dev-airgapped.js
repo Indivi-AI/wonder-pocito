@@ -1,5 +1,6 @@
 import { execFileSync, spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
+import { startPostgres } from './postgres.mjs'
 const pocito = 'solutions/pocito', envFile = process.env.POCITO_ENV_FILE || `${pocito}/.env.onprem`, venvs = '/opt/pocito/venvs'
 if (existsSync(envFile)) process.loadEnvFile(envFile)
 const env = process.env, minio = env.MINIO_ENDPOINT
@@ -21,7 +22,11 @@ Object.assign(env, {
   LITELLM_LOCAL_POLICY_TEMPLATES: 'true', LITELLM_LOCAL_BLOG_POSTS: 'True'
 })
 const services = [], finished = [], warn = (name, error) => console.warn(`Warning: ${name} failed; continuing: ${error.message || error}`)
+let stopping = false
+const stop = () => { stopping = true; services.forEach(service => service.kill()) }
+for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, stop)
 const start = (name, port, file, args, vars = {}) => {
+  if (stopping) return
   try { execFileSync('fuser', ['-k', `${port}/tcp`], {stdio: 'ignore'}) } catch (error) { if (error.status != 1) warn(`port ${port} cleanup`, error) }
   const service = spawn(file, args, {env: {...env, ...vars}, stdio: 'inherit'})
   services.push(service)
@@ -32,12 +37,13 @@ const start = (name, port, file, args, vars = {}) => {
 }
 const ready = async (name, url) => {
   const until = Date.now() + 60000
-  while (Date.now() < until) {
+  while (!stopping && Date.now() < until) {
     if (await fetch(url, {signal: AbortSignal.timeout(2000)}).then(response => response.ok).catch(() => false)) return
     await new Promise(ok => setTimeout(ok, 500))
   }
-  warn(`${name} readiness`, 'timed out after 60 seconds')
+  if (!stopping) warn(`${name} readiness`, 'timed out after 60 seconds')
 }
+if (internalAgno && !env.PGVECTOR_URL) startPostgres(env)
 if (internalLiteLlm && env.LITELLM_CONFIG) start('LiteLLM', ports.litellm, `${venvs}/litellm/bin/litellm`,
   ['--config', env.LITELLM_CONFIG, '--port', ports.litellm])
 else if (internalLiteLlm) warn('LiteLLM', 'LITELLM_CONFIG is not set')
@@ -46,7 +52,5 @@ for (const service of ['marketplace', ...(internalAgno ? ['agno'] : [])]) start(
 await Promise.all([ready('Marketplace', `${marketplace}/healthz`), ready('Agno', `${env.AGNO_API_URL.replace(/\/$/, '')}/healthz`)])
 start('Pocito', ports.pocito, process.execPath, ['--import', './nodejs-importmap.js', `${pocito}/on-prem/dev/pocito-local-server.js`],
   {LLM_PROXY_MODE: 'onprem', LLM_PROXY_URL: `${app}/llmProxy`, POCITO_BIND_HOST: '0.0.0.0', PORT: ports.pocito})
-const stop = () => services.forEach(service => service.kill())
-for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, stop)
 await Promise.all(finished)
 stop()

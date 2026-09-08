@@ -2,7 +2,7 @@
 
 The Linux AMD64 image supplies dependencies, sudo and OMP 18.1.2. Source lives in a native Linux host Git checkout, bind-mounted at `/workspace/repo`.
 The Git bundle is an offline delivery artifact. Clone and update it on the host; the container runs the checkout without cloning or updating it.
-MinIO, PostgreSQL/pgvector and FLAPI remain external services. LiteLLM and Agno can run in this container or at configured external endpoints.
+MinIO and FLAPI remain external services. LiteLLM, Agno and PostgreSQL/pgvector can run in this container or at configured external endpoints.
 Section 1 prepares the delivery on a connected machine. If you already have the exported files, start at section 2 on the native Linux Docker host.
 Run host commands in Bash. SSH commands run on the computer you connect from; replace `LINUX_HOST` with the Docker host's hostname or IP address.
 
@@ -106,7 +106,7 @@ Set these values in `pocito.env`:
 | Setting | Required configuration |
 | --- | --- |
 | `MINIO_ENDPOINT` | Reachable MinIO URL; for a host service use `http://host.docker.internal:9000` |
-| `PGVECTOR_URL` | PostgreSQL URL, e.g. `postgresql+psycopg://wonder:wonder-pg-local@host.docker.internal:5432/wonder` |
+| `PGVECTOR_URL` | Empty for bundled PostgreSQL with local Agno; otherwise your external PostgreSQL URL |
 | `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY` | Your MinIO credentials; uncomment and set when overriding the local defaults |
 | `MARKETPLACE_S3_BUCKET` | Your room bucket; default `indiviai-wonder` |
 | `MINIO_STORAGE_CLASS` | `STANDARD` for stock MinIO; otherwise your supported class |
@@ -115,6 +115,10 @@ Set these values in `pocito.env`:
 | `LITELLM_CONFIG` | `/run/pocito/litellm.yaml` when using bundled LiteLLM |
 | `LITELLM_API_KEY` | Gateway API key if authentication is enabled |
 | `AGNO_API_URL` | External Agno origin, or empty to start bundled Agno |
+
+For bundled PostgreSQL, set `PGVECTOR_URL=` and `AGNO_API_URL=`. The launcher initializes PostgreSQL 17 and enables pgvector before starting Agno.
+It listens only on container loopback port 5432, uses database `postgres` and user `pocito`, and requires no published database port.
+A configured `PGVECTOR_URL` always uses that database, including when it is unreachable. External Agno manages its own database.
 
 For bundled LiteLLM, change the copied YAML's OpenAI examples to your on-prem model endpoints, model names and keys.
 Provide `chat` and `embeddings` aliases. Embedding dimensions must agree with the configured model and existing knowledge indexes.
@@ -126,16 +130,16 @@ Host services must listen on an address reachable from Docker's bridge; loopback
 
 ### 5. Verify external infrastructure
 
-Have your on-prem administrators provide MinIO, PostgreSQL with the `vector` extension, and FLAPI before starting Pocito.
+Have your on-prem administrators provide MinIO and FLAPI before starting Pocito; provide PostgreSQL with pgvector when using an external database.
 MinIO needs the `indiviai-wonder` room bucket (or your override) and the `wonder-code-packages` code bucket, with the access policy your applets need.
-For an existing PostgreSQL service, its administrator can enable the extension with:
+For an external PostgreSQL service, its administrator can enable the extension with:
 
 ```sh
 psql "$PGVECTOR_ADMIN_URL" -c 'CREATE EXTENSION IF NOT EXISTS vector;'
 ```
 
 Set `PGVECTOR_ADMIN_URL` to an administrator connection URL using the `postgresql://` scheme; `psql` is an optional host administration tool.
-MinIO/PostgreSQL images and their data are separate from this export. Existing infrastructure does not need to be recreated for code updates.
+External MinIO/PostgreSQL images and their data are separate from this export. Existing infrastructure does not need to be recreated for code updates.
 
 ### 6. Start the container and services
 
@@ -159,10 +163,12 @@ SSH starts automatically on container port 2222 before the supplied command, inc
 Choose an unused `POCITO_SSH_PORT` for each developer: setting it to `5555` publishes `5555:2222`; connect with `ssh -p 5555 pocito@LINUX_HOST`.
 Anyone who can reach the published SSH port can enter this development container as `pocito` and use sudo without credentials.
 The launcher starts Pocito, Marketplace and configured bundled Agno/LiteLLM services. It requires external FLAPI and uses image dependencies.
+Bundled PostgreSQL starts before Agno and stops cleanly with the launcher; its data is reused on subsequent starts.
 Before starting a bundled service it terminates processes on that container port. Inspect startup warnings and readiness failures in the logs.
 This command uses no Docker volumes. Source and local edits persist in the host checkout.
 Agno writes working copies of skills, Python tools and knowledge documents from MinIO under `/tmp/pocito-marketplace`; they can be recreated.
 OMP state is under `/home/pocito/.local/share/pocito/omp`, and generated SSH host keys are under `/home/pocito/.ssh`.
+PostgreSQL data is under `/home/pocito/.local/share/pocito/postgres`; `PGDATA` can override this directory. It is initialized at runtime, not in the image.
 Home files survive stop/start but are lost when the container is removed unless home is mounted or backed up.
 Marketplace, Agno and LiteLLM browser requests use Pocito's same-origin routes, so only the app port needs publishing.
 
@@ -287,3 +293,27 @@ If the copied checkout contains `node_modules`, move it outside the checkout bef
 Apply the permissions from section 3, prepare the runtime configuration, then remove the stopped container with `docker rm` and run section 6.
 Keep the old workspace volume until Git state, local files and application behavior have been verified. The update commands fetch directly from the
 new kit path, so they also work when the migrated checkout still has an old `image-bundle` remote.
+
+### 11. Test bundled PostgreSQL
+
+Use the image and checkout variables from section 2. Preload the MinIO image below when testing offline.
+These commands create an isolated MinIO and a disposable dev container without a home volume; they do not use your application database or bucket.
+The test runs `npm run pocito-dev-airgapped`, verifies pgvector SQL and clean restart persistence, and checks external database/Agno configuration.
+It makes no model or FLAPI requests. All test services communicate on an internal Docker network without Internet access.
+
+```sh
+docker network create --internal pocito-postgres-test
+docker run -d --name pocito-postgres-test-minio --network pocito-postgres-test \
+  -e MINIO_ROOT_USER=wonder -e MINIO_ROOT_PASSWORD=wonder-minio-local \
+  minio/minio:RELEASE.2025-04-22T22-12-26Z server /data
+docker run --rm --network pocito-postgres-test --entrypoint /bin/sh "$POCITO_IMAGE" -ec '
+  mc alias set test http://pocito-postgres-test-minio:9000 wonder wonder-minio-local
+  mc mb test/indiviai-wonder test/wonder-code-packages
+'
+docker run --rm --platform linux/amd64 --network pocito-postgres-test \
+  -e POCITO_TEST_MINIO_ENDPOINT=http://pocito-postgres-test-minio:9000 \
+  --mount "type=bind,src=$POCITO_CHECKOUT,dst=/workspace/repo,readonly" \
+  "$POCITO_IMAGE" node --test solutions/pocito/on-prem/dev/postgres.test.mjs
+docker rm -fv pocito-postgres-test-minio
+docker network rm pocito-postgres-test
+```

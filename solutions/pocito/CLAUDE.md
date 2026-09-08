@@ -111,15 +111,16 @@ Open the returned public or signed room URL in the browser and verify desktop pl
 The air-gapped dev image `pocito-dev:latest` contains dependencies, sudo and the OMP binary. Clone the exported Git bundle on Linux and bind-mount that
 checkout at `/workspace/repo`. The entrypoint requires the checkout and never clones or updates it; `omp` runs its launcher from the checkout.
 SSH starts automatically on port 2222. Publish a host port such as `5555:2222` and connect as `pocito`; SSH and sudo need no credentials in this dev image.
-MinIO and PostgreSQL/pgvector remain external services. With bridge networking use endpoints reachable from the container, such as
-`host.docker.internal`. Do not move these services into the image.
+MinIO remains external. PostgreSQL 17 with pgvector starts locally when Agno is local and `PGVECTOR_URL` is empty; a configured URL always uses that database.
+Bundled PostgreSQL stores data under `/home/pocito/.local/share/pocito/postgres` (override with `PGDATA`) and stops with the air-gapped launcher.
+With bridge networking use external endpoints reachable from the container, such as `host.docker.internal`.
 
 Pass service configuration with Docker `--env-file`. If bundled LiteLLM is used, mount its ignored YAML outside the checkout and set
 `LITELLM_CONFIG` to that container path. Never put provider keys in the Git bundle, tracked template, build arguments, or image layers.
 
 Run `npm run pocito-dev-airgapped`; it requires external FLAPI and directly uses image dependencies without inspecting mounted lockfiles.
 Do not put `node_modules` in the host checkout; the image provides it at `/workspace/node_modules`.
-Agno working files use `/tmp/pocito-marketplace`. OMP state and SSH keys use `/home/pocito`; a home volume is optional and no data volume is needed.
+Agno working files use `/tmp/pocito-marketplace`. PostgreSQL data, OMP state and SSH keys use `/home/pocito`; a home volume is optional.
 The exact export, host clone, permissions, run, update and migration commands are in `solutions/pocito/local-dev-readme.md` and the exported README.
 `npm run airgapped-export -- --code` exports code without Docker; `--images` exports images only; the default exports both under `on-prem/images`.
 Stop or restart the air-gapped stack through its container lifecycle.
