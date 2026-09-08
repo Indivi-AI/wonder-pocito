@@ -76,6 +76,8 @@ ReactComp('wonderPlatformRunTrace', {
         const columns = [...new Set(shown.flatMap(row =>
           row && typeof row == 'object' && !Array.isArray(row) ? Object.keys(row) : ['ערך']))].slice(0, 8)
         const fileInfo = value?._file || (value && typeof value == 'object' && Object.values(value).find(v => v?._file)?._file)
+        const resultInfo = value?.result_id ? value : Object.values(value?.results || {}).find(item => item?.rows === rows)
+        const total = resultInfo?.total_rows ?? rows.length, partial = total > rows.length
         const downloadJson = () => {
           const content = JSON.stringify(rows.length ? rows : value, null, 2)
           const blob = new Blob([content], {type: 'application/json'})
@@ -85,13 +87,15 @@ ReactComp('wonderPlatformRunTrace', {
           a.click()
         }
         const table = rows.length > 0 && h('div:overflow-x-auto rounded-[7px] border border-[var(--wp-border)]', {},
-          h('div:flex flex-wrap items-center justify-between gap-2 border-b border-[var(--wp-border)] bg-[var(--wp-surface-2)] px-2.5 py-1.5 text-[11px] text-[var(--wp-ink-3)]', {},
-            h('span:font-medium', {}, `${isFull ? rows.length : Math.min(5, rows.length)} מתוך ${rows.length} שורות${fileInfo ? ` · ${fileInfo.name}` : ''}`),
+          h('div:flex flex-wrap items-center justify-between gap-2 border-b border-[var(--wp-border)] bg-[var(--wp-surface-2)] ' +
+            'px-2.5 py-1.5 text-[11px] text-[var(--wp-ink-3)]', {},
+            h('span:font-medium', {}, `${shown.length} מתוך ${total} שורות${fileInfo ? ` · ${fileInfo.name}` : ''}`),
             h('div:flex items-center gap-1.5', {},
               h('button:rounded bg-[var(--wp-surface-3)] px-2 py-0.5 text-[11px] font-medium text-[var(--wp-ink)] transition-colors hover:bg-[var(--wp-border)]',
-                {onClick: downloadJson, title: 'הורדת הקובץ המלא'}, 'הורדת קובץ מלא'),
+                {onClick: downloadJson}, partial ? 'הורדת השורות המוצגות' : 'הורדת קובץ מלא'),
               rows.length > 5 && h('button:rounded bg-[var(--wp-surface-3)] px-2 py-0.5 text-[11px] font-medium text-[var(--wp-ink)] transition-colors hover:bg-[var(--wp-border)]',
-                {onClick: () => toggleFull(blockKey), title: isFull ? 'הצגת 5 שורות' : 'הצגת כל השורות'}, isFull ? 'הסתרת שורות' : 'הצגת כל השורות')
+                {onClick: () => toggleFull(blockKey), title: isFull ? 'הצגת 5 שורות' : 'הצגת כל השורות'},
+                isFull ? 'הסתרת שורות' : 'הצגת כל השורות')
             )),
           h('table:w-full border-collapse text-start text-[11px]', {dir: 'auto'},
             h('thead', {}, h('tr', {}, columns.map(column => h(
@@ -119,7 +123,8 @@ ReactComp('wonderPlatformRunTrace', {
               h('span:rounded-full bg-[var(--wp-surface-3)] px-2 py-0.5 text-[10px] text-[var(--wp-ink-3)]', {}, step.kind),
               step.duration != null && h('span:font-mono text-[10px] text-[var(--wp-ink-4)]', {dir: 'ltr'},
                 `${Number(step.duration).toFixed(2)}s`)),
-            valueBlock('קלט', step.input, `${index}-in`), valueBlock('פלט', step.output, `${index}-out`), isFailed && valueBlock('שגיאה', step.error || 'שגיאה לא ידועה', `${index}-err`))
+            valueBlock('קלט', step.input, `${index}-in`), valueBlock('פלט', step.output, `${index}-out`),
+            isFailed && valueBlock('שגיאה', step.error || 'שגיאה לא ידועה', `${index}-err`))
         })))
     }
   })

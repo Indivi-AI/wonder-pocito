@@ -25,6 +25,7 @@ from agno.knowledge.knowledge import Knowledge
 from agno.knowledge.reader import ReaderFactory
 from agno.models.openai import OpenAIChat
 from agno.os import AgentOS
+from agno.run import RunContext
 from agno.skills import LocalSkills, Skills
 from agno.tools.function import Function
 from agno.tools.mcp import MCPTools
@@ -125,8 +126,15 @@ class JsonDict(dict):
         return json.dumps(self, ensure_ascii=False)
 
 
-def make_flow_package_executor(package_id, bindings=None, repo=None, output_cubes=None):
-    def execute(**flat_args):
+def result_key(room, run_context, result_id):
+    if not run_context or not run_context.session_id or not re.fullmatch(r'[a-f0-9]{32}', result_id):
+        raise ValueError('A valid result_id and active session are required')
+    scope = hashlib.sha256(json.dumps([run_context.user_id, run_context.session_id]).encode()).hexdigest()
+    return f'{safe_name(room)}/results/{scope}/{result_id}.json'
+
+
+def make_flow_package_executor(package_id, bindings=None, repo=None, output_cubes=None, room=None):
+    def execute(_agno_run_context: RunContext = None, **flat_args):
         import urllib.request
         import urllib.error
         import json
@@ -156,8 +164,17 @@ def make_flow_package_executor(package_id, bindings=None, repo=None, output_cube
         except Exception:
             return JsonDict({'raw': str(raw)})
 
-        room = ROOM_CONTEXT.get() or 'dev'
-        results = data.get('results') or data.get('cubes') or (data if isinstance(data, dict) else {})
+        def save_result(cube, rows):
+            if not repo:
+                return {'cube': cube, 'rows': rows, 'total_rows': len(rows)}
+            result_id = uuid.uuid4().hex
+            key = result_key(room or ROOM_CONTEXT.get(), _agno_run_context, result_id)
+            repo.objects.put(key, json.dumps({'run_id': _agno_run_context.run_id, 'cube': cube, 'rows': rows},
+              ensure_ascii=False).encode(), 'application/json')
+            return {'result_id': result_id, 'cube': cube, 'rows': rows[:5], 'total_rows': len(rows)}
+
+        results = data.get('results', data.get('cubes', data)) if isinstance(data, dict) else {}
+        results = results or {}
         cubes = output_cubes or []
         if len(cubes) == 1:
             target = cubes[0].get('Name') or cubes[0].get('id') or ''
@@ -166,78 +183,44 @@ def make_flow_package_executor(package_id, bindings=None, repo=None, output_cube
             if isinstance(rows, dict) and 'rows' in rows: rows = rows['rows']
             if not isinstance(rows, list): rows = [rows] if rows else []
             cube_name = cubes[0].get('Name') or matched or 'output'
-            safe_cube = re.sub(r'\W+', '_', str(cube_name)).strip('_') or 'table'
-            file_meta = {'name': f'{safe_cube}.json', 'path': f'{room}/files/{safe_cube}.json', 'row_count': len(rows)}
-            if repo and rows:
-                body = json.dumps(rows, ensure_ascii=False, indent=2).encode()
-                repo.objects.put(file_meta['path'], body, 'application/json')
-                repo.objects.put(f"files/{file_meta['name']}", body, 'application/json')
-            return JsonDict({'cube': cube_name, 'rows': rows, 'total_rows': len(rows), '_file': file_meta})
+            return JsonDict(save_result(cube_name, rows))
 
-        files_meta = {}
         filtered = {}
         for cube_id, cube_val in (results.items() if isinstance(results, dict) else []):
             if cubes and not any(c.get('Name') == cube_id or c.get('id') == cube_id or str(c.get('Name') or '') in str(cube_id) for c in cubes):
                 continue
             rows = cube_val if isinstance(cube_val, list) else (cube_val.get('rows') if isinstance(cube_val, dict) else None)
             if isinstance(rows, list):
-                filtered[cube_id] = rows
-                safe_cube = re.sub(r'\W+', '_', str(cube_id)).strip('_') or 'table'
-                file_meta = {'name': f'{safe_cube}.json', 'path': f'{room}/files/{safe_cube}.json', 'row_count': len(rows)}
-                files_meta[safe_cube] = file_meta
-                if repo:
-                    body = json.dumps(rows, ensure_ascii=False, indent=2).encode()
-                    repo.objects.put(file_meta['path'], body, 'application/json')
-                    repo.objects.put(f"files/{file_meta['name']}", body, 'application/json')
-        out = {'results': filtered or results}
-        if files_meta: out['_files'] = files_meta
-        return JsonDict(out)
+                filtered[cube_id] = save_result(cube_id, rows)
+        return JsonDict({'results': filtered if cubes else filtered or results})
 
     return execute
 
 
-def make_file_reader_tool(repo):
+def make_file_reader_tool(repo, room=None):
     params = generate_json_schema([
-        {'Name': 'file_path', 'Type': 'String', 'Description': 'נתיב הקובץ או שמו לקריאה (למשל Ecom_Products_Cube.json)', 'IsRequired': True},
+        {'Name': 'result_id', 'Type': 'String', 'Description': 'מזהה תוצאה שהוחזר מכלי מארז בשיחה הנוכחית', 'IsRequired': True},
         {'Name': 'limit', 'Type': 'int', 'Description': 'מספר שורות מקסימלי לקריאה (ברירת מחדל 50)', 'IsRequired': False},
         {'Name': 'offset', 'Type': 'int', 'Description': 'דילוג שורות (ברירת מחדל 0)', 'IsRequired': False},
         {'Name': 'search', 'Type': 'String', 'Description': 'סינון טקסט חופשי בשורות', 'IsRequired': False}
     ])
 
-    def read_file(file_path: str, limit: int = 50, offset: int = 0, search: str = '') -> JsonDict:
-        room = ROOM_CONTEXT.get() or 'dev'
-        clean = file_path.strip().replace('\\', '/')
-        base_name = Path(clean).name
-        candidates = [clean, f"{room}/files/{clean}", f"{room}/files/{base_name}", f"files/{clean}", f"files/{base_name}", base_name]
-        content = None
-        for cand in candidates:
-            try:
-                content = repo.objects.get(cand)
-                break
-            except Exception:
-                continue
-        if not content:
-            return JsonDict({'error': f'קובץ {file_path} לא נמצא במערכת'})
+    def read_file(result_id: str, limit: int = 50, offset: int = 0, search: str = '', _agno_run_context: RunContext = None) -> JsonDict:
+        if not 1 <= limit <= 200 or offset < 0:
+            raise ValueError('limit must be 1–200 and offset must be nonnegative')
+        key = result_key(room or ROOM_CONTEXT.get(), _agno_run_context, result_id)
         try:
-            parsed = json.loads(content.decode())
-            if isinstance(parsed, list):
-                rows = parsed
-                if search:
-                    rows = [r for r in rows if search.lower() in json.dumps(r, ensure_ascii=False).lower()]
-                total = len(rows)
-                sliced = rows[offset:offset + limit]
-                return JsonDict({'total_rows': total, 'returned_rows': len(sliced), 'offset': offset, 'rows': sliced})
-            return JsonDict({'content': parsed})
-        except Exception:
-            text = content.decode()
-            lines = text.splitlines()
-            if search:
-                lines = [l for l in lines if search.lower() in l.lower()]
-            return JsonDict({'total_lines': len(lines), 'lines': lines[offset:offset + limit]})
+            result = json.loads(repo.objects.get(key))
+        except FileNotFoundError:
+            raise ValueError('Result not found in the current session') from None
+        rows = [row for row in result['rows'] if not search or search.casefold() in json.dumps(row, ensure_ascii=False).casefold()]
+        return JsonDict({'result_id': result_id, 'cube': result['cube'], 'total_rows': len(rows),
+          'offset': offset, 'rows': rows[offset:offset + limit], 'returned_rows': len(rows[offset:offset + limit])})
 
     return Function(
         name='read_file',
-        description='קריאת קובץ נתונים או טבלה שנשמרו במערכת (כגון קובץ תוצאות מקוביות קודמות) לצורך סינון, ניתוח או העברה הלאה.',
+        description=('קריאת תוצאות מארז בשיחה הנוכחית לפי result_id. '
+          'לקבלת שורות מעבר לתצוגה המקדימה השתמשו ב-offset, limit (עד 200) ו-search.'),
         parameters=params,
         entrypoint=read_file,
         skip_entrypoint_processing=True,
@@ -323,7 +306,7 @@ class MarketplaceAgentRuntime:
                 raise ValueError(f"flow_package tool {name} is missing package_id")
             bindings = manifest.get('input_bindings') or []
             parameters = generate_binding_schema(bindings) if bindings else generate_json_schema(manifest.get('input_schema') or [])
-            entrypoint = make_flow_package_executor(package_id, bindings, self.repo, manifest.get('output_cubes') or [])
+            entrypoint = make_flow_package_executor(package_id, bindings, self.repo, manifest.get('output_cubes') or [], room)
             return Function(name=re.sub(r'\W', '_', name), description=manifest['description'],
               parameters=parameters, entrypoint=entrypoint, skip_entrypoint_processing=True)
 
@@ -443,7 +426,7 @@ class MarketplaceAgentRuntime:
         skills = Skills([LocalSkills(str(self.materialize_skill(room, item)), validate=False) for item in sorted(skill_names)])
         knowledge = self.knowledge(room, sorted(knowledge_names)[0]) if knowledge_names else None
         tools = [await self.tool(room, item, context_ref) for item in sorted(tool_names)]
-        tools.append(make_file_reader_tool(self.repo))
+        tools.append(make_file_reader_tool(self.repo, room))
         return Agent(id=agent_id, name=manifest['display_name'], model=self.model_factory(manifest),
           db=self.room_dbs[room], add_history_to_context=True,
           tools=tools, skills=skills,
