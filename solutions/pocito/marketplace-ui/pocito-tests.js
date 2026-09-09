@@ -53,8 +53,8 @@ Data('wonderPlatformChatAgentCapture', {
 })
 
 Data('wonderPlatformFlapiFixture', {
-  impl: () => ({metadata: {Id: 7, Name: 'E-commerce Analytics', Queries: [{id: 'orders', Name: 'Orders Cube', ResultsLimit: 1000,
-    Fields: [{Name: 'category', DisplayName: 'Category', Type: 'String'}, {Name: 'limit', DisplayName: 'Limit', Type: 'Int'}]}]}})
+  impl: () => ({Id: 7, Name: 'E-commerce Analytics', Queries: [{id: 'orders', Name: 'Orders Cube', ResultsLimit: 1000,
+    Fields: [{Name: 'category', DisplayName: 'Category', Type: 'String'}, {Name: 'limit', DisplayName: 'Limit', Type: 'Int'}]}]})
 })
 
 const { wonderPlatformChatAgentCapture, wonderPlatformTestSave } = dsls.common.data
@@ -203,7 +203,7 @@ Data('wonderPlatformFlapiUiRoundTrip', {
   impl: async () => {
     const {createServer} = await import('node:http'); let path
     const upstream = createServer((req, res) => {
-      path = req.url; res.setHeader('content-type', 'application/json'); res.end('{"metadata":{"Id":7}}')
+      path = req.url; res.setHeader('content-type', 'application/json'); res.end('{"Id":7}')
     })
     await new Promise(resolve => upstream.listen(0, '127.0.0.1', resolve))
     try {
@@ -279,7 +279,7 @@ Test('wonderPlatform.flapiRoundTrip', {
   nodeOnly: true,
   impl: dataTest({
     calculate: dsls.common.data.wonderPlatformFlapiRoundTrip(),
-    expectedResult: and(equals('%status%', 200), equals('%body/metadata/Queries/0/Name%', 'Orders Cube'), equals('%requests/length%', 1),
+    expectedResult: and(equals('%status%', 200), equals('%body/Queries/0/Name%', 'Orders Cube'), equals('%requests/length%', 1),
       equals('%requests/0/method%', 'POST'), equals('%requests/0/body%', asIs({})),
       equals('%requests/0/headers/content-type%', 'application/json'), equals('%requests/0/headers/accept%', 'application/json'),
       equals('%requests/0/headers/authorization%', 'test-token'), equals('%requests/0/headers/username%', 'test-user'))
@@ -292,7 +292,7 @@ Test('wonderPlatform.flapiUiRoundTrip', {
   nodeOnly: true,
   impl: dataTest({
     calculate: dsls.common.data.wonderPlatformFlapiUiRoundTrip(),
-    expectedResult: and(equals('%path%', '/api/v1/flapi/package/a%2Fb'), equals('%result/metadata/Id%', 7))
+    expectedResult: and(equals('%path%', '/api/v1/flapi/package/a%2Fb'), equals('%result/Id%', 7))
   }),
   logger: 'marketplaceLogger'
 })

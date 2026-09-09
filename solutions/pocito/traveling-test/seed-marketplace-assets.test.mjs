@@ -2,14 +2,13 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { seedMarketplaceAssets } from './scripts/seed-marketplace-assets.mjs'
 
-const quick = id => ({[`query-${id}`]: [{Name: 'query', Type: 'String', DisplayName: 'Query', Description: 'Search', IsRequired: false}]})
-const metadata = id => ({Id: Number(id), Name: `Package ${id}`, Queries: [{id: `cube-${id}`, Name: `Cube ${id}`, Fields: []}]})
+const metadata = id => ({Id: Number(id), Name: `Package ${id}`, Queries: [{id: `cube-${id}`, Name: `Cube ${id}`,
+  Fields: [{Name: 'query', Type: 'String', DisplayName: 'Query', Description: 'Search', IsRequired: false}]}]})
 
 test('seeds four FLAPI tools, one skill, and one agent only once', async () => {
   const stored = new Map()
   const fetchImpl = async (input, options = {}) => {
     const path = new URL(input).pathname, method = options.method || 'GET', id = path.split('/').filter(Boolean).at(-1)
-    if (path.includes('/package/v1/quick/')) return Response.json(quick(id))
     if (path.includes('/package/v2/')) return Response.json(metadata(id))
     const parts = path.split('/').filter(Boolean), plural = parts[2]
     if (method == 'GET') return stored.has(`${plural}/${id}`) ? Response.json(stored.get(`${plural}/${id}`)) : new Response('', {status: 404})

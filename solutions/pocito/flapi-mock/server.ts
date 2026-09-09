@@ -312,7 +312,7 @@ server.post('/package/:packageId', { schema: runPackageSchema }, runPackageHandl
 server.get('/flapi/package/:packageId', async (request: any, reply) => {
   const metadata = getPackageFullMetadata(request.params.packageId);
   if (!metadata) return reply.status(404).send(errorBody('not_found', 'Package not found'));
-  return {quick: getQuickParamsInfo(request.params.packageId), metadata};
+  return metadata;
 });
 
 // ——— Health ———

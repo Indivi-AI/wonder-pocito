@@ -249,7 +249,7 @@ def flapi_package(package_id):
     try:
         request = urllib.request.Request(f'{base_url}/package/v2/{encoded_id}', b'{}', headers, method='POST')
         with urllib.request.urlopen(request, timeout=30) as response:
-            return {'metadata': json.loads(response.read())}
+            return json.loads(response.read())
     except urllib.error.HTTPError as error:
         return Response(error.read(), status_code=error.code,
           media_type=error.headers.get_content_type() if error.headers else None)

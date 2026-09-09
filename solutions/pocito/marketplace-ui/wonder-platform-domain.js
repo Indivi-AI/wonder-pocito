@@ -58,16 +58,12 @@ Data('wonderPlatformSeed', {
           'הפער החוסם הוא נוהל ההתאוששות.'}
     ]}, {id: 'c2', title: 'פערי מפרט מוקד צפון', agentId: 'p2', when: 'אתמול', messages: []},
     {id: 'c3', title: 'חריגות שבוע 33', agentId: 'p3', when: 'יום א׳', messages: []}]
-    const quickParam = (Name, DisplayName, Type, IsRequired, IsRequireAny) => ({Name, DisplayName, Description: null, Type,
-      OntologyType: Type == 'DateTime' ? 'TIME' : 'TEXT', IsSingleValue: true, IsRequired, IsRequireAny})
     const query = (id, Name, ResultsLimit) => ({id, uniqueName: id, Name, Description: '', ResultsLimit, DataSourceName: 'reports', Fields: []})
     const flowPackages = [
-      {Id: 4821037, Name: 'איחוד דוחות שבועיים', Description: 'מארז Flow לאיחוד דוחות לפי טווח.', Quick: {default: [
-        quickParam('date_from', 'תאריך התחלה', 'DateTime', true, false), quickParam('date_to', 'תאריך סיום', 'DateTime', true, false),
-        quickParam('unit_code', 'קוד יחידה', 'String', false, false), quickParam('include_drafts', 'כולל טיוטות', 'Boolean', false, false)]},
-      Queries: [query('aggregate_table', 'טבלת איחוד מלאה', 500), query('summary_metrics', 'מדדים מסוכמים', 100)]},
-      {Id: 4821048, Name: 'שליחת חבילת מסמכים', Description: 'מארז Flow לשליחת מסמכים.', Quick: {}, Queries: []},
-      {Id: 4821062, Name: 'מדדי מחסן', Description: 'מארז Flow לשאילתת מדדים.', Quick: {}, Queries: []}
+      {Id: 4821037, Name: 'איחוד דוחות שבועיים', Description: 'מארז Flow לאיחוד דוחות לפי טווח.',
+        Queries: [query('aggregate_table', 'טבלת איחוד מלאה', 500), query('summary_metrics', 'מדדים מסוכמים', 100)]},
+      {Id: 4821048, Name: 'שליחת חבילת מסמכים', Description: 'מארז Flow לשליחת מסמכים.', Queries: []},
+      {Id: 4821062, Name: 'מדדי מחסן', Description: 'מארז Flow לשאילתת מדדים.', Queries: []}
     ]
     const agents = rows(['id', 'name', 'mark', 'icon', 'desc', 'pluginIds', 'skillIds', 'toolIds', 'knowledgeIds', 'owner'], [
       ['ag1', 'סוכן תמיכת לקוחות B2B', 'סת', 'Headset',

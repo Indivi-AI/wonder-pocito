@@ -30,11 +30,8 @@ const flapiJson = async (fetchImpl, baseUrl, path, env) => {
 export const marketplaceAssets = async ({fetchImpl = fetch, env = process.env} = {}) => {
   const flapiBase = env.FLAPI_BASE_URL || 'http://localhost:6001'
   const tools = await Promise.all(packages.map(async ([packageId, id, display_name, description]) => {
-    const [quick, metadata] = await Promise.all([
-      flapiJson(fetchImpl, flapiBase, `package/v1/quick/${packageId}`, env),
-      flapiJson(fetchImpl, flapiBase, `package/v2/${packageId}`, env)
-    ])
-    const input_schema = [...new Map(Object.values(quick).flat().map(param => [param.Name, param])).values()]
+    const metadata = await flapiJson(fetchImpl, flapiBase, `package/v2/${packageId}`, env)
+    const input_schema = [...new Map((metadata.Queries || []).flatMap(q => q.Fields || []).map(param => [param.Name, param])).values()]
     return {kind: 'tool', payload: {id, display_name, description, tool_type: 'flow_package', package_id: packageId,
       input_schema, output_cubes: metadata.Queries || []}}
   }))

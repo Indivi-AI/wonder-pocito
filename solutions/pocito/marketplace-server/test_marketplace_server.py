@@ -48,7 +48,7 @@ class FlapiProxyTest(unittest.TestCase):
           'FLAPI_USERNAME': '625navehp'}), \
           patch('urllib.request.urlopen') as urlopen:
             urlopen.return_value.__enter__.return_value.read.return_value = b'{"metadata": true}'
-            self.assertEqual(flapi_package('a/b'), {'metadata': {'metadata': True}})
+            self.assertEqual(flapi_package('a/b'), {'metadata': True})
             requests = [call.args[0] for call in urlopen.call_args_list]
             self.assertEqual([request.full_url for request in requests],
               ['http://flapi.test/package/v2/a%2Fb'])

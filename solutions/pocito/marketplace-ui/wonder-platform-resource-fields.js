@@ -26,7 +26,7 @@ ReactComp('wonderPlatformResourceFields', {
         if (resource == 'tools' && item.toolType == 'flow_package' && item.packageId) {
           setPackageState({loading: true, error: ''})
           loadPackage(ctx.setVars({packageId: item.packageId}))
-            .then(({metadata}) => {
+            .then(metadata => {
               setPkg(metadata)
               setPackageState({loading: false, error: ''})
             })
@@ -455,7 +455,7 @@ ReactComp('wonderPlatformResourceFields', {
       const loadFlowPackage = async () => {
         setPackageState({loading: true, error: ''})
         try {
-          const {metadata} = await loadPackage(ctx.setVars({packageId: item.packageId}))
+          const metadata = await loadPackage(ctx.setVars({packageId: item.packageId}))
           setPkg(metadata); update({...item, packageId: String(metadata.Id ?? item.packageId), inputSchema: [], inputBindings: [], outputCubes: []})
           setPackageState({loading: false, error: ''})
         } catch (error) { setPackageState({loading: false, error: error.message || String(error)}) }
