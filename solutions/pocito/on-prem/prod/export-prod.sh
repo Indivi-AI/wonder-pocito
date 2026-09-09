@@ -20,6 +20,6 @@ done
 docker save -o "$releaseDir/images.tar" "${images[@]}"
 helm lint "$chartDir" -f "$prodDir/customer-values.example.yaml"
 helm package "$chartDir" --destination "$releaseDir"
-cp "$prodDir/customer-values.example.yaml" "$prodDir/README.md" "$prodDir/deployment-reference.md" "$releaseDir/"
-(cd "$releaseDir" && shasum -a 256 images.tar images.txt pocito-*.tgz customer-values.example.yaml README.md deployment-reference.md > SHA256SUMS)
+cp "$prodDir/"*.example.yaml "$prodDir/README.md" "$prodDir/deployment-reference.md" "$releaseDir/"
+(cd "$releaseDir" && shasum -a 256 images.tar images.txt pocito-*.tgz *.example.yaml README.md deployment-reference.md > SHA256SUMS)
 echo "Release saved to $releaseDir"

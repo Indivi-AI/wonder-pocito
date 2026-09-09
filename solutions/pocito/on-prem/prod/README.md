@@ -10,16 +10,24 @@
 
 3. **Import images:** run `shasum -a 256 -c SHA256SUMS`, then `docker load -i images.tar`. Tag and push all three images to the customer registry.
 
-4. **Prepare OpenShift:** create/select project `pocito`, configure the three Route DNS names/TLS, and create your ConfigMaps and any referenced Secrets.
+4. **Prepare OpenShift:** create/select project `pocito`, configure the three Route DNS names/TLS, and create any referenced Secrets.
    Ensure pods can reach external services and browsers can reach MinIO. Publish applets, lambda packages and runtime assets to MinIO.
    See [configuration keys and release status](deployment-reference.md).
 
-5. **Set deployment values:** copy `customer-values.example.yaml` to `customer-values.yaml`; fill in images, Route hosts and your existing ConfigMap names.
-   Set optional Secret, CA and registry credential references if needed.
+5. **Configure:** make editable copies of the two templates:
+
+   ```sh
+   cp customer-configmaps.example.yaml customer-configmaps.yaml
+   cp customer-values.example.yaml customer-values.yaml
+   ```
+
+   Edit `customer-configmaps.yaml`: replace example endpoints, credentials, database names, model ID and embedding dimensions.
+   Edit `customer-values.yaml`: set images, Route hosts and the matching ConfigMap names; set optional Secret, CA and registry references if needed.
 
 6. **Deploy:**
 
    ```sh
+   oc apply -n pocito -f customer-configmaps.yaml
    helm upgrade --install pocito ./pocito-0.1.0.tgz -n pocito -f customer-values.yaml --wait --timeout 10m
    ```
 

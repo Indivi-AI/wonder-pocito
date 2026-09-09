@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pocito-wonder-config
+data:
+  MINIO_ENDPOINT: "https://minio.customer.example"
+  WONDER_STORAGE_URL: "https://minio.customer.example"
+  WONDER_CDN_URL: "https://minio.customer.example/wonder-code-packages/runtime"
+  LITELLM_HOST: "http://litellm.customer.example:4000"
+  MARKETPLACE_API_URL: "http://pocito-marketplace:7777"
+  AGNO_API_URL: "http://pocito-agno:7778"
+  WONDER_SERVICE_URL: "http://pocito-wonder:8080"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pocito-marketplace-config
+data:
+  MINIO_ENDPOINT: "https://minio.customer.example"
+  WONDER_STORAGE_URL: "https://minio.customer.example"
+  MINIO_ACCESS_KEY: "REPLACE_MINIO_ACCESS_KEY"
+  MINIO_SECRET_KEY: "REPLACE_MINIO_SECRET_KEY"
+  MARKETPLACE_S3_BUCKET: "indiviai-wonder"
+  S3_USE_PATH_STYLE: "true"
+  FLAPI_BASE_URL: "http://flapi.customer.example:6001"
+  FLAPI_TOKEN: ""
+  FLAPI_USERNAME: ""
+  CORS_ALLOWED_ORIGINS: "https://pocito.apps.customer.example,https://marketplace.apps.customer.example"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pocito-agno-config
+data:
+  MINIO_ENDPOINT: "https://minio.customer.example"
+  WONDER_STORAGE_URL: "https://minio.customer.example"
+  MINIO_ACCESS_KEY: "REPLACE_MINIO_ACCESS_KEY"
+  MINIO_SECRET_KEY: "REPLACE_MINIO_SECRET_KEY"
+  MARKETPLACE_S3_BUCKET: "indiviai-wonder"
+  S3_USE_PATH_STYLE: "true"
+  FLAPI_BASE_URL: "http://flapi.customer.example:6001"
+  FLAPI_TOKEN: ""
+  FLAPI_USERNAME: ""
+  LITELLM_HOST: "http://litellm.customer.example:4000"
+  OPENAI_BASE_URL: "http://litellm.customer.example:4000/v1"
+  OPENAI_API_KEY: "unused"
+  OPENAI_MODEL: "chat"
+  OPENAI_EMBEDDING_DIMENSIONS: "1536"
+  AGNO_DB_URL: "postgresql+psycopg://REPLACE_USER:REPLACE_PASSWORD@postgres.customer.example:5432/REPLACE_DATABASE"
+  PGVECTOR_URL: "postgresql+psycopg://REPLACE_USER:REPLACE_PASSWORD@postgres.customer.example:5432/REPLACE_DATABASE"
+  SITE_HOST: "agno.apps.customer.example,pocito-agno"
+  CORS_ALLOWED_ORIGINS: "https://pocito.apps.customer.example,https://agno.apps.customer.example"

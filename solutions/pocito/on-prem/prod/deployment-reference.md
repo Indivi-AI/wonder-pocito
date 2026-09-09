@@ -16,7 +16,12 @@ DuckDB and lambdas requiring it are outside this release.
 Use immutable release tags or registry digests. Supply imagePullSecrets if required by that registry.
 Route hosts must resolve to OpenShift ingress and be covered by its certificate; ingress terminates TLS and redirects HTTP to HTTPS.
 
-Create and edit your ConfigMaps in the deployment namespace before installing the chart.
+The kit includes customer-configmaps.example.yaml with all three ConfigMaps, named to match customer-values.example.yaml.
+Copy it to customer-configmaps.yaml, replace every customer.example address and REPLACE_* value, then apply it in the deployment namespace.
+Keep the two Python services on the same MinIO bucket. The internal pocito-* Service addresses assume Helm release name pocito.
+Fill FLAPI_TOKEN and FLAPI_USERNAME only if your existing FLAPI requires them.
+Set OPENAI_MODEL to your LiteLLM chat model ID and OPENAI_EMBEDDING_DIMENSIONS to your embedding model's output size.
+The current Agno runtime requests the embedding model alias embeddings from LiteLLM. The template's chat and 1536 values are examples.
 Each services.<name>.existingConfigMap names the ConfigMap for that service. Helm neither creates these ConfigMaps nor writes their values.
 The containers receive their keys through envFrom; the existing applications continue reading environment variables.
 There are no env values in Helm and no generated endpoint, model, database or certificate variables.
@@ -37,9 +42,10 @@ AGNO_API_URL: http://pocito-agno:7778
 WONDER_SERVICE_URL: http://pocito-wonder:8080
 ```
 
-Set Agno's OPENAI_BASE_URL to the LiteLLM address plus /v1, and OPENAI_API_KEY to the value expected by that deployment (unused when no key is required).
+Set Agno's OPENAI_BASE_URL to the LiteLLM address plus /v1; the template's OPENAI_API_KEY: unused assumes LiteLLM needs no key.
 Set SITE_HOST to the comma-separated Agno Route hostname and Service name, such as agno.apps.customer.example,pocito-agno.
-Set CORS_ALLOWED_ORIGINS to the HTTPS Wonder origin and the service's own HTTPS origin, separated by commas.
+Match these hosts to customer-values.yaml. SITE_HOST contains hostnames without schemes or spaces.
+Set CORS_ALLOWED_ORIGINS to the HTTPS Wonder origin and the service's own HTTPS origin, separated by commas without spaces.
 The images retain their existing authentication-disabled defaults.
 
 Optional services.<name>.existingSecret references load additional keys through envFrom. These keys take precedence over matching ConfigMap keys.
@@ -56,7 +62,8 @@ They can point to the same existing database. Agno creates a stable schema per r
 Supply AGNO_DB_URL and PGVECTOR_URL in Agno's ConfigMap or referenced Secret; Helm does not supply or validate their contents.
 AGNO_DB_URL is needed for persistent production sessions; the existing runtime falls back to in-memory sessions when it is absent.
 
-MINIO_ENDPOINT must be reachable by pods and browsers. WONDER_STORAGE_URL is an optional browser override; presigning uses that address too.
+MINIO_ENDPOINT must be reachable by pods. WONDER_STORAGE_URL sets the browser-facing address and is also used for presigning.
+If WONDER_STORAGE_URL is omitted, browsers use MINIO_ENDPOINT too.
 WONDER_CDN_URL must point to the mirrored runtime directory already published in MinIO; the example path is illustrative.
 Publish applet definitions, browser snapshots, lambda packages, and their complete runtime assets before serving the apps.
 Marketplace business data and Agno's ingestion queue remain in the existing MinIO bucket; this chart does not create or seed application content.
