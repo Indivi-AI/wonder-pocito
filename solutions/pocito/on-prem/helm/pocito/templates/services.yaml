@@ -1,0 +1,110 @@
+{{- $ports := dict "wonder" 8080 "marketplace" 7777 "agno" 7778 -}}
+{{- range $kind := list "wonder" "marketplace" "agno" }}
+{{- $service := index $.Values.services $kind -}}
+{{- $name := printf "%s-%s" $.Release.Name $kind -}}
+{{- $host := required (printf "services.%s.host is required" $kind) $service.host }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $.Release.Name }}
+      app.kubernetes.io/component: {{ $kind }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ $.Release.Name }}
+        app.kubernetes.io/component: {{ $kind }}
+    spec:
+      terminationGracePeriodSeconds: {{ $.Values.terminationGracePeriodSeconds }}
+      {{- with $.Values.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ $kind }}
+          image: {{ required (printf "services.%s.image is required" $kind) $service.image | quote }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: {{ index $ports $kind }}
+          envFrom:
+            - configMapRef:
+                name: {{ required (printf "services.%s.existingConfigMap is required" $kind) $service.existingConfigMap | quote }}
+            {{- with $service.existingSecret }}
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+          resources: {{ toYaml $service.resources | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: {{ if eq $kind "wonder" }}/health{{ else }}/livez{{ end }}
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+          livenessProbe:
+            httpGet:
+              path: {{ if eq $kind "wonder" }}/health{{ else }}/livez{{ end }}
+              port: http
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: {{ if eq $kind "wonder" }}/health{{ else }}/readyz{{ end }}
+              port: http
+            timeoutSeconds: 10
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            {{- if $.Values.caConfigMap }}
+            - name: ca
+              mountPath: /etc/pocito-ca
+              readOnly: true
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: {{ $service.tmpSizeLimit }}
+        {{- if $.Values.caConfigMap }}
+        - name: ca
+          configMap:
+            name: {{ $.Values.caConfigMap }}
+        {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+spec:
+  selector:
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+    app.kubernetes.io/component: {{ $kind }}
+  ports:
+    - name: http
+      port: {{ index $ports $kind }}
+      targetPort: http
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ $name }}
+  annotations:
+    haproxy.router.openshift.io/timeout: {{ $.Values.routeTimeout | quote }}
+spec:
+  host: {{ $host | quote }}
+  to:
+    kind: Service
+    name: {{ $name }}
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+{{- end }}

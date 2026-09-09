@@ -19,6 +19,7 @@ if str(SCHEMA_DIR) not in sys.path:
     sys.path.insert(0, str(SCHEMA_DIR))
 
 from marketplace_storage import DEFAULT_ROOM, ROOM_CONTEXT, ROOT, MarketplaceRepository, S3ObjectStore, safe_name, safe_path
+from service_http import setup_service_http
 
 
 class StrictModel(BaseModel):
@@ -451,6 +452,7 @@ def create_app():
     base.state.marketplace_repo = repo
     base.openapi_schema = json.loads((ROOT / 'marketplace-openapi.json').read_text())
     base.openapi = lambda: base.openapi_schema
+    setup_service_http(base, healthz)
     return base
 
 

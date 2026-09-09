@@ -1,0 +1,13 @@
+services:
+  wonder:
+    image: registry.customer.example/pocito-wonder:release-version
+    host: pocito.apps.customer.example
+    existingConfigMap: pocito-wonder-config
+  marketplace:
+    image: registry.customer.example/pocito-marketplace:release-version
+    host: marketplace.apps.customer.example
+    existingConfigMap: pocito-marketplace-config
+  agno:
+    image: registry.customer.example/pocito-agno:release-version
+    host: agno.apps.customer.example
+    existingConfigMap: pocito-agno-config

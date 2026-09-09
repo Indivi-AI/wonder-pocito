@@ -1,0 +1,6 @@
+apiVersion: v2
+name: pocito
+description: Pocito published runtime, Marketplace, and Agno for air-gapped OpenShift
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

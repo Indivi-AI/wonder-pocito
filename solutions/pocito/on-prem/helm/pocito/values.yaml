@@ -1,0 +1,26 @@
+imagePullSecrets: []
+routeTimeout: 300s
+terminationGracePeriodSeconds: 30
+caConfigMap: ""
+services:
+  wonder:
+    image: ""
+    host: ""
+    existingConfigMap: ""
+    existingSecret: ""
+    resources: {}
+    tmpSizeLimit: 4Gi
+  marketplace:
+    image: ""
+    host: ""
+    existingConfigMap: ""
+    existingSecret: ""
+    resources: {}
+    tmpSizeLimit: 1Gi
+  agno:
+    image: ""
+    host: ""
+    existingConfigMap: ""
+    existingSecret: ""
+    resources: {}
+    tmpSizeLimit: 4Gi

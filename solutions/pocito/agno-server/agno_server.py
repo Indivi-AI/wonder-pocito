@@ -11,14 +11,15 @@ import os
 import re
 import sys
 import uuid
-from collections import defaultdict
-from contextlib import asynccontextmanager, suppress
+from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from pathlib import Path
+from threading import Event
 
 from agno.agent import Agent
 from agno.agent.factory import AgentFactory
 from agno.db.in_memory import InMemoryDb
+from agno.db.postgres import PostgresDb
 from agno.knowledge.chunking.fixed import FixedSizeChunking
 from agno.knowledge.embedder.openai import OpenAIEmbedder
 from agno.knowledge.knowledge import Knowledge
@@ -45,6 +46,7 @@ if str(SCHEMA_DIR) not in sys.path:
 
 from marketplace_storage import DEFAULT_ROOM, ROOM_CONTEXT, ROOT, MarketplaceRepository, S3ObjectStore, safe_name, safe_path
 from knowledge_mcp import BearerAuthMiddleware, create_knowledge_mcp
+from service_http import setup_service_http
 
 ADHOC_DEFAULT_INSTRUCTIONS = 'את/ה עוזר בינה מלאכותית ידידותי ומדויק. השב/י בעברית, בבהירות ובתמציתיות.'
 MODEL_CONTEXT = ContextVar('model', default='')
@@ -231,8 +233,10 @@ def make_file_reader_tool(repo, room=None):
 class MarketplaceAgentRuntime:
     def __init__(self, repo, runtime_dir, model_factory=None, embedder=None):
         self.repo, self.runtime_dir = repo, Path(runtime_dir)
-        self.db = InMemoryDb()
-        self.room_dbs = defaultdict(InMemoryDb)
+        session_url = os.getenv('AGNO_DB_URL')
+        self.session_db_engine = create_engine(session_url, pool_pre_ping=True) if session_url else None
+        self.room_dbs = {}
+        self.db = self.room_db(DEFAULT_ROOM)
         self.litellm_url = f"{os.getenv('LITELLM_HOST', 'http://localhost:4000').rstrip('/')}/v1"
         self.model_factory = model_factory or self.openai_model
         self.embedder = embedder or OpenAIEmbedder(id='embeddings', dimensions=int(os.getenv('OPENAI_EMBEDDING_DIMENSIONS', '1536')),
@@ -244,6 +248,12 @@ class MarketplaceAgentRuntime:
         self.vector_db_engine = create_engine(pgvector_url, pool_pre_ping=True)
         self.knowledge_instances, self.worker_id = {}, os.urandom(16).hex()
         self.mcp_tools = {}
+
+    def room_db(self, room):
+        if room not in self.room_dbs:
+            schema = f'pocito_{hashlib.sha256(room.encode()).hexdigest()[:20]}'
+            self.room_dbs[room] = PostgresDb(db_engine=self.session_db_engine, db_schema=schema, id=schema) if self.session_db_engine else InMemoryDb()
+        return self.room_dbs[room]
 
     def openai_model(self, manifest):
         model = MODEL_CONTEXT.get() or manifest.get('config', {}).get('backend_config', {}).get('model') or os.getenv('OPENAI_MODEL', 'gpt-5-mini')
@@ -374,8 +384,10 @@ class MarketplaceAgentRuntime:
         if knowledge.vector_db.get_count() <= count:
             raise RuntimeError('content was not indexed')
 
-    def process_content_jobs(self):
+    def process_content_jobs(self, stopping=None):
         for pending in self.repo.content_jobs():
+            if stopping and stopping.is_set():
+                break
             if not self.repo.claim_content_job(pending, self.worker_id):
                 continue
             job = None
@@ -428,7 +440,7 @@ class MarketplaceAgentRuntime:
         tools = [await self.tool(room, item, context_ref) for item in sorted(tool_names)]
         tools.append(make_file_reader_tool(self.repo, room))
         return Agent(id=agent_id, name=manifest['display_name'], model=self.model_factory(manifest),
-          db=self.room_dbs[room], add_history_to_context=True,
+          db=self.room_db(room), add_history_to_context=True,
           tools=tools, skills=skills,
           knowledge=knowledge, knowledge_retriever=(lambda agent, query, num_documents=None, **kwargs:
             self.retrieve_knowledge(knowledge, knowledge_names, query, num_documents, **kwargs)) if knowledge else None,
@@ -464,25 +476,32 @@ def create_app(data_dir=None, model_factory=None, embedder=None):
     runtime = MarketplaceAgentRuntime(repo, data_dir / 'runtime', model_factory or configured_model_factory(), embedder)
     site_host = os.getenv('SITE_HOST', 'localhost')
     mcp = create_knowledge_mcp(runtime, streamable_http_path='/mcp', json_response=True, stateless_http=True,
-      transport_security=TransportSecuritySettings(allowed_hosts=[f'{site_host}:*', 'localhost:*', '127.0.0.1:*'],
+      transport_security=TransportSecuritySettings(
+        allowed_hosts=[value for host in [*site_host.split(','), 'localhost', '127.0.0.1'] for value in (host, f'{host}:*')],
         allowed_origins=os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')))
     mcp_app = mcp.streamable_http_app()
 
     @asynccontextmanager
     async def lifespan(_):
+        stopping = Event()
         async with mcp_app.router.lifespan_context(mcp_app):
             async def ingest():
                 await asyncio.to_thread(repo.bootstrap_content_jobs)
-                while True:
-                    await asyncio.to_thread(runtime.process_content_jobs)
+                while not stopping.is_set():
+                    await asyncio.to_thread(runtime.process_content_jobs, stopping)
                     await asyncio.sleep(float(os.getenv('KNOWLEDGE_WORKER_INTERVAL', '1')))
             worker = asyncio.create_task(ingest())
             try:
                 yield
             finally:
-                worker.cancel()
-                with suppress(asyncio.CancelledError):
+                stopping.set()
+                try:
                     await worker
+                finally:
+                    await asyncio.gather(*(tool.close() for tool in runtime.mcp_tools.values()))
+                    runtime.vector_db_engine.dispose()
+                    if runtime.session_db_engine:
+                        runtime.session_db_engine.dispose()
 
     base = FastAPI(title='agno', version='0.1.0', lifespan=lifespan)
     factories = []
@@ -519,8 +538,15 @@ def create_app(data_dir=None, model_factory=None, embedder=None):
             vector_store = 'ok'
         except Exception:
             vector_store = 'unreachable'
-        return {'status': 'ok' if vector_store == 'ok' else 'degraded',
-          'object_store': 'ok' if repo.objects.healthy() else 'unreachable', 'vector_store': vector_store}
+        try:
+            if runtime.session_db_engine:
+                with runtime.session_db_engine.connect() as connection:
+                    connection.execute(text('SELECT 1'))
+            session_store = 'ok'
+        except Exception:
+            session_store = 'unreachable'
+        return {'status': 'ok' if vector_store == session_store == 'ok' else 'degraded',
+          'object_store': 'ok' if repo.objects.healthy() else 'unreachable', 'vector_store': vector_store, 'session_store': session_store}
 
     @base.post('/adhoc/runs', tags=['adhoc'])
     async def adhoc_run(payload: AdhocRunRequest):
@@ -542,6 +568,7 @@ def create_app(data_dir=None, model_factory=None, embedder=None):
     app.user_middleware = [middleware for middleware in app.user_middleware if middleware.cls is not CORSMiddleware]
     app.add_middleware(CORSMiddleware, allow_origins=os.getenv('CORS_ALLOWED_ORIGINS', '*').lower().split(','),
       allow_methods=['*'], allow_headers=['*'], allow_private_network=True)
+    setup_service_http(app, healthz)
     app.mount('/', BearerAuthMiddleware(mcp_app, os.getenv('MCP_BEARER_TOKEN', '')))
     app.state.marketplace_repo, app.state.marketplace_runtime = repo, runtime
     return app

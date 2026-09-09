@@ -51,7 +51,8 @@ class S3ObjectStore:
           config=BotoConfig(connect_timeout=5, read_timeout=20, retries={'max_attempts': 3, 'mode': 'standard'},
             s3={'addressing_style': 'path'} if os.getenv('S3_USE_PATH_STYLE', '').lower() == 'true' else None))
         self.client = client or create_client(endpoint)
-        self.presign_client = self.client
+        public_endpoint = os.getenv('WONDER_STORAGE_URL', endpoint)
+        self.presign_client = create_client(public_endpoint) if public_endpoint != endpoint else self.client
         self.client.meta.events.register('before-send.s3.*', self.drop_expect_header)
         try:
             self.client.head_bucket(Bucket=self.bucket)
