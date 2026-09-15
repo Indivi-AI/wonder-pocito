@@ -127,12 +127,14 @@ const PUBLIC_PATH_PREFIXES = ['/api-docs', '/documentation', '/public/', '/sso']
 const PUBLIC_PATHS = new Set(['/health']);
 
 server.addHook('preHandler', async (request, reply) => {
+  if (process.env.WONDER_AUTH_MODE === 'none') return;
   const url = request.url.split('?', 1)[0];
   if (PUBLIC_PATHS.has(url) || PUBLIC_PATH_PREFIXES.some((p) => url.startsWith(p))) {
     return;
   }
 
-  if (!process.env.FLAPI_TOKEN || request.headers.authorization !== process.env.FLAPI_TOKEN || request.headers.username !== '625navehp')
+  const auth = request.headers.authorization?.replace(/^Bearer\s+/i, '');
+  if (!process.env.FLAPI_TOKEN || auth !== process.env.FLAPI_TOKEN || request.headers.username !== '625navehp')
     return reply.status(401).send(errorBody('unauthorized', 'Invalid FLAPI credentials'));
 });
 
@@ -314,6 +316,19 @@ server.get('/flapi/package/:packageId', async (request: any, reply) => {
   if (!metadata) return reply.status(404).send(errorBody('not_found', 'Package not found'));
   return metadata;
 });
+
+// FLAPI metadata queries/names (matches internal flapi)
+const queriesNamesHandler = async (request: any, reply: any) => {
+  const metadata = getPackageFullMetadata(request.params.packageId);
+  if (!metadata) return reply.status(404).send(errorBody('not_found', 'Package not found'));
+  return (metadata.Queries || []).map(q => ({
+    DisplayName: q.Name || q.DisplayName || q.id,
+    UniqueName: q.uniqueName || q.Name || q.id
+  }));
+};
+server.get('/flapi/metadata/:packageId/queries/names', queriesNamesHandler);
+server.get('/package/metadata/:packageId/queries/names', queriesNamesHandler);
+server.get('/metadata/:packageId/queries/names', queriesNamesHandler);
 
 // ——— Health ———
 

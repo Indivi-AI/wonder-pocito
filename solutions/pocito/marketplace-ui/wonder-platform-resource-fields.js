@@ -159,8 +159,14 @@ ReactComp('wonderPlatformResourceFields', {
           Name: bindingName(binding, inputBindings), Type: binding.type,
           DisplayName: binding.displayName, Description: binding.description, IsRequired: true, QueryId: binding.queryId}))
       const setBindings = inputBindings => update({...item, inputBindings, inputSchema: bindingSchema(inputBindings)})
-      const patchBinding = (binding, patch) => setBindings((item.inputBindings || []).map(value => value == binding
-        ? {...value, ...patch} : value))
+      const patchBinding = (binding, patch) => {
+        const current = item.inputBindings || []
+        const exists = current.some(v => v.queryId == binding.queryId && v.field == binding.field)
+        const next = exists
+          ? current.map(v => (v.queryId == binding.queryId && v.field == binding.field) ? {...v, ...patch} : v)
+          : [...current, {...binding, ...patch}]
+        setBindings(next)
+      }
       const queryExpanded = (id, index) => {
         if (openQueries[id] !== undefined) return !!openQueries[id]
         const bound = [...new Set((item.inputBindings || []).map(b => b.queryId))]
@@ -173,7 +179,57 @@ ReactComp('wonderPlatformResourceFields', {
       }
       const fieldDescription = field => field?.Description || field?.description || field?.Desc || field?.Help
         || (field?.DisplayName ? `ערך ${field.DisplayName}` : (field?.Name ? `ערך ${field.Name}` : ''))
+      const inputFields = query => (Array.isArray(query.QuickParams) && query.QuickParams.length > 0)
+        ? query.QuickParams : (Array.isArray(query.Fields) ? query.Fields : [])
+      const isFieldRequired = field => !!(field?.IsRequired || field?.required)
+      const allRequiredFields = () => {
+        if (!currentPackage) return []
+        const rawQueries = currentPackage.inputQueries
+          ? currentPackage.inputQueries
+          : (currentPackage.Queries || []).filter(q => Array.isArray(q.QuickParams) && q.QuickParams.length > 0)
+        const list = []
+        rawQueries.forEach(query => {
+          const qId = queryId(query), qName = query.Name || qId
+          inputFields(query).forEach(field => {
+            if (isFieldRequired(field)) list.push({queryId: qId, queryName: qName, field})
+          })
+        })
+        return list
+      }
+      const getRequiredBindings = (packageData, currentBindings = []) => {
+        if (!packageData) return currentBindings
+        const rawQueries = packageData.inputQueries
+          ? packageData.inputQueries
+          : (packageData.Queries || []).filter(q => Array.isArray(q.QuickParams) && q.QuickParams.length > 0)
+        const next = [...currentBindings]
+        rawQueries.forEach(query => {
+          const qId = queryId(query), qName = query.Name || qId
+          inputFields(query).forEach(field => {
+            if (isFieldRequired(field)) {
+              const key = `${qId}:${field.Name}`
+              if (!next.some(b => `${b.queryId}:${b.field}` == key)) {
+                const defaultOpt = Array.isArray(field?.Value) && field.Value.length > 0 ? field.Value[0]?.Value : null
+                next.push({
+                  queryId: qId, queryName: qName, field: field.Name,
+                  displayName: field.DisplayName || field.Name, type: field.Type || 'String',
+                  mode: defaultOpt != null ? 'fixed' : 'dynamic',
+                  value: defaultOpt != null ? defaultOpt : '',
+                  description: fieldDescription(field)
+                })
+              }
+            }
+          })
+        })
+        return next
+      }
+      useEffect(() => {
+        if (!currentPackage) return
+        const current = item.inputBindings || []
+        const withReq = getRequiredBindings(currentPackage, current)
+        if (withReq.length !== current.length) setBindings(withReq)
+      }, [currentPackage, item.inputBindings?.length])
       const toggleField = (query, field) => {
+        if (isFieldRequired(field)) return
         const binding = selectedBinding(query, field)
         const next = binding ? (item.inputBindings || []).filter(value => value != binding) : [...(item.inputBindings || []), {
           queryId: queryId(query), queryName: query.Name || queryId(query), field: field.Name,
@@ -212,7 +268,17 @@ ReactComp('wonderPlatformResourceFields', {
       const fixedValue = (binding, value) => ['int', 'double'].includes((binding?.type || '').toLowerCase()) ? +value
         : (binding?.type || '').toLowerCase() == 'boolean' ? value == 'true' : value
       const bindingEditor = (query, field) => {
-        const binding = selectedBinding(query, field), selected = !!binding
+        const isRequired = isFieldRequired(field)
+        const defaultOpt = Array.isArray(field?.Value) && field.Value.length > 0 ? field.Value[0]?.Value : null
+        const existingBinding = selectedBinding(query, field)
+        const binding = existingBinding || (isRequired ? {
+          queryId: queryId(query), queryName: query.Name || queryId(query), field: field.Name,
+          displayName: field.DisplayName || field.Name, type: field.Type || 'String',
+          mode: defaultOpt != null ? 'fixed' : 'dynamic',
+          value: defaultOpt != null ? defaultOpt : '',
+          description: fieldDescription(field)
+        } : null)
+        const selected = isRequired || !!binding
         const isDate = isDateField(binding, field)
         const isRelative = selected && isDate && typeof binding?.value == 'object' && binding?.value !== null && binding?.value?.TimeBackValue !== undefined
         const dateKind = binding?.dateKind || (isRelative ? 'relative' : 'exact')
@@ -245,26 +311,48 @@ ReactComp('wonderPlatformResourceFields', {
                       value: {TimeBackValue: relVal.TimeBackValue ?? 30, TimeBackUnit: event.target.value}})},
                     ...timeUnits.map(([unit, label]) => h('option', {key: unit, value: unit}, label)))))
           }
-          if ((binding.type || field?.Type || '').toLowerCase() == 'boolean') {
-            return h(`select:${classes.fieldBare}`, {value: String(binding.value ?? ''),
-              'aria-label': `ערך קבוע ${field.Name}`,
-              onChange: event => patchBinding(binding, {value: fixedValue(binding, event.target.value)})},
-              ...['', 'true', 'false'].map(value => h('option', {key: value, value},
-                value == '' ? 'בחרו ערך' : value == 'true' ? 'כן' : 'לא')))
-          }
-          return h(`input:${classes.fieldBare}`, {
-            type: ['int', 'double'].includes((binding.type || field?.Type || '').toLowerCase()) ? 'number' : 'text', value: String(binding.value ?? ''),
-            placeholder: 'ערך קבוע', 'aria-label': `ערך קבוע ${field.Name}`,
-            onInput: event => patchBinding(binding, {value: fixedValue(binding, event.target.value)}),
-            onChange: event => patchBinding(binding, {value: fixedValue(binding, event.target.value)})})
+          const defaultOpt = Array.isArray(field?.Value) && field.Value.length > 0 ? field.Value[0]?.Value : null
+          const hasPresets = Array.isArray(field?.Value) && field.Value.length > 0
+          return h('div:space-y-2', {},
+            hasPresets && h('div:flex flex-wrap items-center gap-2 text-[12px]', {},
+              h('span:text-[var(--wp-ink-3)]', {}, 'ערך דיפולט:'),
+              ...field.Value.map(opt => h('button:rounded border border-[var(--wp-border)] bg-[var(--wp-surface-2)] px-2 py-0.5 ' +
+                'font-mono text-[11px] text-[var(--wp-ink)] hover:bg-[var(--wp-surface-3)]',
+                {key: opt.Value ?? opt.Name, type: 'button',
+                  onClick: () => patchBinding(binding, {value: fixedValue(binding, opt.Value ?? opt.Name)})},
+                opt.Name || opt.Value))),
+            h('div:flex items-center gap-2', {},
+              h(`input:${classes.fieldBare} flex-1`, {
+                type: ['int', 'double'].includes((binding.type || field?.Type || '').toLowerCase()) ? 'number' : 'text',
+                value: String(binding.value ?? ''),
+                placeholder: defaultOpt ? `ערך קבוע (דיפולט: ${defaultOpt})` : 'ערך קבוע',
+                'aria-label': `ערך קבוע ${field.Name}`,
+                onInput: event => patchBinding(binding, {value: fixedValue(binding, event.target.value)}),
+                onChange: event => patchBinding(binding, {value: fixedValue(binding, event.target.value)})
+              }),
+              defaultOpt && binding.value !== defaultOpt && h(`button:${classes.button} text-[11px] px-2 py-1 shrink-0`, {
+                type: 'button', onClick: () => patchBinding(binding, {value: fixedValue(binding, defaultOpt)})
+              }, 'שחזור דיפולט')))
         }
+        const defaultBadge = Array.isArray(field?.Value) && field.Value.length > 0
+          ? field.Value.map(v => v.Name || v.Value).join(', ') : null
         return h(`div:border-t border-[var(--wp-border)] px-4 py-3 ${selected ? 'bg-[var(--wp-surface-2)]' : ''}`,
           {key: field.Name},
-          h('button:flex w-full items-start gap-3 text-start', {onClick: () => toggleField(query, field)},
-            h('span:mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded border border-[var(--wp-border-strong)]', {},
-              selected && h('L:Check', {size: 13})),
+          h('button:flex w-full items-start gap-3 text-start' + (isRequired ? ' cursor-default' : ''), {
+            onClick: () => toggleField(query, field),
+            title: isRequired ? 'פרמטר חובה - נבחר אוטומטית ולא ניתן להסרה' : undefined
+          },
+            h('span:mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded border ' +
+              (isRequired ? 'border-[var(--wp-border-strong)] bg-[var(--wp-surface-3)] text-[var(--wp-ink)]'
+                : (selected ? 'border-[var(--wp-border-strong)] bg-[var(--wp-surface-2)] text-[var(--wp-ink)]'
+                  : 'border-[var(--wp-border-strong)]')), {},
+              (selected || isRequired) && h('L:Check', {size: 13})),
             h('span:min-w-0 flex-1', {},
-              h('b:block truncate text-[13px] font-medium', {}, field.DisplayName || field.Name),
+              h('div:flex items-center gap-2', {},
+                h('b:truncate text-[13px] font-medium', {}, field.DisplayName || field.Name),
+                isRequired && h('span:inline-flex items-center gap-1 rounded bg-[var(--wp-danger-soft)] px-1.5 py-0.5 ' +
+                  'text-[10px] font-semibold text-[var(--wp-danger)]', {title: 'פרמטר חובה'}, h('L:Lock', {size: 10}), 'חובה'),
+                defaultBadge && h('span:rounded bg-[var(--wp-surface-2)] px-1.5 py-0.5 text-[10px] text-[var(--wp-ink-3)] font-mono', {dir: 'ltr'}, `דיפולט: ${defaultBadge}`)),
               h(`span:${classes.mono} block`, {dir: 'ltr'}, field.Name),
               binding?.mode == 'fixed' && descText && h('p:mt-1 text-[12px] text-[var(--wp-ink-3)] leading-relaxed', {}, descText)),
             h(`span:${classes.chip} shrink-0`, {}, field.Type || 'String')),
@@ -273,7 +361,8 @@ ReactComp('wonderPlatformResourceFields', {
               ...[['dynamic', 'דינמי'], ['fixed', 'קבוע']].map(([mode, label]) => h(
                 `button:rounded-[6px] px-3 py-1.5 text-[12px] font-medium ${binding.mode == mode
                   ? 'bg-[var(--wp-ink)] text-white' : 'text-[var(--wp-ink-3)]'}`,
-                {key: mode, onClick: () => patchBinding(binding, {mode, ...(mode == 'fixed' ? {value: ''} : {})})}, label))),
+                {key: mode, onClick: () => patchBinding(binding, {mode,
+                  ...(mode == 'fixed' ? {value: (Array.isArray(field?.Value) && field.Value.length > 0 ? field.Value[0]?.Value : '')} : {})})}, label))),
             binding.mode == 'dynamic' ? h(`input:${classes.fieldBare}`, {value: binding.description ?? descText,
               placeholder: 'מה הסוכן צריך להזין?', 'aria-label': `תיאור ${field.Name}`,
               onInput: event => patchBinding(binding, {description: event.target.value})})
@@ -285,6 +374,7 @@ ReactComp('wonderPlatformResourceFields', {
       }
       const inputQuery = (query, index) => {
         const id = queryId(query)
+        const fields = inputFields(query)
         const count = (item.inputBindings || []).filter(binding => binding.queryId == id).length
         const hasSelected = count > 0
         const isExpanded = queryExpanded(id, index)
@@ -297,15 +387,42 @@ ReactComp('wonderPlatformResourceFields', {
               h(`span:${classes.mono}`, {dir: 'ltr'}, id)),
             hasSelected && h(`span:${classes.chip}`, {}, `${count} שדות`),
             h(isExpanded ? 'L:ChevronUp' : 'L:ChevronDown', {size: 15})),
-          isExpanded && h('div', {}, ...(query.Fields || []).map(field => bindingEditor(query, field)),
-            !(query.Fields || []).length && h('p:border-t border-[var(--wp-border)] px-4 py-4 text-[12px] text-[var(--wp-ink-3)]', {},
-              'לא נמצאו שדות בקובייה')))
+          isExpanded && h('div', {}, ...fields.map(field => bindingEditor(query, field)),
+            !fields.length && h('p:border-t border-[var(--wp-border)] px-4 py-4 text-[12px] text-[var(--wp-ink-3)]', {},
+              'לא נמצאו קלטים בקובייה זו')))
       }
-      const inputSection = () => h('div:space-y-3', {}, h('div:flex items-end justify-between gap-4 px-1', {},
-        h('div', {}, h(`h2:${classes.h2}`, {}, 'קלטים לפונקציה'), h(`p:${classes.help}`, {},
-          'בחרו קובייה, ואז סמנו אילו שדות הסוכן ימלא ואילו יישלחו כערך קבוע (אופציונלי).')),
-        h(`span:${classes.chip}`, {}, `${(item.inputBindings || []).length} נבחרו`)),
-      ...(currentPackage?.Queries || []).map((query, index) => inputQuery(query, index)))
+      const inputSection = () => {
+        const rawQueries = currentPackage?.inputQueries
+          ? currentPackage.inputQueries
+          : (currentPackage?.Queries || []).filter(q => Array.isArray(q.QuickParams) && q.QuickParams.length > 0)
+        const queriesWithInputs = rawQueries.filter(q => inputFields(q).length > 0)
+        const hasAnyInputs = queriesWithInputs.length > 0
+        if (!hasAnyInputs) {
+          return h('div:space-y-4', {},
+            h(`div:rounded-[12px] border border-[var(--wp-danger-border,#fca5a5)] bg-[var(--wp-danger-soft,#fef2f2)] p-6`, {},
+              h('div:flex items-start gap-4', {},
+                h('div:rounded-full bg-[var(--wp-danger,#ef4444)]/10 p-2 text-[var(--wp-danger,#ef4444)]', {},
+                  h('L:AlertTriangle', {size: 24})),
+                h('div:flex-1 space-y-2', {},
+                  h('b:block text-[15px] font-semibold text-[var(--wp-danger,#b91c1c)]', {},
+                    'לא הוגדרו פרמטרים מהירים במארז זה (Quick Parameters Missing)'),
+                  h('p:text-[13px] leading-relaxed text-[var(--wp-ink)]', {},
+                    'כדי שסוכן יוכל להפעיל כלי ממארז Flow, המארז חייב לכלול לפחות שאילתה אחת עם פרמטרים מהירים (Quick Parameters).'),
+                  h('p:text-[13px] leading-relaxed text-[var(--wp-ink-2)]', {},
+                    'יש לפתוח את המארז ב-FlowBolt / FLAPI, להגדיר בו פרמטרים מהירים (כגון שדות סינון, טווח תאריכים או מזהים), ' +
+                    'לשמור את המארז, ולאחר מכן לטעון אותו שוב כאן ליצירת הכלי.'),
+                  h('div:mt-3 flex items-center gap-2 pt-1', {},
+                    h(`button:${classes.button}`, {onClick: loadFlowPackage, disabled: packageState.loading},
+                      h('L:RefreshCw', {size: 13, className: packageState.loading ? 'animate-spin' : ''}),
+                      'בדיקה וטעינה מחדש'))))))
+        }
+        return h('div:space-y-3', {},
+          h('div:flex items-end justify-between gap-4 px-1', {},
+            h('div', {}, h(`h2:${classes.h2}`, {}, 'פרמטרים מהירים (קלטים)'), h(`p:${classes.help}`, {},
+              'סמנו אילו פרמטרים מהירים הסוכן ימלא בדינמיות ואילו יישלחו כערך קבוע.')),
+            h(`span:${classes.chip}`, {}, `${(item.inputBindings || []).length} נבחרו`)),
+          queriesWithInputs.map((query, index) => inputQuery(query, index)))
+      }
       const summaryStep = () => {
         const dynamic = (item.inputBindings || []).filter(binding => binding.mode == 'dynamic')
         const fixed = (item.inputBindings || []).filter(binding => binding.mode == 'fixed')
@@ -456,14 +573,28 @@ ReactComp('wonderPlatformResourceFields', {
         setPackageState({loading: true, error: ''})
         try {
           const metadata = await loadPackage(ctx.setVars({packageId: item.packageId}))
-          setPkg(metadata); update({...item, packageId: String(metadata.Id ?? item.packageId), inputSchema: [], inputBindings: [], outputCubes: []})
+          const initialBindings = getRequiredBindings(metadata, [])
+          setPkg(metadata)
+          update({
+            ...item, packageId: String(metadata.Id ?? item.packageId),
+            inputBindings: initialBindings, inputSchema: bindingSchema(initialBindings), outputCubes: []
+          })
           setPackageState({loading: false, error: ''})
         } catch (error) { setPackageState({loading: false, error: error.message || String(error)}) }
       }
       const loaded = !!item.packageId
+      const hasQuickParams = !currentPackage ? true
+        : ((currentPackage.inputQueries || []).some(q => (q.QuickParams || q.Fields || []).length > 0)
+           || (currentPackage.Queries || []).some(q => (q.QuickParams || []).length > 0))
+      const missingRequired = allRequiredFields().find(({queryId: qId, field}) => {
+        const b = (item.inputBindings || []).find(binding => binding.queryId == qId && binding.field == field.Name)
+        if (!b) return true
+        if (b.mode == 'dynamic') return !b.description?.trim()
+        return !hasValidFixedValue(b)
+      })
       const invalidBinding = (item.inputBindings || []).find(binding => binding.mode == 'dynamic' ? !binding.description?.trim()
         : !hasValidFixedValue(binding))
-      const inputsReady = !invalidBinding
+      const inputsReady = hasQuickParams && !missingRequired && !invalidBinding
       const toolSteps = [
         {id: 'general', label: 'כללי', render: () => section(
           field('שם להצגה', input('name', {placeholder: 'שם להצגה…', 'aria-label': 'display_name'}), 'display_name'),
@@ -486,7 +617,9 @@ ReactComp('wonderPlatformResourceFields', {
       if (resource == 'tools') return h('div:h-full min-h-0', {},
         (item.originalId && item.kind != 'flow'
           ? h('div:wp-scroll h-full overflow-y-auto', {}, h('div:mx-auto w-full max-w-[840px] px-6 py-6', {}, legacyTool()))
-          : stepped(toolSteps, {reason: invalidBinding ? 'השלימו תיאור או ערך לכל שדה שנבחר' : reason,
+          : stepped(toolSteps, {reason: !hasQuickParams ? 'נדרש להגדיר פרמטרים מהירים במארז בטרם יצירת הכלי'
+            : missingRequired ? `יש להגדיר ערך תקין עבור פרמטר החובה "${missingRequired.field.DisplayName || missingRequired.field.Name}"`
+            : invalidBinding ? 'השלימו תיאור או ערך לכל שדה שנבחר' : reason,
           finish: finish && {...finish, disabled: finish.disabled || !inputsReady}})),
         dialogFile && hh(ctx, dsls.react['react-comp'].wonderPlatformDialog, {
           title: 'החלפת תוכן המיומנות',

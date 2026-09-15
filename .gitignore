@@ -44,3 +44,9 @@ solutions/pocito/flapi-mock/node_modules/
 .playwright-mcp/
 *.png
 /solutions/pocito/assets/traveling-test/
+
+# Local workspace links
+FlowBolt
+flowbolt
+*.code-workspace
+

@@ -201,14 +201,17 @@ Data('wonderPlatformFlapiRoundTrip', {
 
 Data('wonderPlatformFlapiUiRoundTrip', {
   impl: async () => {
-    const {createServer} = await import('node:http'); let path
+    const {createServer} = await import('node:http'); const paths = []
     const upstream = createServer((req, res) => {
-      path = req.url; res.setHeader('content-type', 'application/json'); res.end('{"Id":7}')
+      paths.push(req.url)
+      res.setHeader('content-type', 'application/json')
+      if (req.url?.includes('/package/v1/quick/')) res.end('{"query-1":[]}')
+      else res.end('{"Id":7,"Queries":[{"id":"query-1","Name":"Cube 1"}]}')
     })
     await new Promise(resolve => upstream.listen(0, '127.0.0.1', resolve))
     try {
       const result = await wonderPlatformFlapiPackage.$run({packageId: 'a/b', baseUrl: `http://127.0.0.1:${upstream.address().port}`})
-      return {path, result}
+      return {path: paths[0], paths, result}
     } finally { await new Promise(resolve => upstream.close(resolve)) }
   }
 })
@@ -292,7 +295,7 @@ Test('wonderPlatform.flapiUiRoundTrip', {
   nodeOnly: true,
   impl: dataTest({
     calculate: dsls.common.data.wonderPlatformFlapiUiRoundTrip(),
-    expectedResult: and(equals('%path%', '/api/v1/flapi/package/a%2Fb'), equals('%result/Id%', 7))
+    expectedResult: and(contains('%paths%', '/package/v1/quick/a%2Fb'), contains('%paths%', '/package/v2/a%2Fb'), equals('%result/Id%', 7))
   }),
   logger: 'marketplaceLogger'
 })

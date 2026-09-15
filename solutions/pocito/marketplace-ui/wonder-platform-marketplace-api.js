@@ -28,11 +28,31 @@ Data('wonderPlatformFlapiPackage', {
     {id: 'baseUrl', as: 'string'}
   ],
   impl: async (ctx, {}, {packageId, baseUrl}) => {
-    const marketplaceBase = (baseUrl || globalThis.MARKETPLACE_API_URL || globalThis.process?.env?.MARKETPLACE_API_URL ||
-      'http://localhost:7777').replace(/\/$/, '')
-    const response = await fetch(`${marketplaceBase}/api/v1/flapi/package/${encodeURIComponent(packageId)}`)
-    if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || `FLAPI ${response.status}`)
-    return response.json()
+    const flapiBase = (baseUrl || globalThis.FLAPI_BASE_URL || globalThis.process?.env?.FLAPI_BASE_URL ||
+      'http://localhost:6001').replace(/\/$/, '')
+    const encoded = encodeURIComponent(packageId)
+    const [quickRes, v2Res] = await Promise.all([
+      fetch(`${flapiBase}/package/v1/quick/${encoded}`),
+      fetch(`${flapiBase}/package/v2/${encoded}`)
+    ])
+    if (!v2Res.ok) {
+      const err = await v2Res.json().catch(() => ({}))
+      throw new Error(err.error || `FLAPI ${v2Res.status}`)
+    }
+    const [quickData, v2Data] = await Promise.all([
+      quickRes.ok ? quickRes.json().catch(() => ({})) : {},
+      v2Res.json()
+    ])
+    const quickMap = quickData || {}
+    const outputCubes = v2Data.Queries || []
+    const inputQueries = Object.entries(quickMap).map(([qId, params]) => ({
+      id: qId,
+      Name: qId,
+      Description: `פרמטרים מהירים עבור ${qId}`,
+      QuickParams: params,
+      Fields: params
+    }))
+    return {...v2Data, QuickParams: quickMap, inputQueries, Queries: outputCubes}
   }
 })
 

@@ -10,8 +10,10 @@ ReactComp('wonderPlatformWizard', {
       const active = steps.find(step => step.id == activeId) || steps[0]
       if (rail) {
         const {classes} = dsls.common.data.wonderPlatformUi.$runWithCtx(ctx)
-        const next = steps.slice(steps.indexOf(active) + 1).find(step => !step.disabled)
-        const action = next ? {label: 'המשך', aria: 'המשך לשלב הבא', onClick: () => onStep(next.id)} : finish
+        const nextStep = steps[steps.indexOf(active) + 1]
+        const action = nextStep
+          ? {label: 'המשך', aria: 'המשך לשלב הבא', disabled: !!nextStep.disabled, onClick: () => onStep(nextStep.id)}
+          : finish
         const mark = (step, index, current) => h(
           `span:grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full border text-[11px] font-medium ${current
             ? 'border-[var(--wp-ink)] bg-[var(--wp-ink)] text-white'
