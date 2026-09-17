@@ -1,7 +1,0 @@
-import './entry-points-pocito.js'
-import '../solutions/pocito/marketplace-ui/pocito-tests.js'
-import '../solutions/pocito/marketplace-ui/wonder-platform-picker-tests.js'
-import '../solutions/pocito/marketplace-ui/wonder-platform-agent-tests.js'
-import '../solutions/pocito/marketplace-ui/evaluation-page-tests.js'
-import '../solutions/pocito/react-comp-examples/react-comp-examples-tests.js'
-import '../solutions/pocito/on-prem/prod/pocito-prod-tests.js'

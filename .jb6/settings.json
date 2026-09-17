@@ -1,4 +1,8 @@
 {
-  "jb6Dirs": ["wonder", "solutions"],
-  "developerEntryPoint": "./.jb6/entry-points-{gitUser}.js"
+  "jb6Dirs": [
+    "ui",
+    "e2e-tests",
+    "3rd-party/wonder"
+  ],
+  "developerEntryPoint": "./e2e-tests/main.js"
 }

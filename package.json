@@ -1,65 +1,40 @@
 {
-  "name": "wonder",
+  "name": "wonder-pocito",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "start-min-io": "env MINIO_ROOT_USER=wonder MINIO_ROOT_PASSWORD=wonder-minio-local $HOME/.local/bin/minio server $HOME/.minio-data --console-address :9001",
-    "local": "ENV_PATH=cloud-services/express-server/.env.dev node --import ./nodejs-importmap.js cloud-services/express-server/local-server.js",
-    "build-wonder-base": "bash cloud-services/build-wonder-base.sh",
-    "build-wonder": "bash cloud-services/build-wonder-image.sh",
-    "deploy-wonder": "bash cloud-services/deploy-cloud-run-staging.sh",
-    "deploy-wonder-all": "bash cloud-services/deploy-cloud-run-staging.sh --all",
-    "deploy-react-lib-and-images-to-cdn": "bash cloud-services/deploy-react-lib-and-images-to-cdn.sh",
-    "airgapped-export": "bash solutions/pocito/on-prem/export-airgap.sh",
-    "pocito": "node solutions/pocito/on-prem/dev/pocito-dev.js",
-    "seed-marketplace-assets": "node solutions/pocito/traveling-test/scripts/seed-marketplace-assets.mjs",
-    "server-secrets:pull:dev": "node scripts/secrets.js pull dev",
-    "server-secrets:pull:prod": "node scripts/secrets.js pull prod",
-    "server-secrets:push:dev": "node scripts/secrets.js push dev",
-    "server-secrets:push:prod": "node scripts/secrets.js push prod",
-    "update-jb6": "bash ./scripts/update-jb6.sh",
-    "pocito-update": "bash scripts/sync-pocito.sh",
-    "pocito-dev": "POCITO_NPM_INSTALL='install --omit=optional' node solutions/pocito/on-prem/dev/pocito-dev.js",
-    "pocito-dev-airgapped": "node solutions/pocito/on-prem/dev/pocito-dev-airgapped.js",
-    "pocito-dev:shutdown": "node solutions/pocito/on-prem/dev/pocito-dev.js --shutdown"
+    "setup": "node infra/dev/main.js --setup",
+    "local": "node infra/dev/main.js",
+    "export-dev": "bash infra/export/export-dev.sh",
+    "export-prod": "bash infra/export/export-prod.sh",
+    "deploy-oc": "bash infra/prod/deploy-oc.sh"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.13.2",
-    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
-    "esbuild": "^0.28.2",
+    "esbuild": "^0.25.0",
     "express": "^4.21.2",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
+    "mime-types": "^2.1.35",
     "stream-json": "^1.9.1",
-    "tar": "^7.5.22",
-    "undici": "^8.3.0",
+    "tar": "^7.5.1",
     "zod": "^3.25.0"
   },
-  "optionalDependencies": {
-    "@google-cloud/secret-manager": "^5.6.0",
-    "@google-cloud/storage": "^7.15.2",
-    "google-auth-library": "^10.2.0",
-    "node-pty": "^1.1.0"
-  },
   "devDependencies": {
-    "fake-indexeddb": "^6.0.1",
     "jsdom": "^26.1.0",
     "playwright": "^1.59.1"
   },
   "importMap": {
     "@wonder/": "/wonder/",
-    "@solution/": "/solutions/",
-    "@indiviai/": "/indiviai/"
+    "@ui/": "/ui/",
+    "@e2e-tests/": "/e2e-tests/"
   },
   "staticMappings": {
-    "/wonder": "./wonder",
-    "/solutions": "./solutions",
-    "/indiviai": "./indiviai",
-    "/jb6-local-settings": "./.jb6"
+    "/wonder": "./3rd-party/wonder",
+    "/ui": "./ui",
+    "/e2e-tests": "./e2e-tests"
   },
   "importMapsInCli": "./nodejs-importmap.js",
-  "jb6Root": "./jb6"
+  "jb6Root": "./3rd-party/jb6"
 }

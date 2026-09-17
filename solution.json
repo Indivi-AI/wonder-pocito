@@ -1,0 +1,16 @@
+{
+  "name": "wonder-pocito",
+  "aliases": {"@ui/": "ui/", "@e2e-tests/": "e2e-tests/"},
+  "entryPoints": ["e2e-tests/main.js", "infra/dev/main.js", "infra/dev/server.js", "infra/prod/main.js", ".jb6/mcp.js"],
+  "developerEntryPoint": "e2e-tests/main.js",
+  "wonder": {"always": ["CLAUDE.md", "images/wonder.svg", "images/wonder-tests.svg", "images/icon/icon-180x180.png", "studio/tests.html"]},
+  "npm": {
+    "scripts": {
+      "setup": "node infra/dev/main.js --setup",
+      "local": "node infra/dev/main.js",
+      "export-dev": "bash infra/export/export-dev.sh",
+      "export-prod": "bash infra/export/export-prod.sh",
+      "deploy-oc": "bash infra/prod/deploy-oc.sh"
+    }
+  }
+}
