@@ -3,7 +3,7 @@ import { MockPackage, buildMetadata, quickParamsQuery } from '../package-base.js
 
 type Row = Record<string, unknown>
 type Params = Record<string, unknown>
-const readDataset = (name: string) => JSON.parse(readFileSync(new URL(`../../../traveling-test/datasets/${name}`, import.meta.url), 'utf8')) as Row[]
+const readDataset = (name: string) => JSON.parse(readFileSync(new URL(`../../../../../e2e-tests/traveling-test/datasets/${name}`, import.meta.url), 'utf8')) as Row[]
 const toTableRows = (rows: Row[]) => rows.map(row => Object.fromEntries(Object.entries(row).map(([key, value]) => [key,
   Array.isArray(value) ? value.join(' | ') : value && typeof value === 'object' ? JSON.stringify(value) : value])))
 const normalizedText = (value: unknown) => String(value ?? '').trim().toLowerCase()

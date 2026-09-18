@@ -489,7 +489,7 @@ try {
     if (error || result?.error) return JSON.stringify({ ...result, error: result?.error || error,
       cliLog: coreUtils.harvestLogs(cliCtx, ['cliLineLogger']).cliLineLogger })
     const dbCtx = ctx.setVars(storageEnvVars())
-    const {appletV, clientCodeWUrl, cmpId} = result
+    const {appletV, clientCodeWUrl, shareImports, cmpId} = result
     const entryUrl = `https://w-staging.indivi.ai/${route}/${resolvedRoomId}/applet/${cmpId}`
     const imageBytes = ogImageLocalPath ? await (await import('fs/promises')).readFile(ogImageLocalPath)
       : ogImage ? new Uint8Array(await (await fetch(ogImage)).arrayBuffer()) : ''
@@ -504,7 +504,7 @@ try {
       imageName && wfetch2(imageWUrl, {method: 'PUT', body: ogImageLocalPath,
         headers: {'x-wonder-body': 'localFile', 'content-type': `image/${imageName.split('.').pop().replace('jpg', 'jpeg')}`}}, dbCtx),
       wfetch2(`${roomWUrl}/applets/${cmpId}.json`, {method: 'PUT', headers: {'content-type': 'application/json'},
-        body: JSON.stringify({cmpId, urlsToLoad: entryPath, appletV, clientCodeWUrl, roomWUrl,
+        body: JSON.stringify({cmpId, urlsToLoad: entryPath, appletV, clientCodeWUrl, shareImports, roomWUrl,
           entryCompFullId, ...(Object.keys(og).length && {og})})}, dbCtx)
     ])
     if (imageRes?.ok === false) return JSON.stringify({error: `applet image PUT failed: ${imageRes.status}`, imageWUrl})

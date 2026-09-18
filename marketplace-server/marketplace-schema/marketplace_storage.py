@@ -16,7 +16,7 @@ from botocore.config import Config as BotoConfig
 from botocore.exceptions import ClientError
 from fastapi import HTTPException
 
-ROOT = Path(__file__).resolve().parent.parent / 'marketplace-server'
+ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_ROOM = 'marketplace'
 KNOWLEDGE_INDEX_VERSION = 'pgvector-v3'
 ROOM_CONTEXT = ContextVar('room', default=DEFAULT_ROOM)
